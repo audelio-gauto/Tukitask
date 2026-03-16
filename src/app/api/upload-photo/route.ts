@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Allow larger body for photo uploads (up to 4MB base64 ≈ 3MB file)
-export const config = {
-  api: { bodyParser: { sizeLimit: '4mb' } },
-};
+// Body size is managed by Next.js App Router (default 1MB, sufficient for base64 photos)
 
 const getSupabase = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
