@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async () => {
       const { data: allUsers } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-      const users = allUsers || [];
+      const users: any[] = allUsers || [];
       setStats({
         total: users.length,
         admins: users.filter(u => u.role === 'admin').length,
