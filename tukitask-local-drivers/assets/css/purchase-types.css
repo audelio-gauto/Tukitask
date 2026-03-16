@@ -1,0 +1,504 @@
+/**
+ * Purchase Types Styles
+ * Estilos para tipos de compra: Normal, Llega Hoy, Tienda Móvil
+ */
+
+/* ========================================
+   Purchase Type Selector
+======================================== */
+.tuki-purchase-type-selector {
+    margin: 20px 0;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.tuki-purchase-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: #666;
+}
+
+.tuki-purchase-loading i {
+    font-size: 1.2rem;
+    color: #ff6b00;
+}
+
+.tuki-purchase-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tuki-purchase-option {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #ffffff;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tuki-purchase-option:hover {
+    border-color: #ff6b00;
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
+}
+
+.tuki-purchase-option.selected {
+    border-color: #ff6b00;
+    background: linear-gradient(135deg, #fff5eb 0%, #ffffff 100%);
+}
+
+.tuki-purchase-option.selected::before {
+    content: '✓';
+    position: absolute;
+    right: 15px;
+    width: 24px;
+    height: 24px;
+    background: #ff6b00;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.tuki-purchase-option {
+    position: relative;
+}
+
+.tuki-option-icon {
+    font-size: 2rem;
+    margin-right: 15px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border-radius: 10px;
+}
+
+.tuki-option-content {
+    flex: 1;
+}
+
+.tuki-option-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.tuki-option-description {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.tuki-option-eta {
+    padding: 5px 12px;
+    background: #f0f0f0;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Type-specific colors */
+.tuki-purchase-option[data-type="normal"] .tuki-option-icon {
+    background: #e3f2fd;
+}
+
+.tuki-purchase-option[data-type="llega_hoy"] .tuki-option-icon {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
+}
+
+.tuki-purchase-option[data-type="llega_hoy"] .tuki-option-eta {
+    background: #ff6b00;
+    color: white;
+}
+
+.tuki-purchase-option[data-type="tienda_movil"] .tuki-option-icon {
+    background: linear-gradient(135deg, #e8f5e9 0%, #a5d6a7 100%);
+}
+
+.tuki-purchase-option[data-type="tienda_movil"] .tuki-option-eta {
+    background: #4caf50;
+    color: white;
+}
+
+/* Extra cost indicator */
+.tuki-extra-cost {
+    font-size: 0.75rem;
+    color: #ff6b00;
+    margin-top: 4px;
+}
+
+/* ========================================
+   Badges
+======================================== */
+.tuki-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.tuki-badge.llega-hoy {
+    background: linear-gradient(135deg, #ff6b00 0%, #ff9800 100%);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.tuki-badge.tienda-movil {
+    background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* ========================================
+   Purchase Type Badge (Admin/Frontend)
+======================================== */
+.tuki-purchase-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.tuki-purchase-type-badge.type-normal {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.tuki-purchase-type-badge.type-llega_hoy {
+    background: linear-gradient(135deg, #ff6b00 0%, #ff9800 100%);
+    color: white;
+}
+
+.tuki-purchase-type-badge.type-tienda_movil {
+    background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+    color: white;
+}
+
+/* ========================================
+   Llega Hoy Section
+======================================== */
+.tuki-llega-hoy-section {
+    margin: 30px 0;
+    padding: 25px;
+    background: linear-gradient(135deg, #fff5eb 0%, #ffffff 100%);
+    border-radius: 16px;
+    border: 2px solid #ffcc80;
+}
+
+.tuki-llega-hoy-section .tuki-section-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.tuki-llega-hoy-section .tuki-section-header h2 {
+    font-size: 1.75rem;
+    color: #ff6b00;
+    margin-bottom: 8px;
+}
+
+.tuki-llega-hoy-section .tuki-section-header p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.tuki-badge-icon {
+    margin-right: 8px;
+}
+
+/* Product Cards in Llega Hoy */
+.tuki-llega-hoy-section .products .product {
+    position: relative;
+}
+
+.tuki-llega-hoy-section .products .product::before {
+    content: '⚡ Llega Hoy';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #ff6b00 0%, #ff9800 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+}
+
+/* ========================================
+   Mobile Store Section
+======================================== */
+.tuki-mobile-store-section {
+    margin: 30px 0;
+    padding: 25px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #ffffff 100%);
+    border-radius: 16px;
+    border: 2px solid #a5d6a7;
+}
+
+.tuki-mobile-store-section .tuki-section-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.tuki-mobile-store-section .tuki-section-header h2 {
+    font-size: 1.75rem;
+    color: #4caf50;
+    margin-bottom: 8px;
+}
+
+.tuki-mobile-store-section .tuki-section-header p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.tuki-mobile-products-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.tuki-mobile-products-loading i {
+    font-size: 2rem;
+    color: #4caf50;
+    margin-bottom: 15px;
+    animation: location-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes location-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+/* Product Cards in Mobile Store */
+.tuki-mobile-store-section .products .product {
+    position: relative;
+}
+
+.tuki-mobile-store-section .products .product::before {
+    content: '🚗 Tienda Móvil';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 10;
+}
+
+/* Mobile Product with Distance Info */
+.tuki-mobile-product-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.tuki-mobile-distance {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+}
+
+.tuki-mobile-eta {
+    font-weight: 600;
+    color: #4caf50;
+}
+
+/* ========================================
+   Empty State
+======================================== */
+.tuki-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.tuki-empty-state i {
+    font-size: 3rem;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+
+.tuki-empty-state p {
+    font-size: 1rem;
+}
+
+/* ========================================
+   Purchase Type Info on Order Details
+======================================== */
+.tuki-purchase-type-info {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.tuki-purchase-type-info h2 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.tuki-purchase-type-info .tuki-purchase-type-badge {
+    font-size: 1rem;
+    padding: 10px 20px;
+}
+
+/* ========================================
+   Checkout Purchase Type Display
+======================================== */
+.woocommerce-checkout .tuki-checkout-purchase-type {
+    margin: 15px 0;
+    padding: 15px;
+    background: linear-gradient(135deg, #fff5eb 0%, #ffffff 100%);
+    border-radius: 10px;
+    border: 1px solid #ffcc80;
+}
+
+.tuki-checkout-purchase-type .tuki-type-label {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.tuki-checkout-purchase-type .tuki-type-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ========================================
+   Product Page Purchase Type
+======================================== */
+.single-product .tuki-purchase-type-selector {
+    margin: 20px 0;
+}
+
+.single-product .tuki-purchase-option {
+    min-height: 80px;
+}
+
+/* ========================================
+   Cart Purchase Type Indicator
+======================================== */
+.woocommerce-cart-form .tuki-cart-item-type {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.tuki-cart-item-type.llega-hoy {
+    background: #fff5eb;
+    color: #ff6b00;
+    border: 1px solid #ffcc80;
+}
+
+.tuki-cart-item-type.tienda-movil {
+    background: #e8f5e9;
+    color: #4caf50;
+    border: 1px solid #a5d6a7;
+}
+
+/* ========================================
+   Responsive Design
+======================================== */
+@media (max-width: 768px) {
+    .tuki-purchase-option {
+        flex-wrap: wrap;
+    }
+    
+    .tuki-option-eta {
+        margin-top: 10px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .tuki-llega-hoy-section,
+    .tuki-mobile-store-section {
+        padding: 15px;
+        margin: 20px 0;
+    }
+    
+    .tuki-llega-hoy-section .products.columns-4,
+    .tuki-mobile-store-section .products.columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .tuki-llega-hoy-section .products.columns-4,
+    .tuki-mobile-store-section .products.columns-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .tuki-purchase-type-selector {
+        padding: 12px;
+    }
+    
+    .tuki-option-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+}
+
+/* ========================================
+   Animation Utilities
+======================================== */
+.tuki-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tuki-slide-in {
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}

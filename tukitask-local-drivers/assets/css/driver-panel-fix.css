@@ -1,0 +1,1309 @@
+/* ================================================
+   TUKITASK DRIVER PANEL - FIX CSS v3.0
+   High specificity styles to override theme conflicts
+   ================================================ */
+
+/* Reset and Base - High Specificity */
+.tuki-driver-panel,
+.tuki-driver-panel *,
+.tuki-driver-panel *::before,
+.tuki-driver-panel *::after {
+	box-sizing: border-box !important;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.tuki-driver-panel {
+	background: #f1f5f9 !important;
+	min-height: 100vh !important;
+	padding-bottom: 80px !important;
+}
+
+/* Container */
+.tuki-driver-panel .tuki-container {
+	max-width: 800px !important;
+	margin: 0 auto !important;
+	padding: 1rem !important;
+}
+
+/* ================================================
+   DASHBOARD CONTENT
+   ================================================ */
+
+.tuki-driver-panel .tuki-dashboard-content {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 1.25rem !important;
+}
+
+/* ================================================
+   HERO CARD - Profile Section
+   ================================================ */
+
+.tuki-driver-panel .tuki-hero-card {
+	position: relative !important;
+	background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+	border-radius: 20px !important;
+	padding: 1.5rem !important;
+	overflow: hidden !important;
+	box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3) !important;
+}
+
+.tuki-driver-panel .tuki-hero-bg {
+	position: absolute !important;
+	inset: 0 !important;
+	background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") !important;
+}
+
+.tuki-driver-panel .tuki-hero-content {
+	position: relative !important;
+	z-index: 1 !important;
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 1.25rem !important;
+}
+
+.tuki-driver-panel .tuki-hero-profile {
+	display: flex !important;
+	align-items: center !important;
+	gap: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-hero-avatar {
+	width: 70px !important;
+	height: 70px !important;
+	border-radius: 50% !important;
+	background-size: cover !important;
+	background-position: center !important;
+	border: 4px solid rgba(255,255,255,0.3) !important;
+	position: relative !important;
+	flex-shrink: 0 !important;
+}
+
+.tuki-driver-panel .tuki-status-dot-live {
+	position: absolute !important;
+	bottom: 2px !important;
+	right: 2px !important;
+	width: 18px !important;
+	height: 18px !important;
+	border-radius: 50% !important;
+	border: 3px solid #4f46e5 !important;
+	background: #ef4444 !important;
+}
+
+.tuki-driver-panel .tuki-status-dot-live.online {
+	background: #10b981 !important;
+	animation: pulseOnline 2s ease-in-out infinite !important;
+}
+
+@keyframes pulseOnline {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+	50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+.tuki-driver-panel .tuki-hero-info {
+	flex: 1 !important;
+	color: white !important;
+}
+
+.tuki-driver-panel .tuki-hero-name {
+	font-size: 1.4rem !important;
+	font-weight: 700 !important;
+	margin: 0 0 0.25rem 0 !important;
+	color: white !important;
+	line-height: 1.2 !important;
+}
+
+.tuki-driver-panel .tuki-hero-meta {
+	display: flex !important;
+	gap: 1rem !important;
+	font-size: 0.9rem !important;
+	opacity: 0.9 !important;
+	color: rgba(255,255,255,0.9) !important;
+}
+
+.tuki-driver-panel .tuki-hero-meta span {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.4rem !important;
+}
+
+.tuki-driver-panel .tuki-hero-rating i {
+	color: #fbbf24 !important;
+}
+
+/* Toggle Switch */
+.tuki-driver-panel .tuki-hero-toggle {
+	display: flex !important;
+	justify-content: center !important;
+}
+
+.tuki-driver-panel .tuki-toggle-modern {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.75rem !important;
+	cursor: pointer !important;
+	background: rgba(255,255,255,0.15) !important;
+	padding: 0.6rem 1.25rem !important;
+	border-radius: 50px !important;
+	backdrop-filter: blur(10px) !important;
+	-webkit-backdrop-filter: blur(10px) !important;
+}
+
+.tuki-driver-panel .tuki-toggle-modern input {
+	display: none !important;
+}
+
+.tuki-driver-panel .tuki-toggle-track {
+	width: 52px !important;
+	height: 28px !important;
+	background: rgba(255,255,255,0.3) !important;
+	border-radius: 14px !important;
+	position: relative !important;
+	transition: all 0.3s ease !important;
+}
+
+.tuki-driver-panel .tuki-toggle-modern input:checked + .tuki-toggle-track {
+	background: #10b981 !important;
+}
+
+.tuki-driver-panel .tuki-toggle-thumb {
+	position: absolute !important;
+	top: 4px !important;
+	left: 4px !important;
+	width: 20px !important;
+	height: 20px !important;
+	background: white !important;
+	border-radius: 50% !important;
+	transition: all 0.3s ease !important;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+}
+
+.tuki-driver-panel .tuki-toggle-modern input:checked + .tuki-toggle-track .tuki-toggle-thumb {
+	transform: translateX(24px) !important;
+}
+
+.tuki-driver-panel .tuki-toggle-label {
+	font-size: 0.85rem !important;
+	font-weight: 700 !important;
+	color: white !important;
+	text-transform: uppercase !important;
+	letter-spacing: 1px !important;
+}
+
+/* ================================================
+   STATS STRIP
+   ================================================ */
+
+.tuki-driver-panel .tuki-stats-strip {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 0.75rem !important;
+}
+
+.tuki-driver-panel .tuki-stat-pill {
+	background: white !important;
+	padding: 1rem !important;
+	border-radius: 14px !important;
+	text-align: center !important;
+	text-decoration: none !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+	border: 1px solid #e2e8f0 !important;
+	transition: all 0.2s ease !important;
+}
+
+.tuki-driver-panel .tuki-stat-pill:hover {
+	transform: translateY(-2px) !important;
+	box-shadow: 0 6px 16px rgba(0,0,0,0.1) !important;
+}
+
+.tuki-driver-panel .tuki-stat-pill .tuki-stat-number {
+	display: block !important;
+	font-size: 1.75rem !important;
+	font-weight: 800 !important;
+	line-height: 1 !important;
+	margin-bottom: 0.25rem !important;
+	color: #1e293b !important;
+}
+
+.tuki-driver-panel .tuki-stat-pill .tuki-stat-text {
+	display: block !important;
+	font-size: 0.7rem !important;
+	color: #64748b !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.5px !important;
+	font-weight: 600 !important;
+}
+
+.tuki-driver-panel .tuki-stat-pill.pending .tuki-stat-number { color: #f59e0b !important; }
+.tuki-driver-panel .tuki-stat-pill.active .tuki-stat-number { color: #3b82f6 !important; }
+.tuki-driver-panel .tuki-stat-pill.success .tuki-stat-number { color: #10b981 !important; }
+
+/* ================================================
+   EARNINGS CARD
+   ================================================ */
+
+.tuki-driver-panel .tuki-earnings-card {
+	background: white !important;
+	border-radius: 16px !important;
+	padding: 1.25rem !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+	border: 1px solid #e2e8f0 !important;
+}
+
+.tuki-driver-panel .tuki-earnings-header {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+	font-size: 0.95rem !important;
+	font-weight: 600 !important;
+	color: #64748b !important;
+	margin-bottom: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-earnings-header i {
+	color: #10b981 !important;
+	font-size: 1.1rem !important;
+}
+
+.tuki-driver-panel .tuki-earnings-grid {
+	display: flex !important;
+	align-items: center !important;
+	gap: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-earnings-item {
+	flex: 1 !important;
+	text-align: center !important;
+}
+
+.tuki-driver-panel .tuki-earnings-label {
+	display: block !important;
+	font-size: 0.75rem !important;
+	color: #94a3b8 !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.5px !important;
+	margin-bottom: 0.25rem !important;
+	font-weight: 600 !important;
+}
+
+.tuki-driver-panel .tuki-earnings-value {
+	display: block !important;
+	font-size: 1.5rem !important;
+	font-weight: 700 !important;
+	color: #10b981 !important;
+}
+
+.tuki-driver-panel .tuki-earnings-value .woocommerce-Price-amount {
+	color: #10b981 !important;
+	font-weight: 700 !important;
+}
+
+.tuki-driver-panel .tuki-earnings-divider {
+	width: 1px !important;
+	height: 50px !important;
+	background: #e2e8f0 !important;
+}
+
+.tuki-driver-panel .tuki-earnings-action {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	gap: 0.5rem !important;
+	margin-top: 1rem !important;
+	padding-top: 1rem !important;
+	border-top: 1px solid #e2e8f0 !important;
+	color: #4f46e5 !important;
+	font-size: 0.9rem !important;
+	font-weight: 600 !important;
+	text-decoration: none !important;
+	transition: gap 0.2s ease !important;
+}
+
+.tuki-driver-panel .tuki-earnings-action:hover {
+	gap: 0.75rem !important;
+}
+
+/* ================================================
+   SECTION HEADERS
+   ================================================ */
+
+.tuki-driver-panel .tuki-section {
+	margin-bottom: 0 !important;
+}
+
+.tuki-driver-panel .tuki-section-header {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	margin-bottom: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-section-header h3 {
+	font-size: 1.1rem !important;
+	font-weight: 700 !important;
+	color: #1e293b !important;
+	margin: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+}
+
+.tuki-driver-panel .tuki-section-header h3 i {
+	color: #4f46e5 !important;
+}
+
+.tuki-driver-panel .tuki-badge-count {
+	background: #4f46e5 !important;
+	color: white !important;
+	padding: 0.25rem 0.75rem !important;
+	border-radius: 20px !important;
+	font-size: 0.8rem !important;
+	font-weight: 700 !important;
+}
+
+/* ================================================
+   ORDER CARDS - PROFESSIONAL STYLE
+   ================================================ */
+
+.tuki-driver-panel .tuki-orders-list {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-order-card-pro {
+	background: white !important;
+	border-radius: 16px !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+	overflow: hidden !important;
+	border: 1px solid #e2e8f0 !important;
+	transition: all 0.3s ease !important;
+}
+
+.tuki-driver-panel .tuki-order-card-pro:hover {
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+	transform: translateY(-2px) !important;
+}
+
+/* Order Header */
+.tuki-driver-panel .tuki-order-header-pro {
+	display: flex !important;
+	justify-content: space-between !important;
+	align-items: center !important;
+	padding: 1rem 1.25rem !important;
+	background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+	color: white !important;
+	gap: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-order-number-badge {
+	font-size: 1.3rem !important;
+	font-weight: 800 !important;
+	letter-spacing: -0.5px !important;
+	color: white !important;
+}
+
+.tuki-driver-panel .tuki-status-flow {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+	flex: 1 !important;
+	justify-content: center !important;
+}
+
+.tuki-driver-panel .tuki-status-dot {
+	width: 12px !important;
+	height: 12px !important;
+	border-radius: 50% !important;
+	background: rgba(255, 255, 255, 0.3) !important;
+	transition: all 0.3s ease !important;
+}
+
+.tuki-driver-panel .tuki-status-dot.active {
+	background: white !important;
+	width: 14px !important;
+	height: 14px !important;
+	box-shadow: 0 0 10px rgba(255,255,255,0.5) !important;
+}
+
+.tuki-driver-panel .tuki-status-dot.done {
+	background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.tuki-driver-panel .tuki-status-badge-pro {
+	padding: 0.4rem 0.9rem !important;
+	border-radius: 50px !important;
+	font-size: 0.7rem !important;
+	font-weight: 700 !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.5px !important;
+	background: rgba(255, 255, 255, 0.2) !important;
+	color: white !important;
+	border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Order Body */
+.tuki-driver-panel .tuki-order-body-pro {
+	padding: 1.25rem !important;
+}
+
+/* Timeline */
+.tuki-driver-panel .tuki-delivery-timeline {
+	position: relative !important;
+	padding-left: 2rem !important;
+}
+
+.tuki-driver-panel .tuki-timeline-item {
+	position: relative !important;
+	margin-bottom: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-timeline-marker {
+	position: absolute !important;
+	left: -2rem !important;
+	top: 0 !important;
+	width: 20px !important;
+	height: 20px !important;
+	border-radius: 50% !important;
+	border: 3px solid white !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+}
+
+.tuki-driver-panel .tuki-timeline-marker.tuki-marker-pickup {
+	background: #f59e0b !important;
+}
+
+.tuki-driver-panel .tuki-timeline-marker.tuki-marker-delivery {
+	background: #10b981 !important;
+}
+
+.tuki-driver-panel .tuki-timeline-content {
+	background: #f8fafc !important;
+	padding: 1rem !important;
+	border-radius: 12px !important;
+	border-left: 4px solid #4f46e5 !important;
+}
+
+.tuki-driver-panel .tuki-timeline-label {
+	font-weight: 700 !important;
+	font-size: 0.85rem !important;
+	color: #1e293b !important;
+	margin-bottom: 0.5rem !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.3px !important;
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+}
+
+.tuki-driver-panel .tuki-timeline-label i {
+	font-size: 0.9rem !important;
+}
+
+.tuki-driver-panel .tuki-timeline-address {
+	font-size: 0.9rem !important;
+	color: #475569 !important;
+	display: flex !important;
+	align-items: flex-start !important;
+	gap: 0.5rem !important;
+	margin-bottom: 0.75rem !important;
+}
+
+.tuki-driver-panel .tuki-timeline-address i {
+	color: #4f46e5 !important;
+	margin-top: 3px !important;
+	flex-shrink: 0 !important;
+}
+
+/* Contact Info */
+.tuki-driver-panel .tuki-contact-info {
+	margin-top: 0.75rem !important;
+	padding-top: 0.75rem !important;
+	border-top: 1px dashed #e2e8f0 !important;
+}
+
+.tuki-driver-panel .tuki-contact-link {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 0.4rem !important;
+	padding: 0.5rem 0.85rem !important;
+	background: #eef2ff !important;
+	border-radius: 8px !important;
+	color: #4f46e5 !important;
+	text-decoration: none !important;
+	font-size: 0.8rem !important;
+	font-weight: 600 !important;
+	transition: all 0.2s ease !important;
+	border: 1px solid #c7d2fe !important;
+}
+
+.tuki-driver-panel .tuki-contact-link:hover {
+	background: #4f46e5 !important;
+	color: white !important;
+	border-color: #4f46e5 !important;
+}
+
+.tuki-driver-panel .tuki-contact-link i {
+	font-size: 0.85rem !important;
+}
+
+/* Order Details Box */
+.tuki-driver-panel .tuki-order-details-box {
+	background: #f8fafc !important;
+	padding: 1rem !important;
+	border-radius: 12px !important;
+	margin-top: 1rem !important;
+	border: 1px solid #e2e8f0 !important;
+}
+
+/* Order Actions */
+.tuki-driver-panel .tuki-order-actions-pro {
+	padding: 1rem 1.25rem !important;
+	background: #f8fafc !important;
+	border-top: 1px solid #e2e8f0 !important;
+}
+
+.tuki-driver-panel .tuki-order-actions-main {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 0.75rem !important;
+}
+
+/* Action Buttons */
+.tuki-driver-panel .tuki-btn-action-large {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 1rem 1.5rem !important;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+	color: white !important;
+	border: none !important;
+	border-radius: 12px !important;
+	font-weight: 700 !important;
+	font-size: 1rem !important;
+	cursor: pointer !important;
+	transition: all 0.3s ease !important;
+	box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+	width: 100% !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.5px !important;
+}
+
+.tuki-driver-panel .tuki-btn-action-large:hover {
+	background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+	transform: translateY(-2px) !important;
+	box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45) !important;
+}
+
+.tuki-driver-panel .tuki-btn-action-large:active {
+	transform: translateY(0) !important;
+}
+
+.tuki-driver-panel .tuki-btn-action-large i {
+	margin-right: 0.5rem !important;
+}
+
+/* ================================================
+   ACTION DOCK (Bottom Navigation)
+   ================================================ */
+
+.tuki-driver-panel .tuki-action-dock {
+	position: fixed !important;
+	bottom: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	background: white !important;
+	border-top: 1px solid #e2e8f0 !important;
+	padding: 0.5rem 1rem !important;
+	padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
+	display: flex !important;
+	justify-content: space-around !important;
+	align-items: flex-end !important;
+	z-index: 1000 !important;
+	box-shadow: 0 -4px 20px rgba(0,0,0,0.08) !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: center !important;
+	gap: 0.25rem !important;
+	padding: 0.5rem 1rem !important;
+	border-radius: 12px !important;
+	text-decoration: none !important;
+	color: #64748b !important;
+	font-size: 0.65rem !important;
+	font-weight: 600 !important;
+	transition: all 0.2s ease !important;
+	min-width: 60px !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.3px !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn i {
+	font-size: 1.3rem !important;
+	margin-bottom: 2px !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn:hover,
+.tuki-driver-panel .tuki-dock-btn:active {
+	color: #4f46e5 !important;
+	background: rgba(79, 70, 229, 0.1) !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn.primary {
+	background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+	color: white !important;
+	border-radius: 50% !important;
+	width: 60px !important;
+	height: 60px !important;
+	min-width: 60px !important;
+	margin-top: -20px !important;
+	box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4) !important;
+	padding: 0 !important;
+	justify-content: center !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn.primary span {
+	display: none !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn.primary i {
+	font-size: 1.5rem !important;
+	margin: 0 !important;
+}
+
+.tuki-driver-panel .tuki-dock-btn.primary:hover {
+	transform: scale(1.1) !important;
+	box-shadow: 0 6px 24px rgba(79, 70, 229, 0.5) !important;
+}
+
+/* ================================================
+   VALIDATION SECTIONS
+   ================================================ */
+
+.tuki-driver-panel .tuki-validation-section-pro {
+	background: #fffbeb !important;
+	border: 1px solid #fde68a !important;
+	border-radius: 12px !important;
+	padding: 1rem !important;
+}
+
+.tuki-driver-panel .tuki-validation-title {
+	font-weight: 700 !important;
+	font-size: 0.9rem !important;
+	color: #92400e !important;
+	margin-bottom: 0.75rem !important;
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+}
+
+.tuki-driver-panel .tuki-input {
+	width: 100% !important;
+	padding: 0.85rem 1rem !important;
+	background: white !important;
+	border: 2px solid #e2e8f0 !important;
+	border-radius: 10px !important;
+	font-size: 1rem !important;
+	font-family: inherit !important;
+	transition: all 0.2s ease !important;
+}
+
+.tuki-driver-panel .tuki-input:focus {
+	outline: none !important;
+	border-color: #4f46e5 !important;
+	box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+}
+
+.tuki-driver-panel .tuki-label {
+	display: block !important;
+	font-size: 0.85rem !important;
+	font-weight: 600 !important;
+	color: #64748b !important;
+	margin-bottom: 0.5rem !important;
+}
+
+/* ================================================
+   FILE UPLOAD
+   ================================================ */
+
+.tuki-driver-panel .tuki-file-upload-box {
+	border: 2px dashed #cbd5e1 !important;
+	border-radius: 12px !important;
+	padding: 1.5rem !important;
+	text-align: center !important;
+	background: #f8fafc !important;
+	transition: all 0.2s ease !important;
+}
+
+.tuki-driver-panel .tuki-file-upload-box:hover {
+	border-color: #4f46e5 !important;
+	background: #eef2ff !important;
+}
+
+.tuki-driver-panel .tuki-file-upload-label {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+	cursor: pointer !important;
+	color: #64748b !important;
+}
+
+.tuki-driver-panel .tuki-file-upload-label i {
+	font-size: 2rem !important;
+	color: #4f46e5 !important;
+}
+
+/* ================================================
+   EMPTY STATE
+   ================================================ */
+
+.tuki-driver-panel .tuki-empty-state {
+	text-align: center !important;
+	padding: 3rem 2rem !important;
+	background: white !important;
+	border-radius: 16px !important;
+	border: 2px dashed #e2e8f0 !important;
+}
+
+.tuki-driver-panel .tuki-empty-icon {
+	width: 80px !important;
+	height: 80px !important;
+	background: #f1f5f9 !important;
+	border-radius: 50% !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin: 0 auto 1.5rem !important;
+}
+
+.tuki-driver-panel .tuki-empty-icon i {
+	font-size: 2rem !important;
+	color: #94a3b8 !important;
+}
+
+.tuki-driver-panel .tuki-empty-state h3 {
+	font-size: 1.25rem !important;
+	font-weight: 700 !important;
+	color: #1e293b !important;
+	margin: 0 0 0.5rem 0 !important;
+}
+
+.tuki-driver-panel .tuki-empty-state p {
+	color: #64748b !important;
+	margin: 0 !important;
+	font-size: 0.95rem !important;
+}
+
+/* ================================================
+   TOASTS
+   ================================================ */
+
+.tuki-toast-container {
+	position: fixed !important;
+	bottom: 90px !important;
+	right: 1rem !important;
+	left: 1rem !important;
+	z-index: 9999 !important;
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 0.5rem !important;
+	pointer-events: none !important;
+}
+
+.tuki-toast {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.75rem !important;
+	padding: 1rem 1.25rem !important;
+	background: white !important;
+	border-radius: 12px !important;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+	border-left: 4px solid #10b981 !important;
+	animation: slideUp 0.3s ease !important;
+	font-size: 0.95rem !important;
+	font-weight: 500 !important;
+	pointer-events: all !important;
+}
+
+.tuki-toast.success {
+	border-left-color: #10b981 !important;
+}
+
+.tuki-toast.success i {
+	color: #10b981 !important;
+}
+
+.tuki-toast.error {
+	border-left-color: #ef4444 !important;
+}
+
+.tuki-toast.error i {
+	color: #ef4444 !important;
+}
+
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ================================================
+   ALERTS
+   ================================================ */
+
+.tuki-driver-panel .tuki-alert {
+	padding: 1rem 1.25rem !important;
+	border-radius: 12px !important;
+	margin-bottom: 1rem !important;
+	font-size: 0.95rem !important;
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.75rem !important;
+}
+
+.tuki-driver-panel .tuki-alert-warning {
+	background: #fef3c7 !important;
+	border: 1px solid #fde047 !important;
+	color: #92400e !important;
+}
+
+.tuki-driver-panel .tuki-alert-danger {
+	background: #fee2e2 !important;
+	border: 1px solid #fecaca !important;
+	color: #991b1b !important;
+}
+
+/* ================================================
+   RESPONSIVE - SMALL PHONES (< 375px)
+   ================================================ */
+
+@media (max-width: 374px) {
+	.tuki-driver-panel .tuki-container {
+		padding: 0.75rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-card {
+		padding: 1rem !important;
+		border-radius: 16px !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-avatar {
+		width: 55px !important;
+		height: 55px !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-name {
+		font-size: 1.1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-meta {
+		font-size: 0.75rem !important;
+		gap: 0.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stats-strip {
+		gap: 0.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill {
+		padding: 0.75rem 0.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-number {
+		font-size: 1.4rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-text {
+		font-size: 0.6rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-header-pro {
+		padding: 0.85rem 1rem !important;
+		flex-wrap: wrap !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-number-badge {
+		font-size: 1.1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-btn-action-large {
+		padding: 0.85rem 1rem !important;
+		font-size: 0.9rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-dock-btn {
+		padding: 0.4rem 0.6rem !important;
+		min-width: 50px !important;
+		font-size: 0.55rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-dock-btn i {
+		font-size: 1.1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-dock-btn.primary {
+		width: 50px !important;
+		height: 50px !important;
+		min-width: 50px !important;
+	}
+}
+
+/* ================================================
+   RESPONSIVE - TABLET (768px - 1023px)
+   ================================================ */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+	.tuki-driver-panel {
+		padding-bottom: 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-container {
+		max-width: 720px !important;
+		padding: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-action-dock {
+		display: none !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-card {
+		padding: 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-content {
+		flex-direction: row !important;
+		justify-content: space-between !important;
+		align-items: center !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-profile {
+		flex: 1 !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-avatar {
+		width: 80px !important;
+		height: 80px !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-name {
+		font-size: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stats-strip {
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill {
+		padding: 1.25rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-number {
+		font-size: 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-orders-list {
+		display: grid !important;
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-card-pro {
+		height: fit-content !important;
+	}
+}
+
+/* ================================================
+   RESPONSIVE - DESKTOP (1024px+)
+   ================================================ */
+
+@media (min-width: 1024px) {
+	.tuki-driver-panel {
+		padding: 2rem 0 !important;
+		background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+	}
+	
+	.tuki-driver-panel .tuki-container {
+		max-width: 1200px !important;
+		padding: 0 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-action-dock {
+		display: none !important;
+	}
+	
+	/* Desktop Layout - Two Column */
+	.tuki-driver-panel .tuki-dashboard-content {
+		display: grid !important;
+		grid-template-columns: 350px 1fr !important;
+		grid-template-rows: auto auto 1fr !important;
+		gap: 1.5rem !important;
+		align-items: start !important;
+	}
+	
+	/* Hero card spans left column */
+	.tuki-driver-panel .tuki-hero-card {
+		grid-column: 1 !important;
+		grid-row: 1 / 3 !important;
+		padding: 2rem !important;
+		position: sticky !important;
+		top: 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-content {
+		flex-direction: column !important;
+		align-items: center !important;
+		text-align: center !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-profile {
+		flex-direction: column !important;
+		text-align: center !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-avatar {
+		width: 100px !important;
+		height: 100px !important;
+		margin-bottom: 0.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-name {
+		font-size: 1.6rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-meta {
+		justify-content: center !important;
+	}
+	
+	/* Stats strip in right column top */
+	.tuki-driver-panel .tuki-stats-strip {
+		grid-column: 2 !important;
+		grid-row: 1 !important;
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill {
+		padding: 1.5rem !important;
+		border-radius: 16px !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-number {
+		font-size: 2.25rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-text {
+		font-size: 0.75rem !important;
+	}
+	
+	/* Earnings card below stats */
+	.tuki-driver-panel .tuki-earnings-card {
+		grid-column: 2 !important;
+		grid-row: 2 !important;
+		padding: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-earnings-grid {
+		justify-content: flex-start !important;
+		gap: 3rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-earnings-value {
+		font-size: 1.75rem !important;
+	}
+	
+	/* Orders section spans full width below */
+	.tuki-driver-panel .tuki-section {
+		grid-column: 1 / -1 !important;
+	}
+	
+	.tuki-driver-panel .tuki-section-header {
+		margin-bottom: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-section-header h3 {
+		font-size: 1.3rem !important;
+	}
+	
+	/* Orders grid for desktop */
+	.tuki-driver-panel .tuki-orders-list {
+		display: grid !important;
+		grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)) !important;
+		gap: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-card-pro {
+		height: 100% !important;
+		display: flex !important;
+		flex-direction: column !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-body-pro {
+		flex: 1 !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-header-pro {
+		padding: 1.25rem 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-number-badge {
+		font-size: 1.4rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-body-pro {
+		padding: 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-order-actions-pro {
+		padding: 1.25rem 1.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-btn-action-large {
+		padding: 1.15rem 2rem !important;
+		font-size: 1.05rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-btn-action-large:hover {
+		transform: translateY(-3px) !important;
+	}
+	
+	/* Empty state for desktop */
+	.tuki-driver-panel .tuki-empty-state {
+		padding: 4rem 3rem !important;
+		grid-column: 1 / -1 !important;
+	}
+	
+	.tuki-driver-panel .tuki-empty-icon {
+		width: 100px !important;
+		height: 100px !important;
+	}
+	
+	.tuki-driver-panel .tuki-empty-icon i {
+		font-size: 2.5rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-empty-state h3 {
+		font-size: 1.5rem !important;
+	}
+}
+
+/* ================================================
+   RESPONSIVE - LARGE DESKTOP (1400px+)
+   ================================================ */
+
+@media (min-width: 1400px) {
+	.tuki-driver-panel .tuki-container {
+		max-width: 1400px !important;
+	}
+	
+	.tuki-driver-panel .tuki-dashboard-content {
+		grid-template-columns: 380px 1fr !important;
+		gap: 2rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-avatar {
+		width: 120px !important;
+		height: 120px !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-name {
+		font-size: 1.8rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-orders-list {
+		grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)) !important;
+	}
+	
+	.tuki-driver-panel .tuki-stat-pill .tuki-stat-number {
+		font-size: 2.5rem !important;
+	}
+}
+
+/* ================================================
+   DESKTOP NAVIGATION BAR (replaces dock)
+   ================================================ */
+
+@media (min-width: 1024px) {
+	.tuki-driver-panel .tuki-desktop-nav {
+		display: flex !important;
+		background: white !important;
+		border-radius: 16px !important;
+		padding: 0.75rem !important;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+		border: 1px solid #e2e8f0 !important;
+		gap: 0.5rem !important;
+		grid-column: 1 !important;
+		margin-top: 1rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-desktop-nav-btn {
+		flex: 1 !important;
+		display: flex !important;
+		flex-direction: column !important;
+		align-items: center !important;
+		gap: 0.35rem !important;
+		padding: 0.85rem 0.5rem !important;
+		border-radius: 12px !important;
+		text-decoration: none !important;
+		color: #64748b !important;
+		font-size: 0.7rem !important;
+		font-weight: 600 !important;
+		transition: all 0.2s ease !important;
+		text-transform: uppercase !important;
+		letter-spacing: 0.3px !important;
+		background: transparent !important;
+		border: none !important;
+		cursor: pointer !important;
+	}
+	
+	.tuki-driver-panel .tuki-desktop-nav-btn i {
+		font-size: 1.25rem !important;
+	}
+	
+	.tuki-driver-panel .tuki-desktop-nav-btn:hover {
+		background: #eef2ff !important;
+		color: #4f46e5 !important;
+	}
+	
+	.tuki-driver-panel .tuki-desktop-nav-btn.active {
+		background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+		color: white !important;
+	}
+}
+
+/* Hide desktop nav on mobile */
+@media (max-width: 1023px) {
+	.tuki-driver-panel .tuki-desktop-nav {
+		display: none !important;
+	}
+}
+
+/* ================================================
+   PRINT STYLES
+   ================================================ */
+
+@media print {
+	.tuki-driver-panel .tuki-action-dock,
+	.tuki-driver-panel .tuki-desktop-nav,
+	.tuki-driver-panel .tuki-hero-toggle {
+		display: none !important;
+	}
+	
+	.tuki-driver-panel {
+		background: white !important;
+	}
+	
+	.tuki-driver-panel .tuki-hero-card {
+		background: #4f46e5 !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+}

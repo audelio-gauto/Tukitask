@@ -1,0 +1,1339 @@
+/**
+ * TukiTask Advanced Filters Styles
+ */
+
+/* ========================================
+   Filter Wrapper
+   ======================================== */
+.tukitask-filters-wrapper {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.tukitask-filters-wrapper.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.tukitask-filters-wrapper.sticky {
+    position: sticky;
+    top: 100px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+/* ========================================
+   Filter Header
+   ======================================== */
+.tukitask-filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.tukitask-filters-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tukitask-filters-header h3 svg {
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+}
+
+.tukitask-filters-clear {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.tukitask-filters-clear:hover {
+    background: #fef2f2;
+}
+
+/* ========================================
+   Filter Body
+   ======================================== */
+.tukitask-filters-body {
+    padding: 8px 0;
+}
+
+/* ========================================
+   Filter Sections
+   ======================================== */
+.tukitask-filter-section {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.tukitask-filter-section:last-child {
+    border-bottom: none;
+}
+
+.tukitask-filter-section.highlight {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    margin: 8px 12px;
+    border-radius: 12px;
+    border: none;
+}
+
+.filter-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.tukitask-filter-section.collapsible .filter-section-header:hover {
+    background: #f9fafb;
+}
+
+.filter-section-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.collapse-icon {
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
+    transition: transform 0.2s;
+}
+
+.tukitask-filter-section.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.filter-section-content {
+    padding: 0 20px 16px;
+}
+
+.tukitask-filter-section.collapsed .filter-section-content {
+    display: none;
+}
+
+/* ========================================
+   Llega Hoy Toggle
+   ======================================== */
+.tukitask-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tukitask-filter-toggle input {
+    display: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: #d1d5db;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.tukitask-filter-toggle input:checked + .toggle-switch {
+    background: #f59e0b;
+}
+
+.tukitask-filter-toggle input:checked + .toggle-switch::after {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #92400e;
+}
+
+.toggle-label svg {
+    width: 18px;
+    height: 18px;
+    color: #f59e0b;
+}
+
+/* ========================================
+   Range Filter (Distance)
+   ======================================== */
+.tukitask-range-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.range-value {
+    font-weight: 600;
+    color: #10b981;
+}
+
+.tukitask-range-filter input[type="range"] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+}
+
+.tukitask-range-filter input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    transition: transform 0.2s;
+}
+
+.tukitask-range-filter input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.range-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.range-preset {
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.range-preset:hover {
+    background: #e5e7eb;
+}
+
+.range-preset.active {
+    background: #10b981;
+    color: white;
+}
+
+/* ========================================
+   Price Filter
+   ======================================== */
+.tukitask-price-range {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.price-input-group {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    background: #f3f4f6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.price-input-group .currency {
+    padding: 0 8px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.price-input-group input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px 10px 0;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    outline: none;
+}
+
+.price-separator {
+    color: #9ca3af;
+}
+
+.price-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.price-preset {
+    padding: 8px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #4b5563;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.price-preset:hover {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+/* ========================================
+   Rating Filter
+   ======================================== */
+.tukitask-rating-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rating-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.rating-option:hover {
+    background: #f9fafb;
+}
+
+.rating-option input {
+    display: none;
+}
+
+.rating-option input:checked + .rating-stars {
+    color: #f59e0b;
+}
+
+.rating-option input:checked ~ .rating-text,
+.rating-option input:checked ~ .rating-count {
+    font-weight: 600;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 2px;
+    color: #d1d5db;
+}
+
+.rating-stars svg {
+    width: 16px;
+    height: 16px;
+}
+
+.rating-text {
+    flex: 1;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.rating-count {
+    font-size: 12px;
+    color: #9ca3af;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* ========================================
+   Delivery Filter
+   ======================================== */
+.tukitask-delivery-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delivery-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.delivery-option:hover {
+    background: #f9fafb;
+}
+
+.delivery-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
+}
+
+.option-icon {
+    font-size: 16px;
+}
+
+.option-text {
+    flex: 1;
+    font-size: 13px;
+    color: #374151;
+}
+
+/* ========================================
+   Category & Vendor Filters
+   ======================================== */
+.category-search,
+.vendor-search {
+    margin-bottom: 12px;
+}
+
+.category-search input,
+.vendor-search input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.category-search input:focus,
+.vendor-search input:focus {
+    border-color: #10b981;
+}
+
+.category-list,
+.vendor-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.category-option,
+.vendor-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.category-option:hover,
+.vendor-option:hover {
+    background: #f9fafb;
+}
+
+.category-option input,
+.vendor-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
+}
+
+.vendor-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.option-name {
+    flex: 1;
+    font-size: 13px;
+    color: #374151;
+}
+
+.option-count {
+    font-size: 12px;
+    color: #9ca3af;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* ========================================
+   Additional Filters
+   ======================================== */
+.tukitask-additional-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 20px 16px;
+}
+
+.additional-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    transition: background 0.2s;
+}
+
+.additional-option:hover {
+    background: #f9fafb;
+}
+
+.additional-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
+}
+
+/* ========================================
+   Filter Footer
+   ======================================== */
+.tukitask-filters-footer {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid #f3f4f6;
+    background: #f9fafb;
+}
+
+.tukitask-btn-clear {
+    flex: 1;
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tukitask-btn-clear:hover {
+    background: #f3f4f6;
+}
+
+.tukitask-btn-apply {
+    flex: 2;
+    padding: 12px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tukitask-btn-apply:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.filter-count {
+    margin-left: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+/* ========================================
+   Filter Bar (Horizontal)
+   ======================================== */
+.tukitask-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+}
+
+.filter-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.filter-bar-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.filter-bar-btn:hover {
+    background: #e5e7eb;
+}
+
+.filter-bar-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.active-filters-count {
+    background: #10b981;
+    color: white;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.quick-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.quick-filter {
+    padding: 8px 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.quick-filter:hover {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.quick-filter.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.filter-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sort-dropdown select {
+    padding: 10px 32px 10px 14px;
+    background: #f3f4f6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    appearance: none;
+}
+
+.view-toggle {
+    display: flex;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.view-btn {
+    padding: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-btn.active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-btn svg {
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+}
+
+.view-btn.active svg {
+    color: #10b981;
+}
+
+/* ========================================
+   Active Filters Tags
+   ======================================== */
+.tukitask-active-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.active-filters-label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.active-filters-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+}
+
+.active-filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.remove-tag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.remove-tag:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.clear-all-filters {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.clear-all-filters:hover {
+    text-decoration: underline;
+}
+
+/* ========================================
+   Products Container
+   ======================================== */
+.tukitask-products-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.products-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.products-count {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.count-number {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ========================================
+   Products Grid
+   ======================================== */
+.tukitask-products-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.tukitask-products-grid.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.tukitask-products-grid.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.tukitask-products-grid.columns-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.tukitask-products-grid.view-list {
+    grid-template-columns: 1fr;
+}
+
+.tukitask-products-grid.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ========================================
+   Product Card
+   ======================================== */
+.tukitask-product-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.tukitask-product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.view-list .tukitask-product-card {
+    display: flex;
+}
+
+.product-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.view-list .product-link {
+    display: flex;
+    flex: 1;
+}
+
+.product-image-wrapper {
+    position: relative;
+    padding-top: 100%;
+    background: #f3f4f6;
+    overflow: hidden;
+}
+
+.view-list .product-image-wrapper {
+    width: 200px;
+    padding-top: 0;
+    flex-shrink: 0;
+}
+
+.product-image-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.tukitask-product-card:hover .product-image-wrapper img {
+    transform: scale(1.05);
+}
+
+.view-list .product-image-wrapper img {
+    position: relative;
+    height: 100%;
+}
+
+.product-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.product-badge.llega-hoy {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+.product-badge.sale {
+    background: #ef4444;
+    color: white;
+    top: auto;
+    bottom: 12px;
+}
+
+.product-wishlist {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tukitask-product-card:hover .product-wishlist {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.product-wishlist svg {
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.product-wishlist:hover svg,
+.product-wishlist.active svg {
+    color: #ef4444;
+    fill: #ef4444;
+}
+
+.product-info {
+    padding: 16px;
+}
+
+.view-list .product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.product-vendor {
+    display: block;
+    font-size: 12px;
+    color: #10b981;
+    margin-bottom: 4px;
+}
+
+.product-name {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.product-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #f59e0b;
+}
+
+.product-rating svg {
+    width: 14px;
+    height: 14px;
+}
+
+.review-count {
+    color: #9ca3af;
+}
+
+.product-distance {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.product-distance svg {
+    width: 14px;
+    height: 14px;
+}
+
+.product-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.product-price del {
+    font-size: 14px;
+    color: #9ca3af;
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+.product-price ins {
+    text-decoration: none;
+    color: #10b981;
+}
+
+.product-actions {
+    padding: 0 16px 16px;
+}
+
+.view-list .product-actions {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+}
+
+.btn-add-to-cart {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-to-cart:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-add-to-cart svg {
+    width: 18px;
+    height: 18px;
+}
+
+.out-of-stock {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+/* ========================================
+   No Results
+   ======================================== */
+.no-products-found {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.no-products-found svg {
+    width: 64px;
+    height: 64px;
+    color: #d1d5db;
+    margin-bottom: 16px;
+}
+
+.no-products-found h4 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #374151;
+}
+
+.no-products-found p {
+    margin: 0;
+    color: #6b7280;
+}
+
+/* ========================================
+   Loading & Error States
+   ======================================== */
+.products-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #10b981;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-spinner.small {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.products-error {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+.products-error svg {
+    width: 48px;
+    height: 48px;
+    color: #ef4444;
+    margin-bottom: 16px;
+}
+
+/* ========================================
+   Pagination
+   ======================================== */
+.tukitask-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.pagination-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.pagination-btn {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.pagination-btn.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.pagination-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ========================================
+   Mobile Styles
+   ======================================== */
+@media (max-width: 1024px) {
+    .tukitask-products-grid.columns-4 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .tukitask-filters-wrapper.sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        z-index: 9999;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        border-radius: 0;
+    }
+    
+    .tukitask-filters-wrapper.mobile-open {
+        transform: translateX(0);
+    }
+    
+    body.filters-open {
+        overflow: hidden;
+    }
+    
+    .tukitask-products-grid.columns-3,
+    .tukitask-products-grid.columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .filter-bar-left {
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+    
+    .quick-filters {
+        display: none;
+    }
+    
+    .tukitask-filter-bar {
+        flex-wrap: wrap;
+    }
+    
+    .filter-bar-right {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #f3f4f6;
+    }
+    
+    .view-list .tukitask-product-card {
+        flex-direction: column;
+    }
+    
+    .view-list .product-image-wrapper {
+        width: 100%;
+        padding-top: 60%;
+    }
+    
+    .view-list .product-actions {
+        padding: 0 16px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tukitask-products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .product-info {
+        padding: 12px;
+    }
+    
+    .product-name {
+        font-size: 14px;
+    }
+    
+    .product-price {
+        font-size: 16px;
+    }
+    
+    .product-actions {
+        padding: 0 12px 12px;
+    }
+    
+    .btn-add-to-cart {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .pagination-buttons {
+        gap: 4px;
+    }
+    
+    .pagination-btn {
+        min-width: 36px;
+        height: 36px;
+    }
+}

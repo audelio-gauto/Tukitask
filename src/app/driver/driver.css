@@ -1,0 +1,468 @@
+/* TukiTask Driver Panel - Modern CSS (Bolt-style) */
+:root {
+  --tuki-primary: #6366f1;
+  --tuki-primary-dark: #4f46e5;
+  --tuki-primary-light: #818cf8;
+  --tuki-success: #10b981;
+  --tuki-success-dark: #059669;
+  --tuki-danger: #ef4444;
+  --tuki-warning: #f59e0b;
+  --tuki-background: #f3f4f6;
+  --tuki-surface: #ffffff;
+  --tuki-text-main: #111827;
+  --tuki-text-secondary: #6b7280;
+  --tuki-border: #e5e7eb;
+  --tuki-radius-sm: 0.5rem;
+  --tuki-radius-md: 0.75rem;
+  --tuki-radius-lg: 1rem;
+  --tuki-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tuki-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tuki-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Fullscreen app container */
+.tuki-driver-app {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  background: var(--tuki-background);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--tuki-text-main);
+}
+
+/* Map background */
+.tuki-map {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  background: #e5e7eb;
+}
+.tuki-map .leaflet-control-attribution { display: none !important; }
+
+/* Driver self marker on map */
+.tuki-driver-self-marker {
+  width: 20px;
+  height: 20px;
+  background: #10b981;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.25), 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Floating buttons */
+.tuki-float-btn {
+  position: absolute;
+  z-index: 100;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #1e293b;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.tuki-float-btn:active { transform: scale(0.92); }
+.tuki-float-btn.menu { top: 16px; left: 16px; }
+.tuki-float-btn.locate { top: 16px; right: 16px; }
+
+/* Drawer (sidebar) */
+.tuki-drawer {
+  position: fixed;
+  top: 0; left: 0;
+  height: 100%; width: 300px;
+  background: #fff;
+  z-index: 99999;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+}
+.tuki-drawer.open { transform: translateX(0); }
+
+.tuki-drawer-header {
+  padding: 2rem 1.5rem 1.5rem;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.tuki-drawer-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-color: #d1d5db;
+  border: 3px solid rgba(255,255,255,0.4);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+.tuki-drawer-name { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+.tuki-drawer-email { color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+
+.tuki-drawer-body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+
+.tuki-drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.tuki-drawer-link svg { width: 20px; height: 20px; color: #6b7280; flex-shrink: 0; }
+.tuki-drawer-link:hover,
+.tuki-drawer-link.active { background: #f0fdf4; color: #059669; }
+.tuki-drawer-link:hover svg,
+.tuki-drawer-link.active svg { color: #059669; }
+
+.tuki-drawer-footer { border-top: 1px solid #e5e7eb; padding: 0.5rem 0; }
+
+/* Overlay */
+.tuki-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 99998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(2px);
+}
+.tuki-overlay.active { opacity: 1; pointer-events: auto; }
+
+/* Bottom Sheet */
+.tuki-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 50;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.tuki-sheet.collapsed { transform: translateY(calc(100% - 140px)); }
+.tuki-sheet.half { transform: translateY(calc(100% - 50vh)); }
+.tuki-sheet.full { transform: translateY(0); }
+
+.tuki-sheet-handle {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+  cursor: grab;
+  flex-shrink: 0;
+  user-select: none;
+}
+.tuki-sheet-bar { width: 40px; height: 5px; background: #d1d5db; border-radius: 999px; }
+
+.tuki-sheet-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem 2rem;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Availability Toggle */
+.tuki-availability {
+  background: var(--tuki-surface);
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  margin-top: 0.5rem;
+  box-shadow: var(--tuki-shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--tuki-border);
+}
+
+.tuki-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.tuki-status-online { background: rgba(16, 185, 129, 0.1); color: var(--tuki-success); }
+.tuki-status-offline { background: rgba(239, 68, 68, 0.1); color: var(--tuki-danger); }
+
+/* Toggle switch */
+.tuki-toggle { position: relative; display: inline-block; width: 3.5rem; height: 2rem; }
+.tuki-toggle input { opacity: 0; width: 0; height: 0; }
+.tuki-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #cbd5e1;
+  transition: .4s;
+  border-radius: 2rem;
+}
+.tuki-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 1.5rem; width: 1.5rem;
+  left: 0.25rem; bottom: 0.25rem;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+input:checked + .tuki-toggle-slider { background-color: var(--tuki-success); }
+input:checked + .tuki-toggle-slider:before { transform: translateX(1.5rem); }
+
+/* Stats Grid */
+.tuki-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.tuki-stat-card {
+  background: var(--tuki-surface);
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: var(--tuki-shadow-md);
+  border: 1px solid var(--tuki-border);
+  transition: transform 0.2s ease;
+  text-align: center;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  cursor: pointer;
+  color: inherit;
+}
+.tuki-stat-card:hover { transform: translateY(-2px); box-shadow: var(--tuki-shadow-lg); }
+.tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: var(--tuki-primary-light); }
+.tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--tuki-primary); line-height: 1; margin-bottom: 0.5rem; }
+.tuki-stat-label { color: var(--tuki-text-secondary); font-size: 0.875rem; font-weight: 500; }
+
+/* Heading */
+.tuki-heading {
+  font-weight: 700;
+  color: var(--tuki-text-main);
+  margin-bottom: 0.5rem;
+  font-size: 1.15rem;
+  margin-top: 0.5rem;
+}
+
+/* Buttons */
+.tuki-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--tuki-radius-md);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  width: 100%;
+}
+.tuki-btn-primary {
+  background: linear-gradient(135deg, var(--tuki-primary), var(--tuki-primary-dark));
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(99,102,241,0.3);
+}
+.tuki-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 8px -1px rgba(99,102,241,0.4); }
+.tuki-btn-success {
+  background: linear-gradient(135deg, var(--tuki-success), var(--tuki-success-dark));
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(16,185,129,0.3);
+}
+
+/* Order Card */
+.tuki-order-card {
+  background: var(--tuki-surface);
+  border-radius: 14px;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--tuki-shadow-md);
+  border: 1px solid var(--tuki-border);
+  overflow: hidden;
+}
+.tuki-order-header {
+  background: #f9fafb;
+  padding: 1rem;
+  border-bottom: 1px solid var(--tuki-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tuki-order-id { font-weight: 700; font-size: 1.125rem; }
+.tuki-order-body { padding: 1.5rem; }
+.tuki-order-actions {
+  padding: 1rem;
+  border-top: 1px solid var(--tuki-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* Route timeline */
+.tuki-route-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--tuki-border);
+  margin-left: 0.5rem;
+}
+.tuki-route-point {
+  position: relative;
+  padding: 0.5rem 0;
+}
+.tuki-route-point::before {
+  content: '';
+  position: absolute;
+  left: -1.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--tuki-primary);
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--tuki-primary);
+}
+.tuki-route-point.pickup::before { background: var(--tuki-warning); box-shadow: 0 0 0 2px var(--tuki-warning); }
+.tuki-route-point.delivery::before { background: var(--tuki-success); box-shadow: 0 0 0 2px var(--tuki-success); }
+
+.tuki-route-meta { font-size: 0.8rem; color: var(--tuki-text-secondary); margin-bottom: 0.25rem; }
+.tuki-route-address { font-weight: 500; font-size: 0.9rem; }
+.tuki-route-phone { font-size: 0.85rem; color: var(--tuki-primary); margin-top: 0.25rem; }
+
+/* Info row */
+.tuki-info-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; align-items: flex-start; }
+.tuki-info-icon { color: var(--tuki-text-secondary); min-width: 1.25rem; margin-top: 0.2rem; }
+
+/* Settings form */
+.tuki-form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; color: var(--tuki-text-secondary); }
+.tuki-form-input {
+  width: 100%; padding: 0.75rem;
+  border: 1px solid var(--tuki-border);
+  border-radius: var(--tuki-radius-sm);
+  font-size: 1rem; transition: border 0.2s;
+  outline: none;
+  background: white;
+}
+.tuki-form-input:focus { border-color: var(--tuki-primary); }
+
+/* Normal layout (non-map screens) */
+.tuki-normal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.tuki-normal-header .menu-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1e293b;
+}
+.tuki-screen-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: var(--tuki-text-main); }
+.tuki-back-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--tuki-primary);
+  text-decoration: none;
+}
+.tuki-normal-content { padding: 1rem; overflow-y: auto; height: calc(100vh - 72px); }
+
+/* Loading spinner */
+.tuki-spinner {
+  width: 40px; height: 40px;
+  border: 4px solid var(--tuki-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: tuki-spin 0.8s linear infinite;
+}
+@keyframes tuki-spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.tuki-toast-container {
+  position: fixed;
+  bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+}
+.tuki-toast {
+  background: #1e293b; color: white;
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-size: 0.9rem; font-weight: 500;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  animation: tuki-toast-in 0.3s ease-out;
+}
+@keyframes tuki-toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Responsive — Tablet: side panel */
+@media (min-width: 768px) {
+  .tuki-sheet {
+    left: auto; right: 0; top: 0; bottom: 0;
+    width: 420px; max-height: 100vh;
+    border-radius: 0;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+    transform: none !important;
+  }
+  .tuki-sheet-handle { display: none; }
+  .tuki-sheet-content { padding-top: 1.5rem; }
+  .tuki-map { right: 420px; }
+  .tuki-float-btn.locate { right: 436px; }
+}
+@media (min-width: 1024px) {
+  .tuki-sheet { width: 460px; }
+  .tuki-map { right: 460px; }
+  .tuki-float-btn.locate { right: 476px; }
+}
+@media (min-width: 1280px) {
+  .tuki-sheet { width: 500px; }
+  .tuki-map { right: 500px; }
+  .tuki-float-btn.locate { right: 516px; }
+}

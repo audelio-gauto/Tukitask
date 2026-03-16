@@ -1,0 +1,47 @@
+# Quick Upload Instructions
+
+## File to Upload
+- **Local:** `includes/Frontend/Driver_Dashboard.php`
+- **Server:** `/home/u208747126/domains/tukitask.com/public_html/id/wp-content/plugins/tukitask-local-drivers/includes/Frontend/Driver_Dashboard.php`
+
+## Changes Made
+
+### Three AJAX handlers completely rewritten:
+
+1. **ajax_toggle_availability()** 
+   - Proper nonce handling
+   - Fallback driver ID lookup
+   - Output buffering for error detection
+   - Comprehensive logging
+
+2. **ajax_request_driver_withdrawal()**
+   - Multi-level balance checking (Wallet_Manager + user_meta)
+   - Fallback withdrawal post creation
+   - Try-catch around each external call
+   - Detailed error reporting
+
+3. **ajax_register_fcm_token()**
+   - Fallback token storage (user_meta)
+   - Output buffering
+   - Consistent error handling
+
+## What This Fixes
+
+✅ Toggle availability button now returns proper JSON instead of 500
+✅ Withdrawal button now processes requests successfully  
+✅ Error handling covers all edge cases
+✅ Comprehensive logging for debugging
+
+## Testing After Upload
+
+1. Log in as driver
+2. Click toggle availability button → should see instant UI update + "Status synced" in console
+3. Click "Retirar Dinero" → modal should open
+4. Enter amount → should see "Solicitud enviada correctamente" message
+
+## Monitoring
+
+Check error logs at:
+`/home/u208747126/domains/tukitask.com/public_html/id/wp-content/debug.log`
+
+Look for messages starting with "Tukitask DEBUG:" to track execution

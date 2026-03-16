@@ -1,0 +1,144 @@
+/* Driver Frontend Styles for Tukitask Local Drivers Pro */
+
+.tukitask-driver-panel {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.driver-header {
+    background: #f9f9f9;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #46b450;
+}
+
+.driver-header h2 {
+    margin-top: 0;
+}
+
+.driver-status-control {
+    margin-top: 15px;
+}
+
+.driver-status-control select {
+    margin-left: 10px;
+    padding: 5px;
+}
+
+.driver-orders {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.driver-orders h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #46b450;
+    padding-bottom: 10px;
+}
+
+.order-card {
+    background: #f9f9f9;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #00a0d2;
+    border-radius: 4px;
+}
+
+.order-card h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.order-card p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.order-card .order-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.order-card .button {
+    margin-right: 10px;
+}
+
+/* Status Widget */
+.tukitask-driver-status-widget {
+    background: #fff;
+    padding: 15px;
+    border-left: 4px solid #46b450;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.tukitask-driver-status-widget p {
+    margin: 0 0 10px 0;
+}
+
+/* Tracking Container */
+.tukitask-tracking-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.driver-info {
+    background: #f9f9f9;
+    padding: 15px;
+    margin: 15px 0;
+    border-left: 3px solid #46b450;
+    border-radius: 4px;
+}
+
+.tracking-timeline ul {
+    list-style: none;
+    padding: 0;
+}
+
+.tracking-timeline li {
+    padding: 10px;
+    border-left: 3px solid #46b450;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.tracking-timeline li strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.tracking-timeline li small {
+    color: #666;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tukitask-driver-panel {
+        padding: 10px;
+    }
+
+    .driver-header,
+    .driver-orders {
+        padding: 15px;
+    }
+
+    .order-card .button {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+    }
+}

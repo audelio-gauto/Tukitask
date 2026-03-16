@@ -1,0 +1,44 @@
+🔧 HOTFIX DISPONIBLE - CORRIGE UNDEFINED CONSTANT ERROR
+═════════════════════════════════════════════════════════════════════════════
+
+ERROR REPORTADO:
+  Fatal error: Undefined constant "TUKITASK_LOCAL_DRIVERS_URL"
+  En: includes/Admin/Admin.php:70
+
+
+SOLUCIÓN:
+  Las constantes globales necesitan prefijo "\" dentro del namespace
+
+  ANTES:  TUKITASK_LOCAL_DRIVERS_URL
+  DESPUÉS: \TUKITASK_LOCAL_DRIVERS_URL
+
+
+ARCHIVOS CORREGIDOS:
+  ✅ includes/Admin/Admin.php (Línea 70)
+  ✅ update_plugin.php (Línea 70)
+
+Ambos archivos están listos en tu carpeta local.
+
+
+APLICAR HOTFIX:
+
+Opción 1 (Automática):
+  1. Descarga: update_plugin.php
+  2. Sube a servidor
+  3. Ejecuta: php update_plugin.php
+  
+Opción 2 (Manual):
+  1. Descarga: includes/Admin/Admin.php
+  2. Sube a servidor
+  3. Desactiva/reactiva plugin en admin
+
+TIEMPO: 2 minutos
+RIESGO: CERO
+
+
+VERIFICAR:
+  ✓ Admin de WordPress carga sin errores
+  ✓ Menú "Tukitask" aparece
+  ✓ No hay "Undefined constant" en logs
+
+¡Listo! 🎉
