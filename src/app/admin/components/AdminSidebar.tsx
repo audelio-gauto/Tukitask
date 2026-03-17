@@ -43,6 +43,7 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
+      { label: 'Driver', href: '/admin/drivers/driver' },
       { label: 'Configuración de Precios', href: '/admin/drivers/pricing' },
     ],
   },
