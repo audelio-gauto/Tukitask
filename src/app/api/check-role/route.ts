@@ -12,6 +12,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ role: null, error: 'Invalid JSON', body: bodyText }, { status: 400 });
     }
     const { email } = parsed;
+    let parsed: any;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (parseErr) {
+      console.error('Invalid JSON body received:', bodyText);
+      return NextResponse.json({ role: null, error: 'Invalid JSON', body: bodyText }, { status: 400 });
+    }
+    const { email } = parsed;
     if (!email) return NextResponse.json({ role: null, error: 'Missing email in body' }, { status: 400 });
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
