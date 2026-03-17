@@ -19,8 +19,11 @@ export default function DriverListPage() {
       setLoading(true);
       try {
         const res = await fetch('/api/admin/drivers/list');
-        if (!res.ok) throw new Error('Error cargando drivers');
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const serverMsg = json?.error || json?.message || 'Error cargando drivers';
+          throw new Error(serverMsg);
+        }
         setDrivers(json.data || []);
       } catch (err: any) {
         setError(String(err?.message || err));
