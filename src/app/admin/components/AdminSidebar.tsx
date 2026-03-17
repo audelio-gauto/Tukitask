@@ -3,7 +3,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-const menuItems = [
+interface SubItem {
+  label: string;
+  href: string;
+}
+
+interface MenuItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  subItems?: SubItem[];
+}
+
+const menuItems: MenuItem[] = [
   {
     label: 'Dashboard',
     href: '/admin',
@@ -30,6 +42,9 @@ const menuItems = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h4m4 6H6a2 2 0 01-2-2V6a2 2 0 012-2h8l6 6v6a2 2 0 01-2 2z" />
       </svg>
     ),
+    subItems: [
+      { label: 'Configuración de Precios', href: '/admin/drivers/pricing' },
+    ],
   },
   {
     label: 'Servicios',
@@ -82,6 +97,15 @@ const menuItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+
+  // Auto-expand parent menu when a sub-item is active
+  const isSubActive = (item: MenuItem) =>
+    item.subItems?.some(sub => pathname === sub.href) ?? false;
+
+  const toggleExpand = (href: string) => {
+    setExpandedMenus(prev => ({ ...prev, [href]: !prev[href] }));
+  };
 
   return (
     <aside
@@ -118,23 +142,71 @@ export default function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-2 py-2 space-y-1">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isExpanded = expandedMenus[item.href] || isSubActive(item) || (hasSubItems && isActive);
+
+          const handleMainClick = (e: React.MouseEvent) => {
+            if (hasSubItems) {
+              e.preventDefault();
+              toggleExpand(item.href);
+            }
+          };
+
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-                ${isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }
-                ${collapsed ? 'justify-center' : ''}
-              `}
-              title={collapsed ? item.label : undefined}
-            >
-              {item.icon}
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
+            <div key={item.href}>
+              <Link
+                href={hasSubItems ? item.href : item.href}
+                onClick={handleMainClick}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
+                  ${isActive
+                    ? hasSubItems
+                      ? 'text-white bg-white/5'
+                      : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }
+                  ${collapsed ? 'justify-center' : ''}
+                `}
+                title={collapsed ? item.label : undefined}
+              >
+                {item.icon}
+                {!collapsed && (
+                  <>
+                    <span className="flex-1">{item.label}</span>
+                    {hasSubItems && (
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
+                  </>
+                )}
+              </Link>
+              {/* Sub-items */}
+              {hasSubItems && isExpanded && !collapsed && (
+                <div className="ml-6 mt-1 space-y-1 border-l border-gray-700/50 pl-3">
+                  {item.subItems!.map(sub => {
+                    const isSubItemActive = pathname === sub.href;
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className={`block px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
+                          ${isSubItemActive
+                            ? 'bg-indigo-600/80 text-white'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                          }
+                        `}
+                      >
+                        {sub.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
