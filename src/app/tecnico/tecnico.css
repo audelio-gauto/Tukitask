@@ -1,0 +1,21 @@
+/* Minimal styles for tecnico panel (keeps layout imports working) */
+:root{
+  --tuki-background: #f3f4f6;
+  --tuki-surface: #ffffff;
+  --tuki-text-main: #111827;
+  --tuki-text-secondary: #6b7280;
+}
+.tuki-driver-app{
+  position: fixed; inset:0; overflow:hidden; background:var(--tuki-background);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color:var(--tuki-text-main);
+}
+.tuki-spinner{
+  width:36px;height:36px;border-radius:50%;border:4px solid rgba(0,0,0,0.08);border-top-color:rgba(0,0,0,0.25);animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.tuki-drawer{display:block}
+
+/* basic responsive main area */
+main{padding:1rem}

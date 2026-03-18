@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-const menuItems = [
+const driverMenuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/driver', icon: 'home' },
   { slug: 'deliveries', label: 'Envíos', href: '/driver/deliveries', icon: 'box' },
   { slug: 'assigned', label: 'Asignados', href: '/driver/assigned', icon: 'clipboard' },
@@ -12,6 +12,15 @@ const menuItems = [
   { slug: 'delivered', label: 'Entregados', href: '/driver/delivered', icon: 'check' },
   { slug: 'failed', label: 'Fallidos', href: '/driver/failed', icon: 'x' },
   { slug: 'settings', label: 'Configuración', href: '/driver/settings', icon: 'settings' },
+];
+
+const tecnicoMenuItems = [
+  { slug: 'dashboard', label: 'Dashboard', href: '/tecnico', icon: 'home' },
+  { slug: 'ofertas', label: 'Ofertas Activas', href: '/tecnico/ofertas', icon: 'box' },
+  { slug: 'citas', label: 'Citas Confirmadas', href: '/tecnico/citas', icon: 'clipboard' },
+  { slug: 'aceptacion', label: 'Tasa de Aceptación', href: '/tecnico/aceptacion', icon: 'check' },
+  { slug: 'ganancias', label: 'Ganancias', href: '/tecnico/ganancias', icon: 'map' },
+  { slug: 'settings', label: 'Configuración', href: '/tecnico/settings', icon: 'settings' },
 ];
 
 const icons: Record<string, React.ReactNode> = {
@@ -34,9 +43,10 @@ interface DriverDrawerProps {
   email: string;
   displayName: string;
   profilePhoto?: string;
+  role?: string | null;
 }
 
-export function DriverDrawer({ open, onClose, email, displayName, profilePhoto }: DriverDrawerProps) {
+export function DriverDrawer({ open, onClose, email, displayName, profilePhoto, role = null }: DriverDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,7 +71,7 @@ export function DriverDrawer({ open, onClose, email, displayName, profilePhoto }
           </div>
         </div>
         <div className="tuki-drawer-body">
-          {menuItems.map((item) => (
+          {(role === 'servicio' ? tecnicoMenuItems : driverMenuItems).map((item) => (
             <Link
               key={item.slug}
               href={item.href}

@@ -1,11 +1,35 @@
 // Componente de autenticación con Supabase
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function Auth() {
   const router = useRouter();
+  // If a session already exists (HMR / reload), redirect by role
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const userEmail = (user.email || '').toLowerCase();
+        const res = await fetch('/api/check-role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail }),
+        });
+        const json = await res.json();
+        if (json?.role === 'admin') router.push('/admin');
+        else if (json?.role === 'driver') router.push('/driver');
+        else if (json?.role === 'cliente') router.push('/cliente');
+        else if (json?.role === 'servicio' || json?.role === 'tecnico') router.push('/tecnico');
+        else if (json?.role) router.push('/');
+      } catch (e) {
+        // ignore
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +45,25 @@ export default function Auth() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error) {
       const userEmail = (data?.user?.email || email).toLowerCase();
+      // Esperar a que la sesión se persista en el cliente antes de redirigir
       try {
+        let tries = 0;
+        let ok = false;
+        while (tries < 10) {
+          // Obtener usuario actual
+          // eslint-disable-next-line no-await-in-loop
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData?.user) {
+            ok = true;
+            console.log('Auth persisted, user:', userData.user.email);
+            break;
+          }
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 200));
+          tries += 1;
+        }
+        if (!ok) console.warn('No se detectó sesión persistida tras iniciar sesión');
+
         const res = await fetch('/api/check-role', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -34,6 +76,8 @@ export default function Auth() {
           router.push('/driver');
         } else if (json?.role === 'cliente') {
           router.push('/cliente');
+        } else if (json?.role === 'servicio' || json?.role === 'tecnico') {
+          router.push('/tecnico');
         } else if (json?.role) {
           router.push('/');
         } else {

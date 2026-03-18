@@ -1,12 +1,14 @@
-'use client';
+ 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useDriverContext } from '../driver/context';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
 
 export default function TecnicoDashboard() {
+  const { openDrawer } = useDriverContext();
   const [available, setAvailable] = useState(false);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -41,7 +43,7 @@ export default function TecnicoDashboard() {
         <DriverMap onLocate={() => {}} />
       </div>
 
-      <button className="tuki-float-btn menu" aria-label="Menú">
+      <button className="tuki-float-btn menu" aria-label="Menú" onClick={openDrawer}>
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
