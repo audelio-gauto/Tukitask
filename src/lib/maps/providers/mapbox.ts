@@ -16,7 +16,10 @@ export const mapboxProvider = (apiKey: string): MapProvider => ({
   geocode: async (query: string) => {
     const url = `${MAPBOX_BASE}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${apiKey}&limit=5&autocomplete=true&language=es`
     const res = await fetch(url)
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.warn(`[mapbox geocode] API returned ${res.status}: ${res.statusText}`)
+      return null
+    }
     const data = await res.json()
     const feature = data.features && data.features[0]
     if (!feature) return null
@@ -45,7 +48,10 @@ export const mapboxProvider = (apiKey: string): MapProvider => ({
 export async function mapboxGeoSearch(query: string, apiKey: string, limit = 6): Promise<GeocodeResult[]> {
   const url = `${MAPBOX_BASE}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${apiKey}&limit=${limit}&autocomplete=true&language=es`
   const res = await fetch(url)
-  if (!res.ok) return []
+  if (!res.ok) {
+    console.warn(`[mapboxGeoSearch] API returned ${res.status}: ${res.statusText}`)
+    return []
+  }
   const data = await res.json()
   return (data.features || []).map(toGeocodeResult)
 }
