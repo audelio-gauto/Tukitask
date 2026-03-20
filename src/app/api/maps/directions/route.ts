@@ -66,20 +66,31 @@ export async function POST(req: Request) {
     }
     await recordSuccess(cbName)
 
-    // if provider returned a polyline string but no coords, decode it
-    if ((!res.coords || res.coords.length === 0) && res.polyline) {
+    // Normalize coords to { lat, lng } objects
+    let coords: Array<{ lat: number; lng: number }> = []
+
+    if (res.coords && res.coords.length > 0) {
+      // coords may be [lat, lng] tuples or already { lat, lng } objects
+      coords = res.coords.map((p: any) => {
+        if (Array.isArray(p)) return { lat: p[0], lng: p[1] }
+        if (p && typeof p === 'object' && 'lat' in p) return { lat: p.lat, lng: p.lng }
+        return p
+      })
+    } else if (res.polyline) {
       try {
         const pts = decodePolyline(res.polyline)
-        // convert to { lat, lng }
-        const coords = pts.map(p => ({ lat: p[0], lng: p[1] }))
-        return NextResponse.json({ ...res, coords })
+        coords = pts.map(p => ({ lat: p[0], lng: p[1] }))
       } catch (err) {
-        // continue returning raw
-        return NextResponse.json(res)
+        // continue without coords
       }
     }
 
-    return NextResponse.json(res)
+    return NextResponse.json({
+      ...res,
+      coords,
+      distance_meters: res.distance_meters,
+      duration_seconds: res.duration_seconds,
+    })
     } catch (err) {
     console.error('directions route error', err)
     await recordFailure('maps:directions')
