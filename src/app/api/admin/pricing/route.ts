@@ -114,6 +114,7 @@ export async function PUT(req: Request) {
     }
 
     // Update pricing settings (numeric) — null means "use default / not set"
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (Array.isArray(pricing_settings)) {
       for (const item of pricing_settings) {
         const raw = item.value
@@ -123,33 +124,71 @@ export async function PUT(req: Request) {
           errors.push(`Valor inválido para ${item.key}`)
           continue
         }
-        // Use upsert so new keys (global_base_price etc.) get created if they don't exist yet
-        const { error } = await supabaseServer
-          .from('pricing_settings')
-          .upsert(
-            { id: item.id, key: item.key, value: value ?? 0, label: item.label || item.key, description: item.description || '', updated_at: new Date().toISOString() },
-            { onConflict: 'key' }
-          )
-        if (error) errors.push(`pricing_settings ${item.key}: ${error.message}`)
+        const hasValidId = item.id && UUID_RE.test(item.id)
+        if (hasValidId) {
+          // Existing row — update by id
+          const { error } = await supabaseServer
+            .from('pricing_settings')
+            .update({ value: value ?? 0, updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+          if (error) errors.push(`pricing_settings ${item.key}: ${error.message}`)
+        } else {
+          // New row — insert if key doesn't exist, update if it does
+          const { data: existing } = await supabaseServer
+            .from('pricing_settings')
+            .select('id')
+            .eq('key', item.key)
+            .maybeSingle()
+          if (existing) {
+            const { error } = await supabaseServer
+              .from('pricing_settings')
+              .update({ value: value ?? 0, updated_at: new Date().toISOString() })
+              .eq('id', existing.id)
+            if (error) errors.push(`pricing_settings ${item.key}: ${error.message}`)
+          } else {
+            const { error } = await supabaseServer
+              .from('pricing_settings')
+              .insert({ key: item.key, value: value ?? 0, label: item.label || item.key, description: item.description || '' })
+            if (error) errors.push(`pricing_settings ${item.key}: ${error.message}`)
+          }
+        }
       }
     }
 
     // Update app settings (string values) — skip if table doesn't exist
     if (Array.isArray(app_settings) && app_settings.length > 0) {
-      // Check if app_settings table exists first
       const testQuery = await supabaseServer.from('app_settings').select('id').limit(1)
       if (testQuery.error && testQuery.error.message.includes('app_settings')) {
         console.warn('app_settings table does not exist, skipping')
       } else {
         for (const item of app_settings) {
           const value = item.value === null || item.value === undefined ? '' : String(item.value)
-          const { error } = await supabaseServer
-            .from('app_settings')
-            .upsert(
-              { id: item.id, key: item.key, value, label: item.label || item.key, description: item.description || '', updated_at: new Date().toISOString() },
-              { onConflict: 'key' }
-            )
-          if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+          const hasValidId = item.id && UUID_RE.test(item.id)
+          if (hasValidId) {
+            const { error } = await supabaseServer
+              .from('app_settings')
+              .update({ value, updated_at: new Date().toISOString() })
+              .eq('id', item.id)
+            if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+          } else {
+            const { data: existing } = await supabaseServer
+              .from('app_settings')
+              .select('id')
+              .eq('key', item.key)
+              .maybeSingle()
+            if (existing) {
+              const { error } = await supabaseServer
+                .from('app_settings')
+                .update({ value, updated_at: new Date().toISOString() })
+                .eq('id', existing.id)
+              if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+            } else {
+              const { error } = await supabaseServer
+                .from('app_settings')
+                .insert({ key: item.key, value, label: item.label || item.key, description: item.description || '' })
+              if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+            }
+          }
         }
       }
     }
