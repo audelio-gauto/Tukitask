@@ -11,6 +11,8 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.99.1",
+    "@upstash/redis": "^1.21.0",
+    "@upstash/ratelimit": "^0.1.4",
     "@types/leaflet": "^1.9.21",
     "leaflet": "^1.9.4",
     "next": "16.1.6",

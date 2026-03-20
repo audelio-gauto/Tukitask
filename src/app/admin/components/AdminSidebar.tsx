@@ -26,6 +26,16 @@ const menuItems: MenuItem[] = [
     ),
   },
   {
+    label: 'Métricas',
+    href: '/admin/metrics',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3v18h18" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 13v6M12 9v10M17 5v14" />
+      </svg>
+    ),
+  },
+  {
     label: 'Usuarios',
     href: '/admin/users',
     icon: (

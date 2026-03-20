@@ -23,7 +23,10 @@ async function getApiKeys(): Promise<{ mapbox: string; google: string }> {
   let mapbox = process.env.MAPBOX_API_KEY || ''
   let google = process.env.GOOGLE_MAPS_API_KEY || ''
   try {
-    const { data } = await supabaseServer.from('app_settings').select('key, value')
+    const { data, error } = await supabaseServer.from('app_settings').select('key, value')
+    if (error) {
+      console.warn('Supabase app_settings query error:', error.message)
+    }
     if (data) {
       for (const row of data) {
         if (row.key === 'mapbox_api_key' && row.value) mapbox = row.value
@@ -32,6 +35,9 @@ async function getApiKeys(): Promise<{ mapbox: string; google: string }> {
     }
   } catch (err) {
     console.warn('Failed to load API keys from app_settings, using env vars', err)
+  }
+  if (!mapbox && !google) {
+    console.warn('No map API keys found (neither env vars nor app_settings)')
   }
   _keyCache = { mapbox, google, ts: Date.now() }
   return { mapbox, google }

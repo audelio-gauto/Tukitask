@@ -62,10 +62,34 @@ INSERT INTO pricing_settings (key, value, label, description) VALUES
   ('min_shipping_price', 5.00, 'Precio Mínimo de Envío', 'El envío nunca costará menos de este monto.')
 ON CONFLICT (key) DO NOTHING;
 
+-- Map provider and API keys (empty by default)
+INSERT INTO pricing_settings (key, value, label, description) VALUES
+  ('map_provider', 0, 'Proveedor de Mapas', '0=osm, 1=mapbox, 2=google (valor usado por la UI)'),
+  ('mapbox_api_key', 0, 'Mapbox API Key', 'Clave pública de Mapbox para geocoding y routing'),
+  ('google_maps_api_key', 0, 'Google Maps API Key', 'Clave de Google Maps para Places/Directions')
+ON CONFLICT (key) DO NOTHING;
+
 -- Enable RLS
 ALTER TABLE package_multipliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_pricing ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pricing_settings ENABLE ROW LEVEL SECURITY;
+
+-- App-level string settings (for API keys and similar)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE,
+  value TEXT,
+  label TEXT,
+  description TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO app_settings (key, value, label, description) VALUES
+  ('mapbox_api_key', '', 'Mapbox API Key', 'Clave pública de Mapbox para geocoding y routing'),
+  ('google_maps_api_key', '', 'Google Maps API Key', 'Clave de Google Maps para Places/Directions')
+ON CONFLICT (key) DO NOTHING;
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- Policies: read for authenticated, write for admins only
 CREATE POLICY "Allow read for authenticated" ON package_multipliers FOR SELECT TO authenticated USING (true);
