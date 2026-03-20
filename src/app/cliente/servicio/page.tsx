@@ -85,6 +85,7 @@ export default function SolicitarServicioPage() {
     function onEnd() {
       if (!isDragging.current) return;
       isDragging.current = false;
+      if (!sheet) return;
       sheet.style.transition = '';
       const finalTranslate = getTranslateY();
       const viewH = window.innerHeight;
