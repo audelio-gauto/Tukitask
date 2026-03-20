@@ -567,7 +567,8 @@
   z-index: 1;
   background: #e5e7eb;
 }
-.enviar-map .leaflet-control-zoom { display: none !important; }
+.enviar-map .mapboxgl-ctrl-bottom-left,
+.enviar-map .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib { display: none !important; }
 
 /* Client map marker */
 .client-map-marker {

@@ -7,7 +7,6 @@ import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
-import GeocodeDemo from '../components/GeocodeDemo';
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes chicos', icon: '🏍️' },
@@ -530,7 +529,7 @@ export default function EnviarPaquetePage() {
         />
       </div>
 
-      {/* Distance / ETA badge — outside map container so Leaflet z-index doesn't cover it */}
+      {/* Distance / ETA badge — floating above Mapbox map */}
       {(routeDistanceMeters || distanceKm > 0) && (
         <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', top: 12, background: 'rgba(255,255,255,0.97)', padding: '8px 18px', borderRadius: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.12)', display: 'flex', gap: 16, alignItems: 'center', zIndex: 9999, pointerEvents: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

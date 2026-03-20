@@ -4,7 +4,7 @@ import { useDriverContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
-// Leaflet must be loaded client-side only (no SSR)
+// Mapbox GL must be loaded client-side only (no SSR)
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
 
 // Web Audio API: play delivery alert sound (like plugin)
@@ -147,7 +147,7 @@ export default function DriverDashboard() {
 
   return (
     <>
-      {/* Real Leaflet Map */}
+      {/* Mapbox Map */}
       <div className="tuki-map">
         <DriverMap onLocate={(fn) => { locateFnRef.current = fn; }} />
       </div>

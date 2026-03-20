@@ -226,7 +226,6 @@ export default function PricingConfigPage() {
                     onChange={e => updateSetting(provider.id, e.target.value)}
                     className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="0">OpenStreetMap (OSM)</option>
                     <option value="1">Mapbox</option>
                     <option value="2">Google Maps</option>
                   </select>

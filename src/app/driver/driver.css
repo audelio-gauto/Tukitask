@@ -38,7 +38,8 @@
   z-index: 1;
   background: #e5e7eb;
 }
-.tuki-map .leaflet-control-attribution { display: none !important; }
+.tuki-map .mapboxgl-ctrl-bottom-left,
+.tuki-map .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib { display: none !important; }
 
 /* Driver self marker on map */
 .tuki-driver-self-marker {

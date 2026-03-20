@@ -1,7 +1,16 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+
+function createMarkerEl(label: string, color: string, size = 28) {
+  const el = document.createElement('div');
+  el.style.cssText = `width:${size}px;height:${size}px;background:${color};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);`;
+  el.textContent = label;
+  return el;
+}
 
 export default function ClientMap({
   pickup,
@@ -13,173 +22,146 @@ export default function ClientMap({
   routeCoords?: Array<{ lat: number; lng: number }> | null;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapInstance = useRef<mapboxgl.Map | null>(null);
   const [ready, setReady] = useState(false);
-  const pickupMarker = useRef<L.Marker | null>(null);
-  const deliveryMarker = useRef<L.Marker | null>(null);
-  const routeLine = useRef<L.Polyline | null>(null);
+  const selfMarker = useRef<mapboxgl.Marker | null>(null);
+  const pickupMarker = useRef<mapboxgl.Marker | null>(null);
+  const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
 
+  // Initialise map
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
+    if (!mapRef.current || mapInstance.current || !MAPBOX_TOKEN) return;
 
     let mounted = true;
-    const watchIdRef: { current: number | null } = { current: null };
+    let watchId: number | null = null;
 
     const defaultLat = -25.2637;
     const defaultLng = -57.5759;
 
-    const map = L.map(mapRef.current, {
-      center: [defaultLat, defaultLng],
+    const map = new mapboxgl.Map({
+      container: mapRef.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [defaultLng, defaultLat],
       zoom: 15,
-      zoomControl: false,
+      accessToken: MAPBOX_TOKEN,
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-    const selfIcon = L.divIcon({
-      className: 'client-map-marker',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
-    });
-    const marker = L.marker([defaultLat, defaultLng], { icon: selfIcon }).addTo(map);
-    markerRef.current = marker;
+    // Self-location marker
+    const selfEl = document.createElement('div');
+    selfEl.className = 'client-map-marker';
+    selfMarker.current = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
+
     mapInstance.current = map;
 
+    map.on('load', () => {
+      if (mounted) setReady(true);
+    });
+
+    // Geolocation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           if (!mounted || !mapInstance.current) return;
-          try {
-            const { latitude, longitude } = pos.coords;
-            if ((map as any)._container) map.setView([latitude, longitude], 16, { animate: true });
-            marker.setLatLng([latitude, longitude]);
-          } catch (err) {
-            console.warn('ClientMap getCurrentPosition error', err);
-          }
+          const { latitude, longitude } = pos.coords;
+          map.flyTo({ center: [longitude, latitude], zoom: 16 });
+          selfMarker.current?.setLngLat([longitude, latitude]);
         },
         () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000 },
       );
 
-      watchIdRef.current = navigator.geolocation.watchPosition(
+      watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          if (!mounted || !mapInstance.current) return;
-          try {
-            const { latitude, longitude } = pos.coords;
-            marker.setLatLng([latitude, longitude]);
-          } catch (err) {
-            console.warn('ClientMap watchPosition error', err);
-          }
+          if (!mounted) return;
+          selfMarker.current?.setLngLat([pos.coords.longitude, pos.coords.latitude]);
         },
         () => {},
-        { enableHighAccuracy: true, maximumAge: 15000 }
+        { enableHighAccuracy: true, maximumAge: 15000 },
       );
     }
 
-    setTimeout(() => {
-      try {
-        if (mounted && mapInstance.current && (map as any)._container) {
-          map.invalidateSize();
-          setReady(true);
-        }
-      } catch (err) {
-        console.warn('ClientMap invalidateSize error', err);
-      }
-    }, 300);
-
     return () => {
       mounted = false;
-      try {
-        if (watchIdRef.current !== null && navigator.geolocation && (navigator.geolocation as any).clearWatch) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-        }
-      } catch (err) {
-        // ignore
-      }
-      try {
-        map.remove();
-      } catch (err) {
-        // ignore
-      }
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      map.remove();
       mapInstance.current = null;
     };
   }, []);
 
-  // Update pickup/delivery markers and route
+  // Update pickup / delivery markers and route
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
 
-    // helper to create label icon
-    const createLabelIcon = (label: string, color = '#10b981') => {
-      return L.divIcon({
-        className: 'custom-label-icon',
-        html: `<div style="background:${color};color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700">${label}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-      });
-    };
-
-    // pickup
+    // Pickup marker
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
       if (!pickupMarker.current) {
-        pickupMarker.current = L.marker([pickup.lat, pickup.lng], { icon: createLabelIcon('A', '#10b981') }).addTo(map);
+        pickupMarker.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981') })
+          .setLngLat([pickup.lng, pickup.lat])
+          .addTo(map);
       } else {
-        pickupMarker.current.setLatLng([pickup.lat, pickup.lng]);
+        pickupMarker.current.setLngLat([pickup.lng, pickup.lat]);
       }
     } else {
-      if (pickupMarker.current) {
-        map.removeLayer(pickupMarker.current);
-        pickupMarker.current = null;
-      }
+      pickupMarker.current?.remove();
+      pickupMarker.current = null;
     }
 
-    // delivery
+    // Delivery marker
     if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
       if (!deliveryMarker.current) {
-        deliveryMarker.current = L.marker([delivery.lat, delivery.lng], { icon: createLabelIcon('B', '#ef4444') }).addTo(map);
+        deliveryMarker.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444') })
+          .setLngLat([delivery.lng, delivery.lat])
+          .addTo(map);
       } else {
-        deliveryMarker.current.setLatLng([delivery.lat, delivery.lng]);
+        deliveryMarker.current.setLngLat([delivery.lng, delivery.lat]);
       }
     } else {
-      if (deliveryMarker.current) {
-        map.removeLayer(deliveryMarker.current);
-        deliveryMarker.current = null;
-      }
+      deliveryMarker.current?.remove();
+      deliveryMarker.current = null;
     }
 
-    // route polyline: use provided routeCoords (routed along streets) if available,
-    // otherwise fallback to straight line between pickup and delivery
-    if (routeCoords && Array.isArray(routeCoords) && routeCoords.length > 0) {
-      const points = routeCoords.map(p => [p.lat, p.lng] as L.LatLngExpression);
-      if (!routeLine.current) {
-        routeLine.current = L.polyline(points, { color: '#2563eb', weight: 3, opacity: 0.9 }).addTo(map);
-      } else {
-        routeLine.current.setLatLngs(points as any);
-      }
-      const bounds = L.latLngBounds(points as any);
-      map.fitBounds(bounds.pad(0.25), { animate: true });
-    } else if (pickup && delivery && isFinite(pickup.lat) && isFinite(pickup.lng) && isFinite(delivery.lat) && isFinite(delivery.lng)) {
-      const points: L.LatLngExpression[] = [[pickup.lat, pickup.lng], [delivery.lat, delivery.lng]];
-      if (!routeLine.current) {
-        routeLine.current = L.polyline(points, { color: '#2563eb', weight: 3, opacity: 0.9 }).addTo(map);
-      } else {
-        routeLine.current.setLatLngs(points);
-      }
-      const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds.pad(0.25), { animate: true });
-    } else {
-      if (routeLine.current) {
-        map.removeLayer(routeLine.current);
-        routeLine.current = null;
-      }
+    // Route line
+    const routeSourceId = 'route-line';
+    const hasRoute = routeCoords && routeCoords.length > 0;
+    const hasStraight = !hasRoute && pickup && delivery && isFinite(pickup.lat) && isFinite(pickup.lng) && isFinite(delivery.lat) && isFinite(delivery.lng);
+
+    const coords: [number, number][] = hasRoute
+      ? routeCoords!.map(p => [p.lng, p.lat])
+      : hasStraight
+        ? [[pickup!.lng, pickup!.lat], [delivery!.lng, delivery!.lat]]
+        : [];
+
+    if (map.getSource(routeSourceId)) {
+      (map.getSource(routeSourceId) as mapboxgl.GeoJSONSource).setData({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: coords },
+      });
+    } else if (coords.length > 0 && map.isStyleLoaded()) {
+      map.addSource(routeSourceId, {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
+      });
+      map.addLayer({
+        id: 'route-line-layer',
+        type: 'line',
+        source: routeSourceId,
+        paint: { 'line-color': '#2563eb', 'line-width': 4, 'line-opacity': 0.9 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
     }
 
-  }, [pickup, delivery]);
+    // Fit bounds
+    if (coords.length >= 2) {
+      const bounds = new mapboxgl.LngLatBounds();
+      coords.forEach(c => bounds.extend(c));
+      map.fitBounds(bounds, { padding: 80, maxZoom: 16, duration: 500 });
+    }
+  }, [pickup, delivery, routeCoords]);
 
   return (
     <div
