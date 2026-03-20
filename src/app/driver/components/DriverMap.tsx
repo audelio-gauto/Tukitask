@@ -1,14 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapInstance = useRef<any>(null);
+  const markerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -17,59 +15,69 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
     let mounted = true;
     let watchId: number | null = null;
 
-    const defaultLat = -25.2637;
-    const defaultLng = -57.5759;
+    (async () => {
+      const mapboxgl = (await import('mapbox-gl')).default;
+      // Inject Mapbox CSS once
+      if (!document.getElementById('mapbox-gl-css')) {
+        const link = document.createElement('link');
+        link.id = 'mapbox-gl-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+        document.head.appendChild(link);
+      }
+      if (!mounted || !mapRef.current) return;
 
-    const map = new mapboxgl.Map({
-      container: mapRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [defaultLng, defaultLat],
-      zoom: 15,
-      accessToken: MAPBOX_TOKEN,
-      attributionControl: false,
-    });
+      const defaultLat = -25.2637;
+      const defaultLng = -57.5759;
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+      const map = new mapboxgl.Map({
+        container: mapRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [defaultLng, defaultLat],
+        zoom: 15,
+        accessToken: MAPBOX_TOKEN,
+        attributionControl: false,
+      });
 
-    // Driver self-marker (green dot)
-    const selfEl = document.createElement('div');
-    selfEl.className = 'tuki-driver-self-marker';
-    const marker = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
-    markerRef.current = marker;
-    mapInstance.current = map;
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-    map.on('load', () => {
-      if (mounted) setReady(true);
-    });
+      const selfEl = document.createElement('div');
+      selfEl.className = 'tuki-driver-self-marker';
+      const marker = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
+      markerRef.current = marker;
+      mapInstance.current = map;
 
-    // Watch geolocation
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!mounted) return;
-          const { latitude, longitude } = pos.coords;
-          map.flyTo({ center: [longitude, latitude], zoom: 16 });
-          marker.setLngLat([longitude, latitude]);
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
+      map.on('load', () => {
+        if (mounted) setReady(true);
+      });
 
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          if (!mounted) return;
-          marker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
-        },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 15000 },
-      );
-    }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!mounted) return;
+            const { latitude, longitude } = pos.coords;
+            map.flyTo({ center: [longitude, latitude], zoom: 16 });
+            marker.setLngLat([longitude, latitude]);
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 },
+        );
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (!mounted) return;
+            marker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 15000 },
+        );
+      }
+    })();
 
     return () => {
       mounted = false;
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      map.remove();
-      mapInstance.current = null;
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
     };
   }, []);
 

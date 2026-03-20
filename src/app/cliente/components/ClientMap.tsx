@@ -1,7 +1,5 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -22,11 +20,12 @@ export default function ClientMap({
   routeCoords?: Array<{ lat: number; lng: number }> | null;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<mapboxgl.Map | null>(null);
+  const mapInstance = useRef<any>(null);
   const [ready, setReady] = useState(false);
-  const selfMarker = useRef<mapboxgl.Marker | null>(null);
-  const pickupMarker = useRef<mapboxgl.Marker | null>(null);
-  const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
+  const selfMarker = useRef<any>(null);
+  const pickupMarker = useRef<any>(null);
+  const deliveryMarker = useRef<any>(null);
+  const mbRef = useRef<any>(null); // mapboxgl module
 
   // Initialise map
   useEffect(() => {
@@ -35,66 +34,78 @@ export default function ClientMap({
     let mounted = true;
     let watchId: number | null = null;
 
-    const defaultLat = -25.2637;
-    const defaultLng = -57.5759;
+    (async () => {
+      const mapboxgl = (await import('mapbox-gl')).default;
+      // Inject Mapbox CSS once
+      if (!document.getElementById('mapbox-gl-css')) {
+        const link = document.createElement('link');
+        link.id = 'mapbox-gl-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+        document.head.appendChild(link);
+      }
+      if (!mounted || !mapRef.current) return;
+      mbRef.current = mapboxgl;
 
-    const map = new mapboxgl.Map({
-      container: mapRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [defaultLng, defaultLat],
-      zoom: 15,
-      accessToken: MAPBOX_TOKEN,
-      attributionControl: false,
-    });
+      const defaultLat = -25.2637;
+      const defaultLng = -57.5759;
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+      const map = new mapboxgl.Map({
+        container: mapRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [defaultLng, defaultLat],
+        zoom: 15,
+        accessToken: MAPBOX_TOKEN,
+        attributionControl: false,
+      });
 
-    // Self-location marker
-    const selfEl = document.createElement('div');
-    selfEl.className = 'client-map-marker';
-    selfMarker.current = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-    mapInstance.current = map;
+      const selfEl = document.createElement('div');
+      selfEl.className = 'client-map-marker';
+      selfMarker.current = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
 
-    map.on('load', () => {
-      if (mounted) setReady(true);
-    });
+      mapInstance.current = map;
 
-    // Geolocation
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!mounted || !mapInstance.current) return;
-          const { latitude, longitude } = pos.coords;
-          map.flyTo({ center: [longitude, latitude], zoom: 16 });
-          selfMarker.current?.setLngLat([longitude, latitude]);
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
+      map.on('load', () => {
+        if (mounted) setReady(true);
+      });
 
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          if (!mounted) return;
-          selfMarker.current?.setLngLat([pos.coords.longitude, pos.coords.latitude]);
-        },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 15000 },
-      );
-    }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!mounted || !mapInstance.current) return;
+            const { latitude, longitude } = pos.coords;
+            map.flyTo({ center: [longitude, latitude], zoom: 16 });
+            selfMarker.current?.setLngLat([longitude, latitude]);
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 },
+        );
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (!mounted) return;
+            selfMarker.current?.setLngLat([pos.coords.longitude, pos.coords.latitude]);
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 15000 },
+        );
+      }
+    })();
 
     return () => {
       mounted = false;
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      map.remove();
-      mapInstance.current = null;
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
     };
   }, []);
 
   // Update pickup / delivery markers and route
   useEffect(() => {
     const map = mapInstance.current;
-    if (!map) return;
+    const mapboxgl = mbRef.current;
+    if (!map || !mapboxgl) return;
 
     // Pickup marker
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
@@ -136,7 +147,7 @@ export default function ClientMap({
         : [];
 
     if (map.getSource(routeSourceId)) {
-      (map.getSource(routeSourceId) as mapboxgl.GeoJSONSource).setData({
+      map.getSource(routeSourceId).setData({
         type: 'Feature',
         properties: {},
         geometry: { type: 'LineString', coordinates: coords },
@@ -158,7 +169,7 @@ export default function ClientMap({
     // Fit bounds
     if (coords.length >= 2) {
       const bounds = new mapboxgl.LngLatBounds();
-      coords.forEach(c => bounds.extend(c));
+      coords.forEach((c: [number, number]) => bounds.extend(c));
       map.fitBounds(bounds, { padding: 80, maxZoom: 16, duration: 500 });
     }
   }, [pickup, delivery, routeCoords]);
