@@ -519,24 +519,25 @@ export default function EnviarPaquetePage() {
           delivery={form.deliveryLat && form.deliveryLng ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) } : undefined}
           routeCoords={routeCoords && routeCoords.length > 0 ? routeCoords : undefined}
         />
-        {/* Distance / ETA badge */}
-        {(routeDistanceMeters || distanceKm > 0) && (
-          <div className="enviar-map-badge" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 12, background: 'rgba(255,255,255,0.97)', padding: '8px 18px', borderRadius: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.12)', display: 'flex', gap: 16, alignItems: 'center', zIndex: 40 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#f97316', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-              </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1f2937' }}>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#22c55e', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) + ' min' : Math.max(1, Math.round((distanceKm / 30) * 60)) + ' min'}</span>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Distance / ETA badge — outside map container so Leaflet z-index doesn't cover it */}
+      {(routeDistanceMeters || distanceKm > 0) && (
+        <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', top: 12, background: 'rgba(255,255,255,0.97)', padding: '8px 18px', borderRadius: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.12)', display: 'flex', gap: 16, alignItems: 'center', zIndex: 9999, pointerEvents: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#f97316', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1f2937' }}>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#22c55e', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) + ' min' : Math.max(1, Math.round((distanceKm / 30) * 60)) + ' min'}</span>
+          </div>
+        </div>
+      )}
 
       {/* Floating menu button */}
       <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
