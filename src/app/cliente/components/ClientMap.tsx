@@ -102,6 +102,13 @@ export default function ClientMap({
         return;
       }
 
+      // WebGL error fires as internal event during constructor — check painter
+      if (!map.painter) {
+        try { map.remove(); } catch {}
+        if (mounted) setUseStatic(true);
+        return;
+      }
+
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       const selfEl = document.createElement('div');
@@ -110,10 +117,23 @@ export default function ClientMap({
       mapInstance.current = map;
 
       map.on('error', (e: any) => {
-        if (e?.error?.message?.includes('WebGL') && mounted) setUseStatic(true);
+        if (e?.error?.message?.includes('WebGL') && mounted) {
+          try { map.remove(); } catch {}
+          mapInstance.current = null;
+          setUseStatic(true);
+        }
       });
 
-      map.on('load', () => { if (mounted) setReady(true); });
+      // Safety timeout: if map doesn't load within 5s, fall back to static
+      const loadTimer = setTimeout(() => {
+        if (mounted && !mapInstance.current?._loaded) {
+          try { map.remove(); } catch {}
+          mapInstance.current = null;
+          setUseStatic(true);
+        }
+      }, 5000);
+
+      map.on('load', () => { clearTimeout(loadTimer); if (mounted) setReady(true); });
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
