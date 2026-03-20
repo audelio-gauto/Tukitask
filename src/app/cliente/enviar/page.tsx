@@ -594,7 +594,6 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-content">
           <form onSubmit={handleSubmit}>
             {/* Demo geocode (IndexedDB cache + server proxy) */}
-            <GeocodeDemo />
 
             {/* Address inputs — tap to open fullscreen search */}
             <div className="enviar-address-section">
