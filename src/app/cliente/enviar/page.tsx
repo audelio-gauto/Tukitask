@@ -195,23 +195,21 @@ export default function EnviarPaquetePage() {
   const [pricingSettings, setPricingSettings] = useState<Record<string, number>>({});
   const [loadingPricing, setLoadingPricing] = useState(true);
 
-  // Fetch pricing config from API
+  // Fetch pricing config from public API
   useEffect(() => {
-    fetch('/api/admin/pricing')
+    fetch('/api/pricing')
       .then(res => res.json())
       .then(data => {
         const map: { [key: string]: { base_price: number | null, price_per_km: number | null } } = {};
         if (data && data.vehicle_pricing) {
           for (const v of data.vehicle_pricing) {
-            // store with vehicle_type normalized (no underscores)
-            const key = (v.vehicle_type || '').replace(/_/g, '');
+            const key = v.vehicle_type || '';
             map[key] = {
               base_price: v.base_price === null || v.base_price === undefined ? null : Number(v.base_price),
               price_per_km: v.price_per_km === null || v.price_per_km === undefined ? null : Number(v.price_per_km),
             };
           }
         }
-        // pricing_settings: array of { key, value }
         const settingsMap: Record<string, number> = {};
         if (data && data.pricing_settings) {
           for (const s of data.pricing_settings) {
@@ -221,13 +219,8 @@ export default function EnviarPaquetePage() {
         setPricing(map);
         setPricingSettings(settingsMap);
         setLoadingPricing(false);
-        // app_settings may contain mapbox/google keys
-        if (data && data.app_settings) {
-          const appMap: Record<string, string> = {};
-          for (const a of data.app_settings) appMap[a.key] = a.value ?? '';
-          setAppSettings(appMap);
-        }
-      });
+      })
+      .catch(() => setLoadingPricing(false));
   }, []);
 
   // Calcular precio sugerido automáticamente
@@ -248,14 +241,14 @@ export default function EnviarPaquetePage() {
   }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
 
   const suggestedPrice = useMemo(() => {
-    const key = (form.vehicleType || '').replace(/_/g, '');
+    const key = form.vehicleType || '';
     const v = pricing[key];
     const globalMin = pricingSettings['min_shipping_price'] ?? 0;
     const base = v?.base_price ?? null;
     const perKm = v?.price_per_km ?? null;
 
-    // If we have both lat/lng for pickup and delivery, use distance
-    const dist = distanceKm;
+    // Use real route distance if available, otherwise haversine
+    const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
 
     let price = 0;
     if (base !== null) price += base;
@@ -274,7 +267,7 @@ export default function EnviarPaquetePage() {
 
     // round to nearest integer
     return Math.round(price || 0);
-  }, [pricing, pricingSettings, form.vehicleType, distanceKm]);
+  }, [pricing, pricingSettings, form.vehicleType, distanceKm, routeDistanceMeters]);
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -658,6 +651,24 @@ export default function EnviarPaquetePage() {
 
             {/* ...se elimina sección de tipo de paquete... */}
 
+            {/* Precio sugerido */}
+            {suggestedPrice > 0 && (
+              <div style={{ margin: '12px 0', padding: '14px 16px', background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', borderRadius: 14, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 500 }}>Precio sugerido</div>
+                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
+                    {pricing[form.vehicleType]?.base_price != null && (<span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>)}
+                    {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
+                      <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
+                    )}
+                  </div>
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#16a34a' }}>
+                  {suggestedPrice.toLocaleString('es-PY')} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Gs</span>
+                </div>
+              </div>
+            )}
+
             {/* Sender details */}
             <div className="enviar-section-label">Datos del envío</div>
             <div className="enviar-details-card">
@@ -718,21 +729,16 @@ export default function EnviarPaquetePage() {
               </div>
               <div className="enviar-field" style={{ marginTop: '1rem' }}>
                 <label className="enviar-field-label">Precio sugerido</label>
-                <input
-                  type="number"
-                  className="enviar-field-input"
-                  placeholder="Ej: 100000"
-                  value={suggestedPrice}
-                  readOnly
-                  min="0"
-                />
+                <div style={{ padding: '10px 12px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', fontSize: '1.1rem', fontWeight: 700, color: '#16a34a' }}>
+                  {suggestedPrice > 0 ? `${suggestedPrice.toLocaleString('es-PY')} Gs` : 'Selecciona direcciones y vehículo'}
+                </div>
               </div>
               <div className="enviar-field" style={{ marginTop: '0.5rem' }}>
-                <label className="enviar-field-label">Tu oferta</label>
+                <label className="enviar-field-label">Tu oferta (opcional)</label>
                 <input
                   type="number"
                   className="enviar-field-input"
-                  placeholder="Ej: 95000"
+                  placeholder={suggestedPrice > 0 ? String(suggestedPrice) : 'Ej: 95000'}
                   value={form.offer || ''}
                   onChange={e => update('offer', e.target.value)}
                   min="0"
