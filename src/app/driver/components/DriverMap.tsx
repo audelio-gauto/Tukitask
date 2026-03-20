@@ -3,22 +3,46 @@ import { useEffect, useRef, useState } from 'react';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
+function supportsWebGL(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl') || c.getContext('webgl2') || c.getContext('experimental-webgl'));
+  } catch { return false; }
+}
+
+function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: number, h: number) {
+  return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+}
+
 export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [useStatic, setUseStatic] = useState(false);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user location for static fallback
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
+  }, []);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current || !MAPBOX_TOKEN) return;
+    if (!mapRef.current || mapInstance.current) return;
+    if (!MAPBOX_TOKEN) { setUseStatic(true); return; }
+    if (!supportsWebGL()) { setUseStatic(true); return; }
 
     let mounted = true;
     let watchId: number | null = null;
 
     (async () => {
       const mapboxgl = (await import('mapbox-gl')).default;
-      // Inject Mapbox CSS once
       if (!document.getElementById('mapbox-gl-css')) {
         const link = document.createElement('link');
         link.id = 'mapbox-gl-css';
@@ -28,8 +52,8 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       }
       if (!mounted || !mapRef.current) return;
 
-      const defaultLat = -25.2637;
       const defaultLng = -57.5759;
+      const defaultLat = -25.2637;
 
       let map: any;
       try {
@@ -40,10 +64,10 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
           zoom: 15,
           accessToken: MAPBOX_TOKEN,
           attributionControl: false,
+          failIfMajorPerformanceCaveat: false,
         });
-      } catch (err) {
-        console.warn('Mapbox GL init failed:', err);
-        if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL. Activá la aceleración por hardware en tu navegador.');
+      } catch {
+        if (mounted) setUseStatic(true);
         return;
       }
 
@@ -56,32 +80,23 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       mapInstance.current = map;
 
       map.on('error', (e: any) => {
-        if (e?.error?.message?.includes('WebGL')) {
-          if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL.');
-        }
+        if (e?.error?.message?.includes('WebGL') && mounted) setUseStatic(true);
       });
 
-      map.on('load', () => {
-        if (mounted) setReady(true);
-      });
+      map.on('load', () => { if (mounted) setReady(true); });
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             if (!mounted) return;
-            const { latitude, longitude } = pos.coords;
-            map.flyTo({ center: [longitude, latitude], zoom: 16 });
-            marker.setLngLat([longitude, latitude]);
+            map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 16 });
+            marker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
           },
           () => {},
           { enableHighAccuracy: true, timeout: 10000 },
         );
-
         watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            if (!mounted) return;
-            marker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
-          },
+          (pos) => { if (mounted) marker.setLngLat([pos.coords.longitude, pos.coords.latitude]); },
           () => {},
           { enableHighAccuracy: true, maximumAge: 15000 },
         );
@@ -101,20 +116,26 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       onLocate(() => {
         if (!mapInstance.current || !navigator.geolocation) return;
         navigator.geolocation.getCurrentPosition((pos) => {
-          const { latitude, longitude } = pos.coords;
-          mapInstance.current?.flyTo({ center: [longitude, latitude], zoom: 16 });
-          markerRef.current?.setLngLat([longitude, latitude]);
+          mapInstance.current?.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 16 });
+          markerRef.current?.setLngLat([pos.coords.longitude, pos.coords.latitude]);
         });
       });
     }
   }, [onLocate]);
 
-  if (mapError) {
+  // --- Static image fallback ---
+  if (useStatic) {
+    const center = userPos || { lat: -25.2637, lng: -57.5759 };
+    const url = staticMapUrl(center, 15, 600, 600);
     return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', padding: 24, textAlign: 'center' }}>
-        <div>
-          <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>{mapError}</p>
-        </div>
+      <div style={{ width: '100%', height: '100%', position: 'relative', background: '#e5e7eb' }}>
+        {MAPBOX_TOKEN ? (
+          <img src={url} alt="Mapa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: '#6b7280', fontSize: 14 }}>Mapa no disponible</p>
+          </div>
+        )}
       </div>
     );
   }
