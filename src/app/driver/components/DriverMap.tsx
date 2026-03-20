@@ -3,13 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
-function supportsWebGL(): boolean {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl') || c.getContext('webgl2') || c.getContext('experimental-webgl'));
-  } catch { return false; }
-}
-
 function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: number, h: number) {
   return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
@@ -18,31 +11,32 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const initRef = useRef(false); // guard against StrictMode double-init
   const [ready, setReady] = useState(false);
   const [useStatic, setUseStatic] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get user location for static fallback
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
-    }
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
+    if (!mapRef.current || initRef.current) return;
     if (!MAPBOX_TOKEN) { setUseStatic(true); return; }
-    if (!supportsWebGL()) { setUseStatic(true); return; }
 
+    initRef.current = true;
     let mounted = true;
     let watchId: number | null = null;
 
     (async () => {
       const mapboxgl = (await import('mapbox-gl')).default;
+
       if (!document.getElementById('mapbox-gl-css')) {
         const link = document.createElement('link');
         link.id = 'mapbox-gl-css';
@@ -51,6 +45,12 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
         document.head.appendChild(link);
       }
       if (!mounted || !mapRef.current) return;
+
+      // Use Mapbox's own browser check (checks specific WebGL extensions)
+      if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
+        if (mounted) setUseStatic(true);
+        return;
+      }
 
       const defaultLng = -57.5759;
       const defaultLat = -25.2637;
@@ -71,8 +71,9 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
         return;
       }
 
-      // WebGL error fires as internal event during constructor — check painter
-      if (!map.painter) {
+      // WebGL error fires as internal event during constructor.
+      // Check that painter AND its GL context actually exist.
+      if (!map.painter?.context?.gl) {
         try { map.remove(); } catch {}
         if (mounted) setUseStatic(true);
         return;
@@ -82,7 +83,9 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
 
       const selfEl = document.createElement('div');
       selfEl.className = 'tuki-driver-self-marker';
-      const marker = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
+      const marker = new mapboxgl.Marker({ element: selfEl })
+        .setLngLat([defaultLng, defaultLat])
+        .addTo(map);
       markerRef.current = marker;
       mapInstance.current = map;
 
@@ -94,16 +97,19 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
         }
       });
 
-      // Safety timeout: if map doesn't load within 5s, fall back to static
-      const loadTimer = setTimeout(() => {
+      // Safety timeout: if map doesn't fire 'load' within 6s, fall back
+      loadTimerRef.current = setTimeout(() => {
         if (mounted && !mapInstance.current?._loaded) {
           try { map.remove(); } catch {}
           mapInstance.current = null;
           setUseStatic(true);
         }
-      }, 5000);
+      }, 6000);
 
-      map.on('load', () => { clearTimeout(loadTimer); if (mounted) setReady(true); });
+      map.on('load', () => {
+        if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+        if (mounted) setReady(true);
+      });
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -116,7 +122,9 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
           { enableHighAccuracy: true, timeout: 10000 },
         );
         watchId = navigator.geolocation.watchPosition(
-          (pos) => { if (mounted) marker.setLngLat([pos.coords.longitude, pos.coords.latitude]); },
+          (pos) => {
+            if (mounted) marker.setLngLat([pos.coords.longitude, pos.coords.latitude]);
+          },
           () => {},
           { enableHighAccuracy: true, maximumAge: 15000 },
         );
@@ -125,8 +133,13 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
 
     return () => {
       mounted = false;
+      if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+      initRef.current = false;
     };
   }, []);
 
@@ -148,9 +161,14 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
     const center = userPos || { lat: -25.2637, lng: -57.5759 };
     const url = staticMapUrl(center, 15, 600, 600);
     return (
-      <div style={{ width: '100%', height: '100%', position: 'relative', background: '#e5e7eb' }}>
+      <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
         {MAPBOX_TOKEN ? (
-          <img src={url} alt="Mapa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <img
+            src={url}
+            alt="Mapa"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: 14 }}>Mapa no disponible</p>
@@ -161,6 +179,15 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
   }
 
   return (
-    <div ref={mapRef} style={{ width: '100%', height: '100%', opacity: ready ? 1 : 0, transition: 'opacity 0.3s' }} />
+    <div
+      ref={mapRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        minHeight: 300,
+        opacity: ready ? 1 : 0,
+        transition: 'opacity 0.3s',
+      }}
+    />
   );
 }
