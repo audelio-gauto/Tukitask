@@ -113,31 +113,44 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Update pricing settings (numeric)
+    // Update pricing settings (numeric) — null means "use default / not set"
     if (Array.isArray(pricing_settings)) {
       for (const item of pricing_settings) {
-        const value = parseFloat(item.value)
-        if (isNaN(value) || value < 0) {
+        const raw = item.value
+        // Allow null/empty to clear the setting
+        const value = (raw === null || raw === undefined || raw === '' || raw === 'null') ? null : parseFloat(raw)
+        if (value !== null && (isNaN(value) || value < 0)) {
           errors.push(`Valor inválido para ${item.key}`)
           continue
         }
+        // Use upsert so new keys (global_base_price etc.) get created if they don't exist yet
         const { error } = await supabaseServer
           .from('pricing_settings')
-          .update({ value, updated_at: new Date().toISOString() })
-          .eq('id', item.id)
-        if (error) errors.push(`pricing_settings ${item.id}: ${error.message}`)
+          .upsert(
+            { id: item.id, key: item.key, value: value ?? 0, label: item.label || item.key, description: item.description || '', updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+          )
+        if (error) errors.push(`pricing_settings ${item.key}: ${error.message}`)
       }
     }
 
-    // Update app settings (string values)
-    if (Array.isArray(app_settings)) {
-      for (const item of app_settings) {
-        const value = item.value === null || item.value === undefined ? '' : String(item.value)
-        const { error } = await supabaseServer
-          .from('app_settings')
-          .update({ value, updated_at: new Date().toISOString() })
-          .eq('id', item.id)
-        if (error) errors.push(`app_settings ${item.id}: ${error.message}`)
+    // Update app settings (string values) — skip if table doesn't exist
+    if (Array.isArray(app_settings) && app_settings.length > 0) {
+      // Check if app_settings table exists first
+      const testQuery = await supabaseServer.from('app_settings').select('id').limit(1)
+      if (testQuery.error && testQuery.error.message.includes('app_settings')) {
+        console.warn('app_settings table does not exist, skipping')
+      } else {
+        for (const item of app_settings) {
+          const value = item.value === null || item.value === undefined ? '' : String(item.value)
+          const { error } = await supabaseServer
+            .from('app_settings')
+            .upsert(
+              { id: item.id, key: item.key, value, label: item.label || item.key, description: item.description || '', updated_at: new Date().toISOString() },
+              { onConflict: 'key' }
+            )
+          if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+        }
       }
     }
 
