@@ -69,11 +69,13 @@ export default function SolicitarServicioPage() {
       isDragging.current = true;
       startY.current = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
       startTranslate.current = getTranslateY();
+      if (!sheet) return;
       sheet.style.transition = 'none';
     }
 
     function onMove(e: TouchEvent | MouseEvent) {
       if (!isDragging.current) return;
+      if (!sheet) return;
       const currentY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
       const delta = currentY - startY.current;
       const newTranslate = Math.max(0, startTranslate.current + delta);
