@@ -1,9 +1,8 @@
 import crypto from 'crypto'
 import { redis } from '../redis'
 import { mapboxProvider } from './providers/mapbox'
-import { mapboxGeoSearch } from './providers/mapbox'
+import { mapboxGeoSearch, mapboxReverseGeocode } from './providers/mapbox'
 import { googleProvider } from './providers/google'
-import { nominatimProvider, nominatimGeoSearch } from './providers/nominatim'
 import type { GeocodeResult, DirectionsResult } from './providers/types'
 import { incrementMetric } from '../metrics'
 import { supabaseServer } from '../supabaseServer'
@@ -51,8 +50,6 @@ async function getProviders() {
   const list: Array<any> = []
   if (keys.mapbox) list.push(mapboxProvider(keys.mapbox))
   if (keys.google) list.push(googleProvider(keys.google))
-  // Always add Nominatim (free, no API key) as last fallback
-  list.push(nominatimProvider())
   // Order providers according to preferred env if present
   if (preferred && preferred.length) {
     const ordered = preferred
@@ -118,45 +115,56 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
   return null
 }
 
-/** Multi-result search for autocomplete (returns up to `limit` results) */
-export async function geocodeSearch(query: string, limit = 6): Promise<GeocodeResult[]> {
-  const key = `geocode_search:${hashKey(query)}:${limit}`
+/** Multi-result search for autocomplete — Mapbox only (returns up to `limit` results) */
+export async function geocodeSearch(
+  query: string,
+  limit = 6,
+  proximity?: { lng: number; lat: number },
+): Promise<GeocodeResult[]> {
+  const key = `geocode_search:${hashKey({ query, limit, proximity })}}`
   const cached = await cacheGet(key)
   if (cached) return cached as GeocodeResult[]
 
   const keys = await getApiKeys()
-  // Log la key usada (solo primeros y últimos 3 caracteres por seguridad)
-  console.log('[geocodeSearch] Mapbox key:', keys.mapbox ? keys.mapbox.slice(0,3) + '...' + keys.mapbox.slice(-3) : '(none)')
-  // Try Mapbox first if available
-  if (keys.mapbox) {
-    try {
-      const results = await mapboxGeoSearch(query, keys.mapbox, limit)
-      console.log('[geocodeSearch] mapboxGeoSearch results:', results)
-      if (results.length > 0) {
-        await cacheSet(key, results, geocodeTTL)
-        return results
-      }
-    } catch (err) {
-      console.warn('[geocodeSearch] mapboxGeoSearch failed:', err)
-    }
+  if (!keys.mapbox) {
+    console.error('[geocodeSearch] No MAPBOX_API_KEY configured')
+    return []
   }
-  // Fallback: try Nominatim (free, no API key)
-  console.log('[geocodeSearch] Trying Nominatim fallback...')
+
   try {
-    const nomResults = await nominatimGeoSearch(query, limit)
-    console.log('[geocodeSearch] nominatimGeoSearch results:', nomResults.length)
-    if (nomResults.length > 0) {
-      await cacheSet(key, nomResults, geocodeTTL)
-      return nomResults
+    const results = await mapboxGeoSearch(query, keys.mapbox, limit, proximity)
+    if (results.length > 0) {
+      await cacheSet(key, results, geocodeTTL)
     }
+    return results
   } catch (err) {
-    console.warn('[geocodeSearch] nominatimGeoSearch failed:', err)
+    console.warn('[geocodeSearch] mapboxGeoSearch failed:', err)
+    return []
   }
-  // Last fallback: use provider.geocode (single result)
-  const single = await geocode(query)
-  const results = single ? [single] : []
-  if (results.length > 0) await cacheSet(key, results, geocodeTTL)
-  return results
+}
+
+/** Reverse geocode: lat,lng → address — Mapbox only */
+export async function reverseGeocode(lat: number, lng: number): Promise<GeocodeResult | null> {
+  const key = `reverse_geocode:${hashKey({ lat, lng })}`
+  const cached = await cacheGet(key)
+  if (cached) return cached as GeocodeResult
+
+  const keys = await getApiKeys()
+  if (!keys.mapbox) {
+    console.error('[reverseGeocode] No MAPBOX_API_KEY configured')
+    return null
+  }
+
+  try {
+    const result = await mapboxReverseGeocode(lat, lng, keys.mapbox)
+    if (result) {
+      await cacheSet(key, result, geocodeTTL)
+    }
+    return result
+  } catch (err) {
+    console.warn('[reverseGeocode] failed:', err)
+    return null
+  }
 }
 
 export async function directions(from: [number, number], to: [number, number]): Promise<DirectionsResult | null> {

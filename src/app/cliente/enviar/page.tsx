@@ -23,7 +23,7 @@ const paymentMethods = [
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
-// (removed mock suggestions; using Nominatim results)
+// (using Mapbox autocomplete results)
 
 export default function EnviarPaquetePage() {
     // ...existing code...
@@ -59,7 +59,7 @@ export default function EnviarPaquetePage() {
     deliveryLng: '',
   });
 
-  // Autocomplete suggestion state (Nominatim)
+  // Autocomplete suggestion state (Mapbox)
   const [pickupSuggestions, setPickupSuggestions] = useState<Array<any>>([]);
   const [deliverySuggestions, setDeliverySuggestions] = useState<Array<any>>([]);
   const pickupTimer = useRef<number | null>(null);
@@ -67,8 +67,17 @@ export default function EnviarPaquetePage() {
   const pickupAbort = useRef<AbortController | null>(null);
   const deliveryAbort = useRef<AbortController | null>(null);
 
-  // App settings and map provider
-  const [appSettings, setAppSettings] = useState<Record<string, string>>({});
+  // User location for proximity bias
+  const userLocation = useRef<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { userLocation.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   // Simple in-memory geocode/autocomplete cache (per session)
   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -92,16 +101,24 @@ export default function EnviarPaquetePage() {
     }
   };
 
-  /** Fetch autocomplete suggestions via backend proxy (API key stays server-side) */
+  /** Fetch autocomplete suggestions via backend proxy — Mapbox only */
   function fetchProxyGeocode(query: string, signal?: AbortSignal) {
+    const payload: any = { query, multi: true, limit: 6 };
+    if (userLocation.current) {
+      payload.proximity = { lat: userLocation.current.lat, lng: userLocation.current.lng };
+    }
     return fetch('/api/maps/geocode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, multi: true, limit: 6 }),
+      body: JSON.stringify(payload),
       signal,
     })
       .then(r => r.json())
       .then(data => {
+        if (data.error) {
+          console.warn('[geocode]', data.error);
+          return [];
+        }
         if (data.results && Array.isArray(data.results)) {
           return data.results.map((r: any) => ({
             display_name: r.display_name,
@@ -110,7 +127,6 @@ export default function EnviarPaquetePage() {
             raw: r,
           }));
         }
-        // single result fallback
         if (data.result) {
           return [{ display_name: data.result.display_name, lat: data.result.lat, lon: data.result.lng, raw: data.result }];
         }
@@ -240,6 +256,11 @@ export default function EnviarPaquetePage() {
     return Math.max(0, R * c);
   }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
 
+  // Route/state for routed polyline using provider (Mapbox)
+  const [routeCoords, setRouteCoords] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
+  const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
+
   const suggestedPrice = useMemo(() => {
     const key = form.vehicleType || '';
     const v = pricing[key];
@@ -270,11 +291,6 @@ export default function EnviarPaquetePage() {
   }, [pricing, pricingSettings, form.vehicleType, distanceKm, routeDistanceMeters]);
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
-
-  // Route/state for routed polyline using provider (Mapbox)
-  const [routeCoords, setRouteCoords] = useState<Array<{ lat: number; lng: number }>>([]);
-  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
-  const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
 
   // Drag state
   const isDragging = useRef(false);
