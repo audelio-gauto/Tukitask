@@ -1,45 +1,32 @@
-'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+
+"use client";
+// ...existing code...
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
+import GeocodeDemo from '../components/GeocodeDemo';
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes chicos', icon: '🏍️' },
   { value: 'auto', label: 'Auto', sub: 'Más capacidad', icon: '🚗' },
   { value: 'motocarro', label: 'Moto carro', sub: 'Envíos rápidos', icon: '🛵' },
   { value: 'camion2t', label: 'Camión 2T', sub: 'Carga media', icon: '🚛' },
-  { value: 'camionft', label: 'Camión FT', sub: 'Carga pesada', icon: '🚚' },
 ];
 
-const packageTypes = [
-  { value: 'pequeno', label: 'Pequeño', sub: 'Hasta 5 kg', icon: '📦', color: '#10b981' },
-  { value: 'documento', label: 'Documento', sub: 'Sobre / Carta', icon: '📄', color: '#3B82F6' },
-  { value: 'mediano', label: 'Mediano', sub: '5 - 15 kg', icon: '📦', color: '#f59e0b' },
-  { value: 'grande', label: 'Grande', sub: '15+ 30 kg', icon: '📦', color: '#8B5CF6' },
-  { value: 'fragil', label: 'Frágil', sub: 'Paquete especial', icon: '⚠️', color: '#ef4444' },
-];
+
 
 const paymentMethods = [
   { value: 'prometido', label: 'Prometido', icon: '💰' },
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
-// Mock suggestions for address autocomplete
-const mockSuggestions = [
-  'Avda. Santísima Trinidad esq. Brasilia',
-  'Avda. Mariscal López c/ Cruz del Chaco',
-  'Avda. España c/ Estados Unidos',
-  'Avda. Eusebio Ayala esq. Sdor. Long',
-  'Calle Palma esq. 15 de Agosto',
-  'Avda. Sacramento c/ Stma. Trinidad',
-  'Avda. San Martín c/ Río de Janeiro',
-  'Ruta Mcal. Estigarribia km 10',
-];
+// (removed mock suggestions; using Nominatim results)
 
 export default function EnviarPaquetePage() {
+    // ...existing code...
   const { openDrawer } = useClientContext();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -55,7 +42,6 @@ export default function EnviarPaquetePage() {
     pickupAddress: '',
     deliveryAddress: '',
     vehicleType: 'moto',
-    packageType: 'pequeno',
     senderContact: '',
     senderPhone: '',
     senderAddress: '',
@@ -66,9 +52,236 @@ export default function EnviarPaquetePage() {
     description: '',
     instructions: '',
     paymentMethod: 'prometido',
+    offer: '',
+    pickupLat: '',
+    pickupLng: '',
+    deliveryLat: '',
+    deliveryLng: '',
   });
 
+  // Autocomplete suggestion state (Nominatim)
+  const [pickupSuggestions, setPickupSuggestions] = useState<Array<any>>([]);
+  const [deliverySuggestions, setDeliverySuggestions] = useState<Array<any>>([]);
+  const pickupTimer = useRef<number | null>(null);
+  const deliveryTimer = useRef<number | null>(null);
+  const pickupAbort = useRef<AbortController | null>(null);
+  const deliveryAbort = useRef<AbortController | null>(null);
+
+  // App settings and map provider
+  const [appSettings, setAppSettings] = useState<Record<string, string>>({});
+
+  // Simple in-memory geocode/autocomplete cache (per session)
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const geoCache = useRef<Map<string, { ts: number; data: any }>>(new Map());
+
+  const getCached = (key: string) => {
+    const entry = geoCache.current.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.ts > CACHE_TTL) {
+      geoCache.current.delete(key);
+      return null;
+    }
+    return entry.data;
+  };
+
+  const setCached = (key: string, data: any) => {
+    try {
+      geoCache.current.set(key, { ts: Date.now(), data });
+    } catch (err) {
+      // ignore cache errors
+    }
+  };
+
+  /** Fetch autocomplete suggestions via backend proxy (API key stays server-side) */
+  function fetchProxyGeocode(query: string, signal?: AbortSignal) {
+    return fetch('/api/maps/geocode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, multi: true, limit: 6 }),
+      signal,
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.results && Array.isArray(data.results)) {
+          return data.results.map((r: any) => ({
+            display_name: r.display_name,
+            lat: r.lat,
+            lon: r.lng,
+            raw: r,
+          }));
+        }
+        // single result fallback
+        if (data.result) {
+          return [{ display_name: data.result.display_name, lat: data.result.lat, lon: data.result.lng, raw: data.result }];
+        }
+        return [];
+      });
+  }
+
+  /** Fetch route via backend proxy (API key stays server-side) */
+  function fetchProxyDirections(lat1: number, lng1: number, lat2: number, lng2: number) {
+    return fetch('/api/maps/directions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: { lat: lat1, lng: lng1 },
+        to: { lat: lat2, lng: lng2 },
+      }),
+    }).then(r => r.json());
+  }
+
+  // debounce pickupAddress
+  useEffect(() => {
+    const q = form.pickupAddress;
+    if (pickupTimer.current) window.clearTimeout(pickupTimer.current);
+    if (pickupAbort.current) pickupAbort.current.abort();
+    if (!q || q.length < 3) {
+      setPickupSuggestions([]);
+      return;
+    }
+    pickupAbort.current = new AbortController();
+    pickupTimer.current = window.setTimeout(() => {
+      const cacheKey = `proxy:${q}`;
+      const cached = getCached(cacheKey);
+      if (cached) {
+        setPickupSuggestions(cached);
+        return;
+      }
+      fetchProxyGeocode(q, pickupAbort.current!.signal)
+        .then((items) => {
+          setCached(cacheKey, items);
+          setPickupSuggestions(items);
+        })
+        .catch(() => setPickupSuggestions([]));
+    }, 300);
+    return () => {
+      if (pickupTimer.current) window.clearTimeout(pickupTimer.current);
+      if (pickupAbort.current) pickupAbort.current.abort();
+    };
+  }, [form.pickupAddress]);
+
+  // debounce deliveryAddress
+  useEffect(() => {
+    const q = form.deliveryAddress;
+    if (deliveryTimer.current) window.clearTimeout(deliveryTimer.current);
+    if (deliveryAbort.current) deliveryAbort.current.abort();
+    if (!q || q.length < 3) {
+      setDeliverySuggestions([]);
+      return;
+    }
+    deliveryAbort.current = new AbortController();
+    deliveryTimer.current = window.setTimeout(() => {
+      const cacheKey = `proxy:${q}`;
+      const cached = getCached(cacheKey);
+      if (cached) {
+        setDeliverySuggestions(cached);
+        return;
+      }
+      fetchProxyGeocode(q, deliveryAbort.current!.signal)
+        .then((items) => {
+          setCached(cacheKey, items);
+          setDeliverySuggestions(items);
+        })
+        .catch(() => setDeliverySuggestions([]));
+    }, 300);
+    return () => {
+      if (deliveryTimer.current) window.clearTimeout(deliveryTimer.current);
+      if (deliveryAbort.current) deliveryAbort.current.abort();
+    };
+  }, [form.deliveryAddress]);
+
+  // Pricing state
+  const [pricing, setPricing] = useState<{ [key: string]: { base_price: number | null, price_per_km: number | null } }>({});
+  const [pricingSettings, setPricingSettings] = useState<Record<string, number>>({});
+  const [loadingPricing, setLoadingPricing] = useState(true);
+
+  // Fetch pricing config from API
+  useEffect(() => {
+    fetch('/api/admin/pricing')
+      .then(res => res.json())
+      .then(data => {
+        const map: { [key: string]: { base_price: number | null, price_per_km: number | null } } = {};
+        if (data && data.vehicle_pricing) {
+          for (const v of data.vehicle_pricing) {
+            // store with vehicle_type normalized (no underscores)
+            const key = (v.vehicle_type || '').replace(/_/g, '');
+            map[key] = {
+              base_price: v.base_price === null || v.base_price === undefined ? null : Number(v.base_price),
+              price_per_km: v.price_per_km === null || v.price_per_km === undefined ? null : Number(v.price_per_km),
+            };
+          }
+        }
+        // pricing_settings: array of { key, value }
+        const settingsMap: Record<string, number> = {};
+        if (data && data.pricing_settings) {
+          for (const s of data.pricing_settings) {
+            settingsMap[s.key] = Number(s.value);
+          }
+        }
+        setPricing(map);
+        setPricingSettings(settingsMap);
+        setLoadingPricing(false);
+        // app_settings may contain mapbox/google keys
+        if (data && data.app_settings) {
+          const appMap: Record<string, string> = {};
+          for (const a of data.app_settings) appMap[a.key] = a.value ?? '';
+          setAppSettings(appMap);
+        }
+      });
+  }, []);
+
+  // Calcular precio sugerido automáticamente
+  // Haversine distance in km
+  const distanceKm = useMemo(() => {
+    const lat1 = parseFloat(form.pickupLat);
+    const lon1 = parseFloat(form.pickupLng);
+    const lat2 = parseFloat(form.deliveryLat);
+    const lon2 = parseFloat(form.deliveryLng);
+    if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) return 0;
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return Math.max(0, R * c);
+  }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
+
+  const suggestedPrice = useMemo(() => {
+    const key = (form.vehicleType || '').replace(/_/g, '');
+    const v = pricing[key];
+    const globalMin = pricingSettings['min_shipping_price'] ?? 0;
+    const base = v?.base_price ?? null;
+    const perKm = v?.price_per_km ?? null;
+
+    // If we have both lat/lng for pickup and delivery, use distance
+    const dist = distanceKm;
+
+    let price = 0;
+    if (base !== null) price += base;
+    if (perKm !== null && dist > 0) price += perKm * dist;
+
+    // If vehicle-specific data is missing, try falling back to globals
+    if ((base === null || perKm === null) && pricingSettings) {
+      const globalBase = pricingSettings['global_base_price'] ?? pricingSettings['base_price'] ?? 0;
+      const globalPerKm = pricingSettings['global_price_per_km'] ?? pricingSettings['price_per_km'] ?? 0;
+      if (base === null && globalBase) price = globalBase + (perKm !== null && dist > 0 ? perKm * dist : globalPerKm * dist);
+      if (perKm === null && base !== null) price = base + globalPerKm * dist;
+    }
+
+    // enforce minimum
+    if (globalMin && price < globalMin) price = globalMin;
+
+    // round to nearest integer
+    return Math.round(price || 0);
+  }, [pricing, pricingSettings, form.vehicleType, distanceKm]);
+
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
+  // Route/state for routed polyline using provider (Mapbox)
+  const [routeCoords, setRouteCoords] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
+  const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
 
   // Drag state
   const isDragging = useRef(false);
@@ -156,20 +369,92 @@ export default function EnviarPaquetePage() {
     }
   }, [searchMode]);
 
+  // When coordinates change, request a routed path via backend proxy
+  useEffect(() => {
+    const lat1 = parseFloat(form.pickupLat);
+    const lon1 = parseFloat(form.pickupLng);
+    const lat2 = parseFloat(form.deliveryLat);
+    const lon2 = parseFloat(form.deliveryLng);
+    if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) {
+      setRouteCoords([]);
+      setRouteDistanceMeters(null);
+      setRouteDurationSec(null);
+      return;
+    }
+
+    fetchProxyDirections(lat1, lon1, lat2, lon2)
+      .then((data) => {
+        if (data && data.coords && data.coords.length > 0) {
+          setRouteCoords(data.coords);
+          setRouteDistanceMeters(data.distance_meters || null);
+          setRouteDurationSec(data.duration_seconds || null);
+        } else {
+          setRouteCoords([]);
+          setRouteDistanceMeters(null);
+          setRouteDurationSec(null);
+        }
+      })
+      .catch(() => {
+        setRouteCoords([]);
+        setRouteDistanceMeters(null);
+        setRouteDurationSec(null);
+      });
+  }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSending(false);
-    setSuccess(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup_address: form.pickupAddress,
+          delivery_address: form.deliveryAddress,
+          vehicle_type: form.vehicleType,
+          sender_contact: form.senderContact,
+          sender_phone: form.senderPhone,
+          sender_address: form.senderAddress,
+          sender_ref: form.senderRef,
+          receiver_contact: form.receiverContact,
+          receiver_phone: form.receiverPhone,
+          receiver_address: form.receiverAddress,
+          description: form.description,
+          instructions: form.instructions,
+          payment_method: form.paymentMethod,
+            suggested_price: suggestedPrice,
+            offer: form.offer,
+            pickup_lat: form.pickupLat,
+            pickup_lng: form.pickupLng,
+            delivery_lat: form.deliveryLat,
+            delivery_lng: form.deliveryLng,
+        }),
+      });
+      if (!res.ok) throw new Error('Error al crear el pedido');
+      setSuccess(true);
+    } catch (err) {
+      alert('Error al crear el pedido');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleUseGPS = (field: 'pickup' | 'delivery') => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const coords = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-        update(field === 'pickup' ? 'pickupAddress' : 'deliveryAddress', coords);
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        const coords = `${lat}, ${lon}`;
+        if (field === 'pickup') {
+          update('pickupAddress', coords);
+          update('pickupLat', lat);
+          update('pickupLng', lon);
+        } else {
+          update('deliveryAddress', coords);
+          update('deliveryLat', lat);
+          update('deliveryLng', lon);
+        }
         setSearchMode(null);
         setSearchQuery('');
       },
@@ -183,15 +468,31 @@ export default function EnviarPaquetePage() {
   };
 
   const selectSuggestion = (address: string) => {
-    if (searchMode === 'pickup') update('pickupAddress', address);
-    else if (searchMode === 'delivery') update('deliveryAddress', address);
+    if (searchMode === 'pickup') {
+      update('pickupAddress', address);
+      const found = pickupSuggestions.find((it: any) => (it.display_name || it.name || it.label) === address);
+      if (found) {
+        update('pickupLat', String(found.lat ?? ''));
+        update('pickupLng', String(found.lon ?? ''));
+      }
+    } else if (searchMode === 'delivery') {
+      update('deliveryAddress', address);
+      const found = deliverySuggestions.find((it: any) => (it.display_name || it.name || it.label) === address);
+      if (found) {
+        update('deliveryLat', String(found.lat ?? ''));
+        update('deliveryLng', String(found.lon ?? ''));
+      }
+    }
     setSearchMode(null);
     setSearchQuery('');
   };
 
   const filteredSuggestions = searchQuery.length > 0
-    ? mockSuggestions.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-    : mockSuggestions;
+    ? (searchMode === 'pickup'
+        ? pickupSuggestions.map((it: any) => it.display_name || it.name || it.label)
+        : deliverySuggestions.map((it: any) => it.display_name || it.name || it.label)
+      )
+    : [];
 
   if (success) {
     return (
@@ -201,7 +502,7 @@ export default function EnviarPaquetePage() {
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setForm({ pickupAddress: '', deliveryAddress: '', vehicleType: 'moto', packageType: 'pequeno', senderContact: '', senderPhone: '', senderAddress: '', senderRef: '', receiverContact: '', receiverPhone: '', receiverAddress: '', description: '', instructions: '', paymentMethod: 'prometido' }); }}>
+          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', senderAddress: '', senderRef: '', receiverContact: '', receiverPhone: '', receiverAddress: '', description: '', instructions: '', paymentMethod: 'prometido', offer: '' }); }}>
             Nuevo Envío
           </button>
         </div>
@@ -213,7 +514,18 @@ export default function EnviarPaquetePage() {
     <>
       {/* Full screen map */}
       <div className="enviar-map">
-        <ClientMap />
+        <ClientMap
+          pickup={form.pickupLat && form.pickupLng ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) } : undefined}
+          delivery={form.deliveryLat && form.deliveryLng ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) } : undefined}
+          routeCoords={routeCoords && routeCoords.length > 0 ? routeCoords : undefined}
+        />
+        {/* Distance / ETA badge (Bolt-like) */}
+        {(routeDistanceMeters || distanceKm > 0) && (
+          <div className="enviar-map-badge" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 12, background: 'rgba(255,255,255,0.95)', padding: '6px 12px', borderRadius: 20, boxShadow: '0 4px 8px rgba(0,0,0,0.08)', display: 'flex', gap: 10, alignItems: 'center', zIndex: 40 }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) + ' min' : Math.max(1, Math.round((distanceKm / 30) * 60)) + ' min'}</div>
+          </div>
+        )}
       </div>
 
       {/* Floating menu button */}
@@ -232,7 +544,7 @@ export default function EnviarPaquetePage() {
 
       {/* Address search fullscreen overlay */}
       {searchMode && (
-        <div className="enviar-search-overlay">
+        <div className="enviar-search-overlay" style={{ background: '#fff' }}>
           <div className="enviar-search-header">
             <button type="button" className="enviar-search-back" onClick={() => { setSearchMode(null); setSearchQuery(''); }}>
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -244,7 +556,12 @@ export default function EnviarPaquetePage() {
                 className="enviar-search-input"
                 placeholder={searchMode === 'pickup' ? 'Punto de recogida' : '¿A dónde va el paquete?'}
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={e => {
+                  const v = e.target.value;
+                  setSearchQuery(v);
+                  if (searchMode === 'pickup') update('pickupAddress', v);
+                  else if (searchMode === 'delivery') update('deliveryAddress', v);
+                }}
               />
               {searchQuery && (
                 <button type="button" className="enviar-search-clear" onClick={() => setSearchQuery('')}>
@@ -276,32 +593,39 @@ export default function EnviarPaquetePage() {
 
         <div className="enviar-sheet-content">
           <form onSubmit={handleSubmit}>
+            {/* Demo geocode (IndexedDB cache + server proxy) */}
+            <GeocodeDemo />
+
             {/* Address inputs — tap to open fullscreen search */}
             <div className="enviar-address-section">
-              <div className="enviar-address-row" onClick={() => openSearch('pickup')}>
+              <div className="enviar-address-row">
                 <span className="enviar-dot green" />
                 <input
                   className="enviar-address-input"
                   placeholder="Punto de recogida"
                   value={form.pickupAddress}
-                  readOnly
+                  onChange={e => { update('pickupAddress', e.target.value); }}
+                  onFocus={() => openSearch('pickup')}
                 />
                 <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); handleUseGPS('pickup'); }} aria-label="Usar GPS">
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
                 </button>
+                {/* opens full-screen search overlay on focus */}
               </div>
               <div className="enviar-address-divider" />
-              <div className="enviar-address-row" onClick={() => openSearch('delivery')}>
+              <div className="enviar-address-row">
                 <span className="enviar-dot red" />
                 <input
                   className="enviar-address-input"
                   placeholder="¿A dónde va el paquete?"
                   value={form.deliveryAddress}
-                  readOnly
+                  onChange={e => { update('deliveryAddress', e.target.value); }}
+                  onFocus={() => openSearch('delivery')}
                 />
                 <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); handleUseGPS('delivery'); }} aria-label="Usar GPS">
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
                 </button>
+                {/* opens full-screen search overlay on focus */}
               </div>
             </div>
 
@@ -322,23 +646,7 @@ export default function EnviarPaquetePage() {
               ))}
             </div>
 
-            {/* Package type — horizontal swipeable */}
-            <div className="enviar-section-label">Tipo de paquete</div>
-            <div className="enviar-type-scroll">
-              {packageTypes.map(p => (
-                <button
-                  key={p.value}
-                  type="button"
-                  className={`enviar-type-card ${form.packageType === p.value ? 'selected' : ''}`}
-                  onClick={() => update('packageType', p.value)}
-                  style={{ '--card-accent': p.color } as React.CSSProperties}
-                >
-                  <span className="enviar-type-icon">{p.icon}</span>
-                  <span className="enviar-type-label">{p.label}</span>
-                  <span className="enviar-type-sub">{p.sub}</span>
-                </button>
-              ))}
-            </div>
+            {/* ...se elimina sección de tipo de paquete... */}
 
             {/* Sender details */}
             <div className="enviar-section-label">Datos del envío</div>
@@ -397,6 +705,28 @@ export default function EnviarPaquetePage() {
               <div className="enviar-field">
                 <label className="enviar-field-label">Instrucciones especiales</label>
                 <textarea className="enviar-field-textarea" placeholder="Indicaciones adicionales para el conductor..." value={form.instructions} onChange={e => update('instructions', e.target.value)} />
+              </div>
+              <div className="enviar-field" style={{ marginTop: '1rem' }}>
+                <label className="enviar-field-label">Precio sugerido</label>
+                <input
+                  type="number"
+                  className="enviar-field-input"
+                  placeholder="Ej: 100000"
+                  value={suggestedPrice}
+                  readOnly
+                  min="0"
+                />
+              </div>
+              <div className="enviar-field" style={{ marginTop: '0.5rem' }}>
+                <label className="enviar-field-label">Tu oferta</label>
+                <input
+                  type="number"
+                  className="enviar-field-input"
+                  placeholder="Ej: 95000"
+                  value={form.offer || ''}
+                  onChange={e => update('offer', e.target.value)}
+                  min="0"
+                />
               </div>
             </div>
 
