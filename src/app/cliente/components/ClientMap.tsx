@@ -22,6 +22,7 @@ export default function ClientMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [ready, setReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const selfMarker = useRef<any>(null);
   const pickupMarker = useRef<any>(null);
   const deliveryMarker = useRef<any>(null);
@@ -50,14 +51,21 @@ export default function ClientMap({
       const defaultLat = -25.2637;
       const defaultLng = -57.5759;
 
-      const map = new mapboxgl.Map({
-        container: mapRef.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [defaultLng, defaultLat],
-        zoom: 15,
-        accessToken: MAPBOX_TOKEN,
-        attributionControl: false,
-      });
+      let map: any;
+      try {
+        map = new mapboxgl.Map({
+          container: mapRef.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [defaultLng, defaultLat],
+          zoom: 15,
+          accessToken: MAPBOX_TOKEN,
+          attributionControl: false,
+        });
+      } catch (err) {
+        console.warn('Mapbox GL init failed:', err);
+        if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL. Activá la aceleración por hardware en tu navegador.');
+        return;
+      }
 
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
@@ -66,6 +74,12 @@ export default function ClientMap({
       selfMarker.current = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
 
       mapInstance.current = map;
+
+      map.on('error', (e: any) => {
+        if (e?.error?.message?.includes('WebGL')) {
+          if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL.');
+        }
+      });
 
       map.on('load', () => {
         if (mounted) setReady(true);
@@ -173,6 +187,16 @@ export default function ClientMap({
       map.fitBounds(bounds, { padding: 80, maxZoom: 16, duration: 500 });
     }
   }, [pickup, delivery, routeCoords]);
+
+  if (mapError) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', padding: 24, textAlign: 'center' }}>
+        <div>
+          <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>{mapError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

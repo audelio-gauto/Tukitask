@@ -8,6 +8,7 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current || !MAPBOX_TOKEN) return;
@@ -30,14 +31,21 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       const defaultLat = -25.2637;
       const defaultLng = -57.5759;
 
-      const map = new mapboxgl.Map({
-        container: mapRef.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [defaultLng, defaultLat],
-        zoom: 15,
-        accessToken: MAPBOX_TOKEN,
-        attributionControl: false,
-      });
+      let map: any;
+      try {
+        map = new mapboxgl.Map({
+          container: mapRef.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [defaultLng, defaultLat],
+          zoom: 15,
+          accessToken: MAPBOX_TOKEN,
+          attributionControl: false,
+        });
+      } catch (err) {
+        console.warn('Mapbox GL init failed:', err);
+        if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL. Activá la aceleración por hardware en tu navegador.');
+        return;
+      }
 
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
@@ -46,6 +54,12 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       const marker = new mapboxgl.Marker({ element: selfEl }).setLngLat([defaultLng, defaultLat]).addTo(map);
       markerRef.current = marker;
       mapInstance.current = map;
+
+      map.on('error', (e: any) => {
+        if (e?.error?.message?.includes('WebGL')) {
+          if (mounted) setMapError('Tu dispositivo no soporta mapas WebGL.');
+        }
+      });
 
       map.on('load', () => {
         if (mounted) setReady(true);
@@ -94,6 +108,16 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
       });
     }
   }, [onLocate]);
+
+  if (mapError) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', padding: 24, textAlign: 'center' }}>
+        <div>
+          <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>{mapError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={mapRef} style={{ width: '100%', height: '100%', opacity: ready ? 1 : 0, transition: 'opacity 0.3s' }} />
