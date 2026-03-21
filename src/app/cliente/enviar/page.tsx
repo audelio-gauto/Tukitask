@@ -17,7 +17,7 @@ const vehicleTypes = [
 
 
 const paymentMethods = [
-  { value: 'prometido', label: 'Prometido', icon: '💰' },
+  { value: 'efectivo', label: 'Efectivo', icon: '💵' },
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
@@ -47,6 +47,7 @@ export default function EnviarPaquetePage() {
     description: '',
     instructions: '',
     paymentMethod: 'prometido',
+    paymentMethod: 'efectivo',
     offer: '',
     pickupLat: '',
     pickupLng: '',
@@ -410,12 +411,12 @@ export default function EnviarPaquetePage() {
         </svg>
       </button>
 
-      {/* Floating back button */}
-      <Link href="/cliente" className="enviar-float-btn back" aria-label="Volver">
+      {/* Floating menu button (fixed) */}
+      <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
-      </Link>
+      </button>
 
       {/* Address search fullscreen overlay */}
       {searchMode && (
@@ -608,12 +609,7 @@ export default function EnviarPaquetePage() {
 
         {suggestedPrice > 0 && (
           <div className="enviar-pricing-breakdown">
-            {pricing[form.vehicleType]?.base_price != null && (
-              <span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>
-            )}
-            {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
-              <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
-            )}
+            {/* Pricing breakdown hidden */}
           </div>
         )}
 
