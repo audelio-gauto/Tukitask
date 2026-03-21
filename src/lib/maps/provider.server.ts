@@ -20,7 +20,7 @@ async function getApiKeys(): Promise<{ mapbox: string; google: string }> {
   if (_keyCache && Date.now() - _keyCache.ts < KEY_CACHE_TTL) {
     return { mapbox: _keyCache.mapbox, google: _keyCache.google }
   }
-  let mapbox = process.env.MAPBOX_API_KEY || ''
+  let mapbox = process.env.MAPBOX_API_KEY || process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
   let google = process.env.GOOGLE_MAPS_API_KEY || ''
   try {
     const { data, error } = await supabaseServer.from('app_settings').select('key, value')
