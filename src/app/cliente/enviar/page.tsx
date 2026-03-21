@@ -560,12 +560,15 @@ export default function EnviarPaquetePage() {
             </div>
 
             {/* Spacer for fixed bottom bar */}
-            <div style={{ height: 220 }} />
+            {form.pickupLat && form.pickupLng && form.deliveryLat && form.deliveryLng && (
+              <div style={{ height: 220 }} />
+            )}
           </form>
         </div>
       </div>
 
       {/* ── Fixed bottom bar: Precio + Pago + CTA (Bolt-style) ── */}
+      {form.pickupLat && form.pickupLng && form.deliveryLat && form.deliveryLng && (
       <div className="enviar-fixed-bottom">
         {/* Precio editable con +/- */}
         <div className="enviar-price-control">
@@ -646,6 +649,7 @@ export default function EnviarPaquetePage() {
           </button>
         </div>
       </div>
+      )}
     </>
   );
 }
