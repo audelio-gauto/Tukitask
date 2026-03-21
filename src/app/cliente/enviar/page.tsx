@@ -385,6 +385,7 @@ export default function EnviarPaquetePage() {
           pickup={form.pickupLat && form.pickupLng ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) } : undefined}
           delivery={form.deliveryLat && form.deliveryLng ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) } : undefined}
           routeCoords={routeCoords && routeCoords.length > 0 ? routeCoords : undefined}
+          showMyLocationButton
         />
       </div>
 

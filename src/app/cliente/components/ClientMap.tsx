@@ -29,10 +29,12 @@ export default function ClientMap({
   pickup,
   delivery,
   routeCoords,
+  showMyLocationButton = false,
 }: {
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
   routeCoords?: Array<{ lat: number; lng: number }> | null;
+  showMyLocationButton?: boolean;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -226,6 +228,19 @@ export default function ClientMap({
   if (pickup && isFinite(pickup.lat)) staticMarkers.push({ ...pickup, label: 'A', color: '#10b981' });
   if (delivery && isFinite(delivery!.lat)) staticMarkers.push({ ...delivery!, label: 'B', color: '#ef4444' });
 
+  const handleMyLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { longitude, latitude } = pos.coords;
+        selfMarker.current?.setLngLat([longitude, latitude]);
+        mapInstance.current?.flyTo({ center: [longitude, latitude], zoom: 16 });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
       {/* Static image — always visible as base layer until GL loads */}
@@ -243,6 +258,26 @@ export default function ClientMap({
           ref={mapRef}
           style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: glReady ? 1 : 0, transition: 'opacity 0.3s' }}
         />
+      )}
+      {/* My-location floating button */}
+      {showMyLocationButton && glReady && (
+        <button
+          type="button"
+          onClick={handleMyLocation}
+          aria-label="Mi ubicación"
+          style={{
+            position: 'absolute', top: 16, right: 16, zIndex: 10,
+            width: 44, height: 44, borderRadius: '50%', border: 'none',
+            background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.15)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+          </svg>
+        </button>
       )}
       {/* No token */}
       {!MAPBOX_TOKEN && (
