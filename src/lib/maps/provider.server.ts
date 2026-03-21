@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { redis } from '../redis'
 import { mapboxProvider } from './providers/mapbox'
 import { mapboxGeoSearch, mapboxReverseGeocode } from './providers/mapbox'
+import { nominatimGeoSearch } from './providers/nominatim'
 import { googleProvider } from './providers/google'
 import type { GeocodeResult, DirectionsResult } from './providers/types'
 import { incrementMetric } from '../metrics'
@@ -115,32 +116,65 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
   return null
 }
 
-/** Multi-result search for autocomplete — Mapbox only (returns up to `limit` results) */
+/**
+ * Multi-result search for autocomplete.
+ * Runs Mapbox (streets/cities) + Nominatim/OSM (businesses/POIs) in parallel,
+ * then merges and deduplicates results.
+ */
 export async function geocodeSearch(
   query: string,
   limit = 6,
   proximity?: { lng: number; lat: number },
 ): Promise<GeocodeResult[]> {
-  const key = `geocode_search:${hashKey({ query, limit, proximity })}}`
+  const key = `geocode_search:${hashKey({ query, limit, proximity })}`
   const cached = await cacheGet(key)
   if (cached) return cached as GeocodeResult[]
 
   const keys = await getApiKeys()
-  if (!keys.mapbox) {
-    console.error('[geocodeSearch] No MAPBOX_API_KEY configured')
-    return []
-  }
 
-  try {
-    const results = await mapboxGeoSearch(query, keys.mapbox, limit, proximity)
-    if (results.length > 0) {
-      await cacheSet(key, results, geocodeTTL)
-    }
-    return results
-  } catch (err) {
-    console.warn('[geocodeSearch] mapboxGeoSearch failed:', err)
-    return []
+  // Run both providers in parallel
+  const [mapboxResults, nominatimResults] = await Promise.all([
+    keys.mapbox
+      ? mapboxGeoSearch(query, keys.mapbox, limit, proximity).catch((err) => {
+          console.warn('[geocodeSearch] mapboxGeoSearch failed:', err)
+          return [] as GeocodeResult[]
+        })
+      : Promise.resolve([] as GeocodeResult[]),
+    nominatimGeoSearch(query, Math.min(limit, 5), proximity).catch((err) => {
+      console.warn('[geocodeSearch] nominatimGeoSearch failed:', err)
+      return [] as GeocodeResult[]
+    }),
+  ])
+
+  // Merge: Nominatim first (has POIs), then Mapbox, deduplicate by proximity
+  const merged = deduplicateResults([...nominatimResults, ...mapboxResults], limit)
+
+  if (merged.length > 0) {
+    await cacheSet(key, merged, geocodeTTL)
   }
+  return merged
+}
+
+/** Remove near-duplicate results (within ~200m of each other with similar names) */
+function deduplicateResults(results: GeocodeResult[], limit: number): GeocodeResult[] {
+  const unique: GeocodeResult[] = []
+  for (const r of results) {
+    const isDup = unique.some(u => {
+      const dlat = Math.abs(u.lat - r.lat)
+      const dlng = Math.abs(u.lng - r.lng)
+      // ~200m threshold
+      if (dlat < 0.002 && dlng < 0.002) {
+        // Check name similarity (one contains the other)
+        const a = u.display_name.toLowerCase()
+        const b = r.display_name.toLowerCase()
+        if (a.includes(b.substring(0, 15)) || b.includes(a.substring(0, 15))) return true
+      }
+      return false
+    })
+    if (!isDup) unique.push(r)
+    if (unique.length >= limit) break
+  }
+  return unique
 }
 
 /** Reverse geocode: lat,lng → address — Mapbox only */
