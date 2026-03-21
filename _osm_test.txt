@@ -1,0 +1,31 @@
+=== stock luque === count:1
+  [supermarket] STOCK, Avenida Ita Yvate, Campo Grande, Luque, Departamento de Central, Región Oriental, 110941, Paraguay
+    lat:-25.2961241 lon:-57.5231530
+=== superseis asuncion === count:5
+  [supermarket] Superseis, Avenida España, Mariscal López, Asunción, Distrito Capital, Región Oriental, 001208, Paraguay
+    lat:-25.2872140 lon:-57.6059108
+  [supermarket] Superseis, Juan León Mallorquín, Asunción, Distrito Capital, Región Oriental, 001008, Paraguay
+    lat:-25.2883267 lon:-57.6490665
+  [supermarket] Superseis, Máximo Ramón Lira Donoso, Recoleta, Asunción, Distrito Capital, Región Oriental, 001207, Paraguay
+    lat:-25.2893014 lon:-57.5901542
+  [supermarket] Superseis, Nicanor Torales, Ycuá Satí, City.: Ycuá Satí, Asunción, Distrito Capital, Región Oriental, 001410, Paraguay
+    lat:-25.2857390 lon:-57.5635792
+  [city_block] S6 Superseis, Ciudad Nueva, Asunción, Distrito Capital, Región Oriental, Paraguay
+    lat:-25.3012409 lon:-57.6170140
+=== shopping del sol asuncion === count:1
+  [mall] Shopping del Sol, Avenida Aviadores del Chaco, Ycuá Satí, Asunción, Distrito Capital, Región Oriental, 001410, Paraguay
+    lat:-25.2828767 lon:-57.5674503
+=== biggie luque === count:2
+  [convenience] Biggie Express Luque Centro, Luis Alberto de Herrera, Cuarto Barrio, Luque, Departamento de Central, Región Oriental, 110932, Paraguay
+    lat:-25.2668059 lon:-57.4961074
+  [supermarket] Biggie Express Gral. Garay, Capitán Andrés Insfrán, Laurelty, Luque, Departamento de Central, Región Oriental, 110941, Paraguay
+    lat:-25.3065092 lon:-57.5049456
+=== farmacia catedral asuncion === count:4
+  [pharmacy] Farmacia Catedral, Avenida España, Manorá, Asunción, Distrito Capital, Región Oriental, 001529, Paraguay
+    lat:-25.2853640 lon:-57.5738741
+  [commercial] Farmacia Catedral, General Jose Eduvigis Diaz, Doctor Francia, Asunción, Distrito Capital, Región Oriental, 001011, Paraguay
+    lat:-25.2788525 lon:-57.6448432
+  [pharmacy] Farmacia Catedral, Avenida Venezuela, Virgen del Huerto, Asunción, Distrito Capital, Región Oriental, 001535, Paraguay
+    lat:-25.2704956 lon:-57.5937488
+  [pharmacy] Farmacia, Doctor Luis Alberto de Herrera y Quevedo, La Catedral, Asunción, Distrito Capital, Región Oriental, 001219, Paraguay
+    lat:-25.2878290 lon:-57.6313653

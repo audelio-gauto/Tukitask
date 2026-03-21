@@ -1,0 +1,19 @@
+=== stock luque (country=py) === count:1
+  [place] Luque, Departamento Central, Paraguay
+=== stock luque (no-country+types) === count:1
+  [address] Stöck, 4730 Raeren, Provincia de Lieja, Bélgica
+=== superseis asuncion (country=py) === count:1
+  [region,place] Asunción, Paraguay
+=== superseis asuncion (no-country+types) === count:1
+  [region,place] Asunción, Paraguay
+=== shopping del sol (country=py) === count:0
+=== shopping del sol (no-country+types) === count:1
+  [address] Soltauer Straße, 27751 Delmenhorst, Alemania
+=== biggie luque (country=py) === count:1
+  [place] Luque, Departamento Central, Paraguay
+=== biggie luque (no-country+types) === count:1
+  [place] Luquembo, Malanje, Angola
+=== farmacia catedral (country=py) === count:1
+  [locality] Catedral, Asunción, Paraguay
+=== farmacia catedral (no-country+types) === count:1
+  [address] Calle Catedral San Apolinar, Cochabamba, Departamento de Cochabamba, Bolivia

@@ -168,6 +168,22 @@ export default function EnviarPaquetePage() {
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // Editable offer price — initialized from suggestedPrice
+  const [offerPrice, setOfferPrice] = useState(0);
+  const offerInitialized = useRef(false);
+  useEffect(() => {
+    if (suggestedPrice > 0 && !offerInitialized.current) {
+      setOfferPrice(suggestedPrice);
+      offerInitialized.current = true;
+    }
+  }, [suggestedPrice]);
+  // Keep synced when vehicle/route changes AFTER first init
+  useEffect(() => {
+    if (offerInitialized.current && suggestedPrice > 0) {
+      setOfferPrice(suggestedPrice);
+    }
+  }, [suggestedPrice]);
+
   // Drag state
   const isDragging = useRef(false);
   const startY = useRef(0);
@@ -302,7 +318,7 @@ export default function EnviarPaquetePage() {
           instructions: form.instructions,
           payment_method: form.paymentMethod,
             suggested_price: suggestedPrice,
-            offer: form.offer,
+            offer: offerPrice > 0 ? String(offerPrice) : form.offer,
             pickup_lat: form.pickupLat,
             pickup_lng: form.pickupLng,
             delivery_lat: form.deliveryLat,
@@ -498,26 +514,6 @@ export default function EnviarPaquetePage() {
               ))}
             </div>
 
-            {/* ...se elimina sección de tipo de paquete... */}
-
-            {/* Precio sugerido */}
-            {suggestedPrice > 0 && (
-              <div style={{ margin: '12px 0', padding: '14px 16px', background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', borderRadius: 14, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 500 }}>Precio sugerido</div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
-                    {pricing[form.vehicleType]?.base_price != null && (<span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>)}
-                    {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
-                      <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#16a34a' }}>
-                  {suggestedPrice.toLocaleString('es-PY')} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Gs</span>
-                </div>
-              </div>
-            )}
-
             {/* Sender details */}
             <div className="enviar-section-label">Datos del envío</div>
             <div className="enviar-details-card">
@@ -555,51 +551,118 @@ export default function EnviarPaquetePage() {
               </div>
             </div>
 
-            {/* Payment method */}
-            <div className="enviar-section-label">Método de pago</div>
-            <div className="enviar-payment-grid">
-              {paymentMethods.map(pm => (
+            {/* ── Precio + Pago: Bolt/Uber style ── */}
+            <div className="enviar-pricing-card">
+              {/* Precio sugerido label */}
+              <div className="enviar-pricing-header">
+                <div className="enviar-pricing-label">
+                  <svg width="16" height="16" fill="none" stroke="#16a34a" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></svg>
+                  <span>Precio del envío</span>
+                </div>
+                {suggestedPrice > 0 && (
+                  <span className="enviar-pricing-hint">
+                    Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
+                  </span>
+                )}
+              </div>
+
+              {/* Precio editable con +/- */}
+              <div className="enviar-price-control">
                 <button
-                  key={pm.value}
                   type="button"
-                  className={`enviar-payment-btn ${form.paymentMethod === pm.value ? 'selected' : ''}`}
-                  onClick={() => update('paymentMethod', pm.value)}
+                  className="enviar-price-btn minus"
+                  onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
+                  disabled={offerPrice <= 0}
+                  aria-label="Restar 5.000"
                 >
-                  <span>{pm.icon}</span> {pm.label}
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
                 </button>
-              ))}
+
+                <div className="enviar-price-display">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="enviar-price-input"
+                    value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, '');
+                      setOfferPrice(Math.max(0, parseInt(raw) || 0));
+                    }}
+                  />
+                  <span className="enviar-price-currency">Gs</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="enviar-price-btn plus"
+                  onClick={() => setOfferPrice(prev => prev + 5000)}
+                  aria-label="Sumar 5.000"
+                >
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                </button>
+              </div>
+
+              {/* Desglose */}
+              {suggestedPrice > 0 && (
+                <div className="enviar-pricing-breakdown">
+                  {pricing[form.vehicleType]?.base_price != null && (
+                    <span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>
+                  )}
+                  {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
+                    <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
+                  )}
+                </div>
+              )}
+
+              {/* Separador */}
+              <div className="enviar-pricing-divider" />
+
+              {/* Método de pago */}
+              <div className="enviar-pricing-label" style={{ marginBottom: 8 }}>
+                <svg width="16" height="16" fill="none" stroke="#6366f1" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" /></svg>
+                <span>Método de pago</span>
+              </div>
+              <div className="enviar-payment-pills">
+                {paymentMethods.map(pm => (
+                  <button
+                    key={pm.value}
+                    type="button"
+                    className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
+                    onClick={() => update('paymentMethod', pm.value)}
+                  >
+                    <span className="enviar-pay-pill-icon">{pm.icon}</span>
+                    <span>{pm.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Instructions */}
+            {/* Instrucciones (colapsable) */}
             <div className="enviar-details-card" style={{ marginTop: '0.75rem' }}>
               <div className="enviar-field">
                 <label className="enviar-field-label">Instrucciones especiales</label>
-                <textarea className="enviar-field-textarea" placeholder="Indicaciones adicionales para el conductor..." value={form.instructions} onChange={e => update('instructions', e.target.value)} />
-              </div>
-              <div className="enviar-field" style={{ marginTop: '1rem' }}>
-                <label className="enviar-field-label">Precio sugerido</label>
-                <div style={{ padding: '10px 12px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', fontSize: '1.1rem', fontWeight: 700, color: '#16a34a' }}>
-                  {suggestedPrice > 0 ? `${suggestedPrice.toLocaleString('es-PY')} Gs` : 'Selecciona direcciones y vehículo'}
-                </div>
-              </div>
-              <div className="enviar-field" style={{ marginTop: '0.5rem' }}>
-                <label className="enviar-field-label">Tu oferta (opcional)</label>
-                <input
-                  type="number"
-                  className="enviar-field-input"
-                  placeholder={suggestedPrice > 0 ? String(suggestedPrice) : 'Ej: 95000'}
-                  value={form.offer || ''}
-                  onChange={e => update('offer', e.target.value)}
-                  min="0"
-                />
+                <textarea className="enviar-field-textarea" placeholder="Indicaciones adicionales para el conductor..." value={form.instructions} onChange={e => update('instructions', e.target.value)} rows={2} />
               </div>
             </div>
 
-            {/* Submit buttons */}
-            <div className="enviar-submit-row">
-              <Link href="/cliente" className="enviar-cancel-btn">Cancelar</Link>
-              <button type="submit" className="enviar-submit-btn" disabled={sending}>
-                {sending ? 'Enviando...' : 'Solicitar Envío'}
+            {/* Botones CTA */}
+            <div className="enviar-cta-row">
+              <Link href="/cliente" className="enviar-cta-cancel">
+                Cancelar
+              </Link>
+              <button type="submit" className="enviar-cta-submit" disabled={sending || offerPrice <= 0}>
+                {sending ? (
+                  <span className="enviar-cta-loading">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Enviando...
+                  </span>
+                ) : (
+                  <>
+                    Solicitar Envío · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs
+                  </>
+                )}
               </button>
             </div>
           </form>

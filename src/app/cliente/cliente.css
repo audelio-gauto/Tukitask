@@ -855,6 +855,185 @@
 .enviar-submit-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(16,185,129,0.4); }
 .enviar-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* ── Bolt/Uber-style Pricing Card ── */
+.enviar-pricing-card {
+  margin: 12px 0;
+  padding: 16px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.enviar-pricing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.enviar-pricing-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+}
+.enviar-pricing-hint {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.enviar-pricing-breakdown {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 6px;
+}
+.enviar-pricing-divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 14px 0;
+}
+
+/* Price control: [-] <price> [+] */
+.enviar-price-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.enviar-price-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.enviar-price-btn:active:not(:disabled) { transform: scale(0.92); }
+.enviar-price-btn.minus:hover:not(:disabled) { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.enviar-price-btn.plus:hover:not(:disabled) { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+.enviar-price-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.enviar-price-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 140px;
+  justify-content: center;
+}
+.enviar-price-input {
+  width: 120px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #16a34a;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.enviar-price-input::-webkit-outer-spin-button,
+.enviar-price-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.enviar-price-input:focus { color: #059669; }
+.enviar-price-currency {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+/* Payment method pills */
+.enviar-payment-pills {
+  display: flex;
+  gap: 8px;
+}
+.enviar-pay-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.enviar-pay-pill:active { transform: scale(0.97); }
+.enviar-pay-pill.active {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
+}
+.enviar-pay-pill-icon { font-size: 1.15rem; }
+
+/* CTA buttons row */
+.enviar-cta-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+}
+.enviar-cta-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.enviar-cta-cancel:hover { background: #e2e8f0; }
+.enviar-cta-cancel:active { transform: scale(0.97); }
+
+.enviar-cta-submit {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.enviar-cta-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.45); }
+.enviar-cta-submit:active:not(:disabled) { transform: scale(0.98); }
+.enviar-cta-submit:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.enviar-cta-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@keyframes enviar-spin { to { transform: rotate(360deg); } }
+.enviar-cta-submit .animate-spin { animation: enviar-spin 1s linear infinite; }
+
 /* Success screen */
 .enviar-success-screen {
   display: flex;

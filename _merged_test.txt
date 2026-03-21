@@ -1,0 +1,24 @@
+=== stock luque === count:2
+  [nominatim] STOCK, Avenida Ita Yvate, Campo Grande, Luque, Departamento de Central, Región Oriental, 110941, Paraguay
+  [mapbox] Luque, Departamento Central, Paraguay
+=== superseis === count:5
+  [nominatim] Superseis, Avenida España, Mariscal López, Asunción, Distrito Capital, Región Oriental, 001208, Paraguay
+  [nominatim] Superseis, Avenida Carlos Antonio López, San Antonio, Asunción, Distrito Capital, Región Oriental, 001008, Paraguay
+  [nominatim] Superseis, Máximo Ramón Lira Donoso, Recoleta, Asunción, Distrito Capital, Región Oriental, 001207, Paraguay
+  [nominatim] Superseis, Nicanor Torales, Ycuá Satí, City.: Ycuá Satí, Asunción, Distrito Capital, Región Oriental, 001410, Paraguay
+  [nominatim] SuperSeis, Capitán Andrés Insfrán, Hugua de Seda, Laurelty, Luque, Departamento de Central, Región Oriental, 110947, Paraguay
+=== shopping del sol === count:1
+  [nominatim] Shopping del Sol, Avenida Aviadores del Chaco, Ycuá Satí, Asunción, Distrito Capital, Región Oriental, 001410, Paraguay
+=== biggie luque === count:2
+  [nominatim] Biggie Express Luque Centro, Luis Alberto de Herrera, Cuarto Barrio, Luque, Departamento de Central, Región Oriental, 110932, Paraguay
+  [nominatim] Biggie Express Gral. Garay, Capitán Andrés Insfrán, Laurelty, Luque, Departamento de Central, Región Oriental, 110941, Paraguay
+=== farmacia catedral === count:6
+  [nominatim] Farmacia Catedral, Avenida España, Manorá, Asunción, Distrito Capital, Región Oriental, 001529, Paraguay
+  [nominatim] Farmacia Catedral, General Jose Eduvigis Diaz, Doctor Francia, Asunción, Distrito Capital, Región Oriental, 001011, Paraguay
+  [nominatim] Farmacia Catedral, Avenida Venezuela, Virgen del Huerto, Asunción, Distrito Capital, Región Oriental, 001535, Paraguay
+  [nominatim] Farmacia Catedral, Ruta Nacional Mariscal Estigarribia, San Lorenzo, Departamento de Central, Región Oriental, 111425, Paraguay
+  [nominatim] Farmacia Catedral, Primero de Marzo, Limpio, Departamento de Central, Región Oriental, Paraguay
+  [mapbox] Catedral, Asunción, Paraguay
+=== asuncion === count:2
+  [nominatim] Asunción, Distrito Capital, Región Oriental, Paraguay
+  [mapbox] Asunción, Paraguay
