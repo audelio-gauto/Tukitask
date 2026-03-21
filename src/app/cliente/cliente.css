@@ -864,6 +864,33 @@
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
+
+/* ── Fixed Bottom Bar (Bolt-style) ── */
+.enviar-fixed-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
+  padding: 14px 16px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 768px) {
+  .enviar-fixed-bottom {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 480px;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
 .enviar-pricing-header {
   display: flex;
   align-items: center;
@@ -985,8 +1012,7 @@
 .enviar-cta-row {
   display: flex;
   gap: 10px;
-  margin-top: 14px;
-  padding-bottom: env(safe-area-inset-bottom, 12px);
+  margin-top: 2px;
 }
 .enviar-cta-cancel {
   display: flex;

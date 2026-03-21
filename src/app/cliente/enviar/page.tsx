@@ -461,7 +461,7 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
-          <form onSubmit={handleSubmit}>
+          <form id="enviar-form" onSubmit={handleSubmit}>
             {/* Demo geocode (IndexedDB cache + server proxy) */}
 
             {/* Address inputs — tap to open fullscreen search */}
@@ -551,93 +551,7 @@ export default function EnviarPaquetePage() {
               </div>
             </div>
 
-            {/* ── Precio + Pago: Bolt/Uber style ── */}
-            <div className="enviar-pricing-card">
-              {/* Precio sugerido label */}
-              <div className="enviar-pricing-header">
-                <div className="enviar-pricing-label">
-                  <svg width="16" height="16" fill="none" stroke="#16a34a" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></svg>
-                  <span>Precio del envío</span>
-                </div>
-                {suggestedPrice > 0 && (
-                  <span className="enviar-pricing-hint">
-                    Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
-                  </span>
-                )}
-              </div>
-
-              {/* Precio editable con +/- */}
-              <div className="enviar-price-control">
-                <button
-                  type="button"
-                  className="enviar-price-btn minus"
-                  onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
-                  disabled={offerPrice <= 0}
-                  aria-label="Restar 5.000"
-                >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
-                </button>
-
-                <div className="enviar-price-display">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    className="enviar-price-input"
-                    value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, '');
-                      setOfferPrice(Math.max(0, parseInt(raw) || 0));
-                    }}
-                  />
-                  <span className="enviar-price-currency">Gs</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="enviar-price-btn plus"
-                  onClick={() => setOfferPrice(prev => prev + 5000)}
-                  aria-label="Sumar 5.000"
-                >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                </button>
-              </div>
-
-              {/* Desglose */}
-              {suggestedPrice > 0 && (
-                <div className="enviar-pricing-breakdown">
-                  {pricing[form.vehicleType]?.base_price != null && (
-                    <span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>
-                  )}
-                  {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
-                    <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
-                  )}
-                </div>
-              )}
-
-              {/* Separador */}
-              <div className="enviar-pricing-divider" />
-
-              {/* Método de pago */}
-              <div className="enviar-pricing-label" style={{ marginBottom: 8 }}>
-                <svg width="16" height="16" fill="none" stroke="#6366f1" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" /></svg>
-                <span>Método de pago</span>
-              </div>
-              <div className="enviar-payment-pills">
-                {paymentMethods.map(pm => (
-                  <button
-                    key={pm.value}
-                    type="button"
-                    className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
-                    onClick={() => update('paymentMethod', pm.value)}
-                  >
-                    <span className="enviar-pay-pill-icon">{pm.icon}</span>
-                    <span>{pm.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Instrucciones (colapsable) */}
+            {/* Instrucciones */}
             <div className="enviar-details-card" style={{ marginTop: '0.75rem' }}>
               <div className="enviar-field">
                 <label className="enviar-field-label">Instrucciones especiales</label>
@@ -645,27 +559,91 @@ export default function EnviarPaquetePage() {
               </div>
             </div>
 
-            {/* Botones CTA */}
-            <div className="enviar-cta-row">
-              <Link href="/cliente" className="enviar-cta-cancel">
-                Cancelar
-              </Link>
-              <button type="submit" className="enviar-cta-submit" disabled={sending || offerPrice <= 0}>
-                {sending ? (
-                  <span className="enviar-cta-loading">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-                    </svg>
-                    Enviando...
-                  </span>
-                ) : (
-                  <>
-                    Solicitar Envío · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Spacer for fixed bottom bar */}
+            <div style={{ height: 220 }} />
           </form>
+        </div>
+      </div>
+
+      {/* ── Fixed bottom bar: Precio + Pago + CTA (Bolt-style) ── */}
+      <div className="enviar-fixed-bottom">
+        {/* Precio editable con +/- */}
+        <div className="enviar-price-control">
+          <button
+            type="button"
+            className="enviar-price-btn minus"
+            onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
+            disabled={offerPrice <= 0}
+            aria-label="Restar 5.000"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
+          </button>
+
+          <div className="enviar-price-display">
+            <input
+              type="text"
+              inputMode="numeric"
+              className="enviar-price-input"
+              value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, '');
+                setOfferPrice(Math.max(0, parseInt(raw) || 0));
+              }}
+            />
+            <span className="enviar-price-currency">Gs</span>
+          </div>
+
+          <button
+            type="button"
+            className="enviar-price-btn plus"
+            onClick={() => setOfferPrice(prev => prev + 5000)}
+            aria-label="Sumar 5.000"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        </div>
+
+        {suggestedPrice > 0 && (
+          <div className="enviar-pricing-breakdown">
+            {pricing[form.vehicleType]?.base_price != null && (
+              <span>Base: {Number(pricing[form.vehicleType].base_price).toLocaleString('es-PY')} Gs</span>
+            )}
+            {pricing[form.vehicleType]?.price_per_km != null && (routeDistanceMeters || distanceKm > 0) && (
+              <span> + {Number(pricing[form.vehicleType].price_per_km).toLocaleString('es-PY')} Gs/km × {routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
+            )}
+          </div>
+        )}
+
+        {/* Método de pago */}
+        <div className="enviar-payment-pills">
+          {paymentMethods.map(pm => (
+            <button
+              key={pm.value}
+              type="button"
+              className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
+              onClick={() => update('paymentMethod', pm.value)}
+            >
+              <span className="enviar-pay-pill-icon">{pm.icon}</span>
+              <span>{pm.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="enviar-cta-row">
+          <Link href="/cliente" className="enviar-cta-cancel">Cancelar</Link>
+          <button type="submit" form="enviar-form" className="enviar-cta-submit" disabled={sending || offerPrice <= 0}>
+            {sending ? (
+              <span className="enviar-cta-loading">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                </svg>
+                Enviando...
+              </span>
+            ) : (
+              <>Solicitar Envío · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+            )}
+          </button>
         </div>
       </div>
     </>
