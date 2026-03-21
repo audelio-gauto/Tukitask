@@ -6,6 +6,7 @@ import { useClientContext } from '../context';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
+const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes chicos', icon: '🏍️' },
@@ -32,6 +33,8 @@ export default function EnviarPaquetePage() {
 
   // Address search overlay state
   const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery'>(null);
+  // Location picker (map pin) state
+  const [pickerMode, setPickerMode] = useState<null | 'pickup' | 'delivery'>(null);
 
   const [form, setForm] = useState({
     pickupAddress: '',
@@ -46,7 +49,6 @@ export default function EnviarPaquetePage() {
     receiverAddress: '',
     description: '',
     instructions: '',
-    paymentMethod: 'prometido',
     paymentMethod: 'efectivo',
     offer: '',
     pickupLat: '',
@@ -367,7 +369,7 @@ export default function EnviarPaquetePage() {
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', senderAddress: '', senderRef: '', receiverContact: '', receiverPhone: '', receiverAddress: '', description: '', instructions: '', paymentMethod: 'prometido', offer: '' }); }}>
+          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', senderAddress: '', senderRef: '', receiverContact: '', receiverPhone: '', receiverAddress: '', description: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); }}>
             Nuevo Envío
           </button>
         </div>
@@ -403,13 +405,6 @@ export default function EnviarPaquetePage() {
           </div>
         </div>
       )}
-
-      {/* Floating menu button */}
-      <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
 
       {/* Floating menu button (fixed) */}
       <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
@@ -454,7 +449,39 @@ export default function EnviarPaquetePage() {
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
             <span>Usar mi ubicación actual</span>
           </button>
+          {/* Open map picker */}
+          <button type="button" className="enviar-search-gps" onClick={() => { setSearchMode(null); setPickerMode(searchMode); }}>
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+            <span>Seleccionar en el mapa</span>
+          </button>
         </div>
+      )}
+
+      {/* Location Picker (Uber/Bolt style) */}
+      {pickerMode && (
+        <LocationPicker
+          mode={pickerMode}
+          initialCenter={
+            pickerMode === 'pickup' && form.pickupLat && form.pickupLng
+              ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) }
+              : pickerMode === 'delivery' && form.deliveryLat && form.deliveryLng
+              ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) }
+              : null
+          }
+          onConfirm={(address, lat, lng) => {
+            if (pickerMode === 'pickup') {
+              update('pickupAddress', address);
+              update('pickupLat', String(lat));
+              update('pickupLng', String(lng));
+            } else {
+              update('deliveryAddress', address);
+              update('deliveryLat', String(lat));
+              update('deliveryLng', String(lng));
+            }
+            setPickerMode(null);
+          }}
+          onClose={() => setPickerMode(null)}
+        />
       )}
 
       {/* Bottom Sheet */}
@@ -476,10 +503,9 @@ export default function EnviarPaquetePage() {
                   onChange={e => { update('pickupAddress', e.target.value); }}
                   onFocus={() => openSearch('pickup')}
                 />
-                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); handleUseGPS('pickup'); }} aria-label="Usar GPS">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
+                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
                 </button>
-                {/* opens full-screen search overlay on focus */}
               </div>
               <div className="enviar-address-divider" />
               <div className="enviar-address-row">
@@ -491,10 +517,9 @@ export default function EnviarPaquetePage() {
                   onChange={e => { update('deliveryAddress', e.target.value); }}
                   onFocus={() => openSearch('delivery')}
                 />
-                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); handleUseGPS('delivery'); }} aria-label="Usar GPS">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
+                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('delivery'); }} aria-label="Seleccionar en mapa">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
                 </button>
-                {/* opens full-screen search overlay on focus */}
               </div>
             </div>
 
@@ -606,12 +631,6 @@ export default function EnviarPaquetePage() {
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
         </div>
-
-        {suggestedPrice > 0 && (
-          <div className="enviar-pricing-breakdown">
-            {/* Pricing breakdown hidden */}
-          </div>
-        )}
 
         {/* Método de pago */}
         <div className="enviar-payment-pills">
