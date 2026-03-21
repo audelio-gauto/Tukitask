@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+const DEFAULT_CENTER = { lat: -25.2637, lng: -57.5759 };
 
 function createMarkerEl(label: string, color: string, size = 28) {
   const el = document.createElement('div');
@@ -10,19 +11,18 @@ function createMarkerEl(label: string, color: string, size = 28) {
   return el;
 }
 
-/** Build a Mapbox Static Images URL */
 function staticMapUrl(
   center: { lat: number; lng: number },
   zoom: number,
-  width: number,
-  height: number,
+  w: number,
+  h: number,
   markers?: { lat: number; lng: number; label: string; color: string }[],
 ) {
   const pins = (markers || [])
     .map(m => `pin-s-${m.label.toLowerCase()}+${m.color.replace('#', '')}(${m.lng},${m.lat})`)
     .join(',');
   const overlay = pins ? `${pins}/` : '';
-  return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlay}${center.lng},${center.lat},${zoom},0/${width}x${height}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+  return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlay}${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
 export default function ClientMap({
@@ -36,29 +36,19 @@ export default function ClientMap({
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const initRef = useRef(false); // guard against StrictMode double-init
-  const [ready, setReady] = useState(false);
-  const [useStatic, setUseStatic] = useState(false);
-  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const initRef = useRef(false);
+  const [glReady, setGlReady] = useState(false);
+  const [glFailed, setGlFailed] = useState(false);
   const selfMarker = useRef<any>(null);
   const pickupMarker = useRef<any>(null);
   const deliveryMarker = useRef<any>(null);
   const mbRef = useRef<any>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Get user location for static fallback
+  // GL map init
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }, []);
-
-  // Initialise GL map
-  useEffect(() => {
-    if (!mapRef.current || initRef.current) return;
-    if (!MAPBOX_TOKEN) { setUseStatic(true); return; }
+    if (!mapRef.current || initRef.current || glFailed) return;
+    if (!MAPBOX_TOKEN) { setGlFailed(true); return; }
 
     initRef.current = true;
     let mounted = true;
@@ -67,7 +57,6 @@ export default function ClientMap({
     (async () => {
       const mapboxgl = (await import('mapbox-gl')).default;
 
-      // Inject Mapbox CSS once
       if (!document.getElementById('mapbox-gl-css')) {
         const link = document.createElement('link');
         link.id = 'mapbox-gl-css';
@@ -77,69 +66,63 @@ export default function ClientMap({
       }
       if (!mounted || !mapRef.current) return;
 
-      // Use Mapbox's own browser check (checks specific WebGL extensions)
       if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
-        if (mounted) setUseStatic(true);
+        if (mounted) setGlFailed(true);
         return;
       }
 
       mbRef.current = mapboxgl;
-      const defaultLng = -57.5759;
-      const defaultLat = -25.2637;
 
       let map: any;
       try {
         map = new mapboxgl.Map({
           container: mapRef.current,
           style: 'mapbox://styles/mapbox/streets-v12',
-          center: [defaultLng, defaultLat],
+          center: [DEFAULT_CENTER.lng, DEFAULT_CENTER.lat],
           zoom: 15,
           accessToken: MAPBOX_TOKEN,
           attributionControl: false,
           failIfMajorPerformanceCaveat: false,
         });
       } catch {
-        if (mounted) setUseStatic(true);
+        if (mounted) setGlFailed(true);
         return;
       }
 
-      // WebGL error fires as internal event during constructor.
-      // Check that painter AND its GL context actually exist.
       if (!map.painter?.context?.gl) {
         try { map.remove(); } catch {}
-        if (mounted) setUseStatic(true);
+        if (mounted) setGlFailed(true);
         return;
       }
 
+      mapInstance.current = map;
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       const selfEl = document.createElement('div');
       selfEl.className = 'client-map-marker';
       selfMarker.current = new mapboxgl.Marker({ element: selfEl })
-        .setLngLat([defaultLng, defaultLat])
+        .setLngLat([DEFAULT_CENTER.lng, DEFAULT_CENTER.lat])
         .addTo(map);
-      mapInstance.current = map;
 
       map.on('error', (e: any) => {
         if (e?.error?.message?.includes('WebGL') && mounted) {
           try { map.remove(); } catch {}
           mapInstance.current = null;
-          setUseStatic(true);
+          setGlFailed(true);
         }
       });
 
-      // Safety timeout: if map doesn't fire 'load' within 6s, fall back
       loadTimerRef.current = setTimeout(() => {
         if (mounted && !mapInstance.current?._loaded) {
           try { map.remove(); } catch {}
           mapInstance.current = null;
-          setUseStatic(true);
+          setGlFailed(true);
         }
       }, 6000);
 
       map.on('load', () => {
         if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
-        if (mounted) setReady(true);
+        if (mounted) setGlReady(true);
       });
 
       if (navigator.geolocation) {
@@ -166,13 +149,10 @@ export default function ClientMap({
       mounted = false;
       if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
       initRef.current = false;
     };
-  }, []);
+  }, [glFailed]);
 
   // Update GL markers and route
   useEffect(() => {
@@ -237,45 +217,39 @@ export default function ClientMap({
     }
   }, [pickup, delivery, routeCoords]);
 
-  // --- Static image fallback (no WebGL needed) ---
-  if (useStatic) {
-    const center = pickup && isFinite(pickup.lat) ? pickup
-      : delivery && isFinite(delivery!.lat) ? delivery!
-      : userPos || { lat: -25.2637, lng: -57.5759 };
-    const zoom = (pickup && delivery && isFinite(pickup.lat) && isFinite(delivery.lat)) ? 13 : 15;
-    const markers: { lat: number; lng: number; label: string; color: string }[] = [];
-    if (pickup && isFinite(pickup.lat)) markers.push({ ...pickup, label: 'A', color: '#10b981' });
-    if (delivery && isFinite(delivery!.lat)) markers.push({ ...delivery!, label: 'B', color: '#ef4444' });
-    const url = staticMapUrl(center, zoom, 600, 600, markers);
-
-    return (
-      <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
-        {MAPBOX_TOKEN ? (
-          <img
-            src={url}
-            alt="Mapa"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: 14 }}>Mapa no disponible</p>
-          </div>
-        )}
-      </div>
-    );
-  }
+  // Compute static map props
+  const center = pickup && isFinite(pickup.lat) ? pickup
+    : delivery && isFinite(delivery!.lat) ? delivery!
+    : DEFAULT_CENTER;
+  const zoom = (pickup && delivery && isFinite(pickup.lat) && isFinite(delivery.lat)) ? 13 : 15;
+  const staticMarkers: { lat: number; lng: number; label: string; color: string }[] = [];
+  if (pickup && isFinite(pickup.lat)) staticMarkers.push({ ...pickup, label: 'A', color: '#10b981' });
+  if (delivery && isFinite(delivery!.lat)) staticMarkers.push({ ...delivery!, label: 'B', color: '#ef4444' });
 
   return (
-    <div
-      ref={mapRef}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        minHeight: 300,
-        opacity: ready ? 1 : 0,
-        transition: 'opacity 0.3s',
-      }}
-    />
+    <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
+      {/* Static image — always visible as base layer until GL loads */}
+      {!glReady && MAPBOX_TOKEN && (
+        <img
+          src={staticMapUrl(center, zoom, 600, 600, staticMarkers)}
+          alt="Mapa"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      )}
+      {/* GL map — overlays static when ready */}
+      {!glFailed && (
+        <div
+          ref={mapRef}
+          style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: glReady ? 1 : 0, transition: 'opacity 0.3s' }}
+        />
+      )}
+      {/* No token */}
+      {!MAPBOX_TOKEN && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}>
+          <p style={{ color: '#6b7280', fontSize: 14 }}>Mapa no disponible</p>
+        </div>
+      )}
+    </div>
   );
 }

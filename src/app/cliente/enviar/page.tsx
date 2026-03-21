@@ -1,12 +1,11 @@
-
 "use client";
-// ...existing code...
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
+const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes chicos', icon: '🏍️' },
@@ -25,7 +24,6 @@ const paymentMethods = [
 // (using Mapbox autocomplete results)
 
 export default function EnviarPaquetePage() {
-    // ...existing code...
   const { openDrawer } = useClientContext();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -34,8 +32,6 @@ export default function EnviarPaquetePage() {
 
   // Address search overlay state
   const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery'>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     pickupAddress: '',
@@ -58,13 +54,7 @@ export default function EnviarPaquetePage() {
     deliveryLng: '',
   });
 
-  // Autocomplete suggestion state (Mapbox)
-  const [pickupSuggestions, setPickupSuggestions] = useState<Array<any>>([]);
-  const [deliverySuggestions, setDeliverySuggestions] = useState<Array<any>>([]);
-  const pickupTimer = useRef<number | null>(null);
-  const deliveryTimer = useRef<number | null>(null);
-  const pickupAbort = useRef<AbortController | null>(null);
-  const deliveryAbort = useRef<AbortController | null>(null);
+
 
   // User location for proximity bias
   const userLocation = useRef<{ lat: number; lng: number } | null>(null);
@@ -78,61 +68,6 @@ export default function EnviarPaquetePage() {
     }
   }, []);
 
-  // Simple in-memory geocode/autocomplete cache (per session)
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  const geoCache = useRef<Map<string, { ts: number; data: any }>>(new Map());
-
-  const getCached = (key: string) => {
-    const entry = geoCache.current.get(key);
-    if (!entry) return null;
-    if (Date.now() - entry.ts > CACHE_TTL) {
-      geoCache.current.delete(key);
-      return null;
-    }
-    return entry.data;
-  };
-
-  const setCached = (key: string, data: any) => {
-    try {
-      geoCache.current.set(key, { ts: Date.now(), data });
-    } catch (err) {
-      // ignore cache errors
-    }
-  };
-
-  /** Fetch autocomplete suggestions via backend proxy — Mapbox only */
-  function fetchProxyGeocode(query: string, signal?: AbortSignal) {
-    const payload: any = { query, multi: true, limit: 6 };
-    if (userLocation.current) {
-      payload.proximity = { lat: userLocation.current.lat, lng: userLocation.current.lng };
-    }
-    return fetch('/api/maps/geocode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal,
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) {
-          console.warn('[geocode]', data.error);
-          return [];
-        }
-        if (data.results && Array.isArray(data.results)) {
-          return data.results.map((r: any) => ({
-            display_name: r.display_name,
-            lat: r.lat,
-            lon: r.lng,
-            raw: r,
-          }));
-        }
-        if (data.result) {
-          return [{ display_name: data.result.display_name, lat: data.result.lat, lon: data.result.lng, raw: data.result }];
-        }
-        return [];
-      });
-  }
-
   /** Fetch route via backend proxy (API key stays server-side) */
   function fetchProxyDirections(lat1: number, lng1: number, lat2: number, lng2: number) {
     return fetch('/api/maps/directions', {
@@ -145,65 +80,7 @@ export default function EnviarPaquetePage() {
     }).then(r => r.json());
   }
 
-  // debounce pickupAddress
-  useEffect(() => {
-    const q = form.pickupAddress;
-    if (pickupTimer.current) window.clearTimeout(pickupTimer.current);
-    if (pickupAbort.current) pickupAbort.current.abort();
-    if (!q || q.length < 3) {
-      setPickupSuggestions([]);
-      return;
-    }
-    pickupAbort.current = new AbortController();
-    pickupTimer.current = window.setTimeout(() => {
-      const cacheKey = `proxy:${q}`;
-      const cached = getCached(cacheKey);
-      if (cached) {
-        setPickupSuggestions(cached);
-        return;
-      }
-      fetchProxyGeocode(q, pickupAbort.current!.signal)
-        .then((items) => {
-          setCached(cacheKey, items);
-          setPickupSuggestions(items);
-        })
-        .catch(() => setPickupSuggestions([]));
-    }, 300);
-    return () => {
-      if (pickupTimer.current) window.clearTimeout(pickupTimer.current);
-      if (pickupAbort.current) pickupAbort.current.abort();
-    };
-  }, [form.pickupAddress]);
 
-  // debounce deliveryAddress
-  useEffect(() => {
-    const q = form.deliveryAddress;
-    if (deliveryTimer.current) window.clearTimeout(deliveryTimer.current);
-    if (deliveryAbort.current) deliveryAbort.current.abort();
-    if (!q || q.length < 3) {
-      setDeliverySuggestions([]);
-      return;
-    }
-    deliveryAbort.current = new AbortController();
-    deliveryTimer.current = window.setTimeout(() => {
-      const cacheKey = `proxy:${q}`;
-      const cached = getCached(cacheKey);
-      if (cached) {
-        setDeliverySuggestions(cached);
-        return;
-      }
-      fetchProxyGeocode(q, deliveryAbort.current!.signal)
-        .then((items) => {
-          setCached(cacheKey, items);
-          setDeliverySuggestions(items);
-        })
-        .catch(() => setDeliverySuggestions([]));
-    }, 300);
-    return () => {
-      if (deliveryTimer.current) window.clearTimeout(deliveryTimer.current);
-      if (deliveryAbort.current) deliveryAbort.current.abort();
-    };
-  }, [form.deliveryAddress]);
 
   // Pricing state
   const [pricing, setPricing] = useState<{ [key: string]: { base_price: number | null, price_per_km: number | null } }>({});
@@ -370,12 +247,6 @@ export default function EnviarPaquetePage() {
     };
   }, [getTranslateY, isDesktop, setSheet]);
 
-  // Focus search input when overlay opens
-  useEffect(() => {
-    if (searchMode && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
-  }, [searchMode]);
 
   // When coordinates change, request a routed path via backend proxy
   useEffect(() => {
@@ -464,43 +335,12 @@ export default function EnviarPaquetePage() {
           update('deliveryLng', lon);
         }
         setSearchMode(null);
-        setSearchQuery('');
       },
       () => {}
     );
   };
 
-  const openSearch = (mode: 'pickup' | 'delivery') => {
-    setSearchMode(mode);
-    setSearchQuery(mode === 'pickup' ? form.pickupAddress : form.deliveryAddress);
-  };
-
-  const selectSuggestion = (address: string) => {
-    if (searchMode === 'pickup') {
-      update('pickupAddress', address);
-      const found = pickupSuggestions.find((it: any) => (it.display_name || it.name || it.label) === address);
-      if (found) {
-        update('pickupLat', String(found.lat ?? ''));
-        update('pickupLng', String(found.lon ?? ''));
-      }
-    } else if (searchMode === 'delivery') {
-      update('deliveryAddress', address);
-      const found = deliverySuggestions.find((it: any) => (it.display_name || it.name || it.label) === address);
-      if (found) {
-        update('deliveryLat', String(found.lat ?? ''));
-        update('deliveryLng', String(found.lon ?? ''));
-      }
-    }
-    setSearchMode(null);
-    setSearchQuery('');
-  };
-
-  const filteredSuggestions = searchQuery.length > 0
-    ? (searchMode === 'pickup'
-        ? pickupSuggestions.map((it: any) => it.display_name || it.name || it.label)
-        : deliverySuggestions.map((it: any) => it.display_name || it.name || it.label)
-      )
-    : [];
+  const openSearch = (mode: 'pickup' | 'delivery') => setSearchMode(mode);
 
   if (success) {
     return (
@@ -565,44 +405,38 @@ export default function EnviarPaquetePage() {
       {searchMode && (
         <div className="enviar-search-overlay" style={{ background: '#fff' }}>
           <div className="enviar-search-header">
-            <button type="button" className="enviar-search-back" onClick={() => { setSearchMode(null); setSearchQuery(''); }}>
+            <button type="button" className="enviar-search-back" onClick={() => setSearchMode(null)}>
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <div className="enviar-search-input-wrap">
-              <span className={`enviar-dot ${searchMode === 'pickup' ? 'green' : 'red'}`} />
-              <input
-                ref={searchInputRef}
-                className="enviar-search-input"
-                placeholder={searchMode === 'pickup' ? 'Punto de recogida' : '¿A dónde va el paquete?'}
-                value={searchQuery}
-                onChange={e => {
-                  const v = e.target.value;
-                  setSearchQuery(v);
-                  if (searchMode === 'pickup') update('pickupAddress', v);
-                  else if (searchMode === 'delivery') update('deliveryAddress', v);
-                }}
-              />
-              {searchQuery && (
-                <button type="button" className="enviar-search-clear" onClick={() => setSearchQuery('')}>
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              )}
-            </div>
+            <span className={`enviar-dot ${searchMode === 'pickup' ? 'green' : 'red'}`} style={{ marginLeft: 8 }} />
+            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#374151', marginLeft: 8 }}>
+              {searchMode === 'pickup' ? 'Punto de recogida' : 'Destino de entrega'}
+            </span>
+          </div>
+          {/* Mapbox SearchBox autocomplete */}
+          <div style={{ padding: '12px 16px 0' }}>
+            <MapboxSearch
+              placeholder={searchMode === 'pickup' ? 'Buscar punto de recogida...' : 'Buscar destino...'}
+              value={searchMode === 'pickup' ? form.pickupAddress : form.deliveryAddress}
+              onSelect={(name: string, lat: number, lng: number) => {
+                if (searchMode === 'pickup') {
+                  update('pickupAddress', name);
+                  update('pickupLat', String(lat));
+                  update('pickupLng', String(lng));
+                } else {
+                  update('deliveryAddress', name);
+                  update('deliveryLat', String(lat));
+                  update('deliveryLng', String(lng));
+                }
+                setSearchMode(null);
+              }}
+            />
           </div>
           {/* GPS option */}
           <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode)}>
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
             <span>Usar mi ubicación actual</span>
           </button>
-          {/* Suggestions */}
-          <div className="enviar-search-suggestions">
-            {filteredSuggestions.map((s, i) => (
-              <button key={i} type="button" className="enviar-search-suggestion" onClick={() => selectSuggestion(s)}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <span>{s}</span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
