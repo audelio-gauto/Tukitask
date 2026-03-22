@@ -190,6 +190,7 @@ export default function EnviarPaquetePage() {
   // Drag state
   const isDragging = useRef(false);
   const startY = useRef(0);
+  const startX = useRef(0);
   const startTranslate = useRef(0);
 
   const isDesktop = useCallback(() => window.matchMedia('(min-width: 768px)').matches, []);
@@ -223,6 +224,13 @@ export default function EnviarPaquetePage() {
     function onMove(e: TouchEvent | MouseEvent) {
       if (!isDragging.current) return;
       const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      // Block if horizontal swipe is dominant
+      if (!startX.current) startX.current = currentX;
+      const deltaX = Math.abs(currentX - startX.current);
+      const deltaY = Math.abs(currentY - startY.current);
+      if (deltaX > deltaY + 5) { isDragging.current = false; return; }
+      if (e.cancelable) e.preventDefault();
       const delta = currentY - startY.current;
       const newTranslate = Math.max(0, startTranslate.current + delta);
       sheet!.style.transform = `translateY(${newTranslate}px)`;
@@ -231,11 +239,12 @@ export default function EnviarPaquetePage() {
     function onEnd() {
       if (!isDragging.current) return;
       isDragging.current = false;
+      startX.current = 0;
       sheet!.style.transition = '';
       const finalTranslate = getTranslateY();
       const viewH = window.innerHeight;
-      if (finalTranslate > viewH * 0.6) setSheet('collapsed');
-      else if (finalTranslate > viewH * 0.3) setSheet('half');
+      if (finalTranslate > viewH * 0.55) setSheet('collapsed');
+      else if (finalTranslate > viewH * 0.25) setSheet('half');
       else setSheet('full');
     }
 

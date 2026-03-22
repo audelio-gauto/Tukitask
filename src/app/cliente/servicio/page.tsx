@@ -70,6 +70,7 @@ export default function SolicitarServicioPage() {
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
+  const startX = useRef(0);
   const startTranslate = useRef(0);
 
   const isDesktop = useCallback(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches, []);
@@ -109,6 +110,13 @@ export default function SolicitarServicioPage() {
       if (!isDragging.current) return;
       if (!sheet) return;
       const currentY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      const currentX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      // Block if horizontal swipe is dominant
+      if (!startX.current) startX.current = currentX;
+      const deltaX = Math.abs(currentX - startX.current);
+      const deltaY = Math.abs(currentY - startY.current);
+      if (deltaX > deltaY + 5) { isDragging.current = false; return; }
+      if (e.cancelable) e.preventDefault();
       const delta = currentY - startY.current;
       const newTranslate = Math.max(0, startTranslate.current + delta);
       sheet.style.transform = `translateY(${newTranslate}px)`;
@@ -117,12 +125,13 @@ export default function SolicitarServicioPage() {
     function onEnd() {
       if (!isDragging.current) return;
       isDragging.current = false;
+      startX.current = 0;
       if (!sheet) return;
       sheet.style.transition = '';
       const finalTranslate = getTranslateY();
       const viewH = window.innerHeight;
-      if (finalTranslate > viewH * 0.6) setSheet('collapsed');
-      else if (finalTranslate > viewH * 0.3) setSheet('half');
+      if (finalTranslate > viewH * 0.55) setSheet('collapsed');
+      else if (finalTranslate > viewH * 0.25) setSheet('half');
       else setSheet('full');
     }
 
@@ -379,11 +388,43 @@ export default function SolicitarServicioPage() {
 
             {/* Fotos */}
             <div className="enviar-section-label">Fotos del problema</div>
-            <div className="enviar-details-card">
-              <input type="file" accept="image/*" multiple onChange={e => handlePhoto(e.target.files)} />
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                {photos.map((p, i) => <img key={i} src={p} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />)}
-              </div>
+            <div className="photo-upload-area">
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={e => handlePhoto(e.target.files)}
+                className="photo-upload-hidden"
+              />
+              {photos.length === 0 ? (
+                <label htmlFor="photo-upload" className="photo-upload-placeholder">
+                  <svg width="40" height="40" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" />
+                    <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                  <span className="photo-upload-text">Tocar para agregar fotos</span>
+                </label>
+              ) : (
+                <div className="photo-grid">
+                  {photos.map((p, i) => (
+                    <div key={i} className="photo-thumb">
+                      <img src={p} alt="" />
+                      <button
+                        type="button"
+                        className="photo-thumb-delete"
+                        onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <svg width="14" height="14" fill="none" stroke="#fff" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  <label htmlFor="photo-upload" className="photo-add-btn">
+                    <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Spacer for fixed bottom bar */}
