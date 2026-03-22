@@ -45,6 +45,20 @@ export default function DriverDashboard() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const locateFnRef = useRef<(() => void) | null>(null);
 
+  // Service filter state
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({
+    moto_envios: true,
+    auto_envios: true,
+    moto_fletes: true,
+    carro_fletes: true,
+    camion_fletes: true,
+  });
+
+  const toggleFilter = (key: string) => {
+    setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   // Touch drag state
   const isDragging = useRef(false);
   const startY = useRef(0);
@@ -166,6 +180,61 @@ export default function DriverDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       </button>
+
+      {/* Floating filter button */}
+      <button
+        className={`tuki-float-btn filter${Object.values(serviceFilters).some(v => !v) ? ' has-filter' : ''}`}
+        onClick={() => setFilterOpen(true)}
+        aria-label="Filtrar servicios"
+      >
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+        </svg>
+      </button>
+
+      {/* Service Filter Modal */}
+      {filterOpen && (
+        <>
+          <div className="driver-filter-overlay" onClick={() => setFilterOpen(false)} />
+          <div className="driver-filter-modal">
+            <div className="driver-filter-header">
+              <h3>Filtrar solicitudes</h3>
+              <button className="driver-filter-close" onClick={() => setFilterOpen(false)} aria-label="Cerrar">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <p className="driver-filter-subtitle">Elegí qué tipo de solicitudes querés recibir</p>
+            <div className="driver-filter-list">
+              {[
+                { key: 'moto_envios', label: 'Moto Envíos', icon: '🏍️', desc: 'Paquetes pequeños en moto' },
+                { key: 'auto_envios', label: 'Auto Envíos', icon: '🚗', desc: 'Paquetes medianos en auto' },
+                { key: 'moto_fletes', label: 'Moto Fletes', icon: '🛵', desc: 'Fletes livianos en moto' },
+                { key: 'carro_fletes', label: 'Carro Fletes', icon: '🚙', desc: 'Fletes medianos en carro' },
+                { key: 'camion_fletes', label: 'Camión Fletes', icon: '🚛', desc: 'Fletes grandes en camión' },
+              ].map(item => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`driver-filter-item${serviceFilters[item.key] ? ' active' : ''}`}
+                  onClick={() => toggleFilter(item.key)}
+                >
+                  <span className="driver-filter-item-icon">{item.icon}</span>
+                  <div className="driver-filter-item-info">
+                    <span className="driver-filter-item-label">{item.label}</span>
+                    <span className="driver-filter-item-desc">{item.desc}</span>
+                  </div>
+                  <span className={`driver-filter-toggle${serviceFilters[item.key] ? ' on' : ''}`}>
+                    <span className="driver-filter-toggle-knob" />
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button className="driver-filter-done" onClick={() => setFilterOpen(false)}>
+              Aplicar filtros
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Bottom Sheet */}
       <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
