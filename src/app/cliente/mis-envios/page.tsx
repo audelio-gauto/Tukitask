@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
@@ -30,6 +30,37 @@ interface DriverOffer {
   created_at: string;
 }
 
+/* ── Web Audio notification ── */
+let _ac: AudioContext | null = null;
+function getAC() {
+  if (typeof window === 'undefined') return null;
+  if (!_ac || _ac.state === 'closed') _ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function tone(f: number, t: number, d: number, v = 0.22) {
+  const c = getAC(); if (!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.connect(g); g.connect(c.destination);
+  o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.02);
+  g.gain.setValueAtTime(v, t + d * 0.7);
+  g.gain.linearRampToValueAtTime(0.001, t + d);
+  o.start(t); o.stop(t + d);
+}
+/** Client: new driver offer received - ascending chime */
+function playOfferAlert() {
+  try {
+    const c = getAC(); if (!c) return;
+    const n = c.currentTime;
+    for (let g = 0; g < 3; g++) {
+      const t = n + g * 2.3;
+      tone(660, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35);
+    }
+  } catch { /* no audio */ }
+}
+
 export default function MisEnviosPage() {
   const { email } = useClientContext();
   const [orders, setOrders] = useState<any[]>([]);
@@ -37,6 +68,10 @@ export default function MisEnviosPage() {
   const [offers, setOffers] = useState<Record<string, DriverOffer[]>>({});
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+
+  // Sound refs
+  const prevOfferCount = useRef(0);
+  const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchOrders = useCallback(() => {
     if (!email) return;
@@ -55,7 +90,7 @@ export default function MisEnviosPage() {
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
-  // Fetch offers for orders that are pending/negotiating
+  // Fetch offers for active orders
   useEffect(() => {
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
     if (activeOrders.length === 0) return;
@@ -77,6 +112,32 @@ export default function MisEnviosPage() {
     const interval = setInterval(fetchAllOffers, 6000);
     return () => clearInterval(interval);
   }, [orders]);
+
+  // Count total pending offers for sound logic
+  const totalPendingOffers = useMemo(() => {
+    let count = 0;
+    for (const key of Object.keys(offers)) count += offers[key].length;
+    return count;
+  }, [offers]);
+
+  // Sound: detect new offers and play alert
+  useEffect(() => {
+    if (prevOfferCount.current > 0 || totalPendingOffers > 0) {
+      if (totalPendingOffers > prevOfferCount.current) {
+        playOfferAlert();
+      }
+    }
+    prevOfferCount.current = totalPendingOffers;
+  }, [totalPendingOffers]);
+
+  // Repeat sound every 6s while pending offers exist
+  useEffect(() => {
+    if (soundTimer.current) { clearInterval(soundTimer.current); soundTimer.current = null; }
+    if (!loading && totalPendingOffers > 0) {
+      soundTimer.current = setInterval(playOfferAlert, 6000);
+    }
+    return () => { if (soundTimer.current) clearInterval(soundTimer.current); };
+  }, [loading, totalPendingOffers]);
 
   const handleAcceptOffer = async (offerId: string) => {
     setAccepting(offerId);
@@ -100,7 +161,6 @@ export default function MisEnviosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'reject' }),
       });
-      // Remove from local state
       setOffers(prev => {
         const updated = { ...prev };
         for (const key of Object.keys(updated)) {
@@ -112,7 +172,10 @@ export default function MisEnviosPage() {
   };
 
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
-  const completedOrders = orders.filter(o => o.status !== 'pending' && o.status !== 'negotiating');
+  const acceptedOrders = orders.filter(o => o.status === 'accepted');
+  const completedOrders = orders.filter(o =>
+    o.status !== 'pending' && o.status !== 'negotiating' && o.status !== 'accepted'
+  );
 
   return (
     <ClientScreenLayout title="Mis Envíos">
@@ -129,7 +192,69 @@ export default function MisEnviosPage() {
         </div>
       )}
 
-      {/* Active orders with negotiation */}
+      {/* ── Accepted orders: show driver info ── */}
+      {acceptedOrders.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>
+            Envío en curso
+          </h3>
+          {acceptedOrders.map(order => (
+            <div key={order.id} style={{
+              background: '#fff', borderRadius: 16, marginBottom: 12,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '2px solid #10b981',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff', padding: '0.75rem 1rem', fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>✅</span>
+                ¡Driver asignado!
+              </div>
+              <div style={{ padding: '1rem' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>
+                  {VEHICLE_LABELS[order.vehicle_type] || order.vehicle_type}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 4 }}>
+                  📍 {order.pickup_address}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 8 }}>
+                  📍 {order.delivery_address}
+                </div>
+                <div style={{
+                  background: '#f0fdf4', borderRadius: 12, padding: '0.75rem',
+                  display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8,
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 700, fontSize: '1.1rem',
+                  }}>
+                    {(order.accepted_by?.[0] || '🚗').toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      {order.accepted_by?.split('@')[0] || 'Driver'}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                      Tu driver en camino
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
+                      {Number(order.offer || order.suggested_price || 0).toLocaleString()} Gs
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Active orders with negotiation ── */}
       {activeOrders.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>
@@ -146,7 +271,6 @@ export default function MisEnviosPage() {
                 boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e5e7eb',
                 overflow: 'hidden'
               }}>
-                {/* Order summary - tap to expand */}
                 <button
                   style={{
                     width: '100%', padding: '1rem', background: 'none', border: 'none',
@@ -183,7 +307,6 @@ export default function MisEnviosPage() {
                   </div>
                 </button>
 
-                {/* Expanded: show driver offers */}
                 {isExpanded && (
                   <div style={{ borderTop: '1px solid #f1f5f9', padding: '0.75rem 1rem 1rem' }}>
                     {orderOffers.length === 0 ? (
@@ -210,7 +333,6 @@ export default function MisEnviosPage() {
                             display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem',
                             background: '#f9fafb', borderRadius: 12, marginBottom: 8, border: '1px solid #e5e7eb'
                           }}>
-                            {/* Driver avatar */}
                             <div style={{
                               width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
                               background: driverOffer.driver_photo ? `url(${driverOffer.driver_photo}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -219,8 +341,6 @@ export default function MisEnviosPage() {
                             }}>
                               {!driverOffer.driver_photo && (driverOffer.driver_name?.[0] || '🚗').toUpperCase()}
                             </div>
-
-                            {/* Driver info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
                                 {driverOffer.driver_name || driverOffer.driver_email.split('@')[0]}
@@ -229,8 +349,6 @@ export default function MisEnviosPage() {
                                 {Number(driverOffer.amount).toLocaleString()} Gs
                               </div>
                             </div>
-
-                            {/* Actions */}
                             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                               <button
                                 onClick={() => handleRejectOffer(driverOffer.id)}
@@ -268,7 +386,7 @@ export default function MisEnviosPage() {
         </div>
       )}
 
-      {/* Completed/past orders */}
+      {/* ── Completed/past orders ── */}
       {completedOrders.length > 0 && (
         <div>
           <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 
@@ -11,6 +11,43 @@ const VEHICLE_LABELS: Record<string, string> = {
   camion2t: '🚛 Camión Fletes',
 };
 
+/* ── Web Audio notification ── */
+let _ac: AudioContext | null = null;
+function getAC() {
+  if (typeof window === 'undefined') return null;
+  if (!_ac || _ac.state === 'closed') _ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function tone(f: number, t: number, d: number, v = 0.22) {
+  const c = getAC(); if (!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.connect(g); g.connect(c.destination);
+  o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.02);
+  g.gain.setValueAtTime(v, t + d * 0.7);
+  g.gain.linearRampToValueAtTime(0.001, t + d);
+  o.start(t); o.stop(t + d);
+}
+function playOrderAlert() {
+  try {
+    const c = getAC(); if (!c) return;
+    const n = c.currentTime;
+    for (let g = 0; g < 3; g++) {
+      const t = n + g * 2.3;
+      tone(880, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35);
+    }
+  } catch { /* no audio */ }
+}
+function playAccepted() {
+  try {
+    const c = getAC(); if (!c) return;
+    const n = c.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, n + i * 0.18, 0.35, 0.28));
+  } catch { /* no audio */ }
+}
+
 export default function DeliveriesPage() {
   const { serviceFilters, email, displayName, profilePhoto } = useDriverContext();
   const [orders, setOrders] = useState<any[]>([]);
@@ -18,50 +55,80 @@ export default function DeliveriesPage() {
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [sentOffers, setSentOffers] = useState<Record<string, number>>({});
+  const [acceptedJobs, setAcceptedJobs] = useState<any[]>([]);
 
-  // Fetch orders — polling every 8 seconds
+  // Sound refs
+  const prevOrderIds = useRef<Set<string>>(new Set());
+  const prevAcceptedIds = useRef<Set<string>>(new Set());
+  const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* ── Fetch pending/negotiating orders ── */
   const fetchOrders = useCallback(() => {
     fetch('/api/orders')
-      .then(res => res.json())
+      .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setOrders(data);
+        if (!Array.isArray(data)) return;
+        setOrders(data);
+        const ids = new Set(data.map((o: any) => o.id as string));
+        if (prevOrderIds.current.size > 0) {
+          for (const id of ids) {
+            if (!prevOrderIds.current.has(id)) { playOrderAlert(); break; }
+          }
+        }
+        prevOrderIds.current = ids;
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 8000);
-    return () => clearInterval(interval);
-  }, [fetchOrders]);
-
-  // Also fetch my existing offers to show "Ya ofertaste"
-  useEffect(() => {
+  /* ── Fetch my offers (pending + accepted with embedded order) ── */
+  const fetchMyOffers = useCallback(() => {
     if (!email) return;
     fetch(`/api/orders/offers?driver_email=${encodeURIComponent(email)}`)
-      .then(res => res.json())
+      .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
-        const map: Record<string, number> = {};
+        const pending: Record<string, number> = {};
+        const accepted: any[] = [];
         for (const o of data) {
-          if (o.status === 'pending' && o.order_id) {
-            map[o.order_id] = Number(o.amount);
+          if (o.status === 'pending' && o.order_id) pending[o.order_id] = Number(o.amount);
+          if (o.status === 'accepted' && o.orders) {
+            accepted.push({ ...o.orders, _offerAmount: Number(o.amount), _offerId: o.id });
+            if (!prevAcceptedIds.current.has(o.id)) playAccepted();
           }
         }
-        setSentOffers(map);
+        setSentOffers(pending);
+        setAcceptedJobs(accepted);
+        prevAcceptedIds.current = new Set(accepted.map((a: any) => a._offerId));
       })
       .catch(() => {});
   }, [email]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      const filterKey = VEHICLE_TO_FILTER[o.vehicle_type];
-      if (!filterKey) return true;
-      return serviceFilters[filterKey] === true;
-    });
-  }, [orders, serviceFilters]);
+  /* ── Polling ── */
+  useEffect(() => {
+    fetchOrders(); fetchMyOffers();
+    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); }, 8000);
+    return () => clearInterval(iv);
+  }, [fetchOrders, fetchMyOffers]);
 
+  const filteredOrders = useMemo(() =>
+    orders.filter(o => { const fk = VEHICLE_TO_FILTER[o.vehicle_type]; return !fk || serviceFilters[fk]; }),
+  [orders, serviceFilters]);
+
+  const unrespondedCount = useMemo(() =>
+    filteredOrders.filter(o => !sentOffers[o.id]).length,
+  [filteredOrders, sentOffers]);
+
+  /* ── Repeat alert every 6s while unresponded orders exist ── */
+  useEffect(() => {
+    if (soundTimer.current) { clearInterval(soundTimer.current); soundTimer.current = null; }
+    if (!loading && unrespondedCount > 0) {
+      soundTimer.current = setInterval(playOrderAlert, 6000);
+    }
+    return () => { if (soundTimer.current) clearInterval(soundTimer.current); };
+  }, [loading, unrespondedCount]);
+
+  /* ── Actions ── */
   const handleSendOffer = async (orderId: string) => {
     const amount = offerAmounts[orderId];
     if (!amount || Number(amount) <= 0) return;
@@ -71,10 +138,8 @@ export default function DeliveriesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_id: orderId,
-          driver_email: email,
-          driver_name: displayName,
-          driver_photo: profilePhoto,
+          order_id: orderId, driver_email: email,
+          driver_name: displayName, driver_photo: profilePhoto,
           amount: Number(amount),
         }),
       });
@@ -93,29 +158,84 @@ export default function DeliveriesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_id: orderId,
-          driver_email: email,
-          driver_name: displayName,
-          driver_photo: profilePhoto,
+          order_id: orderId, driver_email: email,
+          driver_name: displayName, driver_photo: profilePhoto,
           amount: clientOffer,
         }),
       });
-      if (res.ok) {
-        setSentOffers(s => ({ ...s, [orderId]: clientOffer }));
-      }
+      if (res.ok) setSentOffers(s => ({ ...s, [orderId]: clientOffer }));
     } catch { /* noop */ }
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
   return (
     <DriverScreenLayout title="Envíos">
+      {/* ── Accepted jobs (client accepted your offer) ── */}
+      {acceptedJobs.map(job => (
+        <div key={job.id} className="tuki-order-card" style={{
+          marginBottom: 16, border: '2px solid #10b981',
+          background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            color: '#fff', padding: '0.75rem 1rem', fontWeight: 700,
+            fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8,
+            borderRadius: '12px 12px 0 0',
+          }}>
+            <span style={{ fontSize: '1.3rem' }}>✅</span>
+            ¡Solicitud Aceptada!
+          </div>
+          <div className="tuki-order-body" style={{ padding: '1rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: '0.9rem' }}>
+              {VEHICLE_LABELS[job.vehicle_type] || job.vehicle_type}
+            </div>
+            <div className="tuki-route-line" style={{ marginBottom: 12 }}>
+              <div className="tuki-route-point pickup">
+                <div className="tuki-route-meta">Recoger</div>
+                <div className="tuki-route-address">{job.pickup_address}</div>
+              </div>
+              <div className="tuki-route-point delivery">
+                <div className="tuki-route-meta">Entregar</div>
+                <div className="tuki-route-address">{job.delivery_address}</div>
+              </div>
+            </div>
+            {job.instructions && (
+              <div style={{ background: '#fff', padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: 10, fontSize: '0.85rem', color: '#6366f1' }}>
+                📝 {job.instructions}
+              </div>
+            )}
+            <div style={{
+              background: '#fff', borderRadius: 12, padding: '0.75rem 1rem',
+              textAlign: 'center', marginBottom: 12,
+            }}>
+              <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Precio acordado</div>
+              <div style={{ fontWeight: 800, color: '#059669', fontSize: '1.4rem' }}>
+                {Number(job._offerAmount || job.offer || 0).toLocaleString()} Gs
+              </div>
+            </div>
+            {job.client_email && (
+              <div style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 8, textAlign: 'center' }}>
+                📞 Cliente: {job.client_email}
+              </div>
+            )}
+            <a href="/driver/en-ruta" className="tuki-btn tuki-btn-success" style={{
+              display: 'block', textAlign: 'center', textDecoration: 'none',
+              fontSize: '1rem', padding: '0.85rem',
+            }}>
+              🚀 Ir a Recoger
+            </a>
+          </div>
+        </div>
+      ))}
+
+      {/* ── Pending orders heading ── */}
       <h2 className="tuki-heading" style={{ marginTop: '1rem' }}>Solicitudes de Envío</h2>
       <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
         Enviá tu oferta al cliente. El cliente elegirá entre las ofertas recibidas.
       </p>
 
       {loading && <div style={{ padding: 32, textAlign: 'center' }}>Cargando...</div>}
-      {!loading && filteredOrders.length === 0 && (
+      {!loading && filteredOrders.length === 0 && acceptedJobs.length === 0 && (
         <div className="tuki-order-card">
           <div className="tuki-order-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
             <span style={{ fontSize: '3rem' }}>📦</span>
@@ -132,7 +252,6 @@ export default function DeliveriesPage() {
         const isSending = sending[req.id];
         return (
           <div key={req.id} className="tuki-order-card" style={{ marginBottom: 16 }}>
-            {/* Header with vehicle badge */}
             <div className="tuki-order-header" style={{ padding: '0.75rem 1rem' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                 {VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}
@@ -143,7 +262,6 @@ export default function DeliveriesPage() {
             </div>
 
             <div className="tuki-order-body" style={{ padding: '1rem' }}>
-              {/* Route */}
               <div className="tuki-route-line" style={{ marginBottom: 12 }}>
                 <div className="tuki-route-point pickup">
                   <div className="tuki-route-meta">Recoger</div>
@@ -161,7 +279,6 @@ export default function DeliveriesPage() {
                 </div>
               )}
 
-              {/* Prices */}
               <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                 <div style={{ flex: 1, background: '#f0fdf4', borderRadius: 10, padding: '0.6rem 0.75rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: 2 }}>Precio sugerido</div>
@@ -177,7 +294,6 @@ export default function DeliveriesPage() {
                 </div>
               </div>
 
-              {/* Already offered indicator */}
               {alreadyOffered ? (
                 <div style={{ background: '#eef2ff', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.8rem', color: '#6366f1', marginBottom: 2 }}>Tu oferta enviada</div>
@@ -190,7 +306,6 @@ export default function DeliveriesPage() {
                 </div>
               ) : (
                 <div>
-                  {/* Accept at client's price */}
                   <button
                     className="tuki-btn tuki-btn-success"
                     style={{ marginBottom: 8 }}
@@ -199,8 +314,6 @@ export default function DeliveriesPage() {
                   >
                     {isSending ? 'Enviando...' : `Aceptar por ${Number(req.offer || req.suggested_price || 0).toLocaleString()} Gs`}
                   </button>
-
-                  {/* Counter-offer */}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                       <input
