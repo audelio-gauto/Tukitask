@@ -24,14 +24,15 @@ export default function ServiceChatInput({
 }: ServiceChatInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [showCancel, setShowCancel] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [inputRows, setInputRows] = useState(1);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdStart = useRef<number>(0);
-  const [dragX, setDragX] = useState(0);
+
+  // Refs for recording — avoids stale closures in event handlers
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const cancelledRef = useRef(false);
 
   // Handle input auto-grow
   useEffect(() => {
@@ -57,79 +58,61 @@ export default function ServiceChatInput({
 
   const startRecording = async () => {
     if (disabled) return;
+    cancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mr = new MediaRecorder(stream);
-      setMediaRecorder(mr);
+      recorderRef.current = mr;
       const chunks: Blob[] = [];
       mr.ondataavailable = (e) => chunks.push(e.data);
       mr.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
+        // Release the mic immediately
+        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        if (cancelledRef.current) {
+          setAudioBlob(null);
+        } else {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          setAudioBlob(blob);
+        }
         setIsRecording(false);
-        setShowCancel(false);
-        setDragX(0);
       };
       mr.start();
       setIsRecording(true);
       setAudioBlob(null);
-    } catch (e) {
+    } catch {
       alert("No se pudo acceder al micrófono");
     }
   };
 
   const stopRecording = (cancel = false) => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      if (cancel) {
-        mediaRecorder.onstop = () => {
-          setIsRecording(false);
-          setShowCancel(false);
-          setDragX(0);
-          setAudioBlob(null);
-        };
-      }
-      // If not cancelled, the original onstop handler will create the blob
-      mediaRecorder.stop();
-      if (!cancel) {
-        setIsRecording(false);
-        setShowCancel(false);
-        setDragX(0);
-      }
+    cancelledRef.current = cancel;
+    const mr = recorderRef.current;
+    if (mr && mr.state !== 'inactive') {
+      mr.stop(); // triggers onstop which cleans up
+    } else {
+      // If recorder never started, just clean up
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      setIsRecording(false);
     }
   };
 
-  // Touch/Mouse handlers for hold-to-record
+  // Touch/Mouse handlers for hold-to-record (WhatsApp style)
   const handleMicDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (disabled) return;
-    holdStart.current = Date.now();
-    setShowCancel(false);
-    setDragX(0);
+    e.preventDefault(); // prevent ghost clicks
     startRecording();
-    // Solo grabar mientras se mantiene presionado
-    document.addEventListener("mousemove", handleDrag);
-    document.addEventListener("touchmove", handleDrag);
-    document.addEventListener("mouseup", handleMicUp, { once: true });
-    document.addEventListener("touchend", handleMicUp, { once: true });
-  };
-
-  const handleDrag = (e: MouseEvent | TouchEvent) => {
-    let clientX = 0;
-    if (e instanceof TouchEvent) {
-      clientX = e.touches[0].clientX;
-    } else {
-      clientX = e.clientX;
-    }
-    setDragX(clientX);
-    if (clientX < 100) setShowCancel(true);
-    else setShowCancel(false);
-  };
-
-  const handleMicUp = () => {
-    document.removeEventListener("mousemove", handleDrag);
-    document.removeEventListener("touchmove", handleDrag);
-    // Al soltar, si no se deslizó a cancelar, guardar el audio
-    if (showCancel) stopRecording(true);
-    else stopRecording(false);
+    const onUp = () => {
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchend", onUp);
+      stopRecording(false);
+    };
+    document.addEventListener("mouseup", onUp, { once: true });
+    document.addEventListener("touchend", onUp, { once: true });
   };
 
   // Send text or audio
@@ -222,9 +205,6 @@ export default function ServiceChatInput({
             </button>
           </div>
         )}
-        {isRecording && showCancel && (
-          <div className="service-chat-cancel">Deslizá para cancelar ←</div>
-        )}
       </div>
     );
   }
@@ -283,9 +263,6 @@ export default function ServiceChatInput({
             )}
           </div>
         )}
-      {isRecording && showCancel && (
-        <div className="service-chat-cancel">Cancelar ❌</div>
-      )}
       </div>
     </div>
   );
