@@ -4,28 +4,6 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 import { supabase } from '@/lib/supabaseClient';
-  // --- Supabase Realtime: subscribe to orders assigned to this driver ---
-  useEffect(() => {
-    if (!email) return;
-    // Listen for new/updated orders assigned to this driver
-    const channel = supabase.channel('driver-orders-' + email)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-        filter: `driver_email=eq.${email}`
-      }, payload => {
-        // On any change, refetch active job and orders
-        fetchActiveJob();
-        fetchOrders();
-        // Play sound if new order assigned or status changes
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          playOrderAlert();
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [email, fetchActiveJob, fetchOrders]);
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -157,6 +135,41 @@ export default function DeliveriesPage() {
     const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 3000);
     return () => clearInterval(iv);
   }, [fetchOrders, fetchMyOffers, fetchActiveJob]);
+
+  /* ── Supabase Realtime: instant notification like Bolt/Uber ── */
+  useEffect(() => {
+    // Channel 1: new pending/negotiating orders → alert driver instantly
+    const chNew = supabase.channel('realtime-new-orders')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'orders',
+      }, () => {
+        fetchOrders();
+        playOrderAlert();
+      })
+      .subscribe();
+
+    // Channel 2: driver's own active job changes
+    const chDriver = email
+      ? supabase.channel('realtime-driver-' + email)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `accepted_by=eq.${email}`,
+          }, () => {
+            fetchActiveJob();
+            fetchOrders();
+          })
+          .subscribe()
+      : null;
+
+    return () => {
+      supabase.removeChannel(chNew);
+      if (chDriver) supabase.removeChannel(chDriver);
+    };
+  }, [email, fetchOrders, fetchActiveJob]);
 
   const filteredOrders = useMemo(() =>
     orders.filter(o => { const fk = VEHICLE_TO_FILTER[o.vehicle_type]; return !fk || serviceFilters[fk]; }),
