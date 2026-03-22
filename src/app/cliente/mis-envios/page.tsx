@@ -14,7 +14,8 @@ const VEHICLE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Buscando drivers...', color: '#f59e0b', bg: '#fffbeb' },
   negotiating: { label: 'Ofertas recibidas', color: '#6366f1', bg: '#eef2ff' },
-  accepted: { label: 'Aceptado', color: '#10b981', bg: '#f0fdf4' },
+  accepted: { label: 'Conductor asignado', color: '#10b981', bg: '#f0fdf4' },
+  picking_up: { label: 'En recogida', color: '#f59e0b', bg: '#fffbeb' },
   in_transit: { label: 'En camino', color: '#3b82f6', bg: '#eff6ff' },
   delivered: { label: 'Entregado', color: '#059669', bg: '#ecfdf5' },
   cancelled: { label: 'Cancelado', color: '#ef4444', bg: '#fef2f2' },
@@ -49,16 +50,209 @@ function tone(f: number, t: number, d: number, v = 0.22) {
   g.gain.linearRampToValueAtTime(0.001, t + d);
   o.start(t); o.stop(t + d);
 }
-/** Client: new driver offer received - ascending chime */
 function playOfferAlert() {
-  try {
-    const c = getAC(); if (!c) return;
-    const n = c.currentTime;
-    for (let g = 0; g < 3; g++) {
-      const t = n + g * 2.3;
-      tone(660, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35);
-    }
-  } catch { /* no audio */ }
+  try { const c = getAC(); if (!c) return; const n = c.currentTime;
+    for (let g = 0; g < 3; g++) { const t = n + g * 2.3; tone(660, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35); }
+  } catch { /* */ }
+}
+
+function genTrackingCode(id: string) {
+  return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
+}
+
+/* ── Timeline steps ── */
+const TIMELINE_STEPS = [
+  { key: 'created', label: 'Solicitud creada', icon: '📝' },
+  { key: 'searching', label: 'Buscando conductor', icon: '🔍' },
+  { key: 'accepted', label: 'Conductor asignado', icon: '✅' },
+  { key: 'picking_up', label: 'En recogida', icon: '📍' },
+  { key: 'in_transit', label: 'En camino', icon: '🚛' },
+  { key: 'delivered', label: 'Entregado', icon: '🏁' },
+];
+
+function getStepIndex(status: string) {
+  const map: Record<string, number> = {
+    pending: 1, negotiating: 1, accepted: 2, picking_up: 3, in_transit: 4, delivered: 5,
+  };
+  return map[status] ?? 0;
+}
+
+function statusMessage(status: string) {
+  const msgs: Record<string, string> = {
+    accepted: 'Se dirige al punto de recogida',
+    picking_up: 'Recogiendo tu paquete',
+    in_transit: 'En camino a destino',
+    delivered: '¡Entregado con éxito!',
+  };
+  return msgs[status] || '';
+}
+
+/* ── Sliding Card Component ── */
+function SlidingCard({ order, driverOffer }: { order: any; driverOffer?: DriverOffer | null }) {
+  const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const startY = useRef(0);
+  const currentY = useRef(0);
+  const dragging = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
+    dragging.current = true;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!dragging.current) return;
+    currentY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const diff = startY.current - currentY.current;
+    if (diff > 40) setExpanded(true);
+    else if (diff < -40) setExpanded(false);
+  };
+
+  const stepIdx = getStepIndex(order.status);
+  const trackCode = genTrackingCode(order.id);
+  const driverName = driverOffer?.driver_name || order.accepted_by?.split('@')[0] || 'Conductor';
+  const driverPhoto = driverOffer?.driver_photo || null;
+
+  return (
+    <div
+      ref={cardRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        position: 'relative', background: '#fff', borderRadius: '20px 20px 0 0',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.12)', transition: 'max-height 0.35s ease',
+        maxHeight: expanded ? '85vh' : '260px', overflow: 'hidden',
+        marginTop: 12, border: '2px solid #10b981',
+      }}
+    >
+      {/* Drag handle */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px', cursor: 'grab' }}
+        onClick={() => setExpanded(!expanded)}>
+        <div style={{ width: 40, height: 5, borderRadius: 3, background: '#d1d5db' }} />
+      </div>
+
+      {/* Driver profile */}
+      <div style={{ padding: '0 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
+          background: driverPhoto ? `url(${driverPhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontWeight: 700, fontSize: '1.3rem', border: '3px solid #10b981',
+        }}>
+          {!driverPhoto && driverName[0]?.toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>{driverName}</div>
+          <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 1 }}>
+            ⭐ 4.8 • {statusMessage(order.status)}
+          </div>
+        </div>
+        {(driverOffer?.driver_email || order.accepted_by) && (
+          <a href={`tel:${driverOffer?.driver_email || order.accepted_by}`}
+            style={{
+              width: 42, height: 42, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '1.2rem', textDecoration: 'none', flexShrink: 0,
+            }}>
+            📞
+          </a>
+        )}
+      </div>
+
+      {/* Tracking badge */}
+      <div style={{ padding: '0 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{
+          background: '#eef2ff', color: '#6366f1', padding: '4px 12px',
+          borderRadius: 99, fontSize: '0.78rem', fontWeight: 700,
+        }}>
+          #{trackCode}
+        </span>
+        <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
+          ₲{Number(order.offer || order.suggested_price || 0).toLocaleString()}
+        </span>
+      </div>
+
+      {/* Addresses */}
+      <div style={{ padding: '0 1rem', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
+            <div style={{ width: 2, flex: 1, background: '#d1d5db', margin: '3px 0' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 600 }}>Recogida</div>
+            <div style={{ fontSize: '0.85rem', color: '#111827', marginBottom: 10, lineHeight: 1.3 }}>
+              {order.pickup_address}
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>Entrega</div>
+            <div style={{ fontSize: '0.85rem', color: '#111827', lineHeight: 1.3 }}>
+              {order.delivery_address}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline (visible when expanded) */}
+      {expanded && (
+        <div style={{ padding: '0.5rem 1rem 1.5rem' }}>
+          <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827', marginBottom: 12 }}>
+            Seguimiento en tiempo real
+          </div>
+          {TIMELINE_STEPS.map((step, i) => {
+            const completed = i <= stepIdx;
+            const current = i === stepIdx;
+            return (
+              <div key={step.key} style={{ display: 'flex', gap: 12, minHeight: i < TIMELINE_STEPS.length - 1 ? 44 : 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.82rem', flexShrink: 0,
+                    background: completed ? (current ? '#10b981' : '#d1fae5') : '#f3f4f6',
+                    color: completed ? (current ? '#fff' : '#059669') : '#9ca3af',
+                    border: current ? '2px solid #059669' : completed ? '2px solid #a7f3d0' : '2px solid #e5e7eb',
+                    fontWeight: 700,
+                  }}>
+                    {completed && !current ? '✓' : step.icon}
+                  </div>
+                  {i < TIMELINE_STEPS.length - 1 && (
+                    <div style={{ width: 2, flex: 1, background: completed ? '#a7f3d0' : '#e5e7eb', margin: '2px 0' }} />
+                  )}
+                </div>
+                <div style={{ paddingTop: 3, flex: 1 }}>
+                  <div style={{
+                    fontWeight: current ? 700 : 500,
+                    fontSize: '0.85rem',
+                    color: completed ? '#111827' : '#9ca3af',
+                  }}>
+                    {step.label}
+                  </div>
+                  {current && (
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                      {statusMessage(order.status)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Payment info */}
+          {order.payment_method && (
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', borderRadius: 10, padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}>
+              <span>💵</span>
+              <span style={{ fontWeight: 600, color: '#065f46' }}>Cobro: {order.payment_method}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MisEnviosPage() {
@@ -68,8 +262,8 @@ export default function MisEnviosPage() {
   const [offers, setOffers] = useState<Record<string, DriverOffer[]>>({});
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [acceptedOffers, setAcceptedOffers] = useState<Record<string, DriverOffer>>({});
 
-  // Sound refs
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -90,52 +284,59 @@ export default function MisEnviosPage() {
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
-  // Fetch offers for active orders
+  // Fetch pending offers for negotiating orders
   useEffect(() => {
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
     if (activeOrders.length === 0) return;
-
     const fetchAllOffers = () => {
       for (const order of activeOrders) {
         fetch(`/api/orders/offers?order_id=${order.id}`)
           .then(res => res.json())
           .then(data => {
-            if (Array.isArray(data)) {
+            if (Array.isArray(data))
               setOffers(prev => ({ ...prev, [order.id]: data.filter((o: DriverOffer) => o.status === 'pending') }));
-            }
           })
           .catch(() => {});
       }
     };
-
     fetchAllOffers();
     const interval = setInterval(fetchAllOffers, 6000);
     return () => clearInterval(interval);
   }, [orders]);
 
-  // Count total pending offers for sound logic
+  // Fetch accepted offer details for tracking orders
+  useEffect(() => {
+    const trackingOrders = orders.filter(o => ['accepted', 'picking_up', 'in_transit'].includes(o.status));
+    for (const order of trackingOrders) {
+      if (acceptedOffers[order.id]) continue;
+      fetch(`/api/orders/offers?order_id=${order.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const accepted = data.find((o: DriverOffer) => o.status === 'accepted');
+            if (accepted) setAcceptedOffers(prev => ({ ...prev, [order.id]: accepted }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [orders, acceptedOffers]);
+
   const totalPendingOffers = useMemo(() => {
     let count = 0;
     for (const key of Object.keys(offers)) count += offers[key].length;
     return count;
   }, [offers]);
 
-  // Sound: detect new offers and play alert
   useEffect(() => {
     if (prevOfferCount.current > 0 || totalPendingOffers > 0) {
-      if (totalPendingOffers > prevOfferCount.current) {
-        playOfferAlert();
-      }
+      if (totalPendingOffers > prevOfferCount.current) playOfferAlert();
     }
     prevOfferCount.current = totalPendingOffers;
   }, [totalPendingOffers]);
 
-  // Repeat sound every 6s while pending offers exist
   useEffect(() => {
     if (soundTimer.current) { clearInterval(soundTimer.current); soundTimer.current = null; }
-    if (!loading && totalPendingOffers > 0) {
-      soundTimer.current = setInterval(playOfferAlert, 6000);
-    }
+    if (!loading && totalPendingOffers > 0) soundTimer.current = setInterval(playOfferAlert, 6000);
     return () => { if (soundTimer.current) clearInterval(soundTimer.current); };
   }, [loading, totalPendingOffers]);
 
@@ -147,10 +348,8 @@ export default function MisEnviosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
       });
-      if (res.ok) {
-        fetchOrders();
-      }
-    } catch { /* noop */ }
+      if (res.ok) fetchOrders();
+    } catch { /* */ }
     setAccepting(null);
   };
 
@@ -163,19 +362,15 @@ export default function MisEnviosPage() {
       });
       setOffers(prev => {
         const updated = { ...prev };
-        for (const key of Object.keys(updated)) {
-          updated[key] = updated[key].filter(o => o.id !== offerId);
-        }
+        for (const key of Object.keys(updated)) updated[key] = updated[key].filter(o => o.id !== offerId);
         return updated;
       });
-    } catch { /* noop */ }
+    } catch { /* */ }
   };
 
-  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
-  const acceptedOrders = orders.filter(o => o.status === 'accepted');
-  const completedOrders = orders.filter(o =>
-    o.status !== 'pending' && o.status !== 'negotiating' && o.status !== 'accepted'
-  );
+  const negotiatingOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
+  const trackingOrders = orders.filter(o => ['accepted', 'picking_up', 'in_transit'].includes(o.status));
+  const completedOrders = orders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
 
   return (
     <ClientScreenLayout title="Mis Envíos">
@@ -192,75 +387,30 @@ export default function MisEnviosPage() {
         </div>
       )}
 
-      {/* ── Accepted orders: show driver info ── */}
-      {acceptedOrders.length > 0 && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>
-            Envío en curso
-          </h3>
-          {acceptedOrders.map(order => (
-            <div key={order.id} style={{
-              background: '#fff', borderRadius: 16, marginBottom: 12,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '2px solid #10b981',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: '#fff', padding: '0.75rem 1rem', fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <span style={{ fontSize: '1.2rem' }}>✅</span>
-                ¡Driver asignado!
-              </div>
-              <div style={{ padding: '1rem' }}>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 6 }}>
-                  {VEHICLE_LABELS[order.vehicle_type] || order.vehicle_type}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 4 }}>
-                  📍 {order.pickup_address}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 8 }}>
-                  📍 {order.delivery_address}
-                </div>
-                <div style={{
-                  background: '#f0fdf4', borderRadius: 12, padding: '0.75rem',
-                  display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8,
-                }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontWeight: 700, fontSize: '1.1rem',
-                  }}>
-                    {(order.accepted_by?.[0] || '🚗').toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      {order.accepted_by?.split('@')[0] || 'Driver'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                      Tu driver en camino
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
-                      {Number(order.offer || order.suggested_price || 0).toLocaleString()} Gs
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ════════════ TRACKING ORDERS (accepted/picking_up/in_transit) ════════════ */}
+      {trackingOrders.map(order => (
+        <div key={order.id} style={{ marginBottom: 20 }}>
+          {/* Green banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            color: '#fff', padding: '0.7rem 1rem', fontWeight: 700,
+            borderRadius: '16px 16px 0 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem',
+          }}>
+            <span>🚚</span> ¡Conductor Asignado!
+          </div>
 
-      {/* ── Active orders with negotiation ── */}
-      {activeOrders.length > 0 && (
+          {/* Sliding card */}
+          <SlidingCard order={order} driverOffer={acceptedOffers[order.id] || null} />
+        </div>
+      ))}
+
+      {/* ════════════ NEGOTIATING ORDERS ════════════ */}
+      {negotiatingOrders.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>
             En proceso
           </h3>
-          {activeOrders.map(order => {
+          {negotiatingOrders.map(order => {
             const orderOffers = offers[order.id] || [];
             const isExpanded = expandedOrder === order.id;
             const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
@@ -386,7 +536,7 @@ export default function MisEnviosPage() {
         </div>
       )}
 
-      {/* ── Completed/past orders ── */}
+      {/* ════════════ HISTORY ════════════ */}
       {completedOrders.length > 0 && (
         <div>
           <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem', color: '#111827' }}>
