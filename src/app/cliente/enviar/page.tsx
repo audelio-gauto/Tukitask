@@ -9,10 +9,10 @@ const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: 
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
 const vehicleTypes = [
-  { value: 'moto', label: 'Moto', sub: 'Paquetes chicos', icon: '🏍️' },
-  { value: 'auto', label: 'Auto', sub: 'Más capacidad', icon: '🚗' },
-  { value: 'motocarro', label: 'Moto carro', sub: 'Envíos rápidos', icon: '🛵' },
-  { value: 'camion2t', label: 'Camión 2T', sub: 'Carga media', icon: '🚛' },
+  { value: 'moto', label: 'Moto Envíos', sub: 'Paquetes chicos', icon: '🏍️' },
+  { value: 'auto', label: 'Auto Envíos', sub: 'Más capacidad', icon: '🚗' },
+  { value: 'motocarro', label: 'Moto Carro Fletes', sub: 'Fletes en moto o carro', icon: '🛵' },
+  { value: 'camion2t', label: 'Camión Fletes', sub: 'Carga grande', icon: '🚛' },
 ];
 
 

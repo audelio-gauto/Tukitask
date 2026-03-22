@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DriverContext } from './context';
+import { DriverContext, DEFAULT_FILTERS } from './context';
+import type { ServiceFilters } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import './driver.css';
 import { DriverDrawer } from './components/DriverDrawer';
@@ -13,6 +14,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
+  const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     (async () => {
@@ -63,7 +66,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter }}>
         {children}
       </DriverContext.Provider>
     </div>

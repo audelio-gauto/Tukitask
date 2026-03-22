@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import '../driver/driver.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
-import { DriverContext } from '../driver/context';
+import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -126,7 +126,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
         role={role}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {} }}>
         <main>
           {children}
         </main>

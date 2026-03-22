@@ -39,24 +39,14 @@ function playDeliveryAlert() {
 }
 
 export default function DriverDashboard() {
-  const { openDrawer } = useDriverContext();
+  const { openDrawer, serviceFilters, toggleFilter } = useDriverContext();
   const [available, setAvailable] = useState(false);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
   const locateFnRef = useRef<(() => void) | null>(null);
 
-  // Service filter state
+  // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
-  const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({
-    moto_envios: true,
-    auto_envios: true,
-    moto_carro_fletes: true,
-    camion_fletes: true,
-  });
-
-  const toggleFilter = (key: string) => {
-    setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   // Touch drag state
   const isDragging = useRef(false);

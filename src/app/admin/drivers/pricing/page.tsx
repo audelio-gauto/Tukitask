@@ -61,12 +61,11 @@ export default function PricingConfigPage() {
       });
       // if backend has no vehicle rows yet, initialize sensible defaults so admin can set base and per-km
       const defaultVehicles = [
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto', emoji: '🏍️', base_price: null, price_per_km: null },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto', emoji: '🚗', base_price: null, price_per_km: null },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto carro', emoji: '🛵', base_price: null, price_per_km: null },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión 2T', emoji: '🚛', base_price: null, price_per_km: null },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null },
       ];
-      setVehicles(filteredVehicles.length > 0 ? filteredVehicles : defaultVehicles);
       setSettings(data.pricing_settings || []);
       setAppSettings(data.app_settings || []);
       // ensure global pricing settings exist in local state for UI
@@ -93,10 +92,10 @@ export default function PricingConfigPage() {
       setError(String(err));
       // Even on error, show default vehicles so admin can still see the UI
       setVehicles([
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto', emoji: '🏍️', base_price: null, price_per_km: null },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto', emoji: '🚗', base_price: null, price_per_km: null },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto carro', emoji: '🛵', base_price: null, price_per_km: null },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión 2T', emoji: '🚛', base_price: null, price_per_km: null },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null },
       ]);
     } finally {
       setLoading(false);

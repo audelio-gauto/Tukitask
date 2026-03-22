@@ -1,12 +1,31 @@
 'use client';
 import { createContext, useContext } from 'react';
 
+/** Maps the vehicle_type stored in orders → driver filter key */
+export const VEHICLE_TO_FILTER: Record<string, string> = {
+  moto: 'moto_envios',
+  auto: 'auto_envios',
+  motocarro: 'moto_carro_fletes',
+  camion2t: 'camion_fletes',
+};
+
+export type ServiceFilters = Record<string, boolean>;
+
+export const DEFAULT_FILTERS: ServiceFilters = {
+  moto_envios: true,
+  auto_envios: true,
+  moto_carro_fletes: true,
+  camion_fletes: true,
+};
+
 interface DriverCtx {
   openDrawer: () => void;
   email: string;
   displayName: string;
   profilePhoto: string;
   setProfilePhoto: (url: string) => void;
+  serviceFilters: ServiceFilters;
+  toggleFilter: (key: string) => void;
 }
 
 export const DriverContext = createContext<DriverCtx>({
@@ -15,6 +34,8 @@ export const DriverContext = createContext<DriverCtx>({
   displayName: '',
   profilePhoto: '',
   setProfilePhoto: () => {},
+  serviceFilters: DEFAULT_FILTERS,
+  toggleFilter: () => {},
 });
 
 export function useDriverContext() {
