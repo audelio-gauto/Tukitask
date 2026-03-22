@@ -3,6 +3,29 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
+import { supabase } from '@/lib/supabaseClient';
+  // --- Supabase Realtime: subscribe to orders assigned to this driver ---
+  useEffect(() => {
+    if (!email) return;
+    // Listen for new/updated orders assigned to this driver
+    const channel = supabase.channel('driver-orders-' + email)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `driver_email=eq.${email}`
+      }, payload => {
+        // On any change, refetch active job and orders
+        fetchActiveJob();
+        fetchOrders();
+        // Play sound if new order assigned or status changes
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          playOrderAlert();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [email, fetchActiveJob, fetchOrders]);
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -131,7 +154,7 @@ export default function DeliveriesPage() {
 
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
-    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 8000);
+    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 3000);
     return () => clearInterval(iv);
   }, [fetchOrders, fetchMyOffers, fetchActiveJob]);
 
@@ -217,13 +240,9 @@ export default function DeliveriesPage() {
               <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
                 style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>📍 Ir a recoger</a>
             )}
-            {activeJob.status === 'picking_up' && activeJob.delivery_lat && (
+            {(activeJob.status === 'picking_up' || activeJob.status === 'in_transit') && activeJob.delivery_lat && (
               <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
                 style={{ background: '#f0fdf4', color: '#059669', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>🚛 Ir a entregar</a>
-            )}
-            {activeJob.status === 'in_transit' && activeJob.delivery_lat && (
-              <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
-                style={{ background: '#eff6ff', color: '#3b82f6', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>📦 En camino</a>
             )}
           </div>
 
