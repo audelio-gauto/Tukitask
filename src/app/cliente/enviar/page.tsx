@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 
@@ -25,7 +26,8 @@ const paymentMethods = [
 // (using Mapbox autocomplete results)
 
 export default function EnviarPaquetePage() {
-  const { openDrawer } = useClientContext();
+  const { openDrawer, email } = useClientContext();
+  const router = useRouter();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
@@ -318,6 +320,7 @@ export default function EnviarPaquetePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          client_email: email,
           pickup_address: form.pickupAddress,
           delivery_address: form.deliveryAddress,
           vehicle_type: form.vehicleType,
@@ -340,7 +343,8 @@ export default function EnviarPaquetePage() {
         }),
       });
       if (!res.ok) throw new Error('Error al crear el pedido');
-      setSuccess(true);
+      // Redirect to mis-envios to see driver offers (inDrive style)
+      router.push('/cliente/mis-envios');
     } catch (err) {
       alert('Error al crear el pedido');
     } finally {

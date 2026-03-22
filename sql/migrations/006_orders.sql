@@ -3,7 +3,8 @@
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  status TEXT NOT NULL DEFAULT 'pending', -- pending, accepted, completed, cancelled
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, negotiating, accepted, in_transit, delivered, cancelled, failed
+  client_email TEXT, -- email of the client who created the order
   pickup_address TEXT NOT NULL,
   delivery_address TEXT NOT NULL,
   vehicle_type TEXT NOT NULL,
