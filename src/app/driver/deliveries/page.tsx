@@ -101,16 +101,22 @@ export default function DeliveriesPage() {
     fetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then((data: any[]) => {
-        if (!Array.isArray(data) || data.length === 0) {
-          setActiveJob(null);
+        if (!Array.isArray(data)) return; // network/parse error — don't clear
+        if (data.length === 0) {
+          // Only clear if not currently transitioning
+          if (!activeJobRef.current || !['accepted','picking_up','in_transit'].includes(activeJobRef.current?.status)) {
+            setActiveJob(null);
+            activeJobRef.current = null;
+          }
           return;
         }
         const job = data[0];
         if (!prevAccepted.current && job.status === 'accepted') playAccepted();
-        prevAccepted.current = !!job;
+        prevAccepted.current = true;
         setActiveJob(job);
+        activeJobRef.current = job;
       })
-      .catch(() => {});
+      .catch(() => {}); // network error — keep current state, don't clear
   }, [email]);
 
   /* ── Fetch my offers ── */
@@ -123,17 +129,17 @@ export default function DeliveriesPage() {
         const pending: Record<string, number> = {};
         for (const o of data) {
           if (o.status === 'pending' && o.order_id) pending[o.order_id] = Number(o.amount);
-          if (o.status === 'accepted' && o.orders && !activeJobRef.current) {
-            setActiveJob(o.orders);
-            activeJobRef.current = o.orders;
-            if (!prevAccepted.current) playAccepted();
+          // NOTE: activeJob is managed exclusively by fetchActiveJob to avoid competing setters.
+          // Sound: play once when first accepted offer appears
+          if (o.status === 'accepted' && !prevAccepted.current) {
+            playAccepted();
             prevAccepted.current = true;
           }
         }
         setSentOffers(pending);
       })
       .catch(() => {});
-  }, [email]); // No activeJob dependency — uses ref to avoid infinite loop
+  }, [email]);
 
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
