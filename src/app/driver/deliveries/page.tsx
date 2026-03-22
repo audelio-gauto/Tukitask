@@ -19,6 +19,15 @@ function getAC() {
   if (_ac.state === 'suspended') _ac.resume();
   return _ac;
 }
+function ensureAudioUnlocked() {
+  const c = getAC();
+  if (c && c.state === 'suspended') c.resume();
+}
+if (typeof window !== 'undefined') {
+  const _unlock = () => { ensureAudioUnlocked(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
+  window.addEventListener('touchstart', _unlock, { once: true });
+  window.addEventListener('click', _unlock, { once: true });
+}
 function tone(f: number, t: number, d: number, v = 0.22) {
   const c = getAC(); if (!c) return;
   const o = c.createOscillator(), g = c.createGain();
@@ -45,8 +54,13 @@ function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
 }
 
+function getNavUrl(lat: number, lng: number, app: string) {
+  if (app === 'waze') return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+}
+
 export default function DeliveriesPage() {
-  const { serviceFilters, email, displayName, profilePhoto } = useDriverContext();
+  const { serviceFilters, email, displayName, profilePhoto, navApp } = useDriverContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
@@ -199,14 +213,17 @@ export default function DeliveriesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
               <span>🚚</span> Envío Activo #{genTrackingCode(activeJob.id)}
             </div>
-            {activeJob.status === 'accepted' && (
-              <span style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700 }}>📍 Ir a recoger</span>
+            {activeJob.status === 'accepted' && activeJob.pickup_lat && (
+              <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
+                style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>📍 Ir a recoger</a>
             )}
-            {activeJob.status === 'picking_up' && (
-              <span style={{ background: '#f0fdf4', color: '#059669', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700 }}>🚛 Ir a entregar</span>
+            {activeJob.status === 'picking_up' && activeJob.delivery_lat && (
+              <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
+                style={{ background: '#f0fdf4', color: '#059669', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>🚛 Ir a entregar</a>
             )}
-            {activeJob.status === 'in_transit' && (
-              <span style={{ background: '#eff6ff', color: '#3b82f6', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700 }}>📦 En camino</span>
+            {activeJob.status === 'in_transit' && activeJob.delivery_lat && (
+              <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
+                style={{ background: '#eff6ff', color: '#3b82f6', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>📦 En camino</a>
             )}
           </div>
 

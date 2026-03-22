@@ -55,6 +55,11 @@ function playOfferAlert() {
     for (let g = 0; g < 3; g++) { const t = n + g * 2.3; tone(660, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35); }
   } catch { /* */ }
 }
+if (typeof window !== 'undefined') {
+  const _unlock = () => { const c = getAC(); if (c && c.state === 'suspended') c.resume(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
+  window.addEventListener('touchstart', _unlock, { once: true });
+  window.addEventListener('click', _unlock, { once: true });
+}
 
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -287,6 +292,15 @@ export default function MisEnviosPage() {
   // Fetch pending offers for negotiating orders
   useEffect(() => {
     const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
+    // Clear offers for orders no longer in negotiation (e.g. accepted)
+    setOffers(prev => {
+      const activeIds = new Set(activeOrders.map(o => o.id));
+      const cleaned: Record<string, DriverOffer[]> = {};
+      for (const key of Object.keys(prev)) {
+        if (activeIds.has(key)) cleaned[key] = prev[key];
+      }
+      return cleaned;
+    });
     if (activeOrders.length === 0) return;
     const fetchAllOffers = () => {
       for (const order of activeOrders) {
@@ -548,27 +562,46 @@ export default function MisEnviosPage() {
               <div key={order.id} style={{
                 background: '#fff', borderRadius: 14, marginBottom: 10,
                 padding: '0.85rem 1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                border: '1px solid #f1f5f9',
               }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
-                    {VEHICLE_LABELS[order.vehicle_type] || order.vehicle_type}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                      {VEHICLE_LABELS[order.vehicle_type] || order.vehicle_type}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 2 }}>
+                      {new Date(order.created_at).toLocaleDateString('es-PY')}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 2 }}>
-                    {new Date(order.created_at).toLocaleDateString('es-PY')}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#059669' }}>
+                      {Number(order.offer || order.suggested_price || 0).toLocaleString()} Gs
+                    </div>
+                    <span style={{
+                      fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px',
+                      borderRadius: 99, color: statusInfo.color, background: statusInfo.bg
+                    }}>
+                      {statusInfo.label}
+                    </span>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#059669' }}>
-                    {Number(order.offer || order.suggested_price || 0).toLocaleString()} Gs
+                {(order.pickup_address || order.delivery_address) && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
+                      <div style={{ width: 1.5, flex: 1, background: '#d1d5db', margin: '2px 0' }} />
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.78rem', color: '#374151', lineHeight: 1.3, marginBottom: 6 }}>
+                        {order.pickup_address}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#374151', lineHeight: 1.3 }}>
+                        {order.delivery_address}
+                      </div>
+                    </div>
                   </div>
-                  <span style={{
-                    fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px',
-                    borderRadius: 99, color: statusInfo.color, background: statusInfo.bg
-                  }}>
-                    {statusInfo.label}
-                  </span>
-                </div>
+                )}
               </div>
             );
           })}

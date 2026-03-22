@@ -26,6 +26,7 @@ interface DriverCtx {
   setProfilePhoto: (url: string) => void;
   serviceFilters: ServiceFilters;
   toggleFilter: (key: string) => void;
+  navApp: string;
 }
 
 export const DriverContext = createContext<DriverCtx>({
@@ -36,6 +37,7 @@ export const DriverContext = createContext<DriverCtx>({
   setProfilePhoto: () => {},
   serviceFilters: DEFAULT_FILTERS,
   toggleFilter: () => {},
+  navApp: 'google_maps',
 });
 
 export function useDriverContext() {

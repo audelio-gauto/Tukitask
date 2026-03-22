@@ -13,6 +13,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
@@ -37,6 +38,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           const profRes = await fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
           const profJson = await profRes.json();
           if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
+          if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
         } catch {}
         setChecking(false);
       } catch {
@@ -66,7 +68,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter, navApp }}>
         {children}
       </DriverContext.Provider>
     </div>
