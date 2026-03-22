@@ -73,6 +73,10 @@ export default function DeliveriesPage() {
   const prevOrderIds = useRef<Set<string>>(new Set());
   const prevAccepted = useRef(false);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeJobRef = useRef<any>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => { activeJobRef.current = activeJob; }, [activeJob]);
 
   /* ── Fetch pending/negotiating orders ── */
   const fetchOrders = useCallback(() => {
@@ -119,8 +123,9 @@ export default function DeliveriesPage() {
         const pending: Record<string, number> = {};
         for (const o of data) {
           if (o.status === 'pending' && o.order_id) pending[o.order_id] = Number(o.amount);
-          if (o.status === 'accepted' && o.orders && !activeJob) {
+          if (o.status === 'accepted' && o.orders && !activeJobRef.current) {
             setActiveJob(o.orders);
+            activeJobRef.current = o.orders;
             if (!prevAccepted.current) playAccepted();
             prevAccepted.current = true;
           }
@@ -128,7 +133,7 @@ export default function DeliveriesPage() {
         setSentOffers(pending);
       })
       .catch(() => {});
-  }, [email, activeJob]);
+  }, [email]); // No activeJob dependency — uses ref to avoid infinite loop
 
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
