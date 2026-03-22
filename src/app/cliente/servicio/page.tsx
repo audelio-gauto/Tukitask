@@ -359,20 +359,20 @@ export default function SolicitarServicioPage() {
 
             {/* Preferencia de género */}
             <div className="enviar-section-label">Preferís que vaya:</div>
-            <div className="gender-preference-pills">
+            <div className="gender-preference-row">
               {[
-                { key: 'mujer', label: 'Solo mujer', icon: '👩' },
-                { key: 'hombre', label: 'Solo hombre', icon: '👨' },
-                { key: 'indiferente', label: 'Indiferente', icon: '🧑‍🔧' },
+                { key: 'mujer', label: 'Solo mujer', avatar: '👩' },
+                { key: 'hombre', label: 'Solo hombre', avatar: '👨' },
+                { key: 'indiferente', label: 'Indiferente', avatar: '🧑' },
               ].map(pref => (
                 <button
                   key={pref.key}
                   type="button"
-                  className={`gender-pill ${genderPreference === pref.key ? 'selected' : ''}`}
+                  className={`gender-chip${genderPreference === pref.key ? ' active' : ''}`}
                   onClick={() => setGenderPreference(pref.key)}
                 >
-                  <span className="gender-pill-icon">{pref.icon}</span>
-                  <span>{pref.label}</span>
+                  <span className="gender-chip-avatar">{pref.avatar}</span>
+                  <span className="gender-chip-label">{pref.label}</span>
                 </button>
               ))}
             </div>

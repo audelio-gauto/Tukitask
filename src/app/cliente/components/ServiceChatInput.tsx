@@ -79,14 +79,22 @@ export default function ServiceChatInput({
   };
 
   const stopRecording = (cancel = false) => {
-    if (mediaRecorder) {
-      // Al soltar, simplemente detenemos y guardamos el audio (a menos que sea cancelado por deslizar)
-      mediaRecorder.onstop = null;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      if (cancel) {
+        mediaRecorder.onstop = () => {
+          setIsRecording(false);
+          setShowCancel(false);
+          setDragX(0);
+          setAudioBlob(null);
+        };
+      }
+      // If not cancelled, the original onstop handler will create the blob
       mediaRecorder.stop();
-      setIsRecording(false);
-      setShowCancel(false);
-      setDragX(0);
-      if (cancel) setAudioBlob(null);
+      if (!cancel) {
+        setIsRecording(false);
+        setShowCancel(false);
+        setDragX(0);
+      }
     }
   };
 
@@ -157,39 +165,65 @@ export default function ServiceChatInput({
 
   if (isSimpleInput) {
     return (
-      <div className="simple-input-container">
-        <textarea
-          ref={inputRef}
-          className="simple-input-textarea"
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          rows={inputRows}
-          maxLength={500}
-          disabled={disabled || isRecording}
-        />
-        <button
-          className={`simple-input-mic-btn${isRecording ? " recording" : ""}`}
-          type="button"
-          aria-label="Grabar audio"
-          onMouseDown={handleMicDown}
-          onTouchStart={handleMicDown}
-          disabled={disabled}
-        >
-          {isRecording ? (
-            <span className="recording-timer">{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}</span>
-          ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a2 2 0 0 0 2-2V6a2 2 0 1 0-4 0v6a2 2 0 0 0 2 2zm-2-6a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0V8z"/><path d="M12 19a5 5 0 0 1-5-5H5a7 7 0 0 0 6 6.93V24h2v-2.07A7 7 0 0 0 19 14h-2a5 5 0 0 1-5 5z"/></svg>
-          )}
-        </button>
-        {isRecording && showCancel && (
-          <div className="service-chat-cancel">Cancelar ❌</div>
-        )}
-        {audioBlob && (
-          <div className="simple-audio-preview">
-            <audio controls src={URL.createObjectURL(audioBlob)} />
-            <button onClick={() => { setAudioBlob(null); if(onAudioDelete) onAudioDelete(); }} type="button">Borrar</button>
+      <div className="si-wrapper">
+        {/* Audio preview after recording */}
+        {(audioBlob || audioUrl) && (
+          <div className="si-audio-preview">
+            <audio controls src={audioUrl || (audioBlob ? URL.createObjectURL(audioBlob) : "")} />
+            <button
+              className="si-audio-delete"
+              type="button"
+              aria-label="Borrar audio"
+              onClick={() => {
+                setAudioBlob(null);
+                if (onAudioDelete) onAudioDelete();
+              }}
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
+        )}
+        {/* Main input row */}
+        {!(audioBlob || audioUrl) && (
+          <div className={`si-input-row${isRecording ? ' recording' : ''}`}>
+            {isRecording ? (
+              <div className="si-recording-indicator">
+                <span className="si-rec-dot" />
+                <span className="si-rec-timer">
+                  {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                </span>
+                <span className="si-rec-label">Grabando...</span>
+              </div>
+            ) : (
+              <textarea
+                ref={inputRef}
+                className="si-textarea"
+                placeholder={placeholder}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                rows={inputRows}
+                maxLength={500}
+                disabled={disabled}
+              />
+            )}
+            <button
+              className={`si-mic-btn${isRecording ? ' active' : ''}`}
+              type="button"
+              aria-label="Grabar audio"
+              onMouseDown={handleMicDown}
+              onTouchStart={handleMicDown}
+              disabled={disabled}
+            >
+              {isRecording ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+              )}
+            </button>
+          </div>
+        )}
+        {isRecording && showCancel && (
+          <div className="service-chat-cancel">Deslizá para cancelar ←</div>
         )}
       </div>
     );
