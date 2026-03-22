@@ -50,8 +50,7 @@ export default function DriverDashboard() {
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({
     moto_envios: true,
     auto_envios: true,
-    moto_fletes: true,
-    carro_fletes: true,
+    moto_carro_fletes: true,
     camion_fletes: true,
   });
 
@@ -208,8 +207,7 @@ export default function DriverDashboard() {
               {[
                 { key: 'moto_envios', label: 'Moto Envíos', icon: '🏍️', desc: 'Paquetes pequeños en moto' },
                 { key: 'auto_envios', label: 'Auto Envíos', icon: '🚗', desc: 'Paquetes medianos en auto' },
-                { key: 'moto_fletes', label: 'Moto Fletes', icon: '🛵', desc: 'Fletes livianos en moto' },
-                { key: 'carro_fletes', label: 'Carro Fletes', icon: '🚙', desc: 'Fletes medianos en carro' },
+                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', desc: 'Fletes en moto o carro' },
                 { key: 'camion_fletes', label: 'Camión Fletes', icon: '🚛', desc: 'Fletes grandes en camión' },
               ].map(item => (
                 <button
