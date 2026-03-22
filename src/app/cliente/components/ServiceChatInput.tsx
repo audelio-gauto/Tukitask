@@ -8,6 +8,8 @@ interface ServiceChatInputProps {
   audioUrl?: string | null;
   onAudioDelete?: () => void;
   disabled?: boolean;
+  isSimpleInput?: boolean;
+  placeholder?: string;
 }
 
 export default function ServiceChatInput({
@@ -17,6 +19,8 @@ export default function ServiceChatInput({
   audioUrl,
   onAudioDelete,
   disabled,
+  isSimpleInput = false,
+  placeholder = "Escribe un mensaje...",
 }: ServiceChatInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -151,6 +155,46 @@ export default function ServiceChatInput({
     );
   };
 
+  if (isSimpleInput) {
+    return (
+      <div className="simple-input-container">
+        <textarea
+          ref={inputRef}
+          className="simple-input-textarea"
+          placeholder={placeholder}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          rows={inputRows}
+          maxLength={500}
+          disabled={disabled || isRecording}
+        />
+        <button
+          className={`simple-input-mic-btn${isRecording ? " recording" : ""}`}
+          type="button"
+          aria-label="Grabar audio"
+          onMouseDown={handleMicDown}
+          onTouchStart={handleMicDown}
+          disabled={disabled}
+        >
+          {isRecording ? (
+            <span className="recording-timer">{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}</span>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a2 2 0 0 0 2-2V6a2 2 0 1 0-4 0v6a2 2 0 0 0 2 2zm-2-6a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0V8z"/><path d="M12 19a5 5 0 0 1-5-5H5a7 7 0 0 0 6 6.93V24h2v-2.07A7 7 0 0 0 19 14h-2a5 5 0 0 1-5 5z"/></svg>
+          )}
+        </button>
+        {isRecording && showCancel && (
+          <div className="service-chat-cancel">Cancelar ❌</div>
+        )}
+        {audioBlob && (
+          <div className="simple-audio-preview">
+            <audio controls src={URL.createObjectURL(audioBlob)} />
+            <button onClick={() => { setAudioBlob(null); if(onAudioDelete) onAudioDelete(); }} type="button">Borrar</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="service-chat-input-bar">
       <div style={{ width: '100%' }}>
@@ -173,7 +217,7 @@ export default function ServiceChatInput({
             <textarea
               ref={inputRef}
               className="service-chat-textarea"
-              placeholder="Escribe un mensaje"
+              placeholder={placeholder}
               value={value}
               onChange={e => onChange(e.target.value)}
               rows={inputRows}

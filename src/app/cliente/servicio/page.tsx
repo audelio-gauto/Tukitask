@@ -44,6 +44,7 @@ export default function SolicitarServicioPage() {
   // Form fields
   const [category, setCategory] = useState<string | null>(null);
   const [details, setDetails] = useState('');
+  const [genderPreference, setGenderPreference] = useState('indiferente'); // 'mujer', 'hombre', 'indiferente'
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
@@ -170,6 +171,7 @@ export default function SolicitarServicioPage() {
       location_lng: locationLng,
       category,
       details,
+      gender_preference: genderPreference,
       photos: photos.length,
       suggested_price: suggestedPrice,
       offer: offerPrice,
@@ -213,6 +215,7 @@ export default function SolicitarServicioPage() {
             setSuccess(false);
             setLocationAddress(''); setLocationLat(''); setLocationLng('');
             setCategory(null); setDetails(''); setPhotos([]);
+            setGenderPreference('indiferente');
             setAudioBlob(null); setPaymentMethod('efectivo');
             offerInitialized.current = false;
           }}>Nueva Solicitud</button>
@@ -331,10 +334,11 @@ export default function SolicitarServicioPage() {
               ))}
             </div>
 
-            {/* Detalles tipo WhatsApp */}
-            <div className="enviar-section-label">Detalles del problema</div>
+            {/* Detalles del problema */}
+            <div className="enviar-section-label">¿Qué necesitás en tu casa?</div>
             <div style={{ marginBottom: 16 }}>
               <ServiceChatInput
+                placeholder="Ej: limpiar casa hoy, reparar aire acondicionado..."
                 value={details}
                 onChange={setDetails}
                 onSend={(val) => {
@@ -349,7 +353,28 @@ export default function SolicitarServicioPage() {
                 audioUrl={audioBlob ? URL.createObjectURL(audioBlob) : null}
                 onAudioDelete={() => setAudioBlob(null)}
                 disabled={sending}
+                isSimpleInput={true}
               />
+            </div>
+
+            {/* Preferencia de género */}
+            <div className="enviar-section-label">Preferís que vaya:</div>
+            <div className="gender-preference-pills">
+              {[
+                { key: 'mujer', label: 'Solo mujer', icon: '👩' },
+                { key: 'hombre', label: 'Solo hombre', icon: '👨' },
+                { key: 'indiferente', label: 'Indiferente', icon: '🧑‍🔧' },
+              ].map(pref => (
+                <button
+                  key={pref.key}
+                  type="button"
+                  className={`gender-pill ${genderPreference === pref.key ? 'selected' : ''}`}
+                  onClick={() => setGenderPreference(pref.key)}
+                >
+                  <span className="gender-pill-icon">{pref.icon}</span>
+                  <span>{pref.label}</span>
+                </button>
+              ))}
             </div>
 
             {/* Fotos */}
