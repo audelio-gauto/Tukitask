@@ -209,8 +209,8 @@ export default function DeliveriesPage() {
     setTransitioning(false);
   };
 
-  const handleSendOffer = async (orderId: string) => {
-    const amount = offerAmounts[orderId];
+  const handleSendOffer = async (orderId: string, directAmount?: number) => {
+    const amount = directAmount ? String(directAmount) : offerAmounts[orderId];
     if (!amount || Number(amount) <= 0) return;
     setSending(s => ({ ...s, [orderId]: true }));
     try {
@@ -380,76 +380,123 @@ export default function DeliveriesPage() {
           {filteredOrders.map(req => {
             const alreadyOffered = sentOffers[req.id];
             const isSending = sending[req.id];
+            const clientPrice = Number(req.offer || req.suggested_price || 0);
+            const quickOffers = [
+              Math.round(clientPrice * 1.1 / 1000) * 1000,
+              Math.round(clientPrice * 1.2 / 1000) * 1000,
+              Math.round(clientPrice * 1.3 / 1000) * 1000,
+            ];
             return (
-              <div key={req.id} className="tuki-order-card" style={{ marginBottom: 16 }}>
-                <div className="tuki-order-header" style={{ padding: '0.75rem 1rem' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                    {VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
-                    {new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+              <div key={req.id} style={{
+                marginBottom: 16, borderRadius: 18, overflow: 'hidden',
+                background: '#1a1a2e', color: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+              }}>
+                {/* ── Header: Solicitud de envío ── */}
+                <div style={{ textAlign: 'center', padding: '0.7rem 1rem 0.3rem', fontSize: '1.05rem', fontWeight: 700, letterSpacing: 0.3 }}>
+                  Solicitud de envío
                 </div>
-                <div className="tuki-order-body" style={{ padding: '1rem' }}>
-                  <div className="tuki-route-line" style={{ marginBottom: 12 }}>
-                    <div className="tuki-route-point pickup">
-                      <div className="tuki-route-meta">Recoger</div>
-                      <div className="tuki-route-address">{req.pickup_address}</div>
+
+                {/* ── Client info row ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.5rem 1rem 0.6rem' }}>
+                  <div style={{ position: 'relative' }}>
+                    {req.client_photo ? (
+                      <img src={req.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #444' }} />
+                    ) : (
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>👤</div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      {req.client_name || req.client_email?.split('@')[0] || 'Cliente'}
                     </div>
-                    <div className="tuki-route-point delivery">
-                      <div className="tuki-route-meta">Entregar</div>
-                      <div className="tuki-route-address">{req.delivery_address}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>{VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}</span>
+                      <span>•</span>
+                      <span>{new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
-
-                  {req.instructions && (
-                    <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: 12, fontSize: '0.85rem', color: '#6366f1' }}>
-                      📝 {req.instructions}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                    <div style={{ flex: 1, background: '#f0fdf4', borderRadius: 10, padding: '0.6rem 0.75rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: 2 }}>Precio sugerido</div>
-                      <div style={{ fontWeight: 700, color: '#059669', fontSize: '1.05rem' }}>
-                        {Number(req.suggested_price || 0).toLocaleString()} Gs
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, background: '#fffbeb', borderRadius: 10, padding: '0.6rem 0.75rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: 2 }}>Oferta cliente</div>
-                      <div style={{ fontWeight: 700, color: '#d97706', fontSize: '1.05rem' }}>
-                        {Number(req.offer || 0).toLocaleString()} Gs
-                      </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fff' }}>
+                      {clientPrice.toLocaleString()} Gs
                     </div>
                   </div>
+                </div>
 
+                {/* ── Route A → B ── */}
+                <div style={{ padding: '0 1rem 0.7rem' }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
+                      <div style={{ width: 2, flex: 1, background: '#444', margin: '3px 0' }} />
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>B</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35, marginBottom: 2 }}>{req.pickup_address}</div>
+                      <div style={{ height: 12 }} />
+                      <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35 }}>{req.delivery_address}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {req.instructions && (
+                  <div style={{ margin: '0 1rem 0.6rem', background: 'rgba(255,255,255,0.08)', padding: '0.4rem 0.7rem', borderRadius: 8, fontSize: '0.82rem', color: '#a5b4fc' }}>
+                    📝 {req.instructions}
+                  </div>
+                )}
+
+                {/* ── Actions ── */}
+                <div style={{ padding: '0 1rem 1rem' }}>
                   {alreadyOffered ? (
-                    <div style={{ background: '#eef2ff', borderRadius: 12, padding: '0.75rem 1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#6366f1', marginBottom: 2 }}>Tu oferta enviada</div>
-                      <div style={{ fontWeight: 800, color: '#4f46e5', fontSize: '1.2rem' }}>
+                    <div style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 14, padding: '0.8rem 1rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#a5b4fc', marginBottom: 2 }}>Tu oferta enviada</div>
+                      <div style={{ fontWeight: 800, color: '#818cf8', fontSize: '1.25rem' }}>
                         {alreadyOffered.toLocaleString()} Gs
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>Esperando respuesta del cliente...</div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>Esperando respuesta del cliente...</div>
                     </div>
                   ) : (
-                    <div>
-                      <button className="tuki-btn tuki-btn-success" style={{ marginBottom: 8 }}
-                        onClick={() => handleAcceptPrice(req.id, Number(req.offer || req.suggested_price))} disabled={isSending}>
-                        {isSending ? 'Enviando...' : `Aceptar por ${Number(req.offer || req.suggested_price || 0).toLocaleString()} Gs`}
+                    <>
+                      {/* Accept button */}
+                      <button
+                        onClick={() => handleAcceptPrice(req.id, clientPrice)}
+                        disabled={isSending}
+                        style={{
+                          width: '100%', padding: '0.85rem', border: 'none', borderRadius: 14, cursor: 'pointer',
+                          background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem',
+                          marginBottom: 10, opacity: isSending ? 0.6 : 1,
+                        }}>
+                        {isSending ? 'Enviando...' : `Aceptar por ${clientPrice.toLocaleString()} Gs`}
                       </button>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                          <input type="number" className="tuki-form-input" placeholder="Tu contraoferta"
-                            value={offerAmounts[req.id] || ''} onChange={e => setOfferAmounts(o => ({ ...o, [req.id]: e.target.value }))}
-                            min="0" style={{ paddingRight: '2rem' }} />
-                          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.82rem' }}>Gs</span>
-                        </div>
-                        <button className="tuki-btn tuki-btn-primary" style={{ width: 'auto', padding: '0.75rem 1.25rem', whiteSpace: 'nowrap' }}
-                          onClick={() => handleSendOffer(req.id)} disabled={isSending || !offerAmounts[req.id]}>
-                          Ofertar
+
+                      {/* Ofrece tu tarifa */}
+                      <div style={{ textAlign: 'center', fontSize: '0.85rem', color: '#9ca3af', marginBottom: 8 }}>Ofrece tu tarifa</div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                        {quickOffers.map(q => (
+                          <button key={q}
+                            onClick={() => handleSendOffer(req.id, q)}
+                            disabled={isSending}
+                            style={{
+                              flex: 1, padding: '0.6rem 0', border: '1px solid #444', borderRadius: 10,
+                              background: 'transparent', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                            }}>
+                            {q.toLocaleString()}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const custom = prompt('Tu contraoferta (Gs):');
+                            if (custom && Number(custom) > 0) {
+                              handleSendOffer(req.id, Number(custom));
+                            }
+                          }}
+                          style={{
+                            width: 44, border: '1px solid #444', borderRadius: 10,
+                            background: 'transparent', color: '#fff', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer',
+                          }}>
+                          &gt;
                         </button>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>

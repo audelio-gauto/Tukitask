@@ -26,7 +26,7 @@ const paymentMethods = [
 // (using Mapbox autocomplete results)
 
 export default function EnviarPaquetePage() {
-  const { openDrawer, email } = useClientContext();
+  const { openDrawer, email, displayName, profilePhoto } = useClientContext();
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -321,6 +321,8 @@ export default function EnviarPaquetePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_email: email,
+          client_name: displayName || email.split('@')[0],
+          client_photo: profilePhoto || '',
           pickup_address: form.pickupAddress,
           delivery_address: form.deliveryAddress,
           vehicle_type: form.vehicleType,
