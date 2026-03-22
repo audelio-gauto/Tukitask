@@ -217,6 +217,7 @@ export default function EnviarPaquetePage() {
       if (['button', 'input', 'textarea', 'select', 'a', 'label'].includes(tag)) return;
       isDragging.current = true;
       startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      startX.current = 0;
       startTranslate.current = getTranslateY();
       sheet!.style.transition = 'none';
     }
@@ -232,7 +233,8 @@ export default function EnviarPaquetePage() {
       if (deltaX > deltaY + 5) { isDragging.current = false; return; }
       if (e.cancelable) e.preventDefault();
       const delta = currentY - startY.current;
-      const newTranslate = Math.max(0, startTranslate.current + delta);
+      const maxTranslate = sheet!.offsetHeight * 0.8;
+      const newTranslate = Math.min(maxTranslate, Math.max(0, startTranslate.current + delta));
       sheet!.style.transform = `translateY(${newTranslate}px)`;
     }
 
