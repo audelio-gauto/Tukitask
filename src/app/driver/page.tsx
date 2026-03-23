@@ -42,7 +42,10 @@ function playDeliveryAlert() {
 export default function DriverDashboard() {
   const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm } = useDriverContext();
   const router = useRouter();
-  const [available, setAvailable] = useState(false);
+  // Persist online/offline across page navigations
+  const [available, setAvailable] = useState(() => {
+    try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
+  });
 
   // Stats state
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
@@ -504,7 +507,11 @@ export default function DriverDashboard() {
               </span>
             </div>
             <label className="tuki-toggle">
-              <input type="checkbox" checked={available} onChange={() => setAvailable(!available)} />
+              <input type="checkbox" checked={available} onChange={() => {
+                const next = !available;
+                setAvailable(next);
+                try { localStorage.setItem('driver_available', String(next)); } catch {}
+              }} />
               <span className="tuki-toggle-slider" />
             </label>
           </div>

@@ -288,6 +288,8 @@ export default function MisEnviosPage() {
 
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track previous order statuses to detect transitions
+  const prevStatusRef = useRef<Record<string, string>>({});
 
   const fetchOrders = useCallback(() => {
     if (!email) return;
@@ -432,6 +434,25 @@ export default function MisEnviosPage() {
     } catch { /* */ }
     setReturningAction(key === returningAction ? null : returningAction);
   };
+
+  // Play alert sound when driver requests return (status → 'returning') or return is re-requested (return_rejected → returning)
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    for (const order of orders) {
+      const prevStatus = prev[order.id];
+      if (
+        order.status === 'returning' &&
+        prevStatus !== undefined &&
+        prevStatus !== 'returning'
+      ) {
+        playOfferAlert();
+        break;
+      }
+    }
+    const map: Record<string, string> = {};
+    for (const o of orders) map[o.id] = o.status;
+    prevStatusRef.current = map;
+  }, [orders]);
 
   const negotiatingOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
   const trackingOrders = orders.filter(o =>

@@ -1,7 +1,25 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDriverContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
+
+function playReturnAlert() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    function beep(t: number, f: number, d: number) {
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'square'; osc.frequency.value = f; g.gain.value = 0.9;
+      osc.start(t); osc.stop(t + d);
+    }
+    for (let r = 0; r < 6; r++) {
+      const t = ctx.currentTime + r * 0.6;
+      beep(t, 880, 0.12); beep(t + 0.15, 1100, 0.12); beep(t + 0.3, 1320, 0.15);
+    }
+  } catch { /* */ }
+}
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -22,13 +40,21 @@ export default function FailedPage() {
   // Per-order return reason text + which order has the return form open
   const [returnReasonMap, setReturnReasonMap] = useState<Record<string, string>>({});
   const [returnFormId, setReturnFormId] = useState<string | null>(null);
+  const prevRejectedIds = useRef<Set<string>>(new Set());
 
   const fetchFailed = useCallback(() => {
     if (!email) return;
     fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&only_failed=true`)
       .then(r => r.json())
       .then((data: any[]) => {
-        if (Array.isArray(data)) setOrders(data);
+        if (Array.isArray(data)) {
+          setOrders(data);
+          // Play sound when a new return_rejected order arrives
+          const rejectedIds = new Set(data.filter(o => o.status === 'return_rejected').map((o: any) => o.id as string));
+          const hasNew = [...rejectedIds].some(id => !prevRejectedIds.current.has(id));
+          if (hasNew && prevRejectedIds.current.size > 0) playReturnAlert();
+          prevRejectedIds.current = rejectedIds;
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
