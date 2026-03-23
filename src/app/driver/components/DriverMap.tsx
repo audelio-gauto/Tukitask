@@ -157,7 +157,7 @@ export default function DriverMap({
     }
   }, [onLocate]);
 
-  // Update A/B markers and route when pickup/delivery change
+  // Update A/B markers and real road route when pickup/delivery change
   useEffect(() => {
     const map = mapInstance.current;
     const mapboxgl = mbRef.current;
@@ -187,24 +187,59 @@ export default function DriverMap({
       deliveryMarkerRef.current?.remove(); deliveryMarkerRef.current = null;
     }
 
-    // Draw A→B line
-    const coords: [number, number][] =
-      pickup && delivery && isFinite(pickup.lat) && isFinite(delivery.lat)
-        ? [[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]] : [];
-
     const srcId = 'driver-route';
-    if (map.getSource(srcId)) {
-      map.getSource(srcId).setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
-    } else if (coords.length === 2 && map.isStyleLoaded()) {
-      map.addSource(srcId, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } } });
-      map.addLayer({ id: 'driver-route-layer', type: 'line', source: srcId, paint: { 'line-color': '#facc15', 'line-width': 4, 'line-opacity': 0.9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    const layerId = 'driver-route-layer';
+    const casingId = 'driver-route-casing';
+
+    function applyRoute(coords: [number, number][]) {
+      const geojson: any = {
+        type: 'Feature', properties: {},
+        geometry: { type: 'LineString', coordinates: coords },
+      };
+      if (map.getSource(srcId)) {
+        (map.getSource(srcId) as any).setData(geojson);
+      } else if (map.isStyleLoaded()) {
+        map.addSource(srcId, { type: 'geojson', data: geojson });
+        // White casing for contrast on any map style
+        map.addLayer({ id: casingId, type: 'line', source: srcId,
+          paint: { 'line-color': '#fff', 'line-width': 7, 'line-opacity': 0.5 },
+          layout: { 'line-cap': 'round', 'line-join': 'round' } });
+        map.addLayer({ id: layerId, type: 'line', source: srcId,
+          paint: { 'line-color': '#facc15', 'line-width': 4.5, 'line-opacity': 1 },
+          layout: { 'line-cap': 'round', 'line-join': 'round' } });
+      }
+
+      if (coords.length >= 2) {
+        const bounds = new mapboxgl.LngLatBounds();
+        coords.forEach((c: [number, number]) => bounds.extend(c));
+        map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+      }
     }
 
-    // Fit bounds to show A and B with space for the bottom card
-    if (coords.length === 2) {
-      const bounds = new mapboxgl.LngLatBounds();
-      coords.forEach((c: [number, number]) => bounds.extend(c));
-      map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+    if (pickup && delivery && isFinite(pickup.lat) && isFinite(delivery.lat)) {
+      // Fetch real road route from Mapbox Directions API
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${pickup.lng},${pickup.lat};${delivery.lng},${delivery.lat}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          const routeCoords: [number, number][] = data?.routes?.[0]?.geometry?.coordinates ?? [];
+          if (routeCoords.length > 0) {
+            applyRoute(routeCoords);
+          } else {
+            // Fallback to straight line if API fails
+            applyRoute([[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]]);
+          }
+        })
+        .catch(() => {
+          applyRoute([[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]]);
+        });
+    } else {
+      // Clear route if no coords
+      if (map.getSource(srcId)) {
+        (map.getSource(srcId) as any).setData({
+          type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] },
+        });
+      }
     }
   }, [pickup, delivery, glReady]);
 
