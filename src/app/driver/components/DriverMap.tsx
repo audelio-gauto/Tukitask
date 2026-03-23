@@ -8,10 +8,28 @@ function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: num
   return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
-export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) => void }) {
+function createMarkerEl(label: string, color: string) {
+  const el = document.createElement('div');
+  el.style.cssText = `width:30px;height:30px;background:${color};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:default;`;
+  el.textContent = label;
+  return el;
+}
+
+export default function DriverMap({
+  onLocate,
+  pickup,
+  delivery,
+}: {
+  onLocate?: (fn: () => void) => void;
+  pickup?: { lat: number; lng: number } | null;
+  delivery?: { lat: number; lng: number } | null;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
+  const mbRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const pickupMarkerRef = useRef<any>(null);
+  const deliveryMarkerRef = useRef<any>(null);
   const initRef = useRef(false);
   const [glReady, setGlReady] = useState(false);
   const [glFailed, setGlFailed] = useState(false);
@@ -43,6 +61,7 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
         return;
       }
 
+      mbRef.current = mapboxgl;
       let map: any;
       try {
         map = new mapboxgl.Map({
@@ -138,25 +157,67 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
     }
   }, [onLocate]);
 
+  // Update A/B markers and route when pickup/delivery change
+  useEffect(() => {
+    const map = mapInstance.current;
+    const mapboxgl = mbRef.current;
+    if (!map || !mapboxgl || !glReady) return;
+
+    // Pickup marker A
+    if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
+      if (!pickupMarkerRef.current) {
+        pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981') })
+          .setLngLat([pickup.lng, pickup.lat]).addTo(map);
+      } else {
+        pickupMarkerRef.current.setLngLat([pickup.lng, pickup.lat]);
+      }
+    } else {
+      pickupMarkerRef.current?.remove(); pickupMarkerRef.current = null;
+    }
+
+    // Delivery marker B
+    if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
+      if (!deliveryMarkerRef.current) {
+        deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444') })
+          .setLngLat([delivery.lng, delivery.lat]).addTo(map);
+      } else {
+        deliveryMarkerRef.current.setLngLat([delivery.lng, delivery.lat]);
+      }
+    } else {
+      deliveryMarkerRef.current?.remove(); deliveryMarkerRef.current = null;
+    }
+
+    // Draw A→B line
+    const coords: [number, number][] =
+      pickup && delivery && isFinite(pickup.lat) && isFinite(delivery.lat)
+        ? [[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]] : [];
+
+    const srcId = 'driver-route';
+    if (map.getSource(srcId)) {
+      map.getSource(srcId).setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
+    } else if (coords.length === 2 && map.isStyleLoaded()) {
+      map.addSource(srcId, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } } });
+      map.addLayer({ id: 'driver-route-layer', type: 'line', source: srcId, paint: { 'line-color': '#facc15', 'line-width': 4, 'line-opacity': 0.9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    }
+
+    // Fit bounds to show A and B with space for the bottom card
+    if (coords.length === 2) {
+      const bounds = new mapboxgl.LngLatBounds();
+      coords.forEach((c: [number, number]) => bounds.extend(c));
+      map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+    }
+  }, [pickup, delivery, glReady]);
+
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
-      {/* Static image — always visible as base layer until GL loads */}
       {!glReady && MAPBOX_TOKEN && (
-        <img
-          src={staticMapUrl(DEFAULT_CENTER, 15, 600, 600)}
-          alt="Mapa"
+        <img src={staticMapUrl(DEFAULT_CENTER, 15, 600, 600)} alt="Mapa"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-        />
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       )}
-      {/* GL map — overlays static when ready */}
       {!glFailed && (
-        <div
-          ref={mapRef}
-          style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: glReady ? 1 : 0, transition: 'opacity 0.3s' }}
-        />
+        <div ref={mapRef} style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: glReady ? 1 : 0, transition: 'opacity 0.3s' }} />
       )}
-      {/* No token */}
       {!MAPBOX_TOKEN && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}>
           <p style={{ color: '#6b7280', fontSize: 14 }}>Mapa no disponible</p>
@@ -165,3 +226,4 @@ export default function DriverMap({ onLocate }: { onLocate?: (fn: () => void) =>
     </div>
   );
 }
+

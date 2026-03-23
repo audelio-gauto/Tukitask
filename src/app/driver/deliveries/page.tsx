@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import DriverScreenLayout from '../components/DriverScreenLayout';
+import dynamic from 'next/dynamic';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 import { supabase } from '@/lib/supabaseClient';
+
+const DriverMap = dynamic(() => import('../components/DriverMap'), { ssr: false });
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -69,6 +71,8 @@ export default function DeliveriesPage() {
   const [sentOffers, setSentOffers] = useState<Record<string, number>>({});
   const [activeJob, setActiveJob] = useState<any>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
+  const [sheetIndex, setSheetIndex] = useState(0);
 
   const prevOrderIds = useRef<Set<string>>(new Set());
   const prevAccepted = useRef(false);
@@ -248,273 +252,292 @@ export default function DeliveriesPage() {
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
-  /* ── RENDER ── */
-  return (
-    <DriverScreenLayout title="Envíos">
+  const handleDismiss = useCallback((orderId: string) => {
+    setDismissedOrders(prev => new Set([...prev, orderId]));
+    setSheetIndex(0);
+  }, []);
 
-      {/* ════════════ ACTIVE JOB ════════════ */}
+  const sheetOrders = useMemo(() =>
+    filteredOrders.filter(o => !dismissedOrders.has(o.id)),
+  [filteredOrders, dismissedOrders]);
+
+  const safeIndex = sheetOrders.length > 0 ? Math.min(sheetIndex, sheetOrders.length - 1) : 0;
+  const currentSheetOrder = sheetOrders[safeIndex] ?? null;
+
+  const activeJobPickup = activeJob?.pickup_lat != null ? { lat: activeJob.pickup_lat, lng: activeJob.pickup_lng } : null;
+  const activeJobDelivery = activeJob?.delivery_lat != null ? { lat: activeJob.delivery_lat, lng: activeJob.delivery_lng } : null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a2e', zIndex: 0 }}>
+      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+
+      {/* ── MAP BACKGROUND ── */}
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <DriverMap pickup={activeJobPickup} delivery={activeJobDelivery} />
+      </div>
+
+      {/* ── FLOATING HEADER ── */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        padding: 'env(safe-area-inset-top, 0.5rem) 1rem 0.75rem',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        paddingTop: 'max(env(safe-area-inset-top, 8px), 12px)',
+      }}>
+        <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: 0.5 }}>Tuki Driver</span>
+        {activeJob && (
+          <span style={{ background: '#10b981', color: '#fff', paddingInline: 12, paddingBlock: 4, borderRadius: 99, fontSize: '0.78rem', fontWeight: 700 }}>● En servicio</span>
+        )}
+        {!activeJob && unrespondedCount > 0 && (
+          <span style={{ background: '#facc15', color: '#111', paddingInline: 12, paddingBlock: 4, borderRadius: 99, fontSize: '0.78rem', fontWeight: 700 }}>
+            {unrespondedCount} solicitud{unrespondedCount !== 1 ? 'es' : ''}
+          </span>
+        )}
+      </div>
+
+      {/* ════════════ ACTIVE JOB CARD ════════════ */}
       {activeJob && (
-        <div style={{ marginBottom: 20, border: '2px solid #10b981', borderRadius: 16, overflow: 'hidden', background: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-          {/* Top banner */}
-          <div style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
-              <span>🚚</span> Envío Activo #{genTrackingCode(activeJob.id)}
-            </div>
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+          padding: '0.5rem 1rem 1.5rem',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
+          maxHeight: '62vh', overflowY: 'auto',
+          animation: 'slideUp 0.25s ease-out',
+        }}>
+          {/* Pull tab */}
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444', margin: '8px auto 14px' }} />
+
+          {/* Tracking code + nav badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.82rem' }}>#{genTrackingCode(activeJob.id)}</span>
             {activeJob.status === 'accepted' && activeJob.pickup_lat && (
               <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
-                style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>📍 Ir a recoger</a>
+                style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
+                📍 Ir a recoger
+              </a>
             )}
             {(activeJob.status === 'picking_up' || activeJob.status === 'in_transit') && activeJob.delivery_lat && (
               <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
-                style={{ background: '#f0fdf4', color: '#059669', padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>🚛 Ir a entregar</a>
+                style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
+                🚛 Ir a entregar
+              </a>
             )}
           </div>
 
-          <div style={{ padding: '1rem' }}>
-            {/* Pickup */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', border: '2px solid #fff', boxShadow: '0 0 0 2px #10b981' }} />
-                <div style={{ width: 2, flex: 1, background: '#d1d5db', margin: '4px 0' }} />
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', border: '2px solid #fff', boxShadow: '0 0 0 2px #ef4444' }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#059669', marginBottom: 2 }}>Recoger en:</div>
-                <div style={{ fontSize: '0.88rem', color: '#111827', marginBottom: 2, lineHeight: 1.3 }}>{activeJob.pickup_address}</div>
-                {activeJob.sender_contact && (
-                  <div style={{ fontSize: '0.82rem', color: '#374151' }}>
-                    {activeJob.sender_contact}
-                    {activeJob.sender_phone && (
-                      <> — <a href={`tel:${activeJob.sender_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.sender_phone}</a></>
-                    )}
-                  </div>
-                )}
-                <div style={{ margin: '12px 0', borderTop: '1px dashed #e5e7eb' }} />
-                <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#ef4444', marginBottom: 2 }}>Entregar en:</div>
-                <div style={{ fontSize: '0.88rem', color: '#111827', marginBottom: 2, lineHeight: 1.3 }}>{activeJob.delivery_address}</div>
-                {activeJob.receiver_contact && (
-                  <div style={{ fontSize: '0.82rem', color: '#374151' }}>
-                    {activeJob.receiver_contact}
-                    {activeJob.receiver_phone && (
-                      <> — <a href={`tel:${activeJob.receiver_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.receiver_phone}</a></>
-                    )}
-                  </div>
-                )}
-              </div>
+          {/* Route A → B */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
+              <div style={{ width: 2, flex: 1, minHeight: 20, background: '#444', margin: '3px 0' }} />
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>B</div>
             </div>
-
-            {/* Payment + meta */}
-            {activeJob.payment_method && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', borderRadius: 10, padding: '0.5rem 0.75rem', marginBottom: 10, fontSize: '0.85rem' }}>
-                <span>💵</span>
-                <span style={{ fontWeight: 600, color: '#065f46' }}>Cobro: {activeJob.payment_method}</span>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', color: '#6b7280', marginBottom: 14 }}>
-              <span>🚗 {VEHICLE_LABELS[activeJob.vehicle_type] || activeJob.vehicle_type}</span>
-              <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
-                ₲{Number(activeJob.offer || activeJob.suggested_price || 0).toLocaleString()}
-              </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: 1.35, marginBottom: 4 }}>{activeJob.pickup_address}</div>
+              {activeJob.sender_contact && (
+                <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 8 }}>
+                  {activeJob.sender_contact}
+                  {activeJob.sender_phone && <> · <a href={`tel:${activeJob.sender_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.sender_phone}</a></>}
+                </div>
+              )}
+              <div style={{ height: 6 }} />
+              <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: 1.35, marginBottom: 4 }}>{activeJob.delivery_address}</div>
+              {activeJob.receiver_contact && (
+                <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                  {activeJob.receiver_contact}
+                  {activeJob.receiver_phone && <> · <a href={`tel:${activeJob.receiver_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.receiver_phone}</a></>}
+                </div>
+              )}
             </div>
-
-            {activeJob.instructions && (
-              <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: 12, fontSize: '0.85rem', color: '#6366f1' }}>
-                📝 {activeJob.instructions}
-              </div>
-            )}
-
-            {/* Action buttons */}
-            {activeJob.status === 'accepted' && (
-              <button
-                onClick={() => handleTransition(activeJob.id, 'picking_up')}
-                disabled={transitioning}
-                style={{
-                  width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
-                  fontWeight: 700, fontSize: '1rem', opacity: transitioning ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                🚗 Confirmar Recogida
-              </button>
-            )}
-
-            {activeJob.status === 'picking_up' && (
-              <button
-                onClick={() => handleTransition(activeJob.id, 'in_transit')}
-                disabled={transitioning}
-                style={{
-                  width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff',
-                  fontWeight: 700, fontSize: '1rem', opacity: transitioning ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                📦 Confirmar Retiro — Ir a Entregar
-              </button>
-            )}
-
-            {activeJob.status === 'in_transit' && (
-              <button
-                onClick={() => handleTransition(activeJob.id, 'delivered')}
-                disabled={transitioning}
-                style={{
-                  width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
-                  fontWeight: 700, fontSize: '1rem', opacity: transitioning ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                ✅ Confirmar Entrega
-              </button>
-            )}
           </div>
-        </div>
-      )}
 
-      {/* ════════════ PENDING ORDERS ════════════ */}
-      {!activeJob && (
-        <>
-          <h2 className="tuki-heading" style={{ marginTop: '1rem' }}>Solicitudes de Envío</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            Enviá tu oferta al cliente. El cliente elegirá entre las ofertas recibidas.
-          </p>
-
-          {loading && <div style={{ padding: 32, textAlign: 'center' }}>Cargando...</div>}
-          {!loading && filteredOrders.length === 0 && (
-            <div className="tuki-order-card">
-              <div className="tuki-order-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-                <span style={{ fontSize: '3rem' }}>📦</span>
-                <p style={{ color: '#6b7280', marginTop: '1rem', fontWeight: 500 }}>No hay envíos pendientes</p>
-                <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                  Las nuevas solicitudes aparecerán aquí según tus filtros
-                </p>
-              </div>
+          {/* Price + vehicle + payment */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}>{VEHICLE_LABELS[activeJob.vehicle_type] || activeJob.vehicle_type}</span>
+            <span style={{ color: '#c8ff00', fontWeight: 800, fontSize: '1.4rem' }}>
+              ₲{Number(activeJob.offer || activeJob.suggested_price || 0).toLocaleString()}
+            </span>
+          </div>
+          {activeJob.payment_method && (
+            <div style={{ background: 'rgba(16,185,129,0.12)', borderRadius: 10, padding: '0.4rem 0.75rem', marginBottom: 12, fontSize: '0.83rem', color: '#6ee7b7', display: 'flex', gap: 6 }}>
+              <span>💵</span><span>Cobro: <strong>{activeJob.payment_method}</strong></span>
+            </div>
+          )}
+          {activeJob.instructions && (
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.4rem 0.75rem', marginBottom: 12, fontSize: '0.82rem', color: '#a5b4fc' }}>
+              📝 {activeJob.instructions}
             </div>
           )}
 
-          {filteredOrders.map(req => {
-            const alreadyOffered = sentOffers[req.id];
-            const isSending = sending[req.id];
-            const clientPrice = Number(req.offer || req.suggested_price || 0);
-            const quickOffers = [
-              Math.round(clientPrice * 1.1 / 1000) * 1000,
-              Math.round(clientPrice * 1.2 / 1000) * 1000,
-              Math.round(clientPrice * 1.3 / 1000) * 1000,
-            ];
-            return (
-              <div key={req.id} style={{
-                marginBottom: 16, borderRadius: 18, overflow: 'hidden',
-                background: '#1a1a2e', color: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-              }}>
-                {/* ── Header: Solicitud de envío ── */}
-                <div style={{ textAlign: 'center', padding: '0.7rem 1rem 0.3rem', fontSize: '1.05rem', fontWeight: 700, letterSpacing: 0.3 }}>
-                  Solicitud de envío
-                </div>
+          {/* Action button */}
+          {activeJob.status === 'accepted' && (
+            <button onClick={() => handleTransition(activeJob.id, 'picking_up')} disabled={transitioning}
+              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+              🚗 Confirmar Recogida
+            </button>
+          )}
+          {activeJob.status === 'picking_up' && (
+            <button onClick={() => handleTransition(activeJob.id, 'in_transit')} disabled={transitioning}
+              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#3b82f6', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+              📦 Confirmar Retiro — Ir a Entregar
+            </button>
+          )}
+          {activeJob.status === 'in_transit' && (
+            <button onClick={() => handleTransition(activeJob.id, 'delivered')} disabled={transitioning}
+              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+              ✅ Confirmar Entrega
+            </button>
+          )}
+        </div>
+      )}
 
-                {/* ── Client info row ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.5rem 1rem 0.6rem' }}>
-                  <div style={{ position: 'relative' }}>
-                    {req.client_photo ? (
-                      <img src={req.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #444' }} />
-                    ) : (
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>👤</div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                      {req.client_name || req.client_email?.split('@')[0] || 'Cliente'}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>{VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}</span>
-                      <span>•</span>
-                      <span>{new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fff' }}>
-                      {clientPrice.toLocaleString()} Gs
-                    </div>
-                  </div>
-                </div>
+      {/* ════════════ INCOMING REQUEST BOTTOM SHEET ════════════ */}
+      {!activeJob && currentSheetOrder && (() => {
+        const req = currentSheetOrder;
+        const alreadyOffered = sentOffers[req.id];
+        const isSending = sending[req.id];
+        const clientPrice = Number(req.offer || req.suggested_price || 0);
+        const qo1 = Math.round(clientPrice * 1.1 / 1000) * 1000;
+        const qo2 = Math.round(clientPrice * 1.2 / 1000) * 1000;
+        const qo3 = Math.round(clientPrice * 1.3 / 1000) * 1000;
+        return (
+          <div key={req.id} style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+            height: '68vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
+            animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+          }}>
+            {/* Pull tab */}
+            <div style={{ flexShrink: 0, paddingTop: 10, paddingBottom: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
+            </div>
 
-                {/* ── Route A → B ── */}
-                <div style={{ padding: '0 1rem 0.7rem' }}>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
-                      <div style={{ width: 2, flex: 1, background: '#444', margin: '3px 0' }} />
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>B</div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35, marginBottom: 2 }}>{req.pickup_address}</div>
-                      <div style={{ height: 12 }} />
-                      <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35 }}>{req.delivery_address}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {req.instructions && (
-                  <div style={{ margin: '0 1rem 0.6rem', background: 'rgba(255,255,255,0.08)', padding: '0.4rem 0.7rem', borderRadius: 8, fontSize: '0.82rem', color: '#a5b4fc' }}>
-                    📝 {req.instructions}
-                  </div>
+            {/* Header row: title + counter + cerrar */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingInline: 16, paddingBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Solicitud de envío</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {sheetOrders.length > 1 && (
+                  <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{safeIndex + 1}/{sheetOrders.length}</span>
                 )}
+                <button onClick={() => handleDismiss(req.id)}
+                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#9ca3af', borderRadius: 99, padding: '4px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
+                  Cerrar
+                </button>
+              </div>
+            </div>
 
-                {/* ── Actions ── */}
-                <div style={{ padding: '0 1rem 1rem' }}>
-                  {alreadyOffered ? (
-                    <div style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 14, padding: '0.8rem 1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#a5b4fc', marginBottom: 2 }}>Tu oferta enviada</div>
-                      <div style={{ fontWeight: 800, color: '#818cf8', fontSize: '1.25rem' }}>
-                        {alreadyOffered.toLocaleString()} Gs
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>Esperando respuesta del cliente...</div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Accept button */}
-                      <button
-                        onClick={() => handleAcceptPrice(req.id, clientPrice)}
-                        disabled={isSending}
-                        style={{
-                          width: '100%', padding: '0.85rem', border: 'none', borderRadius: 14, cursor: 'pointer',
-                          background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem',
-                          marginBottom: 10, opacity: isSending ? 0.6 : 1,
-                        }}>
-                        {isSending ? 'Enviando...' : `Aceptar por ${clientPrice.toLocaleString()} Gs`}
-                      </button>
-
-                      {/* Ofrece tu tarifa */}
-                      <div style={{ textAlign: 'center', fontSize: '0.85rem', color: '#9ca3af', marginBottom: 8 }}>Ofrece tu tarifa</div>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                        {quickOffers.map(q => (
-                          <button key={q}
-                            onClick={() => handleSendOffer(req.id, q)}
-                            disabled={isSending}
-                            style={{
-                              flex: 1, padding: '0.6rem 0', border: '1px solid #444', borderRadius: 10,
-                              background: 'transparent', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                            }}>
-                            {q.toLocaleString()}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => {
-                            const custom = prompt('Tu contraoferta (Gs):');
-                            if (custom && Number(custom) > 0) {
-                              handleSendOffer(req.id, Number(custom));
-                            }
-                          }}
-                          style={{
-                            width: 44, border: '1px solid #444', borderRadius: 10,
-                            background: 'transparent', color: '#fff', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer',
-                          }}>
-                          &gt;
-                        </button>
-                      </div>
-                    </>
-                  )}
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingInline: 16, paddingBottom: 16 }}>
+              {/* Client info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+                {req.client_photo ? (
+                  <img src={req.client_photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #333', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#2d2d2d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>👤</div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
+                    {req.client_name || req.client_email?.split('@')[0] || 'Cliente'}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    {VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type} · {new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1.5rem', color: '#c8ff00', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Gs</div>
                 </div>
               </div>
-            );
-          })}
-        </>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: '#2d2d2d', marginBottom: 14 }} />
+
+              {/* Route A → B */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>A</div>
+                  <div style={{ width: 2, flex: 1, minHeight: 18, background: '#333', margin: '4px 0' }} />
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>B</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35, marginBottom: 4 }}>{req.pickup_address}</div>
+                  <div style={{ height: 10 }} />
+                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35 }}>{req.delivery_address}</div>
+                </div>
+              </div>
+
+              {req.instructions && (
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.45rem 0.75rem', marginBottom: 12, fontSize: '0.8rem', color: '#a5b4fc' }}>
+                  📝 {req.instructions}
+                </div>
+              )}
+
+              {/* Actions */}
+              {alreadyOffered ? (
+                <div style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 14, padding: '1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#a5b4fc', marginBottom: 4 }}>Tu oferta enviada</div>
+                  <div style={{ fontWeight: 800, color: '#818cf8', fontSize: '1.4rem' }}>{alreadyOffered.toLocaleString()} Gs</div>
+                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>Esperando respuesta del cliente...</div>
+                </div>
+              ) : (
+                <>
+                  {/* Accept at client price */}
+                  <button onClick={() => handleAcceptPrice(req.id, clientPrice)} disabled={isSending}
+                    style={{ width: '100%', padding: '0.95rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1.05rem', marginBottom: 12, opacity: isSending ? 0.6 : 1 }}>
+                    {isSending ? 'Enviando...' : `Aceptar por ${clientPrice.toLocaleString()} Gs`}
+                  </button>
+
+                  {/* Ofrece tu tarifa */}
+                  <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#6b7280', marginBottom: 8 }}>Ofrece tu tarifa</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                    {[qo1, qo2, qo3].map(q => (
+                      <button key={q} onClick={() => handleSendOffer(req.id, q)} disabled={isSending}
+                        style={{ flex: 1, padding: '0.65rem 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+                        {q.toLocaleString()}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const custom = prompt('Tu contraoferta (Gs):');
+                        if (custom && Number(custom) > 0) handleSendOffer(req.id, Number(custom));
+                      }}
+                      style={{ width: 44, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
+                      +
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Nav dots if multiple orders */}
+              {sheetOrders.length > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
+                  {sheetOrders.map((_, i) => (
+                    <button key={i} onClick={() => setSheetIndex(i)}
+                      style={{ width: i === safeIndex ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'width 0.2s',
+                        background: i === safeIndex ? '#c8ff00' : '#333' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ════════════ EMPTY STATE ════════════ */}
+      {!activeJob && !currentSheetOrder && !loading && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+          padding: '2rem 1.5rem 2.5rem', textAlign: 'center',
+          boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
+          animation: 'slideUp 0.25s ease-out',
+        }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📦</div>
+          <div style={{ color: '#d1d5db', fontWeight: 700, fontSize: '1rem' }}>Sin solicitudes pendientes</div>
+          <div style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 6 }}>Las nuevas solicitudes aparecerán aquí automáticamente</div>
+        </div>
       )}
-    </DriverScreenLayout>
+    </div>
   );
 }
