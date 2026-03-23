@@ -98,15 +98,24 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Not your order' }, { status: 403 });
   }
 
-  const updates: Record<string, unknown> = { status };
-  if (status === 'delivered') updates.completed_at = new Date().toISOString();
-  if (status === 'failed' && fail_reason) updates.fail_reason = fail_reason;
-  if (status === 'returning') updates.returning_at = new Date().toISOString();
-  if (status === 'returned') updates.returned_at = new Date().toISOString();
-  if (status === 'return_rejected' && return_rejected_reason) updates.return_rejected_reason = return_rejected_reason;
+  // Core update (always safe — only touches columns that exist before migration 011)
+  const coreUpdates: Record<string, unknown> = { status };
+  if (status === 'delivered') coreUpdates.completed_at = new Date().toISOString();
 
-  const { error } = await supabase.from('orders').update(updates).eq('id', order_id);
+  const { error } = await supabase.from('orders').update(coreUpdates).eq('id', order_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Best-effort: store new columns added by migration 011 in a separate call.
+  // If the migration hasn't been run yet these will fail silently — status transition still succeeds.
+  const extraUpdates: Record<string, unknown> = {};
+  if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
+  if (status === 'returning') extraUpdates.returning_at = new Date().toISOString();
+  if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
+  if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
+  if (Object.keys(extraUpdates).length > 0) {
+    // Ignore error — migration 011 may not have been run yet
+    await supabase.from('orders').update(extraUpdates).eq('id', order_id);
+  }
 
   return NextResponse.json({ success: true, status });
 }
