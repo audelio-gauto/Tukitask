@@ -40,7 +40,7 @@ function playDeliveryAlert() {
 }
 
 export default function DriverDashboard() {
-  const { openDrawer, serviceFilters, toggleFilter } = useDriverContext();
+  const { openDrawer, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm } = useDriverContext();
   const router = useRouter();
   const [available, setAvailable] = useState(false);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
@@ -259,6 +259,35 @@ export default function DriverDashboard() {
                 </button>
               ))}
             </div>
+
+            {/* Rango de km */}
+            <div style={{ padding: '0 4px', marginTop: 4 }}>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>📍 Rango de recogida</label>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981' }}>{pickupRangeKm} km</span>
+                </div>
+                <input type="range" min={1} max={50} step={1} value={pickupRangeKm}
+                  onChange={e => setPickupRangeKm(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#10b981' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
+                  <span>1 km</span><span>50 km</span>
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>🚛 Rango de entrega</label>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6' }}>{deliveryRangeKm} km</span>
+                </div>
+                <input type="range" min={1} max={100} step={1} value={deliveryRangeKm}
+                  onChange={e => setDeliveryRangeKm(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#3b82f6' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
+                  <span>1 km</span><span>100 km</span>
+                </div>
+              </div>
+            </div>
+
             <button className="driver-filter-done" onClick={() => setFilterOpen(false)}>
               Aplicar filtros
             </button>

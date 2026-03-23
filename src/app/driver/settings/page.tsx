@@ -25,10 +25,6 @@ export default function DriverSettingsPage() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
-  const [pickupRange, setPickupRange] = useState('');
-  const [deliveryRange, setDeliveryRange] = useState('');
-  const [maxWeight, setMaxWeight] = useState('');
-  const [acceptsPackages, setAcceptsPackages] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -52,10 +48,6 @@ export default function DriverSettingsPage() {
           setAddress(data.address || '');
           setCity(data.city || '');
           setPhone(data.phone || '');
-          setPickupRange(data.pickup_range || '');
-          setDeliveryRange(data.delivery_range || '');
-          setMaxWeight(data.max_weight || '');
-          setAcceptsPackages(data.accepts_packages || false);
         }
       } catch {}
     })();
@@ -79,10 +71,6 @@ export default function DriverSettingsPage() {
       address,
       city,
       phone,
-      pickup_range: pickupRange ? parseFloat(String(pickupRange)) : null,
-      delivery_range: deliveryRange ? parseFloat(String(deliveryRange)) : null,
-      max_weight: maxWeight ? parseFloat(String(maxWeight)) : null,
-      accepts_packages: acceptsPackages,
     };
 
     try {
@@ -247,30 +235,6 @@ export default function DriverSettingsPage() {
             </div>
 
             <hr style={{ border: 0, borderTop: '1px solid var(--tuki-border)', margin: '1.5rem 0' }} />
-
-            {/* Capacidad y Rangos */}
-            <h3 className="tuki-heading" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Capacidad y Rangos</h3>
-            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr 1fr', marginBottom: '1rem' }}>
-              <div>
-                <label className="tuki-form-label">Rango Recogida (km)</label>
-                <input type="number" value={pickupRange} onChange={e => setPickupRange(e.target.value)} className="tuki-form-input" step="0.1" />
-              </div>
-              <div>
-                <label className="tuki-form-label">Rango Entrega (km)</label>
-                <input type="number" value={deliveryRange} onChange={e => setDeliveryRange(e.target.value)} className="tuki-form-input" step="0.1" />
-              </div>
-              <div>
-                <label className="tuki-form-label">Peso Máximo (kg)</label>
-                <input type="number" value={maxWeight} onChange={e => setMaxWeight(e.target.value)} className="tuki-form-input" step="0.1" />
-              </div>
-            </div>
-            <div style={{ marginTop: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={acceptsPackages} onChange={e => setAcceptsPackages(e.target.checked)} />
-                <span className="tuki-form-label" style={{ margin: 0 }}>📦 Acepto envíos de paquetes (tipo Bolt)</span>
-              </label>
-              <small style={{ color: '#6b7280', fontSize: '0.8rem' }}>Recibirás notificaciones de solicitudes de envío de paquetes cercanas.</small>
-            </div>
 
             <hr style={{ border: 0, borderTop: '1px solid var(--tuki-border)', margin: '1.5rem 0' }} />
 

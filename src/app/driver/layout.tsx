@@ -17,6 +17,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  const [pickupRangeKm, setPickupRangeKm] = useState(10);
+  const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
 
   useEffect(() => {
     (async () => {
@@ -39,6 +41,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           const profJson = await profRes.json();
           if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+          if (profJson.profile?.pickup_range) setPickupRangeKm(Number(profJson.profile.pickup_range));
+          if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
         } catch {}
         setChecking(false);
       } catch {
@@ -68,7 +72,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter, navApp }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
       </DriverContext.Provider>
     </div>

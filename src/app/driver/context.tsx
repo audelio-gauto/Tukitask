@@ -27,6 +27,10 @@ interface DriverCtx {
   serviceFilters: ServiceFilters;
   toggleFilter: (key: string) => void;
   navApp: string;
+  pickupRangeKm: number;
+  setPickupRangeKm: (v: number) => void;
+  deliveryRangeKm: number;
+  setDeliveryRangeKm: (v: number) => void;
 }
 
 export const DriverContext = createContext<DriverCtx>({
@@ -38,6 +42,10 @@ export const DriverContext = createContext<DriverCtx>({
   serviceFilters: DEFAULT_FILTERS,
   toggleFilter: () => {},
   navApp: 'google_maps',
+  pickupRangeKm: 10,
+  setPickupRangeKm: () => {},
+  deliveryRangeKm: 20,
+  setDeliveryRangeKm: () => {},
 });
 
 export function useDriverContext() {

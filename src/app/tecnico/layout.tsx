@@ -126,7 +126,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
         role={role}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp: 'google_maps' }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp: 'google_maps', pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}
         </main>
