@@ -74,10 +74,16 @@ export default function DeliveriesPage() {
   const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
   const [sheetIndex, setSheetIndex] = useState(0);
 
+  // Fail delivery modal state
+  const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
+  const [showFailReason, setShowFailReason] = useState(false);
+  const [failReason, setFailReason] = useState('');
+
   const prevOrderIds = useRef<Set<string>>(new Set());
   const prevAccepted = useRef(false);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeJobRef = useRef<any>(null);
+  const prevStatusRef = useRef<string | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => { activeJobRef.current = activeJob; }, [activeJob]);
@@ -108,7 +114,7 @@ export default function DeliveriesPage() {
         if (!Array.isArray(data)) return; // network/parse error — don't clear
         if (data.length === 0) {
           // Only clear if not currently transitioning
-          if (!activeJobRef.current || !['accepted','picking_up','in_transit'].includes(activeJobRef.current?.status)) {
+          if (!activeJobRef.current || !['accepted','picking_up','in_transit','returning','driver_returning','return_delivered'].includes(activeJobRef.current?.status)) {
             setActiveJob(null);
             activeJobRef.current = null;
           }
@@ -203,6 +209,47 @@ export default function DeliveriesPage() {
   }, [loading, unrespondedCount, activeJob]);
 
   /* ── Status transitions ── */
+  // Reset fail modal when job leaves in_transit
+  useEffect(() => {
+    if (activeJob?.status !== 'in_transit') {
+      setShowDeliveryConfirm(false);
+      setShowFailReason(false);
+      setFailReason('');
+    }
+  }, [activeJob?.status]);
+
+  // Auto-open navigation when client accepts the return (driver_returning)
+  useEffect(() => {
+    if (
+      activeJob?.status === 'driver_returning' &&
+      prevStatusRef.current === 'returning' &&
+      activeJob.pickup_lat
+    ) {
+      window.open(getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp), '_blank');
+    }
+    prevStatusRef.current = activeJob?.status ?? null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJob?.status]);
+
+  const handleFailed = async (reason: string) => {
+    if (!activeJob) return;
+    setTransitioning(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: activeJob.id, status: 'failed', driver_email: email, fail_reason: reason }),
+      });
+      if (res.ok) {
+        setActiveJob(null);
+        activeJobRef.current = null;
+        prevAccepted.current = false;
+        prevStatusRef.current = null;
+      }
+    } catch { /* */ }
+    setTransitioning(false);
+  };
+
   const handleTransition = async (orderId: string, newStatus: string) => {
     setTransitioning(true);
     try {
@@ -215,6 +262,7 @@ export default function DeliveriesPage() {
         if (newStatus === 'delivered') {
           playAccepted();
           setActiveJob(null);
+          activeJobRef.current = null;
           prevAccepted.current = false;
         } else {
           setActiveJob((j: any) => j ? { ...j, status: newStatus } : j);
@@ -323,6 +371,22 @@ export default function DeliveriesPage() {
                 🚛 Ir a entregar
               </a>
             )}
+            {activeJob.status === 'driver_returning' && activeJob.pickup_lat && (
+              <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
+                style={{ background: '#f59e0b', color: '#111', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
+                🔄 Ir a devolver
+              </a>
+            )}
+            {activeJob.status === 'return_delivered' && (
+              <span style={{ background: '#6366f1', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700 }}>
+                ⏳ Esperando cliente
+              </span>
+            )}
+            {activeJob.status === 'returning' && (
+              <span style={{ background: '#d97706', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700 }}>
+                ⚠️ Fallido
+              </span>
+            )}
           </div>
 
           {/* Route A → B */}
@@ -382,11 +446,79 @@ export default function DeliveriesPage() {
               📦 Confirmar Retiro — Ir a Entregar
             </button>
           )}
-          {activeJob.status === 'in_transit' && (
-            <button onClick={() => handleTransition(activeJob.id, 'delivered')} disabled={transitioning}
+          {/* ── Confirm delivery: Entregado / Fallido ── */}
+          {activeJob.status === 'in_transit' && !showDeliveryConfirm && !showFailReason && (
+            <button onClick={() => setShowDeliveryConfirm(true)} disabled={transitioning}
               style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
               ✅ Confirmar Entrega
             </button>
+          )}
+          {activeJob.status === 'in_transit' && showDeliveryConfirm && !showFailReason && (
+            <div>
+              <p style={{ color: '#d1d5db', fontSize: '0.88rem', textAlign: 'center', marginBottom: 10, fontWeight: 600 }}>¿Cómo resultó la entrega?</p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => { setShowDeliveryConfirm(false); handleTransition(activeJob.id, 'delivered'); }}
+                  disabled={transitioning}
+                  style={{ flex: 1, padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.95rem', opacity: transitioning ? 0.6 : 1 }}>
+                  ✅ Entregado
+                </button>
+                <button
+                  onClick={() => { setShowDeliveryConfirm(false); setShowFailReason(true); }}
+                  disabled={transitioning}
+                  style={{ flex: 1, padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>
+                  ❌ Fallido
+                </button>
+              </div>
+            </div>
+          )}
+          {activeJob.status === 'in_transit' && showFailReason && (
+            <div>
+              <p style={{ color: '#fca5a5', fontSize: '0.88rem', textAlign: 'center', marginBottom: 8, fontWeight: 600 }}>¿Por qué no se pudo entregar?</p>
+              <textarea
+                value={failReason}
+                onChange={e => setFailReason(e.target.value)}
+                placeholder="Ej: Nadie en casa, dirección incorrecta..."
+                style={{
+                  width: '100%', padding: '0.75rem', borderRadius: 12, border: '1.5px solid #374151',
+                  background: '#0f172a', color: '#fff', fontSize: '0.88rem', resize: 'none',
+                  minHeight: 76, boxSizing: 'border-box', marginBottom: 8,
+                  fontFamily: 'inherit', outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setShowFailReason(false); setShowDeliveryConfirm(true); setFailReason(''); }}
+                  style={{ flex: 1, padding: '0.8rem', border: '1px solid #374151', borderRadius: 12, background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600 }}>
+                  ← Atrás
+                </button>
+                <button
+                  onClick={() => handleFailed(failReason)}
+                  disabled={!failReason.trim() || transitioning}
+                  style={{ flex: 2, padding: '0.8rem', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.9rem', opacity: (!failReason.trim() || transitioning) ? 0.5 : 1 }}>
+                  Confirmar Fallido
+                </button>
+              </div>
+            </div>
+          )}
+          {/* ── Return flow statuses ── */}
+          {activeJob.status === 'returning' && (
+            <div style={{ background: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: '0.85rem', textAlign: 'center', border: '1px solid rgba(245,158,11,0.3)' }}>
+              <div style={{ color: '#fbbf24', fontWeight: 700, marginBottom: 4 }}>⏳ Esperando respuesta del cliente</div>
+              <div style={{ color: '#9ca3af', fontSize: '0.83rem' }}>El cliente debe aceptar la devolución para continuar</div>
+            </div>
+          )}
+          {activeJob.status === 'driver_returning' && (
+            <button onClick={() => handleTransition(activeJob.id, 'return_delivered')} disabled={transitioning}
+              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+              📦 Confirmar llegada — esperando al remitente
+            </button>
+          )}
+          {activeJob.status === 'return_delivered' && (
+            <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: 12, padding: '0.85rem', textAlign: 'center', border: '1px solid rgba(99,102,241,0.3)' }}>
+              <div style={{ color: '#a5b4fc', fontWeight: 700, marginBottom: 4 }}>⏳ Esperando confirmación final del cliente</div>
+              <div style={{ color: '#9ca3af', fontSize: '0.83rem' }}>El cliente debe aceptar o rechazar la recepción</div>
+            </div>
           )}
         </div>
       )}

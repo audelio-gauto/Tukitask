@@ -22,6 +22,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   in_transit: { label: 'En camino', color: '#3b82f6', bg: '#eff6ff' },
   delivered: { label: 'Entregado', color: '#059669', bg: '#ecfdf5' },
   cancelled: { label: 'Cancelado', color: '#ef4444', bg: '#fef2f2' },
+  failed: { label: 'Entrega fallida', color: '#ef4444', bg: '#fef2f2' },
+  returning: { label: 'Conductor devolviendo', color: '#d97706', bg: '#fffbeb' },
+  driver_returning: { label: 'En camino de vuelta', color: '#7c3aed', bg: '#f5f3ff' },
+  return_delivered: { label: 'Conductor llegó', color: '#5b21b6', bg: '#f5f3ff' },
+  returned: { label: 'Devuelto ✓', color: '#059669', bg: '#ecfdf5' },
+  return_rejected: { label: 'Devolución rechazada', color: '#dc2626', bg: '#fef2f2' },
 };
 
 interface DriverOffer {
@@ -275,6 +281,11 @@ export default function MisEnviosPage() {
   const [ratingOrder, setRatingOrder] = useState<any>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
 
+  // Return flow state
+  const [returningAction, setReturningAction] = useState<string | null>(null);
+  const [returnRejectionOrderId, setReturnRejectionOrderId] = useState<string | null>(null);
+  const [returnRejectionReason, setReturnRejectionReason] = useState('');
+
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -324,9 +335,9 @@ export default function MisEnviosPage() {
     return () => clearInterval(interval);
   }, [orders]);
 
-  // Fetch accepted offer details for tracking orders
+  // Fetch accepted offer details for tracking orders (includes return-flow statuses)
   useEffect(() => {
-    const trackingOrders = orders.filter(o => ['accepted', 'picking_up', 'in_transit'].includes(o.status));
+    const trackingOrders = orders.filter(o => ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(o.status));
     for (const order of trackingOrders) {
       if (acceptedOffers[order.id]) continue;
       fetch(`/api/orders/offers?order_id=${order.id}`)
@@ -402,9 +413,33 @@ export default function MisEnviosPage() {
     setRatingOrder(null);
   };
 
+  const handleClientReturn = async (orderId: string, newStatus: string, rejectionReason?: string) => {
+    const key = orderId + newStatus;
+    setReturningAction(key);
+    try {
+      const body: Record<string, unknown> = { order_id: orderId, status: newStatus, client_email: email };
+      if (rejectionReason) body.return_rejected_reason = rejectionReason;
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        fetchOrders();
+        setReturnRejectionOrderId(null);
+        setReturnRejectionReason('');
+      }
+    } catch { /* */ }
+    setReturningAction(key === returningAction ? null : returningAction);
+  };
+
   const negotiatingOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
-  const trackingOrders = orders.filter(o => ['accepted', 'picking_up', 'in_transit'].includes(o.status));
-  const completedOrders = orders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
+  const trackingOrders = orders.filter(o =>
+    ['accepted', 'picking_up', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered'].includes(o.status)
+  );
+  const completedOrders = orders.filter(o =>
+    ['delivered', 'cancelled', 'returned', 'return_rejected'].includes(o.status)
+  );
 
   return (
     <ClientScreenLayout title="Mis Envíos">
@@ -421,22 +456,173 @@ export default function MisEnviosPage() {
         </div>
       )}
 
-      {/* ════════════ TRACKING ORDERS (accepted/picking_up/in_transit) ════════════ */}
-      {trackingOrders.map(order => (
-        <div key={order.id} style={{ marginBottom: 20 }}>
-          {/* Green banner */}
-          <div style={{
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            color: '#fff', padding: '0.7rem 1rem', fontWeight: 700,
-            borderRadius: '16px 16px 0 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem',
-          }}>
-            <span>🚚</span> ¡Conductor Asignado!
-          </div>
+      {/* ════════════ TRACKING ORDERS ════════════ */}
+      {trackingOrders.map(order => {
+        const price = Number(order.offer || order.suggested_price || 0);
+        const isReturnFlow = ['failed', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
 
-          {/* Sliding card */}
-          <SlidingCard order={order} driverOffer={acceptedOffers[order.id] || null} />
-        </div>
-      ))}
+        if (!isReturnFlow) {
+          return (
+            <div key={order.id} style={{ marginBottom: 20 }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff', padding: '0.7rem 1rem', fontWeight: 700,
+                borderRadius: '16px 16px 0 0', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem',
+              }}>
+                <span>🚚</span> ¡Conductor Asignado!
+              </div>
+              <SlidingCard order={order} driverOffer={acceptedOffers[order.id] || null} />
+            </div>
+          );
+        }
+
+        // ── Return / failed flow card ──
+        const borderColor = order.status === 'failed' ? '#ef4444'
+          : order.status === 'returning' ? '#f59e0b'
+          : order.status === 'driver_returning' ? '#7c3aed'
+          : '#5b21b6';
+        const bgColor = order.status === 'failed' ? 'rgba(239,68,68,0.06)'
+          : order.status === 'returning' ? 'rgba(245,158,11,0.06)'
+          : 'rgba(99,102,241,0.06)';
+        const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
+        const isDoingAction = (s: string) => returningAction === order.id + s;
+
+        return (
+          <div key={order.id} style={{
+            background: '#fff', borderRadius: 16, border: `2px solid ${borderColor}`,
+            marginBottom: 20, padding: '1rem', boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          }}>
+            {/* Status badge */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{
+                fontSize: '0.78rem', fontWeight: 700, padding: '4px 12px', borderRadius: 99,
+                color: statusInfo.color, background: statusInfo.bg,
+              }}>
+                {statusInfo.label}
+              </span>
+              <span style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>₲{price.toLocaleString()}</span>
+            </div>
+
+            {/* Route */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
+                <div style={{ width: 1.5, flex: 1, background: '#d1d5db', margin: '2px 0' }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+              </div>
+              <div style={{ flex: 1, fontSize: '0.82rem', color: '#374151', lineHeight: 1.35 }}>
+                <div style={{ marginBottom: 6 }}>{order.pickup_address}</div>
+                <div>{order.delivery_address}</div>
+              </div>
+            </div>
+
+            {/* Fail reason */}
+            {order.fail_reason && (
+              <div style={{ background: bgColor, borderRadius: 8, padding: '0.45rem 0.7rem', marginBottom: 10, fontSize: '0.8rem', color: '#374151', borderLeft: `3px solid ${borderColor}` }}>
+                <strong>Motivo:</strong> {order.fail_reason}
+              </div>
+            )}
+
+            {/* ─ Status: failed ─ just waiting for driver to act */}
+            {order.status === 'failed' && (
+              <div style={{ background: '#fef2f2', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.83rem', color: '#dc2626', fontWeight: 600 }}>
+                El conductor está revisando la situación...
+              </div>
+            )}
+
+            {/* ─ Status: returning — client must accept ─ */}
+            {order.status === 'returning' && (
+              <div>
+                <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 10, lineHeight: 1.4 }}>
+                  El conductor no pudo completar la entrega y está devolviendo tu envío al remitente.
+                  <br /><strong>La tarifa de devolución es: ₲{price.toLocaleString()}</strong>
+                </p>
+                <button
+                  onClick={() => handleClientReturn(order.id, 'driver_returning')}
+                  disabled={!!returningAction}
+                  style={{
+                    width: '100%', padding: '0.75rem', border: 'none', borderRadius: 12,
+                    cursor: 'pointer', background: '#f59e0b', color: '#111',
+                    fontWeight: 700, fontSize: '0.9rem', opacity: isDoingAction('driver_returning') ? 0.6 : 1,
+                  }}>
+                  {isDoingAction('driver_returning') ? '...' : '✓ Aceptar devolución'}
+                </button>
+              </div>
+            )}
+
+            {/* ─ Status: driver_returning — info only ─ */}
+            {order.status === 'driver_returning' && (
+              <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.83rem', color: '#7c3aed', fontWeight: 600 }}>
+                🔄 El conductor está en camino de vuelta con tu envío
+              </div>
+            )}
+
+            {/* ─ Status: return_delivered — client must accept or reject ─ */}
+            {order.status === 'return_delivered' && (
+              <div>
+                <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 10, fontWeight: 600 }}>
+                  📦 El conductor llegó con tu envío. ¿Confirmás la recepción?
+                </p>
+                {returnRejectionOrderId !== order.id ? (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      onClick={() => handleClientReturn(order.id, 'returned')}
+                      disabled={!!returningAction}
+                      style={{
+                        flex: 1, padding: '0.75rem', border: 'none', borderRadius: 12,
+                        cursor: 'pointer', background: '#10b981', color: '#fff',
+                        fontWeight: 700, opacity: isDoingAction('returned') ? 0.6 : 1,
+                      }}>
+                      {isDoingAction('returned') ? '...' : '✓ Aceptar'}
+                    </button>
+                    <button
+                      onClick={() => setReturnRejectionOrderId(order.id)}
+                      disabled={!!returningAction}
+                      style={{
+                        flex: 1, padding: '0.75rem', border: '1.5px solid #ef4444', borderRadius: 12,
+                        cursor: 'pointer', background: '#fff', color: '#ef4444',
+                        fontWeight: 700,
+                      }}>
+                      ✕ Rechazar
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <textarea
+                      value={returnRejectionReason}
+                      onChange={e => setReturnRejectionReason(e.target.value)}
+                      placeholder="¿Por qué rechazás la devolución?"
+                      style={{
+                        width: '100%', padding: '0.65rem', borderRadius: 10,
+                        border: '1.5px solid #e5e7eb', fontSize: '0.85rem',
+                        resize: 'none', minHeight: 72, boxSizing: 'border-box',
+                        marginBottom: 8, fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setReturnRejectionOrderId(null)}
+                        style={{ flex: 1, padding: '0.65rem', border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', color: '#6b7280', cursor: 'pointer', fontWeight: 600 }}>
+                        Atrás
+                      </button>
+                      <button
+                        onClick={() => handleClientReturn(order.id, 'return_rejected', returnRejectionReason)}
+                        disabled={!returnRejectionReason.trim() || !!returningAction}
+                        style={{
+                          flex: 2, padding: '0.65rem', border: 'none', borderRadius: 10,
+                          background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer',
+                          opacity: (!returnRejectionReason.trim() || !!returningAction) ? 0.5 : 1,
+                        }}>
+                        Confirmar rechazo
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* ════════════ NEGOTIATING ORDERS ════════════ */}
       {negotiatingOrders.length > 0 && (
