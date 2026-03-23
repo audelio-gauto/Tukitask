@@ -40,9 +40,18 @@ function playDeliveryAlert() {
 }
 
 export default function DriverDashboard() {
-  const { openDrawer, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm } = useDriverContext();
+  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm } = useDriverContext();
   const router = useRouter();
   const [available, setAvailable] = useState(false);
+
+  // Stats state
+  const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
+  const [earningsData, setEarningsData] = useState({ dia: 0, semana: 0, mes: 0, año: 0 });
+  const [deliveredCount, setDeliveredCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
+  const [totalShipments, setTotalShipments] = useState(0);
+  const [showEarnings, setShowEarnings] = useState(false);
+  const [earningsPeriod, setEarningsPeriod] = useState<'dia' | 'semana' | 'mes' | 'año'>('dia');
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
   const locateFnRef = useRef<(() => void) | null>(null);
@@ -68,8 +77,42 @@ export default function DriverDashboard() {
     return () => navigator.geolocation.clearWatch(id);
   }, []);
 
+  // Fetch driver stats (delivered/failed counts + earnings)
+  useEffect(() => {
+    if (!email) return;
+    fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (!Array.isArray(data)) return;
+        const delivered = data.filter(o => o.status === 'delivered');
+        const failed = data.filter(o => o.status === 'failed');
+        setDeliveredCount(delivered.length);
+        setFailedCount(failed.length);
+        setTotalShipments(data.length);
+        const total = delivered.length + failed.length;
+        setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
+
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const sum = (from: Date) =>
+          delivered.filter(o => new Date(o.created_at) >= from)
+            .reduce((acc: number, o: any) => acc + Number(o.offer || o.suggested_price || 0), 0);
+        setEarningsData({
+          dia: sum(startOfDay),
+          semana: sum(startOfWeek),
+          mes: sum(startOfMonth),
+          año: sum(startOfYear),
+        });
+      })
+      .catch(() => {});
+  }, [email]);
+
   useEffect(() => {
     const check = () => {
+      if (!available) return;
       fetch('/api/orders')
         .then(r => r.json())
         .then((data: any[]) => {
@@ -88,7 +131,7 @@ export default function DriverDashboard() {
     check();
     const iv = setInterval(check, 5000);
     return () => clearInterval(iv);
-  }, []);
+  }, [available]);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -183,11 +226,8 @@ export default function DriverDashboard() {
 
   // Stats (placeholder — would come from Supabase)
   const stats = [
-    { label: 'Envíos', value: 0, href: '/driver/deliveries', icon: '📦' },
-    { label: 'Pedidos', value: 0, href: '/driver/assigned', icon: '📋' },
-    { label: 'En Ruta', value: 0, href: '/driver/en-ruta', icon: '🚚' },
-    { label: 'Entregados', value: 0, href: '/driver/delivered', icon: '✅' },
-    { label: 'Fallidos', value: 0, href: '/driver/failed', icon: '❌' },
+    { label: 'Envíos', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa de Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—%', href: '#', icon: '📊', onClick: undefined as (() => void) | undefined },
   ];
 
   return (
@@ -395,6 +435,60 @@ export default function DriverDashboard() {
         );
       })()}
 
+      {/* Earnings Breakdown Modal */}
+      {showEarnings && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowEarnings(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 9999, background: '#1a1a2e',
+            borderRadius: 22, width: 'min(380px, 94vw)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
+            border: '2px solid #facc15',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ background: 'rgba(250,204,21,0.1)', borderBottom: '1px solid rgba(250,204,21,0.2)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>💰 Ganancias</span>
+              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
+            </div>
+            {/* Period tabs */}
+            <div style={{ display: 'flex', gap: 4, padding: '0.75rem 1rem 0' }}>
+              {(['dia', 'semana', 'mes', 'año'] as const).map(p => (
+                <button key={p} onClick={() => setEarningsPeriod(p)}
+                  style={{
+                    flex: 1, padding: '0.5rem 0', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
+                    background: earningsPeriod === p ? '#facc15' : 'rgba(255,255,255,0.06)',
+                    color: earningsPeriod === p ? '#111' : '#9ca3af',
+                    transition: 'all 0.2s',
+                  }}>
+                  {p === 'dia' ? 'Hoy' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'Año'}
+                </button>
+              ))}
+            </div>
+            {/* Amount */}
+            <div style={{ padding: '1.5rem 1rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#c8ff00', lineHeight: 1 }}>
+                {earningsData[earningsPeriod].toLocaleString('es-PY')}
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: '0.9rem', marginTop: 6 }}>Guaraníes</div>
+            </div>
+            {/* Summary row */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 1rem 1rem' }}>
+              <div style={{ flex: 1, background: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: '0.75rem', textAlign: 'center', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1.1rem' }}>{deliveredCount}</div>
+                <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: 2 }}>Entregados</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(239,68,68,0.1)', borderRadius: 12, padding: '0.75rem', textAlign: 'center', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div style={{ fontWeight: 800, color: '#ef4444', fontSize: '1.1rem' }}>{failedCount}</div>
+                <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: 2 }}>Fallidos</div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Bottom Sheet */}
       <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
         <div className="tuki-sheet-handle">
@@ -418,32 +512,44 @@ export default function DriverDashboard() {
           {/* Stats Grid */}
           <div className="tuki-stats-grid">
             {stats.map((s) => (
-              <Link key={s.label} href={s.href} className="tuki-stat-card">
-                <span className="tuki-stat-icon">{s.icon}</span>
-                <div className="tuki-stat-value">{s.value}</div>
-                <div className="tuki-stat-label">{s.label}</div>
-              </Link>
+              s.onClick ? (
+                <div key={s.label} className="tuki-stat-card" onClick={s.onClick} role="button" tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && s.onClick?.()}>
+                  <span className="tuki-stat-icon">{s.icon}</span>
+                  <div className="tuki-stat-value">{s.value}</div>
+                  <div className="tuki-stat-label">{s.label}</div>
+                </div>
+              ) : (
+                <Link key={s.label} href={s.href} className="tuki-stat-card">
+                  <span className="tuki-stat-icon">{s.icon}</span>
+                  <div className="tuki-stat-value">{s.value}</div>
+                  <div className="tuki-stat-label">{s.label}</div>
+                </Link>
+              )
             ))}
+            {/* Ganancias Hoy — full width, opens earnings modal */}
+            <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
+              onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}>
+              <span className="tuki-stat-icon">💰</span>
+              <div className="tuki-stat-value">
+                {earningsData.dia.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
+              </div>
+              <div className="tuki-stat-label">Ganancias Hoy</div>
+            </div>
+            {/* Entregados + Fallidos side by side */}
+            <Link href="/driver/delivered" className="tuki-stat-card">
+              <span className="tuki-stat-icon">✅</span>
+              <div className="tuki-stat-value">{deliveredCount}</div>
+              <div className="tuki-stat-label">Entregados</div>
+            </Link>
+            <Link href="/driver/failed" className="tuki-stat-card">
+              <span className="tuki-stat-icon">❌</span>
+              <div className="tuki-stat-value">{failedCount}</div>
+              <div className="tuki-stat-label">Fallidos</div>
+            </Link>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{ marginTop: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones Rápidas</h2>
-            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr 1fr' }}>
-              <button className="tuki-btn tuki-btn-primary" onClick={playDeliveryAlert}>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                </svg>
-                Escanear QR
-              </button>
-              <Link href="/driver/assigned" className="tuki-btn tuki-btn-success">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                Ver Pedidos
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     </>
