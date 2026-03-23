@@ -81,8 +81,13 @@ export default function DriverDashboard() {
   const [newestOrder, setNewestOrder] = useState<any>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const prevCountRef = useRef(0);
-  // IDs of orders dismissed with "Ahora no" — never show popup for these again
-  const dismissedRef = useRef<Set<string>>(new Set());
+  // IDs of orders dismissed with "Ahora no" — persisted to localStorage across page loads
+  const dismissedRef = useRef<Set<string>>((() => {
+    try {
+      const saved = typeof window !== 'undefined' && localStorage.getItem('driver_dismissed_orders');
+      return new Set<string>(saved ? JSON.parse(saved) : []);
+    } catch { return new Set<string>(); }
+  })());
 
   // Track driver position for distance calc
   useEffect(() => {
@@ -446,7 +451,10 @@ export default function DriverDashboard() {
               </button>
               <button
                 onClick={() => {
-                  if (newestOrder?.id) dismissedRef.current.add(newestOrder.id);
+                  if (newestOrder?.id) {
+                    dismissedRef.current.add(newestOrder.id);
+                    try { localStorage.setItem('driver_dismissed_orders', JSON.stringify([...dismissedRef.current])); } catch {}
+                  }
                   setShowPopup(false);
                 }}
                 style={{ padding: '0.85rem 1rem', border: '1px solid #333', borderRadius: 14, cursor: 'pointer', background: 'transparent', color: '#9ca3af', fontWeight: 600, fontSize: '0.9rem' }}>

@@ -275,6 +275,8 @@ export default function MisEnviosPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [offers, setOffers] = useState<Record<string, DriverOffer[]>>({});
+  // Tracks which order IDs have had at least one successful (non-error) offers fetch
+  const [offersLoaded, setOffersLoaded] = useState<Set<string>>(new Set());
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [acceptedOffers, setAcceptedOffers] = useState<Record<string, DriverOffer>>({});
@@ -333,8 +335,10 @@ export default function MisEnviosPage() {
         fetch(`/api/orders/offers?order_id=${order.id}`)
           .then(res => res.json())
           .then(data => {
-            if (Array.isArray(data))
+            if (Array.isArray(data)) {
               setOffers(prev => ({ ...prev, [order.id]: data.filter((o: DriverOffer) => o.status === 'pending') }));
+              setOffersLoaded(prev => { const n = new Set(prev); n.add(order.id); return n; });
+            }
           })
           .catch(() => {});
       }
@@ -798,7 +802,7 @@ export default function MisEnviosPage() {
                       // Detect no-drivers: pending + no offers + older than 3 minutes
                       const refTime = noDriverResets[order.id] ?? new Date(order.created_at).getTime();
                       const ageMinutes = (Date.now() - refTime) / 60000;
-                      const noDrivers = order.status === 'pending' && orderOffers.length === 0 && ageMinutes > 3;
+                      const noDrivers = order.status === 'pending' && offersLoaded.has(order.id) && orderOffers.length === 0 && ageMinutes > 3;
 
                       if (noDrivers) {
                         return (
