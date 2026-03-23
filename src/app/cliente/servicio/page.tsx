@@ -9,12 +9,37 @@ const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
-const CATEGORIES = [
-  { key: 'aire_split', label: 'Tec Aire Split', icon: '❄️' },
-  { key: 'electrico', label: 'Servicio Eléctrico', icon: '⚡' },
-  { key: 'plomeria', label: 'Servicio Plomería', icon: '🔧' },
-  { key: 'cerrajeria', label: 'Servicio Cerrajería', icon: '🔑' },
+const CATEGORIES_MUJER = [
+  { key: 'limpieza',         label: 'Limpieza',           icon: '🧹' },
+  { key: 'niera',            label: 'Niñera',             icon: '👶' },
+  { key: 'cocina',           label: 'Cocina',             icon: '🍳' },
+  { key: 'eventos',          label: 'Eventos',            icon: '🎉' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'otros',            label: 'Otros',              icon: '✨' },
 ];
+
+const CATEGORIES_HOMBRE = [
+  { key: 'aire_split',       label: 'Tec Aire Split',     icon: '❄️' },
+  { key: 'electrico',        label: 'Servicio Eléctrico', icon: '⚡' },
+  { key: 'plomeria',         label: 'Servicio Plomería',  icon: '🔧' },
+  { key: 'cerrajeria',       label: 'Servicio Cerrajería',icon: '🔑' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'otros',            label: 'Otros',              icon: '✨' },
+];
+
+function getCategoriesForGender(gender: string) {
+  if (gender === 'mujer')  return CATEGORIES_MUJER;
+  if (gender === 'hombre') return CATEGORIES_HOMBRE;
+  // indiferente: combined unique by key
+  const seen = new Set<string>();
+  return [...CATEGORIES_MUJER, ...CATEGORIES_HOMBRE].filter(c => {
+    if (seen.has(c.key)) return false;
+    seen.add(c.key);
+    return true;
+  });
+}
 
 const paymentMethods = [
   { value: 'efectivo', label: 'Efectivo', icon: '💵' },
@@ -23,10 +48,17 @@ const paymentMethods = [
 
 // Service pricing: fixed per category (no per-km)
 const SERVICE_PRICES: Record<string, number> = {
-  aire_split: 300000,
-  electrico: 250000,
-  plomeria: 200000,
-  cerrajeria: 180000,
+  limpieza:         150000,
+  niera:            200000,
+  cocina:           150000,
+  eventos:          250000,
+  cuidado_mascotas: 150000,
+  cuidado_adultos:  250000,
+  otros:            150000,
+  aire_split:       300000,
+  electrico:        250000,
+  plomeria:         200000,
+  cerrajeria:       180000,
 };
 
 export default function SolicitarServicioPage() {
@@ -40,6 +72,35 @@ export default function SolicitarServicioPage() {
   const [locationLng, setLocationLng] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [pickerMode, setPickerMode] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Auto-detect client location on mount
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLocationLat(lat.toFixed(6));
+        setLocationLng(lng.toFixed(6));
+        try {
+          const res = await fetch('/api/maps/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reverse: true, lat, lng }),
+          });
+          const data = await res.json();
+          setLocationAddress(data.result?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        } catch {
+          setLocationAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+        setLocationLoading(false);
+      },
+      () => setLocationLoading(false),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }, []);
 
   // Form fields
   const [category, setCategory] = useState<string | null>(null);
@@ -318,10 +379,11 @@ export default function SolicitarServicioPage() {
                 <span className="enviar-dot green" />
                 <input
                   className="enviar-address-input"
-                  placeholder="Ubicación del servicio"
+                  placeholder={locationLoading ? 'Detectando ubicación…' : 'Ubicación del servicio'}
                   value={locationAddress}
                   onChange={e => setLocationAddress(e.target.value)}
                   onFocus={() => setSearchMode(true)}
+                  readOnly={locationLoading}
                 />
                 <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(true); }} aria-label="Seleccionar en mapa">
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
@@ -329,10 +391,37 @@ export default function SolicitarServicioPage() {
               </div>
             </div>
 
-            {/* Categoría — horizontal cards like vehicle type */}
+            {/* Preferencia de género — shown first to filter categories */}
+            <div className="enviar-section-label">Preferís que vaya:</div>
+            <div className="gender-preference-row">
+              {[
+                { key: 'mujer',       label: 'Solo mujer',  avatar: '👩' },
+                { key: 'hombre',      label: 'Solo hombre', avatar: '👨' },
+                { key: 'indiferente', label: 'Indiferente', avatar: '🧑' },
+              ].map(pref => (
+                <button
+                  key={pref.key}
+                  type="button"
+                  className={`gender-chip${genderPreference === pref.key ? ' active' : ''}`}
+                  onClick={() => {
+                    setGenderPreference(pref.key);
+                    // Reset category if it's not available for the new gender
+                    if (category) {
+                      const newCats = getCategoriesForGender(pref.key);
+                      if (!newCats.find(c => c.key === category)) setCategory(null);
+                    }
+                  }}
+                >
+                  <span className="gender-chip-avatar">{pref.avatar}</span>
+                  <span className="gender-chip-label">{pref.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Categoría — filtered by gender preference */}
             <div className="enviar-section-label">Tipo de servicio</div>
             <div className="enviar-type-scroll">
-              {CATEGORIES.map(cat => (
+              {getCategoriesForGender(genderPreference).map(cat => (
                 <button
                   key={cat.key}
                   type="button"
@@ -366,26 +455,6 @@ export default function SolicitarServicioPage() {
                 disabled={sending}
                 isSimpleInput={true}
               />
-            </div>
-
-            {/* Preferencia de género */}
-            <div className="enviar-section-label">Preferís que vaya:</div>
-            <div className="gender-preference-row">
-              {[
-                { key: 'mujer', label: 'Solo mujer', avatar: '👩' },
-                { key: 'hombre', label: 'Solo hombre', avatar: '👨' },
-                { key: 'indiferente', label: 'Indiferente', avatar: '🧑' },
-              ].map(pref => (
-                <button
-                  key={pref.key}
-                  type="button"
-                  className={`gender-chip${genderPreference === pref.key ? ' active' : ''}`}
-                  onClick={() => setGenderPreference(pref.key)}
-                >
-                  <span className="gender-chip-avatar">{pref.avatar}</span>
-                  <span className="gender-chip-label">{pref.label}</span>
-                </button>
-              ))}
             </div>
 
             {/* Fotos */}
