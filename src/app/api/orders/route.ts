@@ -62,13 +62,14 @@ export async function PATCH(req: Request) {
     failed: ['in_transit'],
     returning: ['failed', 'return_rejected'], // request return or re-request after rejection
     return_delivered: ['driver_returning'],
+    incident_closed: ['return_rejected'], // driver closes after 3 rejections
   };
 
   // Client-initiated transitions
   const clientAllowed: Record<string, string[]> = {
     driver_returning: ['returning'],   // client accepts the return
     returned: ['return_delivered'],    // client confirms receipt
-    return_rejected: ['return_delivered'], // client rejects receipt
+    return_rejected: ['return_delivered', 'returning'], // client rejects receipt or return request
   };
 
   const isDriverStatus = status in driverAllowed;
@@ -80,7 +81,7 @@ export async function PATCH(req: Request) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('status, accepted_by, client_email')
+    .select('status, accepted_by, client_email, return_attempts')
     .eq('id', order_id)
     .single();
 
@@ -111,6 +112,8 @@ export async function PATCH(req: Request) {
   if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
   if (status === 'returning' && return_reason) extraUpdates.return_reason = return_reason;
   if (status === 'returning') extraUpdates.returning_at = new Date().toISOString();
+  if (status === 'returning') extraUpdates.return_attempts = (Number((order as any).return_attempts) || 0) + 1;
+  if (status === 'incident_closed') extraUpdates.incident_closed_at = new Date().toISOString();
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {

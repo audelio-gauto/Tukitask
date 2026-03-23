@@ -28,6 +28,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   return_delivered: { label: 'Conductor llegó', color: '#5b21b6', bg: '#f5f3ff' },
   returned: { label: 'Devuelto ✓', color: '#059669', bg: '#ecfdf5' },
   return_rejected: { label: 'Devolución rechazada', color: '#dc2626', bg: '#fef2f2' },
+  incident_closed: { label: 'Incidencia cerrada', color: '#6b7280', bg: '#f3f4f6' },
 };
 
 interface DriverOffer {
@@ -285,6 +286,9 @@ export default function MisEnviosPage() {
   const [returningAction, setReturningAction] = useState<string | null>(null);
   const [returnRejectionOrderId, setReturnRejectionOrderId] = useState<string | null>(null);
   const [returnRejectionReason, setReturnRejectionReason] = useState('');
+  // Reject the driver's return REQUEST (status: returning → return_rejected)
+  const [rejectReturningId, setRejectReturningId] = useState<string | null>(null);
+  const [rejectReturningReason, setRejectReturningReason] = useState('');
 
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -430,6 +434,8 @@ export default function MisEnviosPage() {
         fetchOrders();
         setReturnRejectionOrderId(null);
         setReturnRejectionReason('');
+        setRejectReturningId(null);
+        setRejectReturningReason('');
       }
     } catch { /* */ }
     setReturningAction(key === returningAction ? null : returningAction);
@@ -459,7 +465,7 @@ export default function MisEnviosPage() {
     ['accepted', 'picking_up', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'].includes(o.status)
   );
   const completedOrders = orders.filter(o =>
-    ['delivered', 'cancelled', 'returned'].includes(o.status)
+    ['delivered', 'cancelled', 'returned', 'incident_closed'].includes(o.status)
   );
 
   return (
@@ -553,7 +559,7 @@ export default function MisEnviosPage() {
               </div>
             )}
 
-            {/* ─ Status: returning — client must accept ─ */}
+            {/* ─ Status: returning — client must accept OR reject ─ */}
             {order.status === 'returning' && (
               <div>
                 {order.return_reason && (
@@ -565,19 +571,64 @@ export default function MisEnviosPage() {
                   </div>
                 )}
                 <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 10, lineHeight: 1.4 }}>
-                  El conductor no pudo completar la entrega y está devolviendo tu envío al remitente.
+                  El conductor no pudo completar la entrega y solicita devolver tu envío al remitente.
                   <br /><strong>La tarifa de devolución es: ₲{price.toLocaleString()}</strong>
                 </p>
-                <button
-                  onClick={() => handleClientReturn(order.id, 'driver_returning')}
-                  disabled={!!returningAction}
-                  style={{
-                    width: '100%', padding: '0.75rem', border: 'none', borderRadius: 12,
-                    cursor: 'pointer', background: '#f59e0b', color: '#111',
-                    fontWeight: 700, fontSize: '0.9rem', opacity: isDoingAction('driver_returning') ? 0.6 : 1,
-                  }}>
-                  {isDoingAction('driver_returning') ? '...' : '✓ Aceptar devolución'}
-                </button>
+                {rejectReturningId !== order.id ? (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      onClick={() => handleClientReturn(order.id, 'driver_returning')}
+                      disabled={!!returningAction}
+                      style={{
+                        flex: 1, padding: '0.75rem', border: 'none', borderRadius: 12,
+                        cursor: 'pointer', background: '#f59e0b', color: '#111',
+                        fontWeight: 700, fontSize: '0.9rem', opacity: isDoingAction('driver_returning') ? 0.6 : 1,
+                      }}>
+                      {isDoingAction('driver_returning') ? '...' : '✓ Aceptar'}
+                    </button>
+                    <button
+                      onClick={() => setRejectReturningId(order.id)}
+                      disabled={!!returningAction}
+                      style={{
+                        flex: 1, padding: '0.75rem', border: '1.5px solid #ef4444', borderRadius: 12,
+                        cursor: 'pointer', background: '#fff', color: '#ef4444',
+                        fontWeight: 700, fontSize: '0.9rem',
+                      }}>
+                      ✕ Rechazar
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <textarea
+                      value={rejectReturningReason}
+                      onChange={e => setRejectReturningReason(e.target.value)}
+                      placeholder="¿Por qué rechazás la devolución?"
+                      style={{
+                        width: '100%', padding: '0.65rem', borderRadius: 10,
+                        border: '1.5px solid #e5e7eb', fontSize: '0.85rem',
+                        resize: 'none', minHeight: 72, boxSizing: 'border-box',
+                        marginBottom: 8, fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setRejectReturningId(null)}
+                        style={{ flex: 1, padding: '0.65rem', border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', color: '#6b7280', cursor: 'pointer', fontWeight: 600 }}>
+                        Atrás
+                      </button>
+                      <button
+                        onClick={() => handleClientReturn(order.id, 'return_rejected', rejectReturningReason)}
+                        disabled={!rejectReturningReason.trim() || !!returningAction}
+                        style={{
+                          flex: 2, padding: '0.65rem', border: 'none', borderRadius: 10,
+                          background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer',
+                          opacity: (!rejectReturningReason.trim() || !!returningAction) ? 0.5 : 1,
+                        }}>
+                        Confirmar rechazo
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

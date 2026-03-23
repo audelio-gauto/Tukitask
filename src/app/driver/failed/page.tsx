@@ -66,7 +66,7 @@ export default function FailedPage() {
     return () => clearInterval(iv);
   }, [fetchFailed]);
 
-  const handleAction = async (orderId: string, newStatus: 'in_transit' | 'returning', returnReason?: string) => {
+  const handleAction = async (orderId: string, newStatus: 'in_transit' | 'returning' | 'incident_closed', returnReason?: string) => {
     const key = orderId + newStatus;
     setActing(key);
     try {
@@ -113,8 +113,11 @@ export default function FailedPage() {
         const price = Number(order.offer || order.suggested_price || 0);
         const retryKey = order.id + 'in_transit';
         const returnKey = order.id + 'returning';
-        const isbusy = acting === retryKey || acting === returnKey;
+        const incidentKey = order.id + 'incident_closed';
+        const isbusy = acting === retryKey || acting === returnKey || acting === incidentKey;
         const isRejected = order.status === 'return_rejected';
+        const attempts = Number(order.return_attempts) || 0;
+        const maxAttemptsReached = isRejected && attempts >= 3;
         const returnReason = returnReasonMap[order.id] ?? '';
         const showReturnForm = returnFormId === order.id;
 
@@ -229,6 +232,27 @@ export default function FailedPage() {
                       {acting === returnKey ? '...' : '📦 Confirmar devolución'}
                     </button>
                   </div>
+                </div>
+              ) : maxAttemptsReached ? (
+                /* ── Incident closure after 3 rejections ── */
+                <div>
+                  <div style={{
+                    background: 'rgba(239,68,68,0.12)', border: '1.5px solid #ef4444', borderRadius: 12,
+                    padding: '0.7rem 0.85rem', marginBottom: 12, fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.45,
+                  }}>
+                    ⚠️ El cliente rechazó la devolución <strong>3 veces</strong>. Confirmá la incidencia para liberar el pedido y poder recibir nuevas solicitudes.
+                  </div>
+                  <button
+                    onClick={() => handleAction(order.id, 'incident_closed')}
+                    disabled={isbusy}
+                    style={{
+                      width: '100%', padding: '0.8rem', border: 'none', borderRadius: 12,
+                      cursor: 'pointer', background: '#ef4444', color: '#fff',
+                      fontWeight: 800, fontSize: '0.95rem',
+                      opacity: isbusy ? 0.6 : 1,
+                    }}>
+                    {acting === incidentKey ? '...' : '⚠️ Confirmar incidencia'}
+                  </button>
                 </div>
               ) : (
                 /* ── Main action buttons ── */
