@@ -9,17 +9,30 @@ import dynamic from 'next/dynamic';
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
 
 // Web Audio API: play delivery alert sound (like plugin)
+let _driverAC: AudioContext | null = null;
+function getDriverAC() {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!_driverAC || _driverAC.state === 'closed') _driverAC = new AudioCtx();
+  if (_driverAC.state === 'suspended') _driverAC.resume();
+  return _driverAC;
+}
+if (typeof window !== 'undefined') {
+  const _unlock = () => { getDriverAC(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
+  window.addEventListener('touchstart', _unlock, { once: true });
+  window.addEventListener('click', _unlock, { once: true });
+}
 function playDeliveryAlert() {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getDriverAC();
+    if (!ctx) return;
 
     function beep(startTime: number, frequency: number, duration: number) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx!.createOscillator();
+      const gain = ctx!.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(ctx!.destination);
       osc.type = 'square';
       osc.frequency.value = frequency;
       gain.gain.value = 1.0;
