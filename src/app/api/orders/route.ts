@@ -70,6 +70,7 @@ export async function PATCH(req: Request) {
     driver_returning: ['returning'],   // client accepts the return
     returned: ['return_delivered'],    // client confirms receipt
     return_rejected: ['return_delivered', 'returning'], // client rejects receipt or return request
+    cancelled: ['pending', 'negotiating'], // client cancels the search
   };
 
   const isDriverStatus = status in driverAllowed;

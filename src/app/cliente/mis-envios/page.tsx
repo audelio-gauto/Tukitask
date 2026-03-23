@@ -289,6 +289,9 @@ export default function MisEnviosPage() {
   // Reject the driver's return REQUEST (status: returning → return_rejected)
   const [rejectReturningId, setRejectReturningId] = useState<string | null>(null);
   const [rejectReturningReason, setRejectReturningReason] = useState('');
+  // No-driver detection: maps orderId → timestamp of last "Volver a solicitar" click
+  const [noDriverResets, setNoDriverResets] = useState<Record<string, number>>({});
+  const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
 
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -439,6 +442,19 @@ export default function MisEnviosPage() {
       }
     } catch { /* */ }
     setReturningAction(key === returningAction ? null : returningAction);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    setCancellingOrder(orderId);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'cancelled', client_email: email }),
+      });
+      if (res.ok) fetchOrders();
+    } catch { /* */ }
+    setCancellingOrder(null);
   };
 
   // Play alert sound when driver requests return (status → 'returning') or return is re-requested (return_rejected → returning)
@@ -778,75 +794,121 @@ export default function MisEnviosPage() {
 
                 {isExpanded && (
                   <div style={{ borderTop: '1px solid #f1f5f9', padding: '0.75rem 1rem 1rem' }}>
-                    {orderOffers.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
-                        <p style={{ color: '#6b7280', fontSize: '0.88rem', fontWeight: 500 }}>
-                          Buscando drivers cercanos...
-                        </p>
-                        <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginTop: 4 }}>
-                          Las ofertas aparecerán aquí automáticamente
-                        </p>
-                        <div style={{
-                          width: 40, height: 40, border: '3px solid #6366f1', borderTopColor: 'transparent',
-                          borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '1rem auto 0'
-                        }} />
-                      </div>
-                    ) : (
-                      <>
-                        <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>
-                          {orderOffers.length} {orderOffers.length === 1 ? 'oferta recibida' : 'ofertas recibidas'}
-                        </p>
-                        {orderOffers.map(driverOffer => (
-                          <div key={driverOffer.id} style={{
-                            display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem',
-                            background: '#f9fafb', borderRadius: 12, marginBottom: 8, border: '1px solid #e5e7eb'
-                          }}>
-                            <div style={{
-                              width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                              background: driverOffer.driver_photo ? `url(${driverOffer.driver_photo}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: '#fff', fontWeight: 700, fontSize: '1.1rem'
-                            }}>
-                              {!driverOffer.driver_photo && (driverOffer.driver_name?.[0] || '🚗').toUpperCase()}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
-                                {driverOffer.driver_name || driverOffer.driver_email.split('@')[0]}
-                              </div>
-                              <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#6366f1' }}>
-                                {Number(driverOffer.amount).toLocaleString()} Gs
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    {(() => {
+                      // Detect no-drivers: pending + no offers + older than 3 minutes
+                      const refTime = noDriverResets[order.id] ?? new Date(order.created_at).getTime();
+                      const ageMinutes = (Date.now() - refTime) / 60000;
+                      const noDrivers = order.status === 'pending' && orderOffers.length === 0 && ageMinutes > 3;
+
+                      if (noDrivers) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '0.5rem 0 0.25rem' }}>
+                            <div style={{ fontSize: '2.2rem', marginBottom: 8 }}>😕</div>
+                            <p style={{ color: '#374151', fontSize: '0.92rem', fontWeight: 700, marginBottom: 4 }}>
+                              No hay conductores disponibles
+                            </p>
+                            <p style={{ color: '#6b7280', fontSize: '0.8rem', marginBottom: 16 }}>
+                              No se encontró ningún conductor en este momento.
+                            </p>
+                            <div style={{ display: 'flex', gap: 10 }}>
                               <button
-                                onClick={() => handleRejectOffer(driverOffer.id)}
+                                onClick={() => setNoDriverResets(prev => ({ ...prev, [order.id]: Date.now() }))}
                                 style={{
-                                  width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #fca5a5',
-                                  background: '#fff', cursor: 'pointer', display: 'flex',
-                                  alignItems: 'center', justifyContent: 'center', color: '#ef4444'
-                                }}
-                                aria-label="Rechazar"
-                              >
-                                ✕
+                                  flex: 2, padding: '0.75rem', border: 'none', borderRadius: 12,
+                                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                  color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem',
+                                }}>
+                                🔄 Volver a solicitar
                               </button>
                               <button
-                                onClick={() => handleAcceptOffer(driverOffer.id)}
-                                disabled={accepting === driverOffer.id}
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancellingOrder === order.id}
                                 style={{
-                                  padding: '0 16px', height: 36, borderRadius: 18, border: 'none',
-                                  background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
-                                  fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                                  opacity: accepting === driverOffer.id ? 0.6 : 1
-                                }}
-                              >
-                                {accepting === driverOffer.id ? '...' : 'Aceptar'}
+                                  flex: 1, padding: '0.75rem', border: '1.5px solid #ef4444', borderRadius: 12,
+                                  background: '#fff', color: '#ef4444', fontWeight: 700,
+                                  cursor: 'pointer', opacity: cancellingOrder === order.id ? 0.6 : 1,
+                                }}>
+                                {cancellingOrder === order.id ? '...' : 'Cancelar'}
                               </button>
                             </div>
                           </div>
-                        ))}
-                      </>
-                    )}
+                        );
+                      }
+
+                      if (orderOffers.length === 0) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
+                            <p style={{ color: '#6b7280', fontSize: '0.88rem', fontWeight: 500 }}>
+                              Buscando drivers cercanos...
+                            </p>
+                            <p style={{ color: '#9ca3af', fontSize: '0.78rem', marginTop: 4 }}>
+                              Las ofertas aparecerán aquí automáticamente
+                            </p>
+                            <div style={{
+                              width: 40, height: 40, border: '3px solid #6366f1', borderTopColor: 'transparent',
+                              borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '1rem auto 0'
+                            }} />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>
+                            {orderOffers.length} {orderOffers.length === 1 ? 'oferta recibida' : 'ofertas recibidas'}
+                          </p>
+                          {orderOffers.map(driverOffer => (
+                            <div key={driverOffer.id} style={{
+                              display: 'flex', alignItems: 'center', gap: 12, padding: '0.75rem',
+                              background: '#f9fafb', borderRadius: 12, marginBottom: 8, border: '1px solid #e5e7eb'
+                            }}>
+                              <div style={{
+                                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                                background: driverOffer.driver_photo ? `url(${driverOffer.driver_photo}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#fff', fontWeight: 700, fontSize: '1.1rem'
+                              }}>
+                                {!driverOffer.driver_photo && (driverOffer.driver_name?.[0] || '🚗').toUpperCase()}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
+                                  {driverOffer.driver_name || driverOffer.driver_email.split('@')[0]}
+                                </div>
+                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#6366f1' }}>
+                                  {Number(driverOffer.amount).toLocaleString()} Gs
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => handleRejectOffer(driverOffer.id)}
+                                  style={{
+                                    width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #fca5a5',
+                                    background: '#fff', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', color: '#ef4444'
+                                  }}
+                                  aria-label="Rechazar"
+                                >
+                                  ✕
+                                </button>
+                                <button
+                                  onClick={() => handleAcceptOffer(driverOffer.id)}
+                                  disabled={accepting === driverOffer.id}
+                                  style={{
+                                    padding: '0 16px', height: 36, borderRadius: 18, border: 'none',
+                                    background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
+                                    fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                                    opacity: accepting === driverOffer.id ? 0.6 : 1
+                                  }}
+                                >
+                                  {accepting === driverOffer.id ? '...' : 'Aceptar'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

@@ -81,6 +81,8 @@ export default function DriverDashboard() {
   const [newestOrder, setNewestOrder] = useState<any>(null);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const prevCountRef = useRef(0);
+  // IDs of orders dismissed with "Ahora no" — never show popup for these again
+  const dismissedRef = useRef<Set<string>>(new Set());
 
   // Track driver position for distance calc
   useEffect(() => {
@@ -133,10 +135,11 @@ export default function DriverDashboard() {
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) return;
-          const count = data.length;
+          const visible = data.filter((o: any) => !dismissedRef.current.has(o.id));
+          const count = visible.length;
           if (count > prevCountRef.current) {
             setPendingCount(count);
-            setNewestOrder(data[0] ?? null);
+            setNewestOrder(visible[0] ?? null);
             setShowPopup(true);
             playDeliveryAlert();
           }
@@ -442,7 +445,10 @@ export default function DriverDashboard() {
                 Ver solicitud
               </button>
               <button
-                onClick={() => setShowPopup(false)}
+                onClick={() => {
+                  if (newestOrder?.id) dismissedRef.current.add(newestOrder.id);
+                  setShowPopup(false);
+                }}
                 style={{ padding: '0.85rem 1rem', border: '1px solid #333', borderRadius: 14, cursor: 'pointer', background: 'transparent', color: '#9ca3af', fontWeight: 600, fontSize: '0.9rem' }}>
                 Ahora no
               </button>
