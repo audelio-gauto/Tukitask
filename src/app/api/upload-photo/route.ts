@@ -11,7 +11,8 @@ const getSupabase = () => {
 
 export async function POST(req: Request) {
   try {
-    const { email, base64, mimeType } = await req.json();
+    const { email, base64, mimeType, role } = await req.json();
+    const profileRole: 'driver' | 'client' = role === 'client' ? 'client' : 'driver';
     if (!email || !base64) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
@@ -50,11 +51,18 @@ export async function POST(req: Request) {
     // Get public URL
     const { data: urlData } = sb.storage.from('profile-photos').getPublicUrl(fileName);
 
-    // Save URL in driver_profiles
-    await sb.from('driver_profiles').upsert(
-      { email: email.toLowerCase(), profile_photo: urlData.publicUrl },
-      { onConflict: 'email' }
-    );
+    // Save URL in the appropriate profile table
+    if (profileRole === 'client') {
+      await sb.from('client_profiles').upsert(
+        { email: email.toLowerCase(), photo_url: urlData.publicUrl, updated_at: new Date().toISOString() },
+        { onConflict: 'email' }
+      );
+    } else {
+      await sb.from('driver_profiles').upsert(
+        { email: email.toLowerCase(), profile_photo: urlData.publicUrl },
+        { onConflict: 'email' }
+      );
+    }
 
     return NextResponse.json({ url: urlData.publicUrl });
   } catch {

@@ -6,6 +6,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const clientEmail = searchParams.get('client_email');
   const driverEmail = searchParams.get('driver_email');
+  const history = searchParams.get('history');
 
   let query = supabase
     .from('orders')
@@ -14,6 +15,9 @@ export async function GET(req: Request) {
 
   if (clientEmail) {
     query = query.eq('client_email', clientEmail);
+  } else if (driverEmail && history === 'true') {
+    // Driver delivery history: completed/failed orders
+    query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'failed', 'cancelled']);
   } else if (driverEmail) {
     // Driver's active jobs
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit']);

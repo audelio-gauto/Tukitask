@@ -12,6 +12,9 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [phone, setPhone] = useState('');
+  const [avgRating, setAvgRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -29,6 +32,21 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         if (json?.role !== 'cliente') { router.push('/auth'); return; }
         setDisplayName(user.email?.split('@')[0] || '');
         setChecking(false);
+
+        // Load client profile (non-blocking)
+        fetch(`/api/client-profile?email=${encodeURIComponent(user.email || '')}`)
+          .then(r => r.json())
+          .then(data => {
+            const p = data?.profile;
+            if (p) {
+              if (p.display_name) setDisplayName(p.display_name);
+              if (p.phone) setPhone(p.phone);
+              if (p.photo_url) setProfilePhoto(p.photo_url);
+              if (p.avg_rating) setAvgRating(Number(p.avg_rating));
+              if (p.total_ratings) setTotalRatings(Number(p.total_ratings));
+            }
+          })
+          .catch(() => {});
       } catch {
         router.push('/auth');
       }
@@ -56,7 +74,13 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
-      <ClientContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto }}>
+      <ClientContext.Provider value={{
+        openDrawer: () => setDrawerOpen(true),
+        email, displayName, profilePhoto, setProfilePhoto,
+        phone, setPhone,
+        avgRating, setAvgRating,
+        totalRatings, setTotalRatings,
+      }}>
         {children}
       </ClientContext.Provider>
     </div>

@@ -1,8 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
+
+const RatingModal = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -268,6 +271,9 @@ export default function MisEnviosPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [acceptedOffers, setAcceptedOffers] = useState<Record<string, DriverOffer>>({});
+  const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);
+  const [ratingOrder, setRatingOrder] = useState<any>(null);
+  const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
 
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -380,6 +386,20 @@ export default function MisEnviosPage() {
         return updated;
       });
     } catch { /* */ }
+  };
+
+  const handleSubmitDriverRating = async (rating: number, note: string) => {
+    if (!ratingOrderId) return;
+    const res = await fetch('/api/orders/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: ratingOrderId, rated_by: 'client', rating, note }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    setLocalRatings(prev => ({ ...prev, [ratingOrderId]: rating }));
+    setRatingOrderId(null);
+    setRatingOrder(null);
   };
 
   const negotiatingOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
@@ -558,6 +578,11 @@ export default function MisEnviosPage() {
           </h3>
           {completedOrders.map(order => {
             const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: '#6b7280', bg: '#f3f4f6' };
+            const driverName = acceptedOffers[order.id]?.driver_name || order.accepted_by?.split('@')[0];
+            const driverPhoto = acceptedOffers[order.id]?.driver_photo || null;
+            const existingRating = order.driver_rating ?? localRatings[order.id] ?? null;
+            const canRate = order.status === 'delivered' && existingRating == null;
+
             return (
               <div key={order.id} style={{
                 background: '#fff', borderRadius: 14, marginBottom: 10,
@@ -602,10 +627,44 @@ export default function MisEnviosPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Driver rating section */}
+                {order.status === 'delivered' && (
+                  <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                    {canRate ? (
+                      <button
+                        onClick={() => { setRatingOrder({ ...order, driver_name: driverName, driver_photo: driverPhoto }); setRatingOrderId(order.id); }}
+                        style={{
+                          width: '100%', padding: '0.55rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: '#fff', fontWeight: 700, fontSize: '0.85rem',
+                        }}
+                      >
+                        ⭐ Calificar Conductor
+                      </button>
+                    ) : existingRating != null ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#059669', fontWeight: 600 }}>
+                        <span>{'★'.repeat(Math.round(existingRating))}</span>
+                        <span>Conductor calificado ({Number(existingRating).toFixed(1)})</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+      )}
+
+      {ratingOrderId && ratingOrder && (
+        <RatingModal
+          title={`Calificar a ${ratingOrder.driver_name || 'Conductor'}`}
+          subtitle="¿Cómo fue tu experiencia con el conductor?"
+          avatarUrl={ratingOrder.driver_photo || undefined}
+          avatarName={ratingOrder.driver_name}
+          onSubmit={handleSubmitDriverRating}
+          onClose={() => { setRatingOrderId(null); setRatingOrder(null); }}
+        />
       )}
 
       <style jsx>{`

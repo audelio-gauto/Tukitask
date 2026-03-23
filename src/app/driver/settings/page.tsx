@@ -25,6 +25,8 @@ export default function DriverSettingsPage() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
+  const [avgRating, setAvgRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +50,8 @@ export default function DriverSettingsPage() {
           setAddress(data.address || '');
           setCity(data.city || '');
           setPhone(data.phone || '');
+          if (data.avg_rating) setAvgRating(Number(data.avg_rating));
+          if (data.total_ratings) setTotalRatings(Number(data.total_ratings));
         }
       } catch {}
     })();
@@ -211,6 +215,15 @@ export default function DriverSettingsPage() {
               <div>
                 <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-main)', margin: 0 }}>Foto de Perfil</p>
                 <p style={{ fontSize: '0.8rem', color: 'var(--tuki-text-secondary)', margin: '0.25rem 0 0' }}>JPG, PNG o WebP. Máximo 2MB.</p>
+                {avgRating > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                    <span style={{ color: '#f59e0b', fontSize: '1rem' }}>
+                      {'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}
+                    </span>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>{Number(avgRating).toFixed(1)}</span>
+                    <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>({totalRatings})</span>
+                  </div>
+                )}
               </div>
             </div>
 

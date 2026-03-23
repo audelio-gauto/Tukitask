@@ -7,6 +7,12 @@ interface ClientCtx {
   displayName: string;
   profilePhoto: string;
   setProfilePhoto: (url: string) => void;
+  phone: string;
+  setPhone: (v: string) => void;
+  avgRating: number;
+  setAvgRating: (v: number) => void;
+  totalRatings: number;
+  setTotalRatings: (v: number) => void;
 }
 
 export const ClientContext = createContext<ClientCtx>({
@@ -15,6 +21,12 @@ export const ClientContext = createContext<ClientCtx>({
   displayName: '',
   profilePhoto: '',
   setProfilePhoto: () => {},
+  phone: '',
+  setPhone: () => {},
+  avgRating: 0,
+  setAvgRating: () => {},
+  totalRatings: 0,
+  setTotalRatings: () => {},
 });
 
 export function useClientContext() {
