@@ -435,10 +435,10 @@ export default function MisEnviosPage() {
 
   const negotiatingOrders = orders.filter(o => o.status === 'pending' || o.status === 'negotiating');
   const trackingOrders = orders.filter(o =>
-    ['accepted', 'picking_up', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered'].includes(o.status)
+    ['accepted', 'picking_up', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'].includes(o.status)
   );
   const completedOrders = orders.filter(o =>
-    ['delivered', 'cancelled', 'returned', 'return_rejected'].includes(o.status)
+    ['delivered', 'cancelled', 'returned'].includes(o.status)
   );
 
   return (
@@ -459,7 +459,7 @@ export default function MisEnviosPage() {
       {/* ════════════ TRACKING ORDERS ════════════ */}
       {trackingOrders.map(order => {
         const price = Number(order.offer || order.suggested_price || 0);
-        const isReturnFlow = ['failed', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
+        const isReturnFlow = ['failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'].includes(order.status);
 
         if (!isReturnFlow) {
           return (
@@ -480,9 +480,11 @@ export default function MisEnviosPage() {
         const borderColor = order.status === 'failed' ? '#ef4444'
           : order.status === 'returning' ? '#f59e0b'
           : order.status === 'driver_returning' ? '#7c3aed'
+          : order.status === 'return_rejected' ? '#dc2626'
           : '#5b21b6';
         const bgColor = order.status === 'failed' ? 'rgba(239,68,68,0.06)'
           : order.status === 'returning' ? 'rgba(245,158,11,0.06)'
+          : order.status === 'return_rejected' ? 'rgba(220,38,38,0.06)'
           : 'rgba(99,102,241,0.06)';
         const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
         const isDoingAction = (s: string) => returningAction === order.id + s;
@@ -533,6 +535,14 @@ export default function MisEnviosPage() {
             {/* ─ Status: returning — client must accept ─ */}
             {order.status === 'returning' && (
               <div>
+                {order.return_reason && (
+                  <div style={{
+                    background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: 10,
+                    padding: '0.55rem 0.75rem', marginBottom: 10, fontSize: '0.83rem', color: '#92400e',
+                  }}>
+                    <strong>El conductor dice:</strong> {order.return_reason}
+                  </div>
+                )}
                 <p style={{ fontSize: '0.85rem', color: '#374151', marginBottom: 10, lineHeight: 1.4 }}>
                   El conductor no pudo completar la entrega y está devolviendo tu envío al remitente.
                   <br /><strong>La tarifa de devolución es: ₲{price.toLocaleString()}</strong>
@@ -547,6 +557,23 @@ export default function MisEnviosPage() {
                   }}>
                   {isDoingAction('driver_returning') ? '...' : '✓ Aceptar devolución'}
                 </button>
+              </div>
+            )}
+
+            {/* ─ Status: return_rejected — waiting for driver to re-request or retry ─ */}
+            {order.status === 'return_rejected' && (
+              <div>
+                {order.return_rejected_reason && (
+                  <div style={{
+                    background: '#fef2f2', border: '1.5px solid #ef4444', borderRadius: 10,
+                    padding: '0.55rem 0.75rem', marginBottom: 10, fontSize: '0.83rem', color: '#991b1b',
+                  }}>
+                    <strong>Tu motivo de rechazo:</strong> {order.return_rejected_reason}
+                  </div>
+                )}
+                <div style={{ background: '#fef2f2', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.83rem', color: '#dc2626', fontWeight: 600 }}>
+                  El conductor está evaluando tu respuesta y decidirá el próximo paso...
+                </div>
               </div>
             )}
 

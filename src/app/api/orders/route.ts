@@ -16,14 +16,14 @@ export async function GET(req: Request) {
   if (clientEmail) {
     query = query.eq('client_email', clientEmail);
   } else if (driverEmail && searchParams.get('only_failed') === 'true') {
-    // Driver's currently failed orders (awaiting retry or return decision)
-    query = query.eq('accepted_by', driverEmail).eq('status', 'failed');
+    // Driver's failed / return-rejected orders (awaiting action)
+    query = query.eq('accepted_by', driverEmail).in('status', ['failed', 'return_rejected']);
   } else if (driverEmail && history === 'true') {
     // Driver delivery history: completed/failed/returned orders
     query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'cancelled', 'returned', 'return_rejected']);
   } else if (driverEmail) {
     // Driver's active jobs (including return flow)
-    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered']);
+    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected']);
   } else {
     query = query.in('status', ['pending', 'negotiating']);
   }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 // PATCH: Update order status (driver or client transitions)
 export async function PATCH(req: Request) {
   const body = await req.json();
-  const { order_id, status, driver_email, client_email, fail_reason, return_rejected_reason } = body;
+  const { order_id, status, driver_email, client_email, fail_reason, return_reason, return_rejected_reason } = body;
 
   if (!order_id || !status) {
     return NextResponse.json({ error: 'order_id and status required' }, { status: 400 });
@@ -57,10 +57,10 @@ export async function PATCH(req: Request) {
   // Driver-initiated transitions
   const driverAllowed: Record<string, string[]> = {
     picking_up: ['accepted'],
-    in_transit: ['picking_up', 'failed'], // failed → retry delivery
+    in_transit: ['picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
     failed: ['in_transit'],
-    returning: ['failed'],
+    returning: ['failed', 'return_rejected'], // request return or re-request after rejection
     return_delivered: ['driver_returning'],
   };
 
@@ -109,6 +109,7 @@ export async function PATCH(req: Request) {
   // If the migration hasn't been run yet these will fail silently — status transition still succeeds.
   const extraUpdates: Record<string, unknown> = {};
   if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
+  if (status === 'returning' && return_reason) extraUpdates.return_reason = return_reason;
   if (status === 'returning') extraUpdates.returning_at = new Date().toISOString();
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
