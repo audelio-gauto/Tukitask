@@ -61,17 +61,37 @@ export default function EnviarPaquetePage() {
 
 
 
-  // User location for proximity bias
+  // User location for proximity bias + auto-fill pickup address
   const userLocation = useRef<{ lat: number; lng: number } | null>(null);
+  const [pickupLoading, setPickupLoading] = useState(false);
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => { userLocation.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    setPickupLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        userLocation.current = { lat, lng };
+        update('pickupLat', lat.toFixed(6));
+        update('pickupLng', lng.toFixed(6));
+        try {
+          const res = await fetch('/api/maps/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reverse: true, lat, lng }),
+          });
+          const data = await res.json();
+          update('pickupAddress', data.result?.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        } catch {
+          update('pickupAddress', `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+        setPickupLoading(false);
+      },
+      () => setPickupLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   /** Fetch route via backend proxy (API key stays server-side) */
   function fetchProxyDirections(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -516,10 +536,11 @@ export default function EnviarPaquetePage() {
                 <span className="enviar-dot green" />
                 <input
                   className="enviar-address-input"
-                  placeholder="Punto de recogida"
+                  placeholder={pickupLoading ? 'Detectando ubicación…' : 'Punto de recogida'}
                   value={form.pickupAddress}
                   onChange={e => { update('pickupAddress', e.target.value); }}
-                  onFocus={() => openSearch('pickup')}
+                  onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
+                  readOnly={pickupLoading}
                 />
                 <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
