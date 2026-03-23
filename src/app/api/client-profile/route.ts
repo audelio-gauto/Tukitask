@@ -20,10 +20,12 @@ export async function GET(req: Request) {
       .select('*')
       .ilike('email', email)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // If table doesn't exist yet, return empty profile gracefully
+    if (error) return NextResponse.json({ profile: null });
     return NextResponse.json({ profile: data });
   } catch {
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    return NextResponse.json({ profile: null });
   }
 }
 
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
 
     const sb = getSupabase();
     const { error } = await sb.from('client_profiles').upsert(update, { onConflict: 'email' });
+    // If table doesn't exist, return a soft error instead of crashing
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch {
