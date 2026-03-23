@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDriverContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -40,6 +41,7 @@ function playDeliveryAlert() {
 
 export default function DriverDashboard() {
   const { openDrawer, serviceFilters, toggleFilter } = useDriverContext();
+  const router = useRouter();
   const [available, setAvailable] = useState(false);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -47,6 +49,32 @@ export default function DriverDashboard() {
 
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // New request popup
+  const [showPopup, setShowPopup] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const prevCountRef = useRef(0);
+
+  useEffect(() => {
+    const check = () => {
+      fetch('/api/orders')
+        .then(r => r.json())
+        .then((data: any[]) => {
+          if (!Array.isArray(data)) return;
+          const count = data.length;
+          if (count > prevCountRef.current) {
+            setPendingCount(count);
+            setShowPopup(true);
+            playDeliveryAlert();
+          }
+          prevCountRef.current = count;
+        })
+        .catch(() => {});
+    };
+    check();
+    const iv = setInterval(check, 5000);
+    return () => clearInterval(iv);
+  }, []);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -222,6 +250,43 @@ export default function DriverDashboard() {
             </button>
           </div>
         </>
+      )}
+
+      {/* New Request Popup */}
+      {showPopup && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#1a1a2e', borderRadius: 18,
+          padding: '1rem 1.25rem', boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', gap: 14,
+          minWidth: 300, maxWidth: '90vw',
+          border: '1.5px solid #c8ff00',
+          animation: 'popupIn 0.3s cubic-bezier(0.32,0.72,0,1)',
+        }}>
+          <style>{`@keyframes popupIn{from{opacity:0;transform:translateX(-50%) translateY(-16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
+          <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>📦</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', lineHeight: 1.2 }}>
+              {pendingCount > 1 ? `Tiene ${pendingCount} nuevas solicitudes` : 'Tiene una nueva solicitud'}
+            </div>
+            <div style={{ color: '#9ca3af', fontSize: '0.78rem', marginTop: 2 }}>Nueva solicitud de envío disponible</div>
+          </div>
+          <button
+            onClick={() => { setShowPopup(false); router.push('/driver/deliveries'); }}
+            style={{
+              background: '#c8ff00', color: '#111', border: 'none', borderRadius: 10,
+              padding: '0.5rem 1rem', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+              flexShrink: 0,
+            }}>
+            Ver
+          </button>
+          <button
+            onClick={() => setShowPopup(false)}
+            style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '4px', fontSize: '1rem', flexShrink: 0 }}
+            aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
       )}
 
       {/* Bottom Sheet */}
