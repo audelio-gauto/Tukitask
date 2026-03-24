@@ -20,6 +20,7 @@ interface Job {
   extra_charge: number | null;
   total_price: number | null;
   description: string | null;
+  audio_url: string | null;
   accepted_at: string | null;
   completion_attempts: number;
   last_rejection_reason: string | null;
@@ -164,6 +165,14 @@ export default function CitasPage() {
                     {job.address && <span>📍 {job.address}</span>}
                     {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
                   </div>
+
+                  {/* Audio del cliente */}
+                  {job.audio_url && (
+                    <div style={{ marginBottom: 10, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>🎙 Audio del cliente</p>
+                      <audio controls src={job.audio_url} style={{ width: '100%', height: 36 }} />
+                    </div>
+                  )}
 
                   {/* Price row */}
                   <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: '0.82rem' }}>

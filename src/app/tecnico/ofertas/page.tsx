@@ -36,6 +36,7 @@ interface Job {
   client_initial_price: number | null;
   description: string | null;
   photos: string[] | null;
+  audio_url: string | null;
   my_offer: { status: string; proposed_price: number } | null;
 }
 
@@ -245,6 +246,14 @@ export default function OfertasPage() {
                     {job.description && (
                       <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, borderLeft: '3px solid #6366f1' }}>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#a5b4fc', lineHeight: 1.45 }}>{job.description}</p>
+                      </div>
+                    )}
+
+                    {/* Client audio */}
+                    {job.audio_url && (
+                      <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(16,185,129,0.08)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
+                        <p style={{ margin: '0 0 5px', fontSize: '0.72rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎙 Audio del cliente</p>
+                        <audio controls src={job.audio_url} style={{ width: '100%', height: 36 }} />
                       </div>
                     )}
 

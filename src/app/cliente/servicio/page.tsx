@@ -242,6 +242,26 @@ export default function SolicitarServicioPage() {
     setSending(true);
     setSubmitError('');
     try {
+      // Upload audio if present
+      let audioUrl: string | undefined;
+      if (audioBlob) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(audioBlob);
+        });
+        const ext = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+        const safeName = `${Date.now()}_${(email || 'anon').replace(/[^a-z0-9]/gi, '_')}.${ext}`;
+        const upRes = await fetch('/api/upload-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, mimeType: audioBlob.type, fileName: safeName }),
+        });
+        const upJson = await upRes.json();
+        if (upRes.ok && upJson.url) audioUrl = upJson.url;
+      }
+
       const res = await fetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -258,6 +278,7 @@ export default function SolicitarServicioPage() {
           price:          offerPrice,
           payment_method: paymentMethod,
           photos:         photos.length > 0 ? photos : undefined,
+          audio_url:      audioUrl || undefined,
         }),
       });
       const json = await res.json();

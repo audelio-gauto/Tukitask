@@ -56,16 +56,31 @@ export default function ServiceChatInput({
     };
   }, [isRecording]);
 
+  // Pick the best supported mime type (iOS Safari requires audio/mp4)
+  const getSupportedMime = () => {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return '';
+  };
+
   const startRecording = async () => {
     if (disabled) return;
     cancelledRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mr = new MediaRecorder(stream);
+      const mime = getSupportedMime();
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       recorderRef.current = mr;
       const chunks: Blob[] = [];
-      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       mr.onstop = () => {
         // Release the mic immediately
         stream.getTracks().forEach(t => t.stop());
@@ -74,16 +89,17 @@ export default function ServiceChatInput({
         if (cancelledRef.current) {
           setAudioBlob(null);
         } else {
-          const blob = new Blob(chunks, { type: "audio/webm" });
+          const usedMime = mime || 'audio/webm';
+          const blob = new Blob(chunks, { type: usedMime });
           setAudioBlob(blob);
         }
         setIsRecording(false);
       };
-      mr.start();
+      mr.start(200); // collect data every 200ms to avoid empty chunks on iOS
       setIsRecording(true);
       setAudioBlob(null);
     } catch {
-      alert("No se pudo acceder al micrófono");
+      alert("No se pudo acceder al micrófono. Verificá que el navegador tenga permiso.");
     }
   };
 

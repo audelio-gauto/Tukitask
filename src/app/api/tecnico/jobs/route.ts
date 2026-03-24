@@ -211,6 +211,7 @@ export async function POST(req: Request) {
           payment_method:       payment_method || 'efectivo',
           scheduled_at:         scheduled_at || null,
           photos:               body.photos || null,
+          audio_url:            body.audio_url || null,
         })
         .select()
         .maybeSingle();
