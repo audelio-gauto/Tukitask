@@ -30,9 +30,17 @@ export async function GET(req: Request) {
       const rangeKm: number = Number(settings?.pickup_range ?? 50);
       const enabledServices = Object.entries(acceptedServices).filter(([, v]) => v).map(([k]) => k);
 
+      // Fetch jobs where this tecnico already sent an offer (any status) to exclude rejected ones
+      const { data: myOfferRows } = await sb
+        .from('tecnico_job_offers')
+        .select('job_id, status')
+        .eq('tecnico_email', email);
+      const rejectedJobIds = (myOfferRows ?? []).filter(o => o.status === 'rejected').map(o => o.job_id);
+
       let offerQ = sb.from('tecnico_jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.in('service_gender', [gender, 'indiferente']);
       if (enabledServices.length > 0) offerQ = offerQ.in('service_type', enabledServices);
+      if (rejectedJobIds.length > 0) offerQ = offerQ.not('id', 'in', `(${rejectedJobIds.map(id => `'${id}'`).join(',')})`);
       const { count: ofertasActivas } = await offerQ;
 
       const { count: citasConfirmadas } = await sb
