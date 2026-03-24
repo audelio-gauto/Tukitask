@@ -94,6 +94,8 @@ export default function TecnicoSettings() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gender) { setError('Debés seleccionar si sos Hombre o Mujer.'); return; }
+    if (!firstName.trim()) { setError('El Nombre es obligatorio.'); return; }
+    if (!lastName.trim()) { setError('El Apellido es obligatorio.'); return; }
     setLoading(true); setError(null); setSuccess(null);
     try {
       const payload = {
@@ -157,7 +159,41 @@ export default function TecnicoSettings() {
 
   return (
     <DriverScreenLayout title="Configuración">
-      <form onSubmit={handleSave} className="flex flex-col gap-4">
+      <form onSubmit={handleSave} className="flex flex-col gap-4" style={{ paddingBottom: '3rem' }}>
+
+        {/* ── Soy ── */}
+        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Soy <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></h2>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          {(['hombre', 'mujer'] as const).map(g => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(g)}
+              style={{
+                flex: 1,
+                padding: '0.85rem',
+                borderRadius: 14,
+                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
+                background: gender === g ? '#6366f1' : 'transparent',
+                color: gender === g ? '#fff' : 'inherit',
+                fontWeight: 700,
+                fontSize: '1rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: '1.4rem' }}>{g === 'hombre' ? '\uD83D\uDC68' : '\uD83D\uDC69'}</span>
+              <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
+            </button>
+          ))}
+        </div>
+        <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: -8, minHeight: '1.1rem' }}>
+          {!gender ? 'Selección obligatoria' : ''}
+        </p>
+
         <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Apariencia</h2>
         <label className="tuki-form-label">Tema</label>
         <select value={themeMode} onChange={e => setThemeMode(e.target.value)} className="tuki-form-input">
@@ -217,12 +253,12 @@ export default function TecnicoSettings() {
 
         <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
           <div>
-            <label className="tuki-form-label">Nombre</label>
-            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="tuki-form-input" />
+            <label className="tuki-form-label">Nombre <span style={{ color: '#ef4444' }}>*</span></label>
+            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="tuki-form-input" required />
           </div>
           <div>
-            <label className="tuki-form-label">Apellido</label>
-            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="tuki-form-input" />
+            <label className="tuki-form-label">Apellido <span style={{ color: '#ef4444' }}>*</span></label>
+            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="tuki-form-input" required />
           </div>
         </div>
 
@@ -236,36 +272,6 @@ export default function TecnicoSettings() {
           <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="tuki-form-input" placeholder="Dirección" />
           <input type="text" value={city} onChange={e => setCity(e.target.value)} className="tuki-form-input" style={{ marginTop: '0.5rem' }} placeholder="Ciudad" />
         </div>
-
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Soy <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></h2>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {(['hombre', 'mujer'] as const).map(g => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGender(g)}
-              style={{
-                flex: 1,
-                padding: '0.85rem',
-                borderRadius: 14,
-                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
-                background: gender === g ? '#6366f1' : 'transparent',
-                color: gender === g ? '#fff' : 'inherit',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: '1.4rem' }}>{g === 'hombre' ? '\uD83D\uDC68' : '\uD83D\uDC69'}</span>
-              <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
-            </button>
-          ))}
-        </div>
-        {!gender && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: -4 }}>Selección obligatoria</p>}
 
         <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Cuenta</h2>
         <div>
