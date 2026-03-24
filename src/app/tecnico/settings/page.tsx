@@ -3,21 +3,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useDriverContext } from '../../driver/context';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 
-const SERVICE_OPTIONS = [
-  { key: 'aire_split', label: 'Instalación / Servicio Aire Split' },
-  { key: 'electrico', label: 'Servicio Eléctrico' },
-  { key: 'plomeria', label: 'Servicio Plomería' },
-  { key: 'cerrajeria', label: 'Servicio Cerrajería' },
-  { key: 'otro', label: 'Otro' },
-];
-
 export default function TecnicoSettings() {
   const { email, displayName, profilePhoto: ctxPhoto, setProfilePhoto: setCtxPhoto } = useDriverContext();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // basic flags
-  const [rangoKm, setRangoKm] = useState<number | ''>('');
-  const [acceptedServices, setAcceptedServices] = useState<Record<string, boolean>>({});
+  const [gender, setGender] = useState<'hombre' | 'mujer' | ''>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +32,6 @@ export default function TecnicoSettings() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    // Initialize acceptedServices default and try to load persisted settings
-    const initial: Record<string, boolean> = {};
-    SERVICE_OPTIONS.forEach(o => { initial[o.key] = true; });
-    setAcceptedServices(initial);
-
     (async () => {
       try {
         if (!email) return;
@@ -53,8 +39,7 @@ export default function TecnicoSettings() {
         const json = await res.json();
         if (json?.settings) {
           const s = json.settings;
-          setRangoKm(s.rango_km ?? '');
-          setAcceptedServices((prev) => ({ ...prev, ...(s.accepted_services || {}) }));
+          setGender(s.gender || '');
           // try populate extended fields if present
           setThemeMode(s.theme_mode || 'light');
           setTransportMode(s.transport_mode || 'moto');
@@ -83,8 +68,7 @@ export default function TecnicoSettings() {
         const raw = localStorage.getItem('tecnico_settings_preview');
         if (raw) {
           const obj = JSON.parse(raw);
-          if (obj.rangoKm !== undefined) setRangoKm(obj.rangoKm);
-          if (obj.acceptedServices) setAcceptedServices((prev) => ({ ...prev, ...obj.acceptedServices }));
+          if (obj.gender) setGender(obj.gender as 'hombre' | 'mujer');
           if (obj.themeMode) setThemeMode(obj.themeMode);
           if (obj.transportMode) setTransportMode(obj.transportMode);
           if (obj.vehicleType) setVehicleType(obj.vehicleType);
@@ -107,18 +91,14 @@ export default function TecnicoSettings() {
     })();
   }, []);
 
-  const toggleService = (key: string) => {
-    setAcceptedServices(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!gender) { setError('Debés seleccionar si sos Hombre o Mujer.'); return; }
     setLoading(true); setError(null); setSuccess(null);
     try {
       const payload = {
         email,
-        rangoKm: typeof rangoKm === 'number' ? rangoKm : null,
-        acceptedServices,
+        gender,
         // extended
         theme_mode: themeMode,
         transport_mode: transportMode,
@@ -146,8 +126,7 @@ export default function TecnicoSettings() {
         // Fallback: save locally for preview if API/table not available
         try {
           localStorage.setItem('tecnico_settings_preview', JSON.stringify({
-            rangoKm,
-            acceptedServices,
+            gender,
             themeMode,
             transportMode,
             vehicleType,
@@ -258,30 +237,35 @@ export default function TecnicoSettings() {
           <input type="text" value={city} onChange={e => setCity(e.target.value)} className="tuki-form-input" style={{ marginTop: '0.5rem' }} placeholder="Ciudad" />
         </div>
 
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Rango de trabajo (km)</h2>
-        <div>
-          <label className="tuki-form-label">Rango de trabajo (km)</label>
-          <input
-            type="number"
-            min={0}
-            value={rangoKm as any}
-            onChange={e => setRangoKm(e.target.value === '' ? '' : Number(e.target.value))}
-            className="tuki-form-input"
-            placeholder="Ej. 25"
-          />
+        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Soy <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></h2>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          {(['hombre', 'mujer'] as const).map(g => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(g)}
+              style={{
+                flex: 1,
+                padding: '0.85rem',
+                borderRadius: 14,
+                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
+                background: gender === g ? '#6366f1' : 'transparent',
+                color: gender === g ? '#fff' : 'inherit',
+                fontWeight: 700,
+                fontSize: '1rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: '1.4rem' }}>{g === 'hombre' ? '\uD83D\uDC68' : '\uD83D\uDC69'}</span>
+              <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
+            </button>
+          ))}
         </div>
-
-        <div>
-          <label className="tuki-form-label">Servicios que aceptas</label>
-          <div className="grid grid-cols-1 gap-2">
-            {SERVICE_OPTIONS.map(opt => (
-              <label key={opt.key} className="flex items-center gap-2">
-                <input type="checkbox" checked={!!acceptedServices[opt.key]} onChange={() => toggleService(opt.key)} />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        {!gender && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: -4 }}>Selección obligatoria</p>}
 
         <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Cuenta</h2>
         <div>
@@ -296,9 +280,7 @@ export default function TecnicoSettings() {
         <div className="flex gap-2">
           <button className="tuki-btn tuki-btn-primary" type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</button>
           <button type="button" className="tuki-btn" onClick={() => {
-            const initial: Record<string, boolean> = {};
-            SERVICE_OPTIONS.forEach(o => { initial[o.key] = true; });
-            setAcceptedServices(initial); setRangoKm(''); setSuccess(null); setError(null);
+            setGender(''); setSuccess(null); setError(null);
           }}>Restablecer</button>
         </div>
 
