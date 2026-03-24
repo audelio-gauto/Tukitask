@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import ServiceChatInput from '../components/ServiceChatInput';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -284,23 +285,23 @@ export default function SolicitarServicioPage() {
     );
   };
 
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => router.push('/cliente/mis-servicios'), 2500);
+    return () => clearTimeout(t);
+  }, [success, router]);
+
   if (success) {
     return (
       <div className="enviar-success-screen">
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>¡Solicitud enviada!</h2>
-        <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Se registró tu solicitud. Te notificaremos cuando un técnico acepte.</p>
+        <p style={{ color: '#6b7280', marginBottom: '1rem', maxWidth: 320 }}>Se registró tu solicitud. Te notificaremos cuando un técnico acepte.</p>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '2rem' }}>Redirigiendo a Mis Servicios…</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-servicios" className="client-btn client-btn-primary">Ver mis servicios →</Link>
-          <Link href="/cliente" className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }}>Ir al inicio</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => {
-            setSuccess(false);
-            setLocationAddress(''); setLocationLat(''); setLocationLng('');
-            setCategory(null); setDetails(''); setPhotos([]);
-            setGenderPreference('indiferente');
-            setAudioBlob(null); setPaymentMethod('efectivo');
-            offerInitialized.current = false;
-          }}>Nueva Solicitud</button>
         </div>
       </div>
     );

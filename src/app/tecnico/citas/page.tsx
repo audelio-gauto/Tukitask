@@ -13,6 +13,8 @@ interface Job {
   client_email: string;
   client_rating?: number | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   scheduled_at: string | null;
   agreed_price: number | null;
   extra_charge: number | null;
@@ -178,9 +180,24 @@ export default function CitasPage() {
 
                   {/* State-based action buttons */}
                   {job.status === 'accepted' && (
-                    <button onClick={() => doAction(job.id, 'en_camino')} disabled={busy}
-                      style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#0ea5e9', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
-                      🚗 Voy en camino
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => doAction(job.id, 'en_camino')} disabled={busy}
+                        style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#0ea5e9', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
+                        🚗 Voy en camino
+                      </button>
+                      {job.lat && job.lng && (
+                        <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}`, '_blank')}
+                          style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          🧭 Navegar
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {job.status === 'en_camino' && job.lat && job.lng && (
+                    <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}`, '_blank')}
+                      style={{ width: '100%', marginBottom: 8, padding: '10px', borderRadius: 12, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                      🧭 Navegar al cliente
                     </button>
                   )}
 
