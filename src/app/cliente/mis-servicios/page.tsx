@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientContext } from '../context';
 
@@ -30,6 +30,29 @@ function playOfferAlert() {
       o.start(t); o.stop(t + 0.1);
     };
     b(ctx.currentTime, 1000); b(ctx.currentTime + 0.14, 1200); b(ctx.currentTime + 0.28, 1400);
+  } catch { /* silent */ }
+}
+function playStatusSound(status: string) {
+  try {
+    const ctx = getClientAC();
+    if (!ctx) return;
+    const b = (t: number, f: number, dur = 0.13) => {
+      const o = ctx!.createOscillator(); const g = ctx!.createGain();
+      o.connect(g); g.connect(ctx!.destination);
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.55, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.start(t); o.stop(t + dur + 0.01);
+    };
+    const t = ctx.currentTime;
+    if (status === 'accepted')            { b(t, 880); b(t+0.16, 1100); b(t+0.32, 1320); }
+    else if (status === 'en_camino')      { b(t, 660); b(t+0.2, 880); }
+    else if (status === 'llegue')         { b(t, 880); b(t+0.13, 880); b(t+0.3, 1100); }
+    else if (status === 'en_proceso')     { b(t, 660, 0.28); b(t+0.35, 880, 0.18); }
+    else if (status === 'completion_pending') {
+      b(t, 1000); b(t+0.14, 1200); b(t+0.28, 1000); b(t+0.42, 1200);
+    }
+    else if (status === 'completado')     { b(t, 523); b(t+0.16, 659); b(t+0.32, 784); b(t+0.48, 1047); }
   } catch { /* silent */ }
 }
 
@@ -97,6 +120,8 @@ export default function MisServiciosPage() {
 
   // Track seen offers per job to detect new ones
   const prevOfferCount = useState<Record<string, number>>(() => ({}))[0];
+  // Track previous job statuses to play sounds on changes
+  const jobStatusRef = useRef<Record<string, string>>({});
 
   const loadJobs = useCallback(async () => {
     if (!email) return;
@@ -104,6 +129,12 @@ export default function MisServiciosPage() {
       const res  = await fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`);
       const data = await res.json();
       if (!Array.isArray(data)) return;
+      // Play sounds for status transitions
+      data.forEach((j: Job) => {
+        const prev = jobStatusRef.current[j.id];
+        if (prev && prev !== j.status) playStatusSound(j.status);
+        jobStatusRef.current[j.id] = j.status;
+      });
       setJobs(data);
       setLoading(false);
 
@@ -346,6 +377,31 @@ export default function MisServiciosPage() {
                   {/* Completion pending: ask if done */}
                   {job.status === 'completion_pending' && (
                     <div style={{ marginTop: 4 }}>
+                      {/* Price breakdown — show always when awaiting confirmation */}
+                      <div style={{ background: '#f0fdf4', borderRadius: 12, padding: '11px 13px', marginBottom: 12, border: '1px solid #bbf7d0' }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.83rem', color: '#374151', marginBottom: 8 }}>💰 Resumen de cobro</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {job.client_initial_price != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.81rem', color: '#64748b' }}>
+                              <span>Tu oferta inicial</span><span>{fmtGs(job.client_initial_price)}</span>
+                            </div>
+                          )}
+                          {job.agreed_price != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.81rem', color: '#374151' }}>
+                              <span>Precio acordado</span><span style={{ fontWeight: 700 }}>{fmtGs(job.agreed_price)}</span>
+                            </div>
+                          )}
+                          {job.extra_charge != null && Number(job.extra_charge) > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.81rem', color: '#d97706' }}>
+                              <span>⚡ Extra del técnico</span><span style={{ fontWeight: 700 }}>{fmtGs(job.extra_charge)}</span>
+                            </div>
+                          )}
+                          <div style={{ borderTop: '1px solid #d1fae5', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', fontWeight: 800, color: '#059669' }}>
+                            <span>Total a pagar</span>
+                            <span>{fmtGs(job.total_price ?? job.agreed_price)}</span>
+                          </div>
+                        </div>
+                      </div>
                       <p style={{ margin: '0 0 10px', fontWeight: 700, color: '#6366f1', fontSize: '0.9rem', textAlign: 'center' }}>
                         ¿El técnico completó el servicio? ({job.completion_attempts}/3)
                       </p>

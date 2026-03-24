@@ -5,7 +5,15 @@ import { useDriverContext } from '../driver/context';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-// ── Web Audio alert ──────────────────────────────────────────────────────────
+// ── Haversine distance ──────────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 let _tecnicoAC: AudioContext | null = null;
 function getTecnicoAC() {
   if (typeof window === 'undefined') return null;
@@ -103,7 +111,7 @@ export default function TecnicoDashboard() {
   const [rangoKm, setRangoKm]           = useState(20);
 
   // ── New-job popup ──────────────────────────────────────────────────────────
-  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; description?: string | null; address?: string | null; }
+  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; description?: string | null; address?: string | null; lat?: number | null; lng?: number | null; }
   const [pendingPopup, setPendingPopup] = useState<PendingJob | null>(null);
   const [popupOfferPrice, setPopupOfferPrice] = useState(0);
   const [popupShowInput, setPopupShowInput]   = useState(false);
@@ -111,6 +119,16 @@ export default function TecnicoDashboard() {
   const [popupCountdown, setPopupCountdown]   = useState(60);
   const seenJobsRef     = useRef<Set<string>>(new Set());
   const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tecnicoPosRef   = useRef<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    const wid = navigator.geolocation.watchPosition(
+      pos => { tecnicoPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 15_000 },
+    );
+    return () => navigator.geolocation.clearWatch(wid);
+  }, []);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -606,6 +624,15 @@ export default function TecnicoDashboard() {
               {pendingPopup.address && (
                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>📍 {pendingPopup.address}</div>
               )}
+              {(() => {
+                const pos = tecnicoPosRef.current;
+                const jLat = pendingPopup.lat; const jLng = pendingPopup.lng;
+                if (pos && jLat != null && jLng != null) {
+                  const km = haversineKm(pos.lat, pos.lng, Number(jLat), Number(jLng));
+                  return <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#6366f1', marginTop: 2 }}>📏 Distancia: {km.toFixed(1)} km</div>;
+                }
+                return null;
+              })()}
               {pendingPopup.client_initial_price != null && (
                 <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#059669', marginTop: 4 }}>
                   💰 Ofrece: {Number(pendingPopup.client_initial_price).toLocaleString('es-PY')} Gs.
