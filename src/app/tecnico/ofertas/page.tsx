@@ -131,7 +131,7 @@ export default function OfertasPage() {
         <button onClick={loadOffers} style={{ marginLeft: 'auto', background: '#334155', border: 'none', color: '#94a3b8', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>↺</button>
       </div>
 
-      <div style={{ padding: '14px' }}>
+      <div style={{ padding: '14px', maxHeight: 'calc(100dvh - 120px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
           <div style={{ textAlign: 'center', paddingTop: 60, color: '#64748b' }}>
             <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
@@ -151,6 +151,11 @@ export default function OfertasPage() {
               const hasMap      = myPos != null && job.lat != null && job.lng != null;
               const distKm      = (myPos && job.lat != null && job.lng != null)
                 ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng))
+                : null;
+
+              // Google Maps navigation URL
+              const gmapsUrl = job.lat && job.lng
+                ? `https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}`
                 : null;
 
               return (
@@ -195,7 +200,7 @@ export default function OfertasPage() {
                       )}
                     </div>
 
-                    {/* A→B route block */}
+                    {/* A→B route block + Navegar */}
                     <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
                         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
@@ -210,6 +215,14 @@ export default function OfertasPage() {
                         <div style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.4 }}>
                           {job.address ?? 'Dirección no especificada'}
                         </div>
+                        {gmapsUrl && (
+                          <button
+                            onClick={() => window.open(gmapsUrl, '_blank')}
+                            style={{ marginTop: 8, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.12)' }}
+                          >
+                            🧭 Navegar
+                          </button>
+                        )}
                       </div>
                     </div>
 
