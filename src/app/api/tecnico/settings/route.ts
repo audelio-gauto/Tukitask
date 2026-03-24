@@ -57,6 +57,7 @@ export async function POST(req: Request) {
     }
     if (body.pickup_range !== undefined) payload.pickup_range = body.pickup_range !== null ? Number(body.pickup_range) : null;
     if (body.accepts_packages !== undefined) payload.accepts_packages = Boolean(body.accepts_packages);
+    if (body.accepted_services !== undefined && typeof body.accepted_services === 'object') payload.accepted_services = body.accepted_services;
     const { data, error } = await sb.from('tecnico_settings').upsert(payload, { onConflict: 'email' }).select().maybeSingle();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ settings: data });
