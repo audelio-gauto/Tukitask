@@ -159,73 +159,41 @@ export default function TecnicoSettings() {
 
   return (
     <DriverScreenLayout title="Configuración">
-      <form onSubmit={handleSave} className="flex flex-col gap-4" style={{ paddingBottom: '3rem' }}>
+      <form onSubmit={handleSave} style={{ paddingBottom: '2rem' }}>
 
-        {/* ── Soy ── */}
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Soy <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></h2>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {(['hombre', 'mujer'] as const).map(g => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGender(g)}
-              style={{
-                flex: 1,
-                padding: '0.85rem',
-                borderRadius: 14,
-                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
-                background: gender === g ? '#6366f1' : 'transparent',
-                color: gender === g ? '#fff' : 'inherit',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: '1.4rem' }}>{g === 'hombre' ? '\uD83D\uDC68' : '\uD83D\uDC69'}</span>
-              <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
-            </button>
-          ))}
-        </div>
-        <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: -8, minHeight: '1.1rem' }}>
-          {!gender ? 'Selección obligatoria' : ''}
-        </p>
-
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Apariencia</h2>
-        <label className="tuki-form-label">Tema</label>
-        <select value={themeMode} onChange={e => setThemeMode(e.target.value)} className="tuki-form-input">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Transporte / App</h2>
-        <label className="tuki-form-label">APP de navegación</label>
-        <select value={navApp} onChange={e => setNavApp(e.target.value)} className="tuki-form-input">
-          <option value="google_maps">Google Maps</option>
-          <option value="waze">Waze</option>
-        </select>
-
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Datos de Contacto</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* ── HERO: Avatar + nombre + email ── */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '1.5rem 1rem 1.25rem', gap: '0.6rem',
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          borderRadius: '0 0 24px 24px', marginBottom: '1.25rem',
+          marginLeft: '-1rem', marginRight: '-1rem', marginTop: '-1rem',
+        }}>
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
-              position: 'relative',
-              width: 80, height: 80, borderRadius: '50%', backgroundColor: '#e5e7eb',
-              backgroundImage: profilePhoto ? `url(${profilePhoto})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '3px solid var(--tuki-border)',
-              overflow: 'hidden', flexShrink: 0,
+              position: 'relative', width: 88, height: 88, borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              backgroundImage: profilePhoto ? `url(${profilePhoto})` : 'none',
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', border: '3px solid rgba(255,255,255,0.6)',
+              overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
             }}
           >
             {!profilePhoto && (
-              <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24">
+              <svg width="36" height="36" fill="none" stroke="rgba(255,255,255,0.8)" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             )}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '0.65rem', textAlign: 'center', padding: '2px 0' }}>{uploading ? '...' : 'Cambiar'}</div>
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              background: 'rgba(0,0,0,0.55)', color: '#fff',
+              fontSize: '0.6rem', fontWeight: 700, textAlign: 'center',
+              padding: '3px 0', letterSpacing: '0.05em',
+            }}>
+              {uploading ? '⏳' : '📷 CAMBIAR'}
+            </div>
           </div>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={async (e) => {
             const file = e.target.files?.[0]; if (!file || !email) return; setUploading(true); setError(null); setSuccess(null);
@@ -236,65 +204,162 @@ export default function TecnicoSettings() {
               const base64 = btoa(binary);
               const res = await fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, base64, mimeType: file.type }) });
               const json = await res.json();
-              if (json.url) {
-                const photoUrl = json.url + '?t=' + Date.now(); setProfilePhoto(photoUrl); setCtxPhoto(photoUrl); setSuccess('Foto actualizada');
-              } else {
-                setError(json.error || 'Error al subir foto');
-              }
-            } catch (err) {
-              setError('Error al subir la foto');
-            }
+              if (json.url) { const photoUrl = json.url + '?t=' + Date.now(); setProfilePhoto(photoUrl); setCtxPhoto(photoUrl); setSuccess('Foto actualizada'); }
+              else { setError(json.error || 'Error al subir foto'); }
+            } catch { setError('Error al subir la foto'); }
             setUploading(false); if (fileInputRef.current) fileInputRef.current.value = '';
           }} />
 
-          <div>
-            <p style={{ fontWeight: 600 }}>{displayName || email}</p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--tuki-text-secondary)' }}>{phone || ''}</p>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: 0, lineHeight: 1.2 }}>
+              {firstName && lastName ? `${firstName} ${lastName}` : displayName || 'Mi perfil'}
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem', margin: '2px 0 0' }}>{email}</p>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
-          <div>
-            <label className="tuki-form-label">Nombre <span style={{ color: '#ef4444' }}>*</span></label>
-            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="tuki-form-input" required />
+        {/* ── SECCIÓN: Soy ── */}
+        <Section icon="🧑" title="Soy" required>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {(['hombre', 'mujer'] as const).map(g => (
+              <button key={g} type="button" onClick={() => setGender(g)} style={{
+                flex: 1, padding: '0.9rem 0.5rem', borderRadius: 14,
+                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
+                background: gender === g ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#f9fafb',
+                color: gender === g ? '#fff' : '#374151',
+                fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'all 0.18s', boxShadow: gender === g ? '0 4px 12px rgba(99,102,241,0.35)' : 'none',
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>{g === 'hombre' ? '👨' : '👩'}</span>
+                <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="tuki-form-label">Apellido <span style={{ color: '#ef4444' }}>*</span></label>
-            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="tuki-form-input" required />
+          {!gender && <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: 6 }}>Selección obligatoria</p>}
+        </Section>
+
+        {/* ── SECCIÓN: Datos personales ── */}
+        <Section icon="👤" title="Datos personales">
+          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Nombre" required>
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" style={inputStyle} required />
+            </Field>
+            <Field label="Apellido" required>
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" style={inputStyle} required />
+            </Field>
           </div>
-        </div>
+          <Field label="Empresa" hint="Opcional">
+            <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
+          </Field>
+        </Section>
 
-        <div>
-          <label className="tuki-form-label">Empresa (Opcional)</label>
-          <input type="text" value={company} onChange={e => setCompany(e.target.value)} className="tuki-form-input" />
-        </div>
+        {/* ── SECCIÓN: Contacto ── */}
+        <Section icon="📞" title="Contacto">
+          <Field label="Teléfono / WhatsApp">
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+595 9XX XXX XXX" style={inputStyle} />
+          </Field>
+          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Dirección">
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Calle y número" style={inputStyle} />
+            </Field>
+            <Field label="Ciudad">
+              <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Asunción" style={inputStyle} />
+            </Field>
+          </div>
+        </Section>
 
-        <div>
-          <label className="tuki-form-label">Ubicación (Dirección)</label>
-          <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="tuki-form-input" placeholder="Dirección" />
-          <input type="text" value={city} onChange={e => setCity(e.target.value)} className="tuki-form-input" style={{ marginTop: '0.5rem' }} placeholder="Ciudad" />
-        </div>
+        {/* ── SECCIÓN: Cuenta ── */}
+        <Section icon="🔒" title="Cuenta">
+          <Field label="Correo electrónico">
+            <input type="email" value={email || ''} readOnly style={{ ...inputStyle, background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }} />
+          </Field>
+          <Field label="Tema de la app">
+            <select value={themeMode} onChange={e => setThemeMode(e.target.value)} style={inputStyle}>
+              <option value="light">☀️ Claro</option>
+              <option value="dark">🌙 Oscuro</option>
+            </select>
+          </Field>
+          <Field label="APP de navegación">
+            <select value={navApp} onChange={e => setNavApp(e.target.value)} style={inputStyle}>
+              <option value="google_maps">Google Maps</option>
+              <option value="waze">Waze</option>
+            </select>
+          </Field>
+        </Section>
 
-        <h2 className="tuki-heading" style={{ fontSize: '1.05rem' }}>Cuenta</h2>
-        <div>
-          <label className="tuki-form-label">Número de teléfono</label>
-          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="tuki-form-input" />
-        </div>
-        <div>
-          <label className="tuki-form-label">Correo electrónico</label>
-          <input type="email" value={email || ''} readOnly className="tuki-form-input" style={{ background: '#f3f4f6' }} />
-        </div>
+        {/* ── Mensajes ── */}
+        {success && (
+          <div style={{ margin: '0 0 0.75rem', padding: '0.75rem 1rem', borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+            ✅ {success}
+          </div>
+        )}
+        {error && (
+          <div style={{ margin: '0 0 0.75rem', padding: '0.75rem 1rem', borderRadius: 12, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+            ⚠️ {error}
+          </div>
+        )}
 
-        <div className="flex gap-2">
-          <button className="tuki-btn tuki-btn-primary" type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</button>
-          <button type="button" className="tuki-btn" onClick={() => {
-            setGender(''); setSuccess(null); setError(null);
-          }}>Restablecer</button>
-        </div>
+        {/* ── Botón guardar ── */}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
+            background: loading ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: loading ? 'none' : '0 6px 20px rgba(99,102,241,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all 0.18s',
+          }}
+        >
+          {loading ? (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+              </svg>
+              Guardando...
+            </>
+          ) : '💾 Guardar configuración'}
+        </button>
 
-        {success && <p className="text-green-600">{success}</p>}
-        {error && <p className="text-red-500">{error}</p>}
       </form>
     </DriverScreenLayout>
   );
 }
+
+/* ── Helpers de layout ── */
+function Section({ icon, title, required, children }: { icon: string; title: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: '1rem', background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151' }}>{title}</span>
+        {required && <span style={{ color: '#ef4444', marginLeft: 2, fontSize: '0.85rem' }}>*</span>}
+      </div>
+      <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' }}>{label}</label>
+        {required && <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>*</span>}
+        {hint && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>({hint})</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '0.7rem 0.85rem', borderRadius: 10,
+  border: '1.5px solid #e5e7eb', background: '#f9fafb',
+  fontSize: '0.92rem', color: '#111827', outline: 'none',
+  boxSizing: 'border-box',
+};
