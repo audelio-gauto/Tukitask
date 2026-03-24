@@ -56,6 +56,15 @@ export default function TecnicoDashboard() {
   // ── Gender loaded from profile ─────────────────────────────────────────────
   const [gender, setGender] = useState<'hombre' | 'mujer' | ''>('');
 
+  // ── Dashboard stats ───────────────────────────────────────────────────────
+  const [statsData, setStatsData] = useState({
+    ofertasActivas:   0,
+    citasConfirmadas: 0,
+    tasaAceptacion:   null as number | null,
+    gananciasHoy:     0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   // ── Filter state ───────────────────────────────────────────────────────────
   const [filterOpen, setFilterOpen]     = useState(false);
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
@@ -214,15 +223,57 @@ export default function TecnicoDashboard() {
     setFilterOpen(false);
   };
 
+  // Load dashboard stats from API (re-fetch every 30 s when available)
+  useEffect(() => {
+    if (!email) return;
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&stats=true`)
+        .then(r => r.json())
+        .then(json => {
+          if (cancelled) return;
+          if (json?.stats) setStatsData(json.stats);
+          setStatsLoading(false);
+        })
+        .catch(() => { if (!cancelled) setStatsLoading(false); });
+    };
+    load();
+    const iv = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [email]);
+
   const catalogue      = getCatalogueForGender(gender);
   const hasActiveFilter = Object.values(serviceFilters).some(v => !v);
   const enabledCount   = catalogue.filter(s => serviceFilters[s.key]).length;
 
+  const fmtGs = (n: number) =>
+    n === 0 ? '0 Gs.' : `${n.toLocaleString('es-PY')} Gs.`;
+
   const stats = [
-    { label: 'Ofertas Activas',   value: 3,              href: '/tecnico/ofertas',    icon: '🎁' },
-    { label: 'Citas Confirmadas', value: 5,              href: '/tecnico/citas',      icon: '📅' },
-    { label: 'Tasa Aceptación',   value: '75%',          href: '/tecnico/aceptacion', icon: '🏆' },
-    { label: 'Ganancias del Mes', value: '2.150.000 Gs.', href: '/tecnico/ganancias', icon: '💰' },
+    {
+      label: 'Ofertas Activas',
+      value: statsLoading ? '…' : statsData.ofertasActivas,
+      href: '/tecnico/ofertas',
+      icon: '🎁',
+    },
+    {
+      label: 'Citas Confirmadas',
+      value: statsLoading ? '…' : statsData.citasConfirmadas,
+      href: '/tecnico/citas',
+      icon: '📅',
+    },
+    {
+      label: 'Tasa Aceptación',
+      value: statsLoading ? '…' : (statsData.tasaAceptacion !== null ? `${statsData.tasaAceptacion}%` : '—'),
+      href: '/tecnico/aceptacion',
+      icon: '🏆',
+    },
+    {
+      label: 'Ganancias Hoy',
+      value: statsLoading ? '…' : fmtGs(statsData.gananciasHoy),
+      href: '/tecnico/ganancias',
+      icon: '💰',
+    },
   ];
 
   return (
