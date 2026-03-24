@@ -215,14 +215,7 @@ export default function OfertasPage() {
                         <div style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.4 }}>
                           {job.address ?? 'Dirección no especificada'}
                         </div>
-                        {gmapsUrl && (
-                          <button
-                            onClick={() => window.open(gmapsUrl, '_blank')}
-                            style={{ marginTop: 8, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.12)' }}
-                          >
-                            🧭 Navegar
-                          </button>
-                        )}
+
                       </div>
                     </div>
 
@@ -277,12 +270,24 @@ export default function OfertasPage() {
 
                     {/* Offer state */}
                     {alreadySent ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1' }}>
-                        <span style={{ fontSize: '0.85rem', color: '#a5b4fc', fontWeight: 700 }}>📤 Oferta enviada</span>
-                        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>
-                          ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>⏳</span>
+                      <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${job.my_offer!.status === 'accepted' ? '#10b981' : '#6366f1'}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: job.my_offer!.status === 'accepted' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)' }}>
+                          <span style={{ fontSize: '0.85rem', color: job.my_offer!.status === 'accepted' ? '#6ee7b7' : '#a5b4fc', fontWeight: 700 }}>
+                            {job.my_offer!.status === 'accepted' ? '✅ Aceptada por el cliente' : '📤 Oferta enviada'}
+                          </span>
+                          <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>
+                            ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
+                          </span>
+                          {job.my_offer!.status !== 'accepted' && <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>⏳</span>}
+                        </div>
+                        {job.my_offer!.status === 'accepted' && gmapsUrl && (
+                          <button
+                            onClick={() => window.open(gmapsUrl, '_blank')}
+                            style={{ width: '100%', padding: '11px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                          >
+                            🧭 Navegar al cliente
+                          </button>
+                        )}
                       </div>
                     ) : isOpen ? (
                       <div>
