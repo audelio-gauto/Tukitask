@@ -10,7 +10,8 @@ interface Job {
   completed_at: string | null;
   service_type: string;
   client_name: string | null;
-  price: number | null;
+  total_price: number | null;
+  status: string;
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -48,7 +49,7 @@ export default function GananciasPage() {
     fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
-        const completed = Array.isArray(data) ? data.filter((j: Job & { status: string }) => j.status === 'completed') : [];
+        const completed = Array.isArray(data) ? data.filter((j: Job) => j.status === 'completado') : [];
         setJobs(completed);
         setLoading(false);
       })
@@ -60,7 +61,7 @@ export default function GananciasPage() {
     const d = new Date(j.completed_at ?? j.created_at);
     return d >= from;
   });
-  const total = filtered.reduce((sum, j) => sum + Number(j.price ?? 0), 0);
+  const total = filtered.reduce((sum, j) => sum + Number(j.total_price ?? 0), 0);
 
   const fmtGs  = (n: number) => n === 0 ? '0 Gs.' : `${n.toLocaleString('es-PY')} Gs.`;
   const fmtDate = (s: string | null) => {
@@ -144,7 +145,7 @@ export default function GananciasPage() {
                     </div>
                   </div>
                   <span style={{ fontWeight: 800, color: '#059669', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                    {fmtGs(Number(job.price ?? 0))}
+                    {fmtGs(Number(job.total_price ?? 0))}
                   </span>
                 </div>
               ))}

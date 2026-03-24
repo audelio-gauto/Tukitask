@@ -290,7 +290,8 @@ export default function SolicitarServicioPage() {
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>¡Solicitud enviada!</h2>
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Se registró tu solicitud. Te notificaremos cuando un técnico acepte.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link href="/cliente" className="client-btn client-btn-primary">Volver al inicio</Link>
+          <Link href="/cliente/mis-servicios" className="client-btn client-btn-primary">Ver mis servicios →</Link>
+          <Link href="/cliente" className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }}>Ir al inicio</Link>
           <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => {
             setSuccess(false);
             setLocationAddress(''); setLocationLat(''); setLocationLng('');

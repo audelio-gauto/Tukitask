@@ -1,9 +1,41 @@
- 'use client';
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useDriverContext } from '../driver/context';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+
+// ── Web Audio alert ──────────────────────────────────────────────────────────
+let _tecnicoAC: AudioContext | null = null;
+function getTecnicoAC() {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!_tecnicoAC || _tecnicoAC.state === 'closed') _tecnicoAC = new AudioCtx();
+  if (_tecnicoAC.state === 'suspended') _tecnicoAC.resume();
+  return _tecnicoAC;
+}
+if (typeof window !== 'undefined') {
+  const _u = () => { getTecnicoAC(); window.removeEventListener('touchstart', _u); window.removeEventListener('click', _u); };
+  window.addEventListener('touchstart', _u, { once: true });
+  window.addEventListener('click', _u, { once: true });
+}
+function playNewJobAlert() {
+  try {
+    const ctx = getTecnicoAC();
+    if (!ctx) return;
+    const beep = (t: number, f: number, d: number) => {
+      const o = ctx!.createOscillator(); const g = ctx!.createGain();
+      o.connect(g); g.connect(ctx!.destination);
+      o.type = 'sine'; o.frequency.value = f; g.gain.value = 0.8;
+      o.start(t); o.stop(t + d);
+    };
+    for (let r = 0; r < 4; r++) {
+      const t = ctx.currentTime + r * 0.5;
+      beep(t, 660, 0.1); beep(t + 0.13, 880, 0.1); beep(t + 0.26, 1100, 0.14);
+    }
+  } catch { /* silent fail */ }
+}
 
 const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
 
@@ -69,6 +101,16 @@ export default function TecnicoDashboard() {
   const [filterOpen, setFilterOpen]     = useState(false);
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
   const [rangoKm, setRangoKm]           = useState(20);
+
+  // ── New-job popup ──────────────────────────────────────────────────────────
+  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; description?: string | null; address?: string | null; }
+  const [pendingPopup, setPendingPopup] = useState<PendingJob | null>(null);
+  const [popupOfferPrice, setPopupOfferPrice] = useState(0);
+  const [popupShowInput, setPopupShowInput]   = useState(false);
+  const [popupSending, setPopupSending]       = useState(false);
+  const [popupCountdown, setPopupCountdown]   = useState(60);
+  const seenJobsRef     = useRef<Set<string>>(new Set());
+  const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -241,6 +283,65 @@ export default function TecnicoDashboard() {
     const iv = setInterval(load, 30_000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [email]);
+
+  // ── Poll for new pending jobs when available ─────────────────────────────
+  const dismissPopup = useCallback(() => {
+    setPendingPopup(null);
+    setPopupShowInput(false);
+    setPopupOfferPrice(0);
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  }, []);
+
+  useEffect(() => {
+    if (!available || !email) return;
+    const check = async () => {
+      try {
+        const res  = await fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`);
+        const jobs = await res.json();
+        if (!Array.isArray(jobs)) return;
+        // Only show jobs not yet seen and where no offer was sent
+        const fresh = jobs.filter((j: any) => !seenJobsRef.current.has(j.id) && !j.my_offer);
+        if (fresh.length === 0) return;
+        const newest = fresh[0];
+        seenJobsRef.current.add(newest.id);
+        setPendingPopup(newest);
+        setPopupOfferPrice(Number(newest.client_initial_price ?? 0));
+        setPopupShowInput(false);
+        setPopupCountdown(60);
+        playNewJobAlert();
+        // Countdown timer
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        countdownRef.current = setInterval(() => {
+          setPopupCountdown(prev => {
+            if (prev <= 1) { dismissPopup(); return 60; }
+            return prev - 1;
+          });
+        }, 1000);
+      } catch { /* ignore */ }
+    };
+    check();
+    const iv = setInterval(check, 15_000);
+    return () => { clearInterval(iv); if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [available, email, dismissPopup]);
+
+  const sendPopupOffer = async () => {
+    if (!pendingPopup || !email || popupSending) return;
+    setPopupSending(true);
+    try {
+      await fetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send_offer',
+          jobId: pendingPopup.id,
+          tecnicoEmail: email,
+          proposedPrice: popupOfferPrice,
+        }),
+      });
+    } catch { /* ignore */ }
+    setPopupSending(false);
+    dismissPopup();
+  };
 
   const catalogue      = getCatalogueForGender(gender);
   const hasActiveFilter = Object.values(serviceFilters).some(v => !v);
@@ -449,6 +550,121 @@ export default function TecnicoDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── New Job Popup ── */}
+      {pendingPopup && (
+        <>
+          <div onClick={dismissPopup} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9998 }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)',
+            zIndex: 9999, width: 'min(92vw, 360px)',
+            background: '#fff', borderRadius: 20,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
+            padding: '20px 18px 18px',
+            animation: 'popupIn 0.28s cubic-bezier(0.32,0.72,0,1)',
+          }}>
+            <style>{`@keyframes popupIn{from{opacity:0;transform:translate(-50%,-58%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
+
+            {/* Header row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '1.3rem' }}>🔔</span>
+                <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>Nueva Solicitud</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.78rem', background: '#fee2e2', color: '#ef4444', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>
+                  {popupCountdown}s
+                </span>
+                <button onClick={dismissPopup} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1, color: '#94a3b8' }}>✕</button>
+              </div>
+            </div>
+
+            {/* Client info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              {pendingPopup.client_photo ? (
+                <img src={pendingPopup.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+              ) : (
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
+              )}
+              <div>
+                <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{pendingPopup.client_name ?? 'Cliente'}</div>
+                {pendingPopup.client_rating != null && (
+                  <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{'★'.repeat(Math.round(pendingPopup.client_rating))} {pendingPopup.client_rating.toFixed(1)}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Service + price */}
+            <div style={{ background: '#f8fafc', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, color: '#6366f1', fontSize: '0.9rem', marginBottom: 4 }}>
+                🛠 {pendingPopup.service_type}
+              </div>
+              {pendingPopup.description && (
+                <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}>{pendingPopup.description}</div>
+              )}
+              {pendingPopup.address && (
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>📍 {pendingPopup.address}</div>
+              )}
+              {pendingPopup.client_initial_price != null && (
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#059669', marginTop: 4 }}>
+                  💰 Ofrece: {Number(pendingPopup.client_initial_price).toLocaleString('es-PY')} Gs.
+                </div>
+              )}
+            </div>
+
+            {/* Offer input (shown after clicking Enviar oferta) */}
+            {popupShowInput ? (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', display: 'block', marginBottom: 4 }}>
+                  Tu precio (Gs.)
+                </label>
+                <input
+                  type="number"
+                  value={popupOfferPrice || ''}
+                  onChange={e => setPopupOfferPrice(Number(e.target.value))}
+                  placeholder="Ej: 150000"
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #6366f1', fontSize: '1rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+            ) : null}
+
+            {/* Action buttons */}
+            {!popupShowInput ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setPopupShowInput(true)}
+                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' }}
+                >
+                  ✅ Enviar oferta
+                </button>
+                <button
+                  onClick={dismissPopup}
+                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                >
+                  Ahora no
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={sendPopupOffer}
+                  disabled={popupSending || popupOfferPrice <= 0}
+                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: popupSending || popupOfferPrice <= 0 ? '#a5b4fc' : '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: popupSending || popupOfferPrice <= 0 ? 'default' : 'pointer' }}
+                >
+                  {popupSending ? 'Enviando…' : '📤 Confirmar oferta'}
+                </button>
+                <button
+                  onClick={() => setPopupShowInput(false)}
+                  style={{ padding: '11px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                >
+                  ←
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }

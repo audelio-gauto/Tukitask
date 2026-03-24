@@ -65,6 +65,13 @@ export default function ClienteDashboard() {
               <div className="client-card-subtitle">Pedidos realizados</div>
               <span className="client-card-arrow">→</span>
             </Link>
+            <Link href="/cliente/mis-servicios" className="client-quick-card card-marketplace">
+              <div className="client-card-icon">🛠</div>
+              <div className="client-card-count">—</div>
+              <div className="client-card-title">Mis Servicios</div>
+              <div className="client-card-subtitle">Técnicos en curso</div>
+              <span className="client-card-arrow">→</span>
+            </Link>
             <Link href="/cliente/enviar" className="client-quick-card card-marketplace">
               <div className="client-card-icon">🚀</div>
               <div className="client-card-count">—</div>
