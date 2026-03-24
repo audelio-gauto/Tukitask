@@ -61,7 +61,89 @@ export default function TecnicoDashboard() {
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
   const [rangoKm, setRangoKm]           = useState(20);
 
+  // Touch drag state
+  const isDragging = useRef(false);
+  const startY = useRef(0);
+  const startTranslate = useRef(0);
+
   const isDesktop = useCallback(() => window.matchMedia('(min-width: 768px)').matches, []);
+
+  const getTranslateY = useCallback(() => {
+    if (!sheetRef.current) return 0;
+    const st = window.getComputedStyle(sheetRef.current);
+    const matrix = new DOMMatrix(st.transform);
+    return matrix.m42;
+  }, []);
+
+  const setSheet = useCallback((state: 'collapsed' | 'half' | 'full') => {
+    if (isDesktop()) return;
+    setSheetState(state);
+  }, [isDesktop]);
+
+  // Attach drag handlers to the sheet
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+
+    function onStart(e: TouchEvent | MouseEvent) {
+      if (isDesktop()) return;
+      const tag = ((e.target as HTMLElement)?.tagName || '').toLowerCase();
+      if (['button', 'input', 'textarea', 'select', 'a'].includes(tag)) return;
+      isDragging.current = true;
+      startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      startTranslate.current = getTranslateY();
+      sheet!.style.transition = 'none';
+    }
+
+    function onMove(e: TouchEvent | MouseEvent) {
+      if (!isDragging.current) return;
+      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const delta = currentY - startY.current;
+      const newTranslate = Math.max(0, startTranslate.current + delta);
+      sheet!.style.transform = `translateY(${newTranslate}px)`;
+    }
+
+    function onEnd() {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      sheet!.style.transition = '';
+      const finalTranslate = getTranslateY();
+      const viewH = window.innerHeight;
+      if (finalTranslate > viewH * 0.6) {
+        setSheet('collapsed');
+      } else if (finalTranslate > viewH * 0.3) {
+        setSheet('half');
+      } else {
+        setSheet('full');
+      }
+    }
+
+    sheet.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    sheet.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+
+    const handleResize = () => {
+      if (isDesktop()) {
+        sheet.style.transform = '';
+      } else {
+        setSheet('half');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      sheet.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      sheet.removeEventListener('mousedown', onStart);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [getTranslateY, isDesktop, setSheet]);
 
   // Bootstrap from localStorage + API on mount
   useEffect(() => {
@@ -230,12 +312,12 @@ export default function TecnicoDashboard() {
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#6366f1' }}>{rangoKm} km</span>
               </div>
               <input
-                type="range" min={1} max={60} step={1} value={rangoKm}
+                type="range" min={1} max={100} step={1} value={rangoKm}
                 onChange={e => setRangoKm(Number(e.target.value))}
                 style={{ width: '100%', accentColor: '#6366f1' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
-                <span>1 km</span><span>60 km</span>
+                <span>1 km</span><span>100 km</span>
               </div>
             </div>
 
