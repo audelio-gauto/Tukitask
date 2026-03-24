@@ -198,6 +198,7 @@ export async function POST(req: Request) {
           client_initial_price: price ? Number(price) : null,
           payment_method:       payment_method || 'efectivo',
           scheduled_at:         scheduled_at || null,
+          photos:               body.photos || null,
         })
         .select()
         .maybeSingle();

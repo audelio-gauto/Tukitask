@@ -1,8 +1,25 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+
+// ── Haversine ────────────────────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Static map with A & B pins ───────────────────────────────────────────────
+function staticMapUrl(aLat: number, aLng: number, bLat: number, bLng: number) {
+  if (!MAPBOX_TOKEN) return '';
+  const pins = `pin-s-a+10b981(${aLng},${aLat}),pin-s-b+ef4444(${bLng},${bLat})`;
+  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${pins}/auto/600x180@2x?padding=40&access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+}
 
 interface Job {
   id: string;
@@ -10,39 +27,46 @@ interface Job {
   service_type: string;
   service_gender: string;
   client_name: string | null;
+  client_photo: string | null;
   client_rating: number | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   scheduled_at: string | null;
   client_initial_price: number | null;
   description: string | null;
+  photos: string[] | null;
   my_offer: { status: string; proposed_price: number } | null;
 }
 
 const SERVICE_LABELS: Record<string, string> = {
-  limpieza: '🧹 Limpieza',
-  niera: '👶 Niñera',
-  cocina: '🍳 Cocina',
-  eventos: '🎉 Eventos',
-  cuidado_mascotas: '🐾 Cuidado Mascotas',
-  cuidado_adultos: '👴 Cuidado adultos',
-  aire_split: '❄️ Tec Aire Split',
-  electrico: '⚡ Serv. Eléctrico',
-  plomeria: '🔧 Serv. Plomería',
-  cerrajeria: '🔑 Serv. Cerrajería',
-  otros: '✨ Otros',
+  limpieza: '🧹 Limpieza', niera: '👶 Niñera', cocina: '🍳 Cocina',
+  eventos: '🎉 Eventos', cuidado_mascotas: '🐾 Mascotas', cuidado_adultos: '👴 Adultos',
+  aire_split: '❄️ Aire Split', electrico: '⚡ Eléctrico', plomeria: '🔧 Plomería',
+  cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
 };
 
 export default function OfertasPage() {
-  const router  = useRouter();
+  const router = useRouter();
   const { email } = useDriverContext();
-  const [jobs, setJobs]   = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Per-job offer input state
+  const [jobs, setJobs]         = useState<Job[]>([]);
+  const [loading, setLoading]   = useState(true);
   const [offerPrices, setOfferPrices] = useState<Record<string, number>>({});
   const [offerNotes, setOfferNotes]   = useState<Record<string, string>>({});
   const [sending, setSending]         = useState<string | null>(null);
-  const [showInput, setShowInput]     = useState<string | null>(null); // jobId with open price input
+  const [showInput, setShowInput]     = useState<string | null>(null);
+  const [lightbox, setLightbox]       = useState<string | null>(null);
+  const [myPos, setMyPos] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const wid = navigator.geolocation.watchPosition(
+      pos => setMyPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 15_000 },
+    );
+    return () => navigator.geolocation.clearWatch(wid);
+  }, []);
 
   const loadOffers = useCallback(() => {
     if (!email) return;
@@ -51,7 +75,6 @@ export default function OfertasPage() {
       .then(data => {
         const arr = Array.isArray(data) ? data : [];
         setJobs(arr);
-        // Pre-fill offer prices with client's suggested price
         setOfferPrices(prev => {
           const next = { ...prev };
           arr.forEach((j: Job) => { if (!(j.id in next)) next[j.id] = j.client_initial_price ?? 0; });
@@ -74,23 +97,18 @@ export default function OfertasPage() {
     if (!price || price <= 0) return;
     setSending(jobId);
     try {
-      const res  = await fetch('/api/tecnico/jobs', {
+      const res = await fetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'send_offer',
-          jobId,
-          tecnicoEmail: email,
-          proposedPrice: price,
-          note: offerNotes[jobId] || undefined,
+          action: 'send_offer', jobId, tecnicoEmail: email,
+          proposedPrice: price, note: offerNotes[jobId] || undefined,
         }),
       });
       const json = await res.json();
       if (json.offer) {
         setJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, my_offer: { status: 'pending', proposed_price: price } }
-          : j
-        ));
+          ? { ...j, my_offer: { status: 'pending', proposed_price: price } } : j));
         setShowInput(null);
       }
     } catch {}
@@ -101,129 +119,217 @@ export default function OfertasPage() {
     if (!s) return '—';
     return new Date(s).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
-  const fmtGs = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs.` : null;
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: 80 }}>
-      {/* Header */}
-      <div style={{ background: '#6366f1', color: '#fff', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
+    <div style={{ minHeight: '100dvh', background: '#0f172a', paddingBottom: 80 }}>
+      <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', color: '#fff', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🎁 Solicitudes disponibles</h1>
-          <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85 }}>Enviá tu precio — el cliente decide</p>
+          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9' }}>🎁 Solicitudes disponibles</h1>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>Enviá tu precio — el cliente decide</p>
         </div>
-        <button onClick={loadOffers} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
-          ↺
-        </button>
+        <button onClick={loadOffers} style={{ marginLeft: 'auto', background: '#334155', border: 'none', color: '#94a3b8', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>↺</button>
       </div>
 
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '14px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', paddingTop: 60, color: '#9ca3af' }}>
+          <div style={{ textAlign: 'center', paddingTop: 60, color: '#64748b' }}>
             <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
-            <p>Buscando solicitudes...</p>
+            <p>Buscando solicitudes…</p>
           </div>
         ) : jobs.length === 0 ? (
-          <div style={{ textAlign: 'center', paddingTop: 60, color: '#9ca3af' }}>
+          <div style={{ textAlign: 'center', paddingTop: 60, color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔍</div>
-            <p style={{ fontWeight: 600, color: '#6b7280' }}>Sin solicitudes por ahora</p>
-            <p style={{ fontSize: '0.85rem' }}>Cuando llegue una solicitud que coincida con tu perfil aparecerá acá.</p>
+            <p style={{ fontWeight: 600, color: '#94a3b8' }}>Sin solicitudes por ahora</p>
+            <p style={{ fontSize: '0.85rem' }}>Cuando lleguen solicitudes que coincidan con tu perfil, aparecerán acá.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {jobs.map(job => {
               const alreadySent = !!job.my_offer;
               const isOpen      = showInput === job.id;
+              const hasMap      = myPos != null && job.lat != null && job.lng != null;
+              const distKm      = (myPos && job.lat != null && job.lng != null)
+                ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng))
+                : null;
+
               return (
-                <div key={job.id} style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 6px rgba(0,0,0,0.07)', border: `1.5px solid ${alreadySent ? '#a5b4fc' : '#e2e8f0'}` }}>
-                  {/* Service + client */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
-                      {SERVICE_LABELS[job.service_type] ?? job.service_type}
-                    </span>
-                    {job.client_initial_price != null && (
-                      <span style={{ fontWeight: 800, color: '#0ea5e9', fontSize: '0.9rem' }}>
-                        💬 {fmtGs(job.client_initial_price)}
+                <div key={job.id} style={{
+                  background: '#1e293b',
+                  borderRadius: 18,
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                  border: `1.5px solid ${alreadySent ? '#6366f1' : '#334155'}`,
+                }}>
+                  {/* Static map A→B */}
+                  {hasMap && MAPBOX_TOKEN ? (
+                    <div style={{ position: 'relative', height: 160, background: '#0f172a' }}>
+                      <img
+                        src={staticMapUrl(myPos!.lat, myPos!.lng, Number(job.lat), Number(job.lng))}
+                        alt="mapa"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      {distKm != null && (
+                        <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.75)', color: '#c8ff00', borderRadius: 8, padding: '3px 10px', fontSize: '0.78rem', fontWeight: 800 }}>
+                          📐 {distKm.toFixed(1)} km
+                        </div>
+                      )}
+                    </div>
+                  ) : distKm != null && (
+                    <div style={{ background: '#0f172a', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: '0.8rem', color: '#c8ff00', fontWeight: 700 }}>📐 {distKm.toFixed(1)} km</span>
+                    </div>
+                  )}
+
+                  <div style={{ padding: '14px 14px 16px' }}>
+                    {/* Service + price */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9' }}>
+                        {SERVICE_LABELS[job.service_type] ?? job.service_type}
                       </span>
+                      {job.client_initial_price != null && (
+                        <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1.05rem' }}>
+                          ₲{Number(job.client_initial_price).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* A→B route block */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
+                        <div style={{ width: 2, flex: 1, minHeight: 18, background: '#475569', margin: '3px 0' }} />
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>B</div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.81rem', color: '#64748b', marginBottom: 6 }}>
+                          {myPos ? `📍 Mi ubicación (${myPos.lat.toFixed(4)}, ${myPos.lng.toFixed(4)})` : '📍 Tu ubicación actual'}
+                        </div>
+                        <div style={{ height: 4 }} />
+                        <div style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.4 }}>
+                          {job.address ?? 'Dirección no especificada'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Client info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, padding: '8px 10px', background: '#0f172a', borderRadius: 10 }}>
+                      {job.client_photo ? (
+                        <img src={job.client_photo} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155' }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>👤</div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f1f5f9' }}>{job.client_name ?? 'Cliente'}</div>
+                        {job.client_rating != null && (
+                          <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>
+                            {'★'.repeat(Math.round(job.client_rating))} {job.client_rating.toFixed(1)}
+                          </div>
+                        )}
+                      </div>
+                      {job.scheduled_at && (
+                        <div style={{ marginLeft: 'auto', fontSize: '0.73rem', color: '#64748b', textAlign: 'right' }}>
+                          📅 {fmtDate(job.scheduled_at)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {job.description && (
+                      <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, borderLeft: '3px solid #6366f1' }}>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#a5b4fc', lineHeight: 1.45 }}>{job.description}</p>
+                      </div>
+                    )}
+
+                    {/* Client photos */}
+                    {job.photos && job.photos.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fotos del cliente</p>
+                        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                          {job.photos.map((url, i) => (
+                            <img
+                              key={i}
+                              src={url}
+                              alt={`foto ${i + 1}`}
+                              onClick={() => setLightbox(url)}
+                              style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', border: '1.5px solid #334155' }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ height: 1, background: '#334155', marginBottom: 12 }} />
+
+                    {/* Offer state */}
+                    {alreadySent ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#a5b4fc', fontWeight: 700 }}>📤 Oferta enviada</span>
+                        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>
+                          ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>⏳</span>
+                      </div>
+                    ) : isOpen ? (
+                      <div>
+                        <div style={{ marginBottom: 8 }}>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Tu precio (Gs.)</label>
+                          <input
+                            type="number"
+                            value={offerPrices[job.id] || ''}
+                            onChange={e => setOfferPrices(prev => ({ ...prev, [job.id]: Number(e.target.value) }))}
+                            placeholder={job.client_initial_price ? String(job.client_initial_price) : 'Ej: 150000'}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #6366f1', background: '#0f172a', color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
+                          />
+                        </div>
+                        <div style={{ marginBottom: 10 }}>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Nota (opcional)</label>
+                          <input
+                            type="text"
+                            value={offerNotes[job.id] || ''}
+                            onChange={e => setOfferNotes(prev => ({ ...prev, [job.id]: e.target.value }))}
+                            placeholder="Ej: Tengo experiencia en esto…"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #334155', background: '#0f172a', color: '#d1d5db', fontSize: '0.9rem', boxSizing: 'border-box', outline: 'none' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => sendOffer(job.id)}
+                            disabled={sending === job.id || !(offerPrices[job.id] > 0)}
+                            style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: sending === job.id || !(offerPrices[job.id] > 0) ? '#334155' : '#6366f1', color: '#fff', fontWeight: 800, cursor: sending === job.id ? 'default' : 'pointer', fontSize: '0.9rem' }}
+                          >
+                            {sending === job.id ? 'Enviando…' : '📤 Enviar oferta'}
+                          </button>
+                          <button onClick={() => setShowInput(null)}
+                            style={{ padding: '11px 14px', borderRadius: 12, border: '1.5px solid #334155', background: 'transparent', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
+                            ←
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowInput(job.id)}
+                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
+                      >
+                        💬 Enviar mi precio
+                      </button>
                     )}
                   </div>
-
-                  {job.description && (
-                    <p style={{ margin: '0 0 6px', fontSize: '0.82rem', color: '#64748b' }}>{job.description}</p>
-                  )}
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12, fontSize: '0.79rem', color: '#64748b' }}>
-                    {job.client_name && <span>👤 {job.client_name}</span>}
-                    {job.client_rating != null && <span>{'★'.repeat(Math.round(job.client_rating))} {job.client_rating.toFixed(1)}</span>}
-                    {job.address && <span>📍 {job.address}</span>}
-                    {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
-                  </div>
-
-                  {/* Already sent */}
-                  {alreadySent ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10, background: '#e0e7ff', color: '#6366f1', fontWeight: 700, fontSize: '0.85rem' }}>
-                      <span>📤 Oferta enviada:</span>
-                      <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#4f46e5' }}>
-                        {fmtGs(job.my_offer!.proposed_price)}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>⏳ esperando</span>
-                    </div>
-                  ) : isOpen ? (
-                    /* Price input form */
-                    <div>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>
-                          Tu precio (Gs.)
-                        </label>
-                        <input
-                          type="number"
-                          value={offerPrices[job.id] || ''}
-                          onChange={e => setOfferPrices(prev => ({ ...prev, [job.id]: Number(e.target.value) }))}
-                          placeholder={job.client_initial_price ? String(job.client_initial_price) : 'Ej: 150000'}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #6366f1', fontSize: '1rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
-                        />
-                      </div>
-                      <div style={{ marginBottom: 10 }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>
-                          Nota (opcional)
-                        </label>
-                        <input
-                          type="text"
-                          value={offerNotes[job.id] || ''}
-                          onChange={e => setOfferNotes(prev => ({ ...prev, [job.id]: e.target.value }))}
-                          placeholder="Ej: Tengo experiencia en esto..."
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #d1d5db', fontSize: '0.9rem', boxSizing: 'border-box', outline: 'none' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => sendOffer(job.id)}
-                          disabled={sending === job.id || !(offerPrices[job.id] > 0)}
-                          style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: sending === job.id || !(offerPrices[job.id] > 0) ? '#a5b4fc' : '#6366f1', color: '#fff', fontWeight: 700, cursor: sending === job.id ? 'default' : 'pointer' }}
-                        >
-                          {sending === job.id ? 'Enviando…' : '📤 Enviar oferta'}
-                        </button>
-                        <button onClick={() => setShowInput(null)}
-                          style={{ padding: '10px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>
-                          ←
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Initial send button */
-                    <button
-                      onClick={() => setShowInput(job.id)}
-                      style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                    >
-                      💬 Enviar mi precio
-                    </button>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src={lightbox} alt="" style={{ maxWidth: '94vw', maxHeight: '90dvh', borderRadius: 14, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: '50%', width: 38, height: 38, fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+        </div>
+      )}
     </div>
   );
 }

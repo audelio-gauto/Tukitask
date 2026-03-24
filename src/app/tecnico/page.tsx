@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -86,6 +87,7 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
 }
 
 export default function TecnicoDashboard() {
+  const router = useRouter();
   const { openDrawer, email } = useDriverContext();
 
   // ── Availability – persisted ───────────────────────────────────────────────
@@ -640,55 +642,21 @@ export default function TecnicoDashboard() {
               )}
             </div>
 
-            {/* Offer input (shown after clicking Enviar oferta) */}
-            {popupShowInput ? (
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', display: 'block', marginBottom: 4 }}>
-                  Tu precio (Gs.)
-                </label>
-                <input
-                  type="number"
-                  value={popupOfferPrice || ''}
-                  onChange={e => setPopupOfferPrice(Number(e.target.value))}
-                  placeholder="Ej: 150000"
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #6366f1', fontSize: '1rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
-                />
-              </div>
-            ) : null}
-
             {/* Action buttons */}
-            {!popupShowInput ? (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setPopupShowInput(true)}
-                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer' }}
-                >
-                  ✅ Enviar oferta
-                </button>
-                <button
-                  onClick={dismissPopup}
-                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
-                >
-                  Ahora no
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={sendPopupOffer}
-                  disabled={popupSending || popupOfferPrice <= 0}
-                  style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: popupSending || popupOfferPrice <= 0 ? '#a5b4fc' : '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: popupSending || popupOfferPrice <= 0 ? 'default' : 'pointer' }}
-                >
-                  {popupSending ? 'Enviando…' : '📤 Confirmar oferta'}
-                </button>
-                <button
-                  onClick={() => setPopupShowInput(false)}
-                  style={{ padding: '11px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
-                >
-                  ←
-                </button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { dismissPopup(); router.push('/tecnico/ofertas'); }}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                👁 Ver solicitud
+              </button>
+              <button
+                onClick={dismissPopup}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+              >
+                Ahora no
+              </button>
+            </div>
           </div>
         </>
       )}

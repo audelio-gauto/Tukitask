@@ -256,6 +256,7 @@ export default function SolicitarServicioPage() {
           description:    details       || null,
           price:          offerPrice,
           payment_method: paymentMethod,
+          photos:         photos.length > 0 ? photos : undefined,
         }),
       });
       const json = await res.json();
