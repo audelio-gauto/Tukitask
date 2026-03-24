@@ -167,6 +167,34 @@ export async function POST(req: Request) {
     const email = String(tecnicoEmail || '').toLowerCase();
     const now   = new Date().toISOString();
 
+    if (action === 'create') {
+      const { service_type, service_gender, client_email, client_name, address, lat, lng,
+              description, price, payment_method, scheduled_at } = body || {};
+      if (!service_type || !client_email) {
+        return NextResponse.json({ error: 'Missing service_type or client_email' }, { status: 400 });
+      }
+      const { data, error } = await sb
+        .from('tecnico_jobs')
+        .insert({
+          status:         'pending',
+          service_type,
+          service_gender: service_gender || 'indiferente',
+          client_email:   String(client_email).toLowerCase(),
+          client_name:    client_name || null,
+          address:        address || null,
+          lat:            lat   ? Number(lat)   : null,
+          lng:            lng   ? Number(lng)   : null,
+          description:    description || null,
+          price:          price ? Number(price) : null,
+          payment_method: payment_method || 'efectivo',
+          scheduled_at:   scheduled_at || null,
+        })
+        .select()
+        .maybeSingle();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ job: data });
+    }
+
     if (action === 'accept') {
       const { data, error } = await sb
         .from('tecnico_jobs')

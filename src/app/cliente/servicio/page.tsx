@@ -62,9 +62,10 @@ const SERVICE_PRICES: Record<string, number> = {
 };
 
 export default function SolicitarServicioPage() {
-  const { openDrawer } = useClientContext();
+  const { openDrawer, email, displayName } = useClientContext();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Location state (same pattern as enviar)
   const [locationAddress, setLocationAddress] = useState('');
@@ -236,25 +237,32 @@ export default function SolicitarServicioPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!category) return;
     setSending(true);
-    const payload = {
-      location: locationAddress,
-      location_lat: locationLat,
-      location_lng: locationLng,
-      category,
-      details,
-      gender_preference: genderPreference,
-      photos: photos.length,
-      suggested_price: suggestedPrice,
-      offer: offerPrice,
-      payment_method: paymentMethod,
-      audio: !!audioBlob,
-      created_at: Date.now(),
-    };
+    setSubmitError('');
     try {
-      localStorage.setItem('servicio_preview', JSON.stringify(payload));
-      await new Promise(r => setTimeout(r, 800));
+      const res = await fetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action:         'create',
+          service_type:   category,
+          service_gender: genderPreference,
+          client_email:   email,
+          client_name:    displayName || email.split('@')[0] || null,
+          address:        locationAddress || null,
+          lat:            locationLat   ? Number(locationLat)  : null,
+          lng:            locationLng   ? Number(locationLng)  : null,
+          description:    details       || null,
+          price:          offerPrice,
+          payment_method: paymentMethod,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Error al enviar');
       setSuccess(true);
+    } catch (err) {
+      setSubmitError((err as Error).message || 'Error al enviar la solicitud');
     } finally {
       setSending(false);
     }
@@ -560,10 +568,17 @@ export default function SolicitarServicioPage() {
           ))}
         </div>
 
+        {/* Error message */}
+        {submitError && (
+          <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: '#fee2e2', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
+            ⚠️ {submitError}
+          </div>
+        )}
+
         {/* CTA */}
         <div className="enviar-cta-row">
           <Link href="/cliente" className="enviar-cta-cancel">Cancelar</Link>
-          <button type="submit" form="servicio-form" className="enviar-cta-submit" disabled={sending || offerPrice <= 0}>
+          <button type="submit" form="servicio-form" className="enviar-cta-submit" disabled={sending || !category || offerPrice <= 0}>
             {sending ? (
               <span className="enviar-cta-loading">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
