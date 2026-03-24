@@ -213,9 +213,11 @@ export default function TecnicoSettings() {
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
+              position: 'relative',
               width: 80, height: 80, borderRadius: '50%', backgroundColor: '#e5e7eb',
               backgroundImage: profilePhoto ? `url(${profilePhoto})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '3px solid var(--tuki-border)'
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '3px solid var(--tuki-border)',
+              overflow: 'hidden', flexShrink: 0,
             }}
           >
             {!profilePhoto && (
@@ -223,7 +225,7 @@ export default function TecnicoSettings() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             )}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '0.65rem', textAlign: 'center' }}>{uploading ? '...' : 'Cambiar'}</div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '0.65rem', textAlign: 'center', padding: '2px 0' }}>{uploading ? '...' : 'Cambiar'}</div>
           </div>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={async (e) => {
             const file = e.target.files?.[0]; if (!file || !email) return; setUploading(true); setError(null); setSuccess(null);
