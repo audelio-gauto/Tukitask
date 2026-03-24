@@ -87,7 +87,7 @@ export default function OfertasPage() {
 
   useEffect(() => {
     loadOffers();
-    const iv = setInterval(loadOffers, 15_000);
+    const iv = setInterval(loadOffers, 8_000);
     return () => clearInterval(iv);
   }, [loadOffers]);
 

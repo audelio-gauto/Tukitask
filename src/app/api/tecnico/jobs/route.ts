@@ -128,7 +128,11 @@ export async function GET(req: Request) {
           .in('job_id', jobIds);
         const offerMap: Record<string, { status: string; proposed_price: number }> = {};
         (myOffers ?? []).forEach(o => { offerMap[o.job_id] = { status: o.status, proposed_price: o.proposed_price }; });
-        return NextResponse.json((jobs ?? []).map(j => ({ ...j, my_offer: offerMap[j.id] ?? null })));
+        return NextResponse.json(
+          (jobs ?? [])
+            .map(j => ({ ...j, my_offer: offerMap[j.id] ?? null }))
+            .filter(j => j.my_offer?.status !== 'rejected')
+        );
       }
       return NextResponse.json(jobs ?? []);
     }
