@@ -29,15 +29,34 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, rangoKm, acceptedServices } = body || {};
+    const { email } = body || {};
     if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     const emailNormalized = String(email).toLowerCase();
-    const payload = {
+    const payload: Record<string, unknown> = {
       email: emailNormalized,
-      rango_km: typeof rangoKm === 'number' ? rangoKm : null,
-      accepted_services: acceptedServices || {},
       updated_at: new Date().toISOString(),
     };
+    // Extended profile fields
+    const fields: Record<string, string> = {
+      gender: 'gender',
+      first_name: 'first_name',
+      last_name: 'last_name',
+      phone: 'phone',
+      company: 'company',
+      address: 'address',
+      city: 'city',
+      profile_photo: 'profile_photo',
+      theme_mode: 'theme_mode',
+      nav_app: 'nav_app',
+      transport_mode: 'transport_mode',
+      vehicle_type: 'vehicle_type',
+      license_plate: 'license_plate',
+    };
+    for (const [bodyKey, colKey] of Object.entries(fields)) {
+      if (body[bodyKey] !== undefined) payload[colKey] = body[bodyKey];
+    }
+    if (body.pickup_range !== undefined) payload.pickup_range = body.pickup_range !== null ? Number(body.pickup_range) : null;
+    if (body.accepts_packages !== undefined) payload.accepts_packages = Boolean(body.accepts_packages);
     const { data, error } = await sb.from('tecnico_settings').upsert(payload, { onConflict: 'email' }).select().maybeSingle();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ settings: data });
