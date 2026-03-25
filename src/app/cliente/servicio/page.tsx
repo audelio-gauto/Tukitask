@@ -129,6 +129,9 @@ export default function SolicitarServicioPage() {
     }
   }, [suggestedPrice]);
 
+  // Step wizard state
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
   // Bottom sheet state
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -424,232 +427,369 @@ export default function SolicitarServicioPage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
-          <form id="servicio-form" onSubmit={handleSubmit}>
-            {/* Ubicación */}
-            <div className="enviar-address-section">
-              <div className="enviar-address-row">
-                <span className="enviar-dot green" />
-                <input
-                  className="enviar-address-input"
-                  placeholder={locationLoading ? 'Detectando ubicación…' : 'Ubicación del servicio'}
-                  value={locationAddress}
-                  onChange={e => setLocationAddress(e.target.value)}
-                  onFocus={() => setSearchMode(true)}
-                  readOnly={locationLoading}
-                />
-                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(true); }} aria-label="Seleccionar en mapa">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                </button>
+          {/* Step indicator */}
+          <div className="enviar-step-indicator">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="enviar-step-item">
+                <div className={`enviar-step-circle ${step === s ? 'active' : step > s ? 'done' : ''}`}>
+                  {step > s ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  ) : s}
+                </div>
+                {s < 3 && <div className={`enviar-step-line ${step > s ? 'done' : ''}`} />}
               </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Preferencia de género — shown first to filter categories */}
-            <div className="enviar-section-label">Preferís que vaya:</div>
-            <div className="gender-preference-row">
-              {[
-                { key: 'mujer',       label: 'Solo mujer',  avatar: '👩' },
-                { key: 'hombre',      label: 'Solo hombre', avatar: '👨' },
-                { key: 'indiferente', label: 'Indiferente', avatar: '🧑' },
-              ].map(pref => (
-                <button
-                  key={pref.key}
-                  type="button"
-                  className={`gender-chip${genderPreference === pref.key ? ' active' : ''}`}
-                  onClick={() => {
-                    setGenderPreference(pref.key);
-                    // Reset category if it's not available for the new gender
-                    if (category) {
-                      const newCats = getCategoriesForGender(pref.key);
-                      if (!newCats.find(c => c.key === category)) setCategory(null);
-                    }
-                  }}
-                >
-                  <span className="gender-chip-avatar">{pref.avatar}</span>
-                  <span className="gender-chip-label">{pref.label}</span>
-                </button>
-              ))}
-            </div>
+          <form id="servicio-form" onSubmit={handleSubmit}>
 
-            {/* Categoría — filtered by gender preference */}
-            <div className="enviar-section-label">Tipo de servicio</div>
-            <div className="enviar-type-scroll">
-              {getCategoriesForGender(genderPreference).map(cat => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  className={`enviar-type-card ${category === cat.key ? 'selected' : ''}`}
-                  onClick={() => setCategory(cat.key)}
-                >
-                  <span className="enviar-type-icon">{cat.icon}</span>
-                  <span className="enviar-type-label">{cat.label}</span>
-                </button>
-              ))}
-            </div>
+            {/* ── STEP 1: UBICACIÓN ── */}
+            {step === 1 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">📍</span>
+                  <div>
+                    <div className="enviar-step-title-main">¿Dónde necesitás el servicio?</div>
+                    <div className="enviar-step-title-sub">Ingresá la dirección o usá tu ubicación</div>
+                  </div>
+                </div>
 
-            {/* Detalles del problema */}
-            <div className="enviar-section-label">¿Qué necesitás en tu casa?</div>
-            <div style={{ marginBottom: 16 }}>
-              <ServiceChatInput
-                placeholder="Ej: limpiar casa hoy, reparar aire acondicionado..."
-                value={details}
-                onChange={setDetails}
-                onSend={(val) => {
-                  if (typeof val === 'string') {
-                    setDetails(val);
-                    setAudioBlob(null);
-                  } else {
-                    setAudioBlob(val);
-                    setDetails('');
-                  }
-                }}
-                audioUrl={audioBlob ? URL.createObjectURL(audioBlob) : null}
-                onAudioDelete={() => setAudioBlob(null)}
-                disabled={sending}
-                isSimpleInput={true}
-              />
-            </div>
+                <div className="enviar-address-section">
+                  <div className="enviar-address-row">
+                    <span className="enviar-dot green" />
+                    <input
+                      className="enviar-address-input"
+                      placeholder={locationLoading ? 'Detectando ubicación…' : 'Dirección del servicio'}
+                      value={locationAddress}
+                      onChange={e => setLocationAddress(e.target.value)}
+                      onFocus={() => setSearchMode(true)}
+                      readOnly={locationLoading}
+                    />
+                    <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(true); }} aria-label="Seleccionar en mapa">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                    </button>
+                  </div>
+                </div>
 
-            {/* Fotos */}
-            <div className="enviar-section-label">Fotos del problema</div>
-            <div className="photo-upload-area">
-              <input
-                id="photo-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={e => handlePhoto(e.target.files)}
-                className="photo-upload-hidden"
-              />
-              {photos.length === 0 ? (
-                <label htmlFor="photo-upload" className="photo-upload-placeholder">
-                  {photosUploading ? (
-                    <span style={{ color: '#F5C518', fontSize: '0.85rem', fontWeight: 600 }}>Subiendo...</span>
-                  ) : (
-                    <>
-                      <svg width="40" height="40" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="3" />
-                        <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                      </svg>
-                      <span className="photo-upload-text">Tocar para agregar fotos</span>
-                    </>
-                  )}
-                </label>
-              ) : (
-                <div className="photo-grid">
-                  {photos.map((p, i) => (
-                    <div key={i} className="photo-thumb">
-                      <img src={p} alt="" />
-                      <button
-                        type="button"
-                        className="photo-thumb-delete"
-                        onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
-                      >
-                        <svg width="14" height="14" fill="none" stroke="#fff" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                      </button>
+                {locationAddress && locationLat && (
+                  <div className="enviar-route-info">
+                    <div className="enviar-route-stat">
+                      <span className="enviar-route-icon" style={{ background: '#10b981' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                      </span>
+                      <span style={{ fontSize: '0.82rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationAddress.split(',').slice(0, 2).join(',')}</span>
                     </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="enviar-next-btn"
+                  disabled={!locationLat}
+                  onClick={() => { setStep(2); setSheet('full'); }}
+                >
+                  Continuar
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+              </>
+            )}
+
+            {/* ── STEP 2: TIPO DE SERVICIO ── */}
+            {step === 2 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">🛠️</span>
+                  <div>
+                    <div className="enviar-step-title-main">¿Qué tipo de servicio?</div>
+                    <div className="enviar-step-title-sub">Elegí quién y qué necesitás</div>
+                  </div>
+                </div>
+
+                {/* Gender preference cards */}
+                <div className="servicio-gender-grid">
+                  {[
+                    { key: 'mujer',       label: 'Mujer',        avatar: '👩', sub: 'Limpieza, niñera, cocina...' },
+                    { key: 'hombre',      label: 'Hombre',       avatar: '👨', sub: 'Técnicos, plomeros...' },
+                    { key: 'indiferente', label: 'Sin preferencia', avatar: '🧑', sub: 'Cualquier técnico' },
+                  ].map(pref => (
+                    <button
+                      key={pref.key}
+                      type="button"
+                      className={`servicio-gender-card ${genderPreference === pref.key ? 'selected' : ''}`}
+                      onClick={() => {
+                        setGenderPreference(pref.key);
+                        if (category) {
+                          const newCats = getCategoriesForGender(pref.key);
+                          if (!newCats.find(c => c.key === category)) setCategory(null);
+                        }
+                      }}
+                    >
+                      <span className="servicio-gender-emoji">{pref.avatar}</span>
+                      <span className="servicio-gender-name">{pref.label}</span>
+                      <span className="servicio-gender-sub">{pref.sub}</span>
+                      {genderPreference === pref.key && (
+                        <span className="enviar-vehicle-check" style={{ top: 6, right: 6 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Category grid */}
+                <div className="servicio-section-label">Categoría</div>
+                <div className="enviar-vehicle-grid">
+                  {getCategoriesForGender(genderPreference).map(cat => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      className={`enviar-vehicle-card ${category === cat.key ? 'selected' : ''}`}
+                      onClick={() => setCategory(cat.key)}
+                    >
+                      <span className="enviar-vehicle-icon">{cat.icon}</span>
+                      <div className="enviar-vehicle-info">
+                        <span className="enviar-vehicle-name">{cat.label}</span>
+                        {SERVICE_PRICES[cat.key] && (
+                          <span className="enviar-vehicle-sub">Desde {SERVICE_PRICES[cat.key].toLocaleString('es-PY')} Gs</span>
+                        )}
+                      </div>
+                      {category === cat.key && (
+                        <span className="enviar-vehicle-check">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="enviar-step-actions">
+                  <button type="button" className="enviar-back-btn" onClick={() => { setStep(1); setSheet('half'); }}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="enviar-next-btn"
+                    disabled={!category}
+                    onClick={() => setStep(3)}
+                    style={{ flex: 1 }}
+                  >
+                    Continuar
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: DETALLES + PRECIO + SUBMIT ── */}
+            {step === 3 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">📋</span>
+                  <div>
+                    <div className="enviar-step-title-main">Descripción y oferta</div>
+                    <div className="enviar-step-title-sub">Contanos qué necesitás y cuánto pagás</div>
+                  </div>
+                </div>
+
+                {/* Summary row */}
+                <div className="servicio-summary-row">
+                  <div className="servicio-summary-col">
+                    <span className="servicio-summary-icon">📍</span>
+                    <span className="servicio-summary-text">{locationAddress.split(',')[0]}</span>
+                  </div>
+                  <div className="servicio-summary-divider" />
+                  <div className="servicio-summary-col">
+                    <span className="servicio-summary-icon">
+                      {getCategoriesForGender(genderPreference).find(c => c.key === category)?.icon}
+                    </span>
+                    <span className="servicio-summary-text">
+                      {getCategoriesForGender(genderPreference).find(c => c.key === category)?.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem' }}>
+                  <div className="enviar-contact-header" style={{ marginBottom: '0.5rem' }}>Describí el problema</div>
+                  <ServiceChatInput
+                    placeholder="Ej: reparar aire acondicionado, limpiar casa 3 habitaciones..."
+                    value={details}
+                    onChange={setDetails}
+                    onSend={(val) => {
+                      if (typeof val === 'string') {
+                        setDetails(val);
+                        setAudioBlob(null);
+                      } else {
+                        setAudioBlob(val);
+                        setDetails('');
+                      }
+                    }}
+                    audioUrl={audioBlob ? URL.createObjectURL(audioBlob) : null}
+                    onAudioDelete={() => setAudioBlob(null)}
+                    disabled={sending}
+                    isSimpleInput={true}
+                  />
+                </div>
+
+                {/* Photos */}
+                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem', background: '#fafafa' }}>
+                  <div className="enviar-contact-header" style={{ marginBottom: '0.5rem' }}>
+                    Fotos del problema <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af', fontSize: '0.72rem' }}>(opcional)</span>
+                  </div>
+                  <div className="photo-upload-area" style={{ marginBottom: 0 }}>
+                    <input
+                      id="photo-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => handlePhoto(e.target.files)}
+                      className="photo-upload-hidden"
+                    />
+                    {photos.length === 0 ? (
+                      <label htmlFor="photo-upload" className="photo-upload-placeholder" style={{ padding: '12px 0' }}>
+                        {photosUploading ? (
+                          <span style={{ color: '#F5C518', fontSize: '0.85rem', fontWeight: 600 }}>Subiendo...</span>
+                        ) : (
+                          <>
+                            <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="3" />
+                              <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
+                              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                            </svg>
+                            <span className="photo-upload-text">Agregar fotos</span>
+                          </>
+                        )}
+                      </label>
+                    ) : (
+                      <div className="photo-grid">
+                        {photos.map((p, i) => (
+                          <div key={i} className="photo-thumb">
+                            <img src={p} alt="" />
+                            <button
+                              type="button"
+                              className="photo-thumb-delete"
+                              onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                            >
+                              <svg width="14" height="14" fill="none" stroke="#fff" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                          </div>
                   ))}
                   {!photosUploading && (
                     <label htmlFor="photo-upload" className="photo-add-btn">
                       <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                     </label>
-                  )}
-                  {photosUploading && (
-                    <div className="photo-add-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: '#F5C518', fontSize: '0.75rem', fontWeight: 600 }}>...</span>
+                      )}
+                      {!photosUploading && (
+                        <label htmlFor="photo-upload" className="photo-add-btn">
+                          <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                        </label>
+                      )}
+                      {photosUploading && (
+                        <div className="photo-add-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ color: '#F5C518', fontSize: '0.75rem', fontWeight: 600 }}>...</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Spacer for fixed bottom bar */}
-            {locationLat && locationLng && category && (
-              <div style={{ height: 220 }} />
+                {/* Price section */}
+                <div className="enviar-price-section">
+                  <div className="enviar-price-label">
+                    Tu oferta al técnico
+                    {suggestedPrice > 0 && (
+                      <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
+                        Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
+                      </button>
+                    )}
+                  </div>
+                  <div className="enviar-price-control">
+                    <button
+                      type="button"
+                      className="enviar-price-btn minus"
+                      onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
+                      disabled={offerPrice <= 0}
+                      aria-label="Restar 5.000"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                    </button>
+                    <div className="enviar-price-display">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="enviar-price-input"
+                        value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setOfferPrice(Math.max(0, parseInt(raw) || 0));
+                        }}
+                      />
+                      <span className="enviar-price-currency">Gs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="enviar-price-btn plus"
+                      onClick={() => setOfferPrice(prev => prev + 5000)}
+                      aria-label="Sumar 5.000"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payment method */}
+                <div className="enviar-payment-pills">
+                  {paymentMethods.map(pm => (
+                    <button
+                      key={pm.value}
+                      type="button"
+                      className={`enviar-pay-pill ${paymentMethod === pm.value ? 'active' : ''}`}
+                      onClick={() => setPaymentMethod(pm.value)}
+                    >
+                      <span className="enviar-pay-pill-icon">{pm.icon}</span>
+                      <span>{pm.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {submitError && (
+                  <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: '#fee2e2', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
+                    ⚠️ {submitError}
+                  </div>
+                )}
+
+                <div className="enviar-step-actions">
+                  <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                  <button
+                    type="submit"
+                    form="servicio-form"
+                    className="enviar-submit-final"
+                    disabled={sending || !category || offerPrice <= 0}
+                    style={{ flex: 1 }}
+                  >
+                    {sending ? (
+                      <span className="enviar-cta-loading">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                        </svg>
+                        Enviando...
+                      </span>
+                    ) : (
+                      <>Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+                    )}
+                  </button>
+                </div>
+
+                <div style={{ height: '1rem' }} />
+              </>
             )}
+
           </form>
         </div>
       </div>
-
-      {/* ── Fixed bottom bar: Precio + Pago + CTA (same Bolt-style as enviar) ── */}
-      {locationLat && locationLng && category && (
-      <div className="enviar-fixed-bottom">
-        {/* Precio editable con +/- */}
-        <div className="enviar-price-control">
-          <button
-            type="button"
-            className="enviar-price-btn minus"
-            onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
-            disabled={offerPrice <= 0}
-            aria-label="Restar 5.000"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
-          </button>
-
-          <div className="enviar-price-display">
-            <input
-              type="text"
-              inputMode="numeric"
-              className="enviar-price-input"
-              value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/\D/g, '');
-                setOfferPrice(Math.max(0, parseInt(raw) || 0));
-              }}
-            />
-            <span className="enviar-price-currency">Gs</span>
-          </div>
-
-          <button
-            type="button"
-            className="enviar-price-btn plus"
-            onClick={() => setOfferPrice(prev => prev + 5000)}
-            aria-label="Sumar 5.000"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-        </div>
-
-        {/* Método de pago */}
-        <div className="enviar-payment-pills">
-          {paymentMethods.map(pm => (
-            <button
-              key={pm.value}
-              type="button"
-              className={`enviar-pay-pill ${paymentMethod === pm.value ? 'active' : ''}`}
-              onClick={() => setPaymentMethod(pm.value)}
-            >
-              <span className="enviar-pay-pill-icon">{pm.icon}</span>
-              <span>{pm.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Error message */}
-        {submitError && (
-          <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: '#fee2e2', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
-            ⚠️ {submitError}
-          </div>
-        )}
-
-        {/* CTA */}
-        <div className="enviar-cta-row">
-          <Link href="/cliente" className="enviar-cta-cancel">Cancelar</Link>
-          <button type="submit" form="servicio-form" className="enviar-cta-submit" disabled={sending || !category || offerPrice <= 0}>
-            {sending ? (
-              <span className="enviar-cta-loading">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-                </svg>
-                Enviando...
-              </span>
-            ) : (
-              <>Solicitar Servicio · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
-            )}
-          </button>
-        </div>
-      </div>
-      )}
     </>
   );
 }
