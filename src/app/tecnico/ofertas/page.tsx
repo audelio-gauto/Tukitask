@@ -268,6 +268,7 @@ export default function OfertasPage() {
                               src={url}
                               alt={`foto ${i + 1}`}
                               onClick={() => setLightbox(url)}
+                              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                               style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', border: '1.5px solid #334155' }}
                             />
                           ))}

@@ -110,6 +110,7 @@ export default function SolicitarServicioPage() {
   const [genderPreference, setGenderPreference] = useState('indiferente'); // 'mujer', 'hombre', 'indiferente'
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photosUploading, setPhotosUploading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
 
   // Pricing state
@@ -228,12 +229,31 @@ export default function SolicitarServicioPage() {
   }, [getTranslateY, isDesktop, setSheet]);
 
   const handlePhoto = async (fileList: FileList | null) => {
-    if (!fileList) return;
-    const urls: string[] = [];
+    if (!fileList || fileList.length === 0) return;
+    setPhotosUploading(true);
+    const uploaded: string[] = [];
     for (let i = 0; i < fileList.length; i++) {
-      urls.push(URL.createObjectURL(fileList[i]));
+      const file = fileList[i];
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const res = await fetch('/api/upload-service-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, mimeType: file.type }),
+        });
+        const json = await res.json();
+        if (json.url) uploaded.push(json.url);
+      } catch {
+        // skip failed uploads silently
+      }
     }
-    setPhotos(prev => [...prev, ...urls]);
+    setPhotos(prev => [...prev, ...uploaded]);
+    setPhotosUploading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -502,12 +522,18 @@ export default function SolicitarServicioPage() {
               />
               {photos.length === 0 ? (
                 <label htmlFor="photo-upload" className="photo-upload-placeholder">
-                  <svg width="40" height="40" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="3" />
-                    <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                  </svg>
-                  <span className="photo-upload-text">Tocar para agregar fotos</span>
+                  {photosUploading ? (
+                    <span style={{ color: '#F5C518', fontSize: '0.85rem', fontWeight: 600 }}>Subiendo...</span>
+                  ) : (
+                    <>
+                      <svg width="40" height="40" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                      </svg>
+                      <span className="photo-upload-text">Tocar para agregar fotos</span>
+                    </>
+                  )}
                 </label>
               ) : (
                 <div className="photo-grid">
@@ -523,9 +549,16 @@ export default function SolicitarServicioPage() {
                       </button>
                     </div>
                   ))}
-                  <label htmlFor="photo-upload" className="photo-add-btn">
-                    <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                  </label>
+                  {!photosUploading && (
+                    <label htmlFor="photo-upload" className="photo-add-btn">
+                      <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    </label>
+                  )}
+                  {photosUploading && (
+                    <div className="photo-add-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#F5C518', fontSize: '0.75rem', fontWeight: 600 }}>...</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

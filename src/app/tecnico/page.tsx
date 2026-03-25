@@ -603,10 +603,10 @@ export default function TecnicoDashboard() {
             {/* Client info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               {pendingPopup.client_photo ? (
-                <img src={pendingPopup.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
-              ) : (
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
-              )}
+                <img src={pendingPopup.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }}
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextSibling as HTMLElement)?.style && ((e.currentTarget.nextSibling as HTMLElement).style.display = 'flex'); }} />
+              ) : null}
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,197,24,0.15)', display: pendingPopup.client_photo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
               <div>
                 <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{pendingPopup.client_name ?? 'Cliente'}</div>
                 {pendingPopup.client_rating != null && (

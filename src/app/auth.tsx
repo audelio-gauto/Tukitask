@@ -35,6 +35,7 @@ export default function Auth() {
   const [isRegister, setIsRegister] = useState(false);
   const [success, setSuccess]   = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,16 +136,21 @@ export default function Auth() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            <img
-              src="/logo.png"
-              alt="TukiTask"
-              style={{ height: 64, objectFit: 'contain' }}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-            {/* Fallback brand mark */}
-            <div style={{ display: 'none' }} id="logo-fallback">
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>📦</div>
-            </div>
+            {logoFailed ? (
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <path d="M8 10h20v4l-6 6v6h-8v-6l-6-6v-4z" fill="#1C1C2E" />
+                  <circle cx="18" cy="8" r="3" fill="#1C1C2E" />
+                </svg>
+              </div>
+            ) : (
+              <img
+                src="/logo.png"
+                alt="TukiTask"
+                style={{ height: 64, objectFit: 'contain' }}
+                onError={() => setLogoFailed(true)}
+              />
+            )}
           </div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#F5C518', letterSpacing: '-0.02em' }}>
             {isRegister ? 'Crear cuenta' : 'Bienvenido'}
