@@ -16,6 +16,14 @@ export default function SettingsPage() {
   const [sizeSaving, setSizeSaving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+      'Content-Type': 'application/json',
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    };
+  };
+
   useEffect(() => {
     fetch('/api/admin/config')
       .then(r => r.json())
@@ -47,7 +55,7 @@ export default function SettingsPage() {
       setLogoPreview(URL.createObjectURL(file));
       const res = await fetch('/api/admin/upload-logo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ base64, mimeType: file.type, fileName: 'logo' }),
       });
       const json = await res.json();
@@ -69,7 +77,7 @@ export default function SettingsPage() {
     setSizeSaving(true);
     const res = await fetch('/api/admin/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ key: 'logo_size', value: String(logoSize) }),
     });
     const json = await res.json();

@@ -6,7 +6,22 @@ const sb = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY as string,
 );
 
-// GET /api/admin/config  → { logo_url, logo_size, ... }
+async function authorizeAdmin(req: Request) {
+  const auth = (req.headers.get('authorization') || '').trim();
+  if (!auth.startsWith('Bearer ')) return false;
+  const token = auth.split(' ')[1];
+  if (!token) return false;
+  try {
+    const client = sb();
+    // @ts-ignore
+    const { data: { user } } = await client.auth.getUser(token);
+    if (!user) return false;
+    const { data } = await client.from('users').select('role').eq('id', user.id).maybeSingle();
+    return ['admin', 'super_admin', 'owner'].includes(data?.role ?? '');
+  } catch { return false; }
+}
+
+// GET /api/admin/config  → { logo_url, logo_size, ... }  (público — solo lectura)
 export async function GET() {
   const { data, error } = await sb()
     .from('app_config')
@@ -19,8 +34,10 @@ export async function GET() {
   return NextResponse.json(config);
 }
 
-// POST /api/admin/config  body: { key: string, value: string }
+// POST /api/admin/config  body: { key: string, value: string }  — solo admin
 export async function POST(req: Request) {
+  if (!await authorizeAdmin(req))
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   try {
     const { key, value } = await req.json();
     if (!key || value === undefined) {

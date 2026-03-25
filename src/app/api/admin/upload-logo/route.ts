@@ -6,7 +6,24 @@ const sb = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY as string,
 );
 
+async function authorizeAdmin(req: Request) {
+  const auth = (req.headers.get('authorization') || '').trim();
+  if (!auth.startsWith('Bearer ')) return false;
+  const token = auth.split(' ')[1];
+  if (!token) return false;
+  try {
+    const client = sb();
+    // @ts-ignore
+    const { data: { user } } = await client.auth.getUser(token);
+    if (!user) return false;
+    const { data } = await client.from('users').select('role').eq('id', user.id).maybeSingle();
+    return ['admin', 'super_admin', 'owner'].includes(data?.role ?? '');
+  } catch { return false; }
+}
+
 export async function POST(req: Request) {
+  if (!await authorizeAdmin(req))
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   try {
     const { base64, mimeType, fileName } = await req.json();
 
