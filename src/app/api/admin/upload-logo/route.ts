@@ -48,6 +48,13 @@ export async function POST(req: Request) {
     const storedName = fileName ? `logo.${ext}` : `logo_${Date.now()}.${ext}`;
     const client = sb();
 
+    // Auto-create bucket if it doesn't exist
+    const { data: buckets } = await client.storage.listBuckets();
+    const bucketExists = (buckets ?? []).some(b => b.id === 'app-assets');
+    if (!bucketExists) {
+      await client.storage.createBucket('app-assets', { public: true, fileSizeLimit: 2097152 });
+    }
+
     const { error: uploadError } = await client.storage
       .from('app-assets')
       .upload(storedName, buffer, { contentType: mimeType, upsert: true });
