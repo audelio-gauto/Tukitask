@@ -137,17 +137,14 @@ export default function Auth() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             {logoFailed ? (
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                  <path d="M8 10h20v4l-6 6v6h-8v-6l-6-6v-4z" fill="#1C1C2E" />
-                  <circle cx="18" cy="8" r="3" fill="#1C1C2E" />
-                </svg>
+              <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #2563EB, #F5C518)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
+                <span style={{ fontSize: '2.2rem' }}>📦</span>
               </div>
             ) : (
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="TukiTask"
-                style={{ height: 64, objectFit: 'contain' }}
+                style={{ height: 90, width: 'auto', objectFit: 'contain' }}
                 onError={() => setLogoFailed(true)}
               />
             )}

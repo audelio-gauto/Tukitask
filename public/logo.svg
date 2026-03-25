@@ -1,0 +1,17 @@
+<svg viewBox="0 0 220 160" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left: Blue circle with yellow inner square (chat bubble style) -->
+  <circle cx="72" cy="72" r="58" fill="#2563EB"/>
+  <!-- White border rect -->
+  <rect x="40" y="40" width="64" height="64" rx="14" fill="white"/>
+  <!-- Yellow inner rect -->
+  <rect x="50" y="50" width="44" height="44" rx="9" fill="#F5C518"/>
+  <!-- Chat bubble pointer -->
+  <path d="M56 125 L72 148 L88 125" fill="#2563EB"/>
+
+  <!-- Right: Yellow rounded square with blue inner square (speech bubble) -->
+  <rect x="128" y="18" width="82" height="82" rx="18" fill="#F5C518"/>
+  <!-- White border rect -->
+  <rect x="148" y="38" width="42" height="42" rx="10" fill="white"/>
+  <!-- Blue inner rect -->
+  <rect x="157" y="47" width="24" height="24" rx="5" fill="#2563EB"/>
+</svg>
