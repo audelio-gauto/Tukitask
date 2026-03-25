@@ -618,7 +618,7 @@
   overscroll-behavior-x: none;
 }
 .enviar-sheet.collapsed { transform: translateY(80%); }
-.enviar-sheet.half { transform: translateY(calc(100% - 55vh)); }
+.enviar-sheet.half { transform: translateY(calc(100% - 48vh)); }
 .enviar-sheet.full { transform: translateY(0); }
 
 .enviar-sheet-handle {

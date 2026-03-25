@@ -590,7 +590,7 @@ export default function EnviarPaquetePage() {
                   type="button"
                   className="enviar-next-btn"
                   disabled={!form.pickupLat || !form.deliveryLat}
-                  onClick={() => { setStep(2); setSheet('full'); }}
+                  onClick={() => { setStep(2); setSheet('full'); /* vehicle step needs scroll */ }}
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -598,115 +598,11 @@ export default function EnviarPaquetePage() {
               </>
             )}
 
-            {/* ── STEP 2: CONTACTS ── */}
+            {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
             {step === 2 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">👤</span>
-                  <div>
-                    <div className="enviar-step-title-main">¿Quién envía y quién recibe?</div>
-                    <div className="enviar-step-title-sub">Solo nombre y teléfono de cada parte</div>
-                  </div>
-                </div>
-
-                <div className="enviar-contact-card">
-                  <div className="enviar-contact-header">
-                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
-                  </div>
-                  <div className="enviar-field-row">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Nombre</label>
-                      <input
-                        className="enviar-field-input"
-                        placeholder="Nombre completo"
-                        value={form.senderContact}
-                        onChange={e => update('senderContact', e.target.value)}
-                        required
-                        autoComplete="name"
-                      />
-                    </div>
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Teléfono</label>
-                      <input
-                        className="enviar-field-input"
-                        type="tel"
-                        placeholder="0981 000 000"
-                        value={form.senderPhone}
-                        onChange={e => update('senderPhone', e.target.value)}
-                        required
-                        autoComplete="tel"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
-                  <div className="enviar-contact-header">
-                    <span className="enviar-dot red" style={{ width: 10, height: 10 }} /> Destinatario
-                  </div>
-                  <div className="enviar-field-row">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Nombre</label>
-                      <input
-                        className="enviar-field-input"
-                        placeholder="Nombre completo"
-                        value={form.receiverContact}
-                        onChange={e => update('receiverContact', e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Teléfono</label>
-                      <input
-                        className="enviar-field-input"
-                        type="tel"
-                        placeholder="0981 000 000"
-                        value={form.receiverPhone}
-                        onChange={e => update('receiverPhone', e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: '#fafafa' }}>
-                  <div className="enviar-field">
-                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
-                    <textarea
-                      className="enviar-field-textarea"
-                      placeholder="Ej: Dejar en portería, tocar timbre 2 veces, es frágil..."
-                      value={form.instructions}
-                      onChange={e => update('instructions', e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                <div className="enviar-step-actions">
-                  <button type="button" className="enviar-back-btn" onClick={() => setStep(1)}>
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="enviar-next-btn"
-                    disabled={!form.senderContact.trim() || !form.senderPhone.trim() || !form.receiverContact.trim() || !form.receiverPhone.trim()}
-                    onClick={() => setStep(3)}
-                    style={{ flex: 1 }}
-                  >
-                    Continuar
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* ── STEP 3: VEHICLE + PRICE + PAYMENT ── */}
-            {step === 3 && (
-              <>
-                <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">🚀</span>
+                  <span className="enviar-step-title-icon">🚗</span>
                   <div>
                     <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
                     <div className="enviar-step-title-sub">Los conductores verán tu precio y aceptarán</div>
@@ -811,8 +707,112 @@ export default function EnviarPaquetePage() {
                   ))}
                 </div>
 
+                <div className="enviar-step-actions">
+                  <button type="button" className="enviar-back-btn" onClick={() => setStep(1)}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="enviar-next-btn"
+                    disabled={offerPrice <= 0}
+                    onClick={() => setStep(3)}
+                    style={{ flex: 1 }}
+                  >
+                    Continuar
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: CONTACTS ── */}
+            {step === 3 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">👤</span>
+                  <div>
+                    <div className="enviar-step-title-main">¿Quién envía y quién recibe?</div>
+                    <div className="enviar-step-title-sub">Solo nombre y teléfono de cada parte</div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card">
+                  <div className="enviar-contact-header">
+                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
+                  </div>
+                  <div className="enviar-field-row">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Nombre</label>
+                      <input
+                        className="enviar-field-input"
+                        placeholder="Nombre completo"
+                        value={form.senderContact}
+                        onChange={e => update('senderContact', e.target.value)}
+                        required
+                        autoComplete="name"
+                      />
+                    </div>
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Teléfono</label>
+                      <input
+                        className="enviar-field-input"
+                        type="tel"
+                        placeholder="0981 000 000"
+                        value={form.senderPhone}
+                        onChange={e => update('senderPhone', e.target.value)}
+                        required
+                        autoComplete="tel"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
+                  <div className="enviar-contact-header">
+                    <span className="enviar-dot red" style={{ width: 10, height: 10 }} /> Destinatario
+                  </div>
+                  <div className="enviar-field-row">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Nombre</label>
+                      <input
+                        className="enviar-field-input"
+                        placeholder="Nombre completo"
+                        value={form.receiverContact}
+                        onChange={e => update('receiverContact', e.target.value)}
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Teléfono</label>
+                      <input
+                        className="enviar-field-input"
+                        type="tel"
+                        placeholder="0981 000 000"
+                        value={form.receiverPhone}
+                        onChange={e => update('receiverPhone', e.target.value)}
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: '#fafafa' }}>
+                  <div className="enviar-field">
+                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                    <textarea
+                      className="enviar-field-textarea"
+                      placeholder="Ej: Dejar en portería, tocar timbre 2 veces, es frágil..."
+                      value={form.instructions}
+                      onChange={e => update('instructions', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
                 {/* Summary row */}
-                <div className="enviar-summary-row">
+                <div className="enviar-summary-row" style={{ marginTop: '0.75rem' }}>
                   <div className="enviar-summary-item">
                     <span className="enviar-summary-dot green" />
                     <span className="enviar-summary-addr">{form.pickupAddress.split(',')[0]}</span>
@@ -833,7 +833,7 @@ export default function EnviarPaquetePage() {
                     type="submit"
                     form="enviar-form"
                     className="enviar-submit-final"
-                    disabled={sending || offerPrice <= 0}
+                    disabled={sending || offerPrice <= 0 || !form.senderContact.trim() || !form.senderPhone.trim() || !form.receiverContact.trim() || !form.receiverPhone.trim()}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
@@ -844,7 +844,7 @@ export default function EnviarPaquetePage() {
                         Enviando...
                       </span>
                     ) : (
-                      <>🚀 Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+                      <>Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
                     )}
                   </button>
                 </div>
