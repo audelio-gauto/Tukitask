@@ -98,7 +98,6 @@ export default function ClientMap({
       }
 
       mapInstance.current = map;
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       const selfEl = document.createElement('div');
       selfEl.className = 'client-map-marker';
