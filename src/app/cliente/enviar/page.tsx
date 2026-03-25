@@ -10,26 +10,23 @@ const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: 
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
 const vehicleTypes = [
-  { value: 'moto', label: 'Moto Envíos', sub: 'Paquetes chicos', icon: '🏍️' },
-  { value: 'auto', label: 'Auto Envíos', sub: 'Más capacidad', icon: '🚗' },
-  { value: 'motocarro', label: 'Moto Carro Fletes', sub: 'Fletes en moto o carro', icon: '🛵' },
-  { value: 'camion2t', label: 'Camión Fletes', sub: 'Carga grande', icon: '🚛' },
+  { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: '🏍️', priceHint: 'Más económico' },
+  { value: 'auto', label: 'Auto', sub: 'Mayor capacidad', icon: '🚗', priceHint: 'Cómodo y seguro' },
+  { value: 'motocarro', label: 'Moto Carro', sub: 'Fletes 300kg', icon: '🛵', priceHint: 'Carga mediana' },
+  { value: 'camion2t', label: 'Camión 2T', sub: 'Carga pesada', icon: '🚛', priceHint: 'Mudanzas y fletes' },
 ];
-
-
 
 const paymentMethods = [
   { value: 'efectivo', label: 'Efectivo', icon: '💵' },
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
-// (using Mapbox autocomplete results)
-
 export default function EnviarPaquetePage() {
   const { openDrawer, email, displayName, profilePhoto } = useClientContext();
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -44,12 +41,8 @@ export default function EnviarPaquetePage() {
     vehicleType: 'moto',
     senderContact: '',
     senderPhone: '',
-    senderAddress: '',
-    senderRef: '',
     receiverContact: '',
     receiverPhone: '',
-    receiverAddress: '',
-    description: '',
     instructions: '',
     paymentMethod: 'efectivo',
     offer: '',
@@ -348,20 +341,16 @@ export default function EnviarPaquetePage() {
           vehicle_type: form.vehicleType,
           sender_contact: form.senderContact,
           sender_phone: form.senderPhone,
-          sender_address: form.senderAddress,
-          sender_ref: form.senderRef,
           receiver_contact: form.receiverContact,
           receiver_phone: form.receiverPhone,
-          receiver_address: form.receiverAddress,
-          description: form.description,
           instructions: form.instructions,
           payment_method: form.paymentMethod,
-            suggested_price: suggestedPrice,
-            offer: offerPrice > 0 ? String(offerPrice) : form.offer,
-            pickup_lat: form.pickupLat,
-            pickup_lng: form.pickupLng,
-            delivery_lat: form.deliveryLat,
-            delivery_lng: form.deliveryLng,
+          suggested_price: suggestedPrice,
+          offer: offerPrice > 0 ? String(offerPrice) : form.offer,
+          pickup_lat: form.pickupLat,
+          pickup_lng: form.pickupLng,
+          delivery_lat: form.deliveryLat,
+          delivery_lng: form.deliveryLng,
         }),
       });
       if (!res.ok) throw new Error('Error al crear el pedido');
@@ -406,7 +395,7 @@ export default function EnviarPaquetePage() {
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', senderAddress: '', senderRef: '', receiverContact: '', receiverPhone: '', receiverAddress: '', description: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); }}>
+          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', receiverContact: '', receiverPhone: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); }}>
             Nuevo Envío
           </button>
         </div>
@@ -425,24 +414,6 @@ export default function EnviarPaquetePage() {
           showMyLocationButton
         />
       </div>
-
-      {/* Distance / ETA badge — floating above Mapbox map */}
-      {(routeDistanceMeters || distanceKm > 0) && (
-        <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', top: 12, background: 'rgba(255,255,255,0.97)', padding: '8px 18px', borderRadius: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.12)', display: 'flex', gap: 16, alignItems: 'center', zIndex: 9999, pointerEvents: 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#f97316', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-            </span>
-            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1f2937' }}>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)} km</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: '#22c55e', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </span>
-            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) + ' min' : Math.max(1, Math.round((distanceKm / 30) * 60)) + ' min'}</span>
-          </div>
-        </div>
-      )}
 
       {/* Floating menu button (fixed) */}
       <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
@@ -527,183 +498,364 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
+          {/* Step indicator */}
+          <div className="enviar-step-indicator">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="enviar-step-item">
+                <div className={`enviar-step-circle ${step === s ? 'active' : step > s ? 'done' : ''}`}>
+                  {step > s ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  ) : s}
+                </div>
+                {s < 3 && <div className={`enviar-step-line ${step > s ? 'done' : ''}`} />}
+              </div>
+            ))}
+          </div>
+
           <form id="enviar-form" onSubmit={handleSubmit}>
-            {/* Demo geocode (IndexedDB cache + server proxy) */}
 
-            {/* Address inputs — tap to open fullscreen search */}
-            <div className="enviar-address-section">
-              <div className="enviar-address-row">
-                <span className="enviar-dot green" />
-                <input
-                  className="enviar-address-input"
-                  placeholder={pickupLoading ? 'Detectando ubicación…' : 'Punto de recogida'}
-                  value={form.pickupAddress}
-                  onChange={e => { update('pickupAddress', e.target.value); }}
-                  onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
-                  readOnly={pickupLoading}
-                />
-                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                </button>
-              </div>
-              <div className="enviar-address-divider" />
-              <div className="enviar-address-row">
-                <span className="enviar-dot red" />
-                <input
-                  className="enviar-address-input"
-                  placeholder="¿A dónde va el paquete?"
-                  value={form.deliveryAddress}
-                  onChange={e => { update('deliveryAddress', e.target.value); }}
-                  onFocus={() => openSearch('delivery')}
-                />
-                <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('delivery'); }} aria-label="Seleccionar en mapa">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                </button>
-              </div>
-            </div>
+            {/* ── STEP 1: ADDRESSES ── */}
+            {step === 1 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">📍</span>
+                  <div>
+                    <div className="enviar-step-title-main">¿Dónde recogemos y entregamos?</div>
+                    <div className="enviar-step-title-sub">Ingresá el origen y destino del paquete</div>
+                  </div>
+                </div>
 
-            {/* Vehicle type — horizontal swipeable */}
-            <div className="enviar-section-label">Tipo de vehículo</div>
-            <div className="enviar-type-scroll">
-              {vehicleTypes.map(v => (
+                <div className="enviar-address-section">
+                  <div className="enviar-address-row">
+                    <span className="enviar-dot green" />
+                    <input
+                      className="enviar-address-input"
+                      placeholder={pickupLoading ? 'Detectando ubicación…' : 'Punto de recogida'}
+                      value={form.pickupAddress}
+                      onChange={e => { update('pickupAddress', e.target.value); }}
+                      onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
+                      readOnly={pickupLoading}
+                    />
+                    <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                    </button>
+                  </div>
+                  <div className="enviar-address-divider" />
+                  <div className="enviar-address-row">
+                    <span className="enviar-dot red" />
+                    <input
+                      className="enviar-address-input"
+                      placeholder="¿A dónde va el paquete?"
+                      value={form.deliveryAddress}
+                      onChange={e => { update('deliveryAddress', e.target.value); }}
+                      onFocus={() => openSearch('delivery')}
+                    />
+                    <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('delivery'); }} aria-label="Seleccionar en mapa">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Route info pill */}
+                {(routeDistanceMeters || distanceKm > 0) && (
+                  <div className="enviar-route-info">
+                    <div className="enviar-route-stat">
+                      <span className="enviar-route-icon" style={{ background: '#f97316' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                      </span>
+                      <span><strong>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)}</strong> km</span>
+                    </div>
+                    <div className="enviar-route-divider" />
+                    <div className="enviar-route-stat">
+                      <span className="enviar-route-icon" style={{ background: '#22c55e' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      </span>
+                      <span><strong>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) : Math.max(1, Math.round((distanceKm / 30) * 60))}</strong> min</span>
+                    </div>
+                    {suggestedPrice > 0 && (
+                      <>
+                        <div className="enviar-route-divider" />
+                        <div className="enviar-route-stat">
+                          <span className="enviar-route-icon" style={{ background: '#F5C518' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                          </span>
+                          <span>Desde <strong>{suggestedPrice.toLocaleString('es-PY')} Gs</strong></span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <button
-                  key={v.value}
                   type="button"
-                  className={`enviar-type-card ${form.vehicleType === v.value ? 'selected' : ''}`}
-                  onClick={() => update('vehicleType', v.value)}
+                  className="enviar-next-btn"
+                  disabled={!form.pickupLat || !form.deliveryLat}
+                  onClick={() => { setStep(2); setSheet('full'); }}
                 >
-                  <span className="enviar-type-icon">{v.icon}</span>
-                  <span className="enviar-type-label">{v.label}</span>
-                  <span className="enviar-type-sub">{v.sub}</span>
+                  Continuar
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
-              ))}
-            </div>
-
-            {/* Sender details */}
-            <div className="enviar-section-label">Datos del envío</div>
-            <div className="enviar-details-card">
-              <div className="enviar-field-row">
-                <div className="enviar-field">
-                  <label className="enviar-field-label">Contacto remitente</label>
-                  <input className="enviar-field-input" placeholder="Nombre completo" value={form.senderContact} onChange={e => update('senderContact', e.target.value)} required />
-                </div>
-                <div className="enviar-field">
-                  <label className="enviar-field-label">Teléfono</label>
-                  <input className="enviar-field-input" type="tel" placeholder="0981/492174" value={form.senderPhone} onChange={e => update('senderPhone', e.target.value)} required />
-                </div>
-              </div>
-              <div className="enviar-field">
-                <label className="enviar-field-label">Dirección completa del envío</label>
-                <input className="enviar-field-input" placeholder="Calle, número, barrio..." value={form.senderAddress} onChange={e => update('senderAddress', e.target.value)} />
-              </div>
-              <div className="enviar-field">
-                <label className="enviar-field-label">Referencia</label>
-                <input className="enviar-field-input" placeholder="Ej: Frente a la heladería del barrio 5..." value={form.senderRef} onChange={e => update('senderRef', e.target.value)} />
-              </div>
-              <div className="enviar-field-row">
-                <div className="enviar-field">
-                  <label className="enviar-field-label">Contacto destinatario</label>
-                  <input className="enviar-field-input" placeholder="Nombre completo" value={form.receiverContact} onChange={e => update('receiverContact', e.target.value)} required />
-                </div>
-                <div className="enviar-field">
-                  <label className="enviar-field-label">Tel. destinatario</label>
-                  <input className="enviar-field-input" type="tel" placeholder="Teléfono" value={form.receiverPhone} onChange={e => update('receiverPhone', e.target.value)} required />
-                </div>
-              </div>
-              <div className="enviar-field">
-                <label className="enviar-field-label">Dirección de entrega</label>
-                <input className="enviar-field-input" placeholder="Ubicar el punto en el mapa..." value={form.receiverAddress} onChange={e => update('receiverAddress', e.target.value)} />
-              </div>
-            </div>
-
-            {/* Instrucciones */}
-            <div className="enviar-details-card" style={{ marginTop: '0.75rem' }}>
-              <div className="enviar-field">
-                <label className="enviar-field-label">Instrucciones especiales</label>
-                <textarea className="enviar-field-textarea" placeholder="Indicaciones adicionales para el conductor..." value={form.instructions} onChange={e => update('instructions', e.target.value)} rows={2} />
-              </div>
-            </div>
-
-            {/* Spacer for fixed bottom bar */}
-            {form.pickupLat && form.pickupLng && form.deliveryLat && form.deliveryLng && (
-              <div style={{ height: 220 }} />
+              </>
             )}
+
+            {/* ── STEP 2: CONTACTS ── */}
+            {step === 2 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">👤</span>
+                  <div>
+                    <div className="enviar-step-title-main">¿Quién envía y quién recibe?</div>
+                    <div className="enviar-step-title-sub">Solo nombre y teléfono de cada parte</div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card">
+                  <div className="enviar-contact-header">
+                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
+                  </div>
+                  <div className="enviar-field-row">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Nombre</label>
+                      <input
+                        className="enviar-field-input"
+                        placeholder="Nombre completo"
+                        value={form.senderContact}
+                        onChange={e => update('senderContact', e.target.value)}
+                        required
+                        autoComplete="name"
+                      />
+                    </div>
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Teléfono</label>
+                      <input
+                        className="enviar-field-input"
+                        type="tel"
+                        placeholder="0981 000 000"
+                        value={form.senderPhone}
+                        onChange={e => update('senderPhone', e.target.value)}
+                        required
+                        autoComplete="tel"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
+                  <div className="enviar-contact-header">
+                    <span className="enviar-dot red" style={{ width: 10, height: 10 }} /> Destinatario
+                  </div>
+                  <div className="enviar-field-row">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Nombre</label>
+                      <input
+                        className="enviar-field-input"
+                        placeholder="Nombre completo"
+                        value={form.receiverContact}
+                        onChange={e => update('receiverContact', e.target.value)}
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">Teléfono</label>
+                      <input
+                        className="enviar-field-input"
+                        type="tel"
+                        placeholder="0981 000 000"
+                        value={form.receiverPhone}
+                        onChange={e => update('receiverPhone', e.target.value)}
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: '#fafafa' }}>
+                  <div className="enviar-field">
+                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                    <textarea
+                      className="enviar-field-textarea"
+                      placeholder="Ej: Dejar en portería, tocar timbre 2 veces, es frágil..."
+                      value={form.instructions}
+                      onChange={e => update('instructions', e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="enviar-step-actions">
+                  <button type="button" className="enviar-back-btn" onClick={() => setStep(1)}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="enviar-next-btn"
+                    disabled={!form.senderContact.trim() || !form.senderPhone.trim() || !form.receiverContact.trim() || !form.receiverPhone.trim()}
+                    onClick={() => setStep(3)}
+                    style={{ flex: 1 }}
+                  >
+                    Continuar
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: VEHICLE + PRICE + PAYMENT ── */}
+            {step === 3 && (
+              <>
+                <div className="enviar-step-title">
+                  <span className="enviar-step-title-icon">🚀</span>
+                  <div>
+                    <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
+                    <div className="enviar-step-title-sub">Los conductores verán tu precio y aceptarán</div>
+                  </div>
+                </div>
+
+                {/* Vehicle cards */}
+                <div className="enviar-vehicle-grid">
+                  {vehicleTypes.map(v => {
+                    const vp = pricing[v.value];
+                    const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
+                    let estPrice = 0;
+                    if (vp?.base_price) estPrice += vp.base_price;
+                    if (vp?.price_per_km && dist > 0) estPrice += vp.price_per_km * dist;
+                    const globalMin = pricingSettings['min_shipping_price'] ?? 0;
+                    if (globalMin && estPrice < globalMin) estPrice = globalMin;
+                    return (
+                      <button
+                        key={v.value}
+                        type="button"
+                        className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
+                        onClick={() => update('vehicleType', v.value)}
+                      >
+                        <span className="enviar-vehicle-icon">{v.icon}</span>
+                        <div className="enviar-vehicle-info">
+                          <span className="enviar-vehicle-name">{v.label}</span>
+                          <span className="enviar-vehicle-sub">{v.sub}</span>
+                        </div>
+                        <div className="enviar-vehicle-price">
+                          {!loadingPricing && estPrice > 0 ? (
+                            <span>{Math.round(estPrice).toLocaleString('es-PY')} <small>Gs</small></span>
+                          ) : (
+                            <span className="enviar-vehicle-hint">{v.priceHint}</span>
+                          )}
+                        </div>
+                        {form.vehicleType === v.value && (
+                          <span className="enviar-vehicle-check">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Price control */}
+                <div className="enviar-price-section">
+                  <div className="enviar-price-label">
+                    Tu oferta al conductor
+                    {suggestedPrice > 0 && (
+                      <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
+                        Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
+                      </button>
+                    )}
+                  </div>
+                  <div className="enviar-price-control">
+                    <button
+                      type="button"
+                      className="enviar-price-btn minus"
+                      onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
+                      disabled={offerPrice <= 0}
+                      aria-label="Restar 5.000"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                    </button>
+                    <div className="enviar-price-display">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="enviar-price-input"
+                        value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setOfferPrice(Math.max(0, parseInt(raw) || 0));
+                        }}
+                      />
+                      <span className="enviar-price-currency">Gs</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="enviar-price-btn plus"
+                      onClick={() => setOfferPrice(prev => prev + 5000)}
+                      aria-label="Sumar 5.000"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payment method */}
+                <div className="enviar-payment-pills">
+                  {paymentMethods.map(pm => (
+                    <button
+                      key={pm.value}
+                      type="button"
+                      className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
+                      onClick={() => update('paymentMethod', pm.value)}
+                    >
+                      <span className="enviar-pay-pill-icon">{pm.icon}</span>
+                      <span>{pm.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Summary row */}
+                <div className="enviar-summary-row">
+                  <div className="enviar-summary-item">
+                    <span className="enviar-summary-dot green" />
+                    <span className="enviar-summary-addr">{form.pickupAddress.split(',')[0]}</span>
+                  </div>
+                  <svg width="14" height="14" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <div className="enviar-summary-item">
+                    <span className="enviar-summary-dot red" />
+                    <span className="enviar-summary-addr">{form.deliveryAddress.split(',')[0]}</span>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <div className="enviar-step-actions">
+                  <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                  </button>
+                  <button
+                    type="submit"
+                    form="enviar-form"
+                    className="enviar-submit-final"
+                    disabled={sending || offerPrice <= 0}
+                    style={{ flex: 1 }}
+                  >
+                    {sending ? (
+                      <span className="enviar-cta-loading">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                        </svg>
+                        Enviando...
+                      </span>
+                    ) : (
+                      <>🚀 Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+                    )}
+                  </button>
+                </div>
+
+                <div style={{ height: '1rem' }} />
+              </>
+            )}
+
           </form>
         </div>
       </div>
-
-      {/* ── Fixed bottom bar: Precio + Pago + CTA (Bolt-style) ── */}
-      {form.pickupLat && form.pickupLng && form.deliveryLat && form.deliveryLng && (
-      <div className="enviar-fixed-bottom">
-        {/* Precio editable con +/- */}
-        <div className="enviar-price-control">
-          <button
-            type="button"
-            className="enviar-price-btn minus"
-            onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
-            disabled={offerPrice <= 0}
-            aria-label="Restar 5.000"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
-          </button>
-
-          <div className="enviar-price-display">
-            <input
-              type="text"
-              inputMode="numeric"
-              className="enviar-price-input"
-              value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/\D/g, '');
-                setOfferPrice(Math.max(0, parseInt(raw) || 0));
-              }}
-            />
-            <span className="enviar-price-currency">Gs</span>
-          </div>
-
-          <button
-            type="button"
-            className="enviar-price-btn plus"
-            onClick={() => setOfferPrice(prev => prev + 5000)}
-            aria-label="Sumar 5.000"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-        </div>
-
-        {/* Método de pago */}
-        <div className="enviar-payment-pills">
-          {paymentMethods.map(pm => (
-            <button
-              key={pm.value}
-              type="button"
-              className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
-              onClick={() => update('paymentMethod', pm.value)}
-            >
-              <span className="enviar-pay-pill-icon">{pm.icon}</span>
-              <span>{pm.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="enviar-cta-row">
-          <Link href="/cliente" className="enviar-cta-cancel">Cancelar</Link>
-          <button type="submit" form="enviar-form" className="enviar-cta-submit" disabled={sending || offerPrice <= 0}>
-            {sending ? (
-              <span className="enviar-cta-loading">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="animate-spin">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
-                </svg>
-                Enviando...
-              </span>
-            ) : (
-              <>Solicitar Envío · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
-            )}
-          </button>
-        </div>
-      </div>
-      )}
     </>
   );
 }
