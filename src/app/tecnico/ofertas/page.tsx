@@ -165,7 +165,7 @@ export default function OfertasPage() {
                   borderRadius: 18,
                   overflow: 'hidden',
                   boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-                  border: `1.5px solid ${alreadySent ? '#6366f1' : '#334155'}`,
+                  border: `1.5px solid ${alreadySent ? '#F5C518' : '#334155'}`,
                 }}>
                   {/* Static map A→B */}
                   {hasMap && MAPBOX_TOKEN ? (
@@ -244,8 +244,8 @@ export default function OfertasPage() {
 
                     {/* Description */}
                     {job.description && (
-                      <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, borderLeft: '3px solid #6366f1' }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#a5b4fc', lineHeight: 1.45 }}>{job.description}</p>
+                      <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(245,197,24,0.10)', borderRadius: 8, borderLeft: '3px solid #F5C518' }}>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#C8960A', lineHeight: 1.45 }}>{job.description}</p>
                       </div>
                     )}
 
@@ -279,15 +279,15 @@ export default function OfertasPage() {
 
                     {/* Offer state */}
                     {alreadySent ? (
-                      <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${job.my_offer!.status === 'accepted' ? '#10b981' : '#6366f1'}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: job.my_offer!.status === 'accepted' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)' }}>
-                          <span style={{ fontSize: '0.85rem', color: job.my_offer!.status === 'accepted' ? '#6ee7b7' : '#a5b4fc', fontWeight: 700 }}>
+                      <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${job.my_offer!.status === 'accepted' ? '#10b981' : '#F5C518'}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: job.my_offer!.status === 'accepted' ? 'rgba(16,185,129,0.15)' : 'rgba(245,197,24,0.15)' }}>
+                          <span style={{ fontSize: '0.85rem', color: job.my_offer!.status === 'accepted' ? '#6ee7b7' : '#F7D060', fontWeight: 700 }}>
                             {job.my_offer!.status === 'accepted' ? '✅ Aceptada por el cliente' : '📤 Oferta enviada'}
                           </span>
                           <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>
                             ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
                           </span>
-                          {job.my_offer!.status !== 'accepted' && <span style={{ fontSize: '0.72rem', color: '#818cf8' }}>⏳</span>}
+                          {job.my_offer!.status !== 'accepted' && <span style={{ fontSize: '0.72rem', color: '#F7D060' }}>⏳</span>}
                         </div>
                         {job.my_offer!.status === 'accepted' && gmapsUrl && (
                           <button
@@ -307,7 +307,7 @@ export default function OfertasPage() {
                             value={offerPrices[job.id] || ''}
                             onChange={e => setOfferPrices(prev => ({ ...prev, [job.id]: Number(e.target.value) }))}
                             placeholder={job.client_initial_price ? String(job.client_initial_price) : 'Ej: 150000'}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #6366f1', background: '#0f172a', color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #F5C518', background: '#0f172a', color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 700, boxSizing: 'border-box', outline: 'none' }}
                           />
                         </div>
                         <div style={{ marginBottom: 10 }}>
@@ -324,7 +324,7 @@ export default function OfertasPage() {
                           <button
                             onClick={() => sendOffer(job.id)}
                             disabled={sending === job.id || !(offerPrices[job.id] > 0)}
-                            style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: sending === job.id || !(offerPrices[job.id] > 0) ? '#334155' : '#6366f1', color: '#fff', fontWeight: 800, cursor: sending === job.id ? 'default' : 'pointer', fontSize: '0.9rem' }}
+                            style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: sending === job.id || !(offerPrices[job.id] > 0) ? '#334155' : '#F5C518', color: sending === job.id || !(offerPrices[job.id] > 0) ? '#fff' : '#1C1C2E', fontWeight: 800, cursor: sending === job.id ? 'default' : 'pointer', fontSize: '0.9rem' }}
                           >
                             {sending === job.id ? 'Enviando…' : '📤 Enviar oferta'}
                           </button>
@@ -337,7 +337,7 @@ export default function OfertasPage() {
                     ) : (
                       <button
                         onClick={() => setShowInput(job.id)}
-                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
+                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
                       >
                         💬 Enviar mi precio
                       </button>

@@ -1,8 +1,8 @@
 /* TukiTask Driver Panel - Modern CSS (Bolt-style) */
 :root {
-  --tuki-primary: #6366f1;
-  --tuki-primary-dark: #4f46e5;
-  --tuki-primary-light: #818cf8;
+  --tuki-primary: #F5C518;
+  --tuki-primary-dark: #E6A800;
+  --tuki-primary-light: #F7D060;
   --tuki-success: #10b981;
   --tuki-success-dark: #059669;
   --tuki-danger: #ef4444;
@@ -90,7 +90,7 @@
 
 .tuki-drawer-header {
   padding: 2rem 1.5rem 1.5rem;
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  background: linear-gradient(135deg, #F5C518 0%, #F58A07 100%);
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -133,9 +133,9 @@
 }
 .tuki-drawer-link svg { width: 20px; height: 20px; color: #6b7280; flex-shrink: 0; }
 .tuki-drawer-link:hover,
-.tuki-drawer-link.active { background: #f0fdf4; color: #059669; }
+.tuki-drawer-link.active { background: rgba(245,197,24,0.10); color: #C8960A; }
 .tuki-drawer-link:hover svg,
-.tuki-drawer-link.active svg { color: #059669; }
+.tuki-drawer-link.active svg { color: #C8960A; }
 
 .tuki-drawer-footer { border-top: 1px solid #e5e7eb; padding: 0.5rem 0; }
 
@@ -293,10 +293,10 @@ input:checked + .tuki-toggle-slider:before { transform: translateX(1.5rem); }
 }
 .tuki-btn-primary {
   background: linear-gradient(135deg, var(--tuki-primary), var(--tuki-primary-dark));
-  color: white;
-  box-shadow: 0 4px 6px -1px rgba(99,102,241,0.3);
+  color: #1C1C2E;
+  box-shadow: 0 4px 6px -1px rgba(245,197,24,0.35);
 }
-.tuki-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 8px -1px rgba(99,102,241,0.4); }
+.tuki-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 8px -1px rgba(245,197,24,0.45); }
 .tuki-btn-success {
   background: linear-gradient(135deg, var(--tuki-success), var(--tuki-success-dark));
   color: white;
@@ -566,7 +566,7 @@ input:checked + .tuki-toggle-slider:before { transform: translateX(1.5rem); }
 .driver-filter-item:active { transform: scale(0.98); }
 .driver-filter-item.active {
   border-color: var(--tuki-primary);
-  background: rgba(99,102,241,0.06);
+  background: rgba(245,197,24,0.10);
 }
 
 .driver-filter-item-icon {
@@ -625,6 +625,6 @@ input:checked + .tuki-toggle-slider:before { transform: translateX(1.5rem); }
   font-size: 0.95rem;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  box-shadow: 0 4px 12px rgba(245,197,24,0.3);
 }
 .driver-filter-done:active { transform: scale(0.97); }

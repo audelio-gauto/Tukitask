@@ -358,7 +358,7 @@ export default function DeliveriesPage() {
 
           {/* Tracking code + nav badge */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.82rem' }}>#{genTrackingCode(activeJob.id)}</span>
+            <span style={{ color: '#C8960A', fontWeight: 700, fontSize: '0.82rem' }}>#{genTrackingCode(activeJob.id)}</span>
             {activeJob.status === 'accepted' && activeJob.pickup_lat && (
               <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
                 style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
@@ -378,7 +378,7 @@ export default function DeliveriesPage() {
               </a>
             )}
             {activeJob.status === 'return_delivered' && (
-              <span style={{ background: '#6366f1', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700 }}>
+              <span style={{ background: '#F5C518', color: '#1C1C2E', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700 }}>
                 ⏳ Esperando cliente
               </span>
             )}
@@ -428,7 +428,7 @@ export default function DeliveriesPage() {
             </div>
           )}
           {activeJob.instructions && (
-            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.4rem 0.75rem', marginBottom: 12, fontSize: '0.82rem', color: '#a5b4fc' }}>
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.4rem 0.75rem', marginBottom: 12, fontSize: '0.82rem', color: '#C8960A' }}>
               📝 {activeJob.instructions}
             </div>
           )}
@@ -510,13 +510,13 @@ export default function DeliveriesPage() {
           )}
           {activeJob.status === 'driver_returning' && (
             <button onClick={() => handleTransition(activeJob.id, 'return_delivered')} disabled={transitioning}
-              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+              style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
               📦 Confirmar llegada — esperando al remitente
             </button>
           )}
           {activeJob.status === 'return_delivered' && (
-            <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: 12, padding: '0.85rem', textAlign: 'center', border: '1px solid rgba(99,102,241,0.3)' }}>
-              <div style={{ color: '#a5b4fc', fontWeight: 700, marginBottom: 4 }}>⏳ Esperando confirmación final del cliente</div>
+            <div style={{ background: 'rgba(245,197,24,0.10)', borderRadius: 12, padding: '0.85rem', textAlign: 'center', border: '1px solid rgba(245,197,24,0.30)' }}>
+              <div style={{ color: '#C8960A', fontWeight: 700, marginBottom: 4 }}>⏳ Esperando confirmación final del cliente</div>
               <div style={{ color: '#9ca3af', fontSize: '0.83rem' }}>El cliente debe aceptar o rechazar la recepción</div>
             </div>
           )}
@@ -600,16 +600,16 @@ export default function DeliveriesPage() {
               </div>
 
               {req.instructions && (
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.45rem 0.75rem', marginBottom: 12, fontSize: '0.8rem', color: '#a5b4fc' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.45rem 0.75rem', marginBottom: 12, fontSize: '0.8rem', color: '#C8960A' }}>
                   📝 {req.instructions}
                 </div>
               )}
 
               {/* Actions */}
               {alreadyOffered ? (
-                <div style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 14, padding: '1rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#a5b4fc', marginBottom: 4 }}>Tu oferta enviada</div>
-                  <div style={{ fontWeight: 800, color: '#818cf8', fontSize: '1.4rem' }}>{alreadyOffered.toLocaleString()} Gs</div>
+                <div style={{ background: 'rgba(245,197,24,0.15)', borderRadius: 14, padding: '1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 4 }}>Tu oferta enviada</div>
+                  <div style={{ fontWeight: 800, color: '#C8960A', fontSize: '1.4rem' }}>{alreadyOffered.toLocaleString()} Gs</div>
                   <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>Esperando respuesta del cliente...</div>
                 </div>
               ) : (

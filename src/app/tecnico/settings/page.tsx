@@ -165,7 +165,7 @@ export default function TecnicoSettings() {
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: '1.5rem 1rem 1.25rem', gap: '0.6rem',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          background: 'linear-gradient(135deg, #F5C518 0%, #F58A07 100%)',
           borderRadius: '0 0 24px 24px', marginBottom: '1.25rem',
           marginLeft: '-1rem', marginRight: '-1rem', marginTop: '-1rem',
         }}>
@@ -224,12 +224,12 @@ export default function TecnicoSettings() {
             {(['hombre', 'mujer'] as const).map(g => (
               <button key={g} type="button" onClick={() => setGender(g)} style={{
                 flex: 1, padding: '0.9rem 0.5rem', borderRadius: 14,
-                border: gender === g ? '2px solid #6366f1' : '2px solid #e5e7eb',
-                background: gender === g ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#f9fafb',
-                color: gender === g ? '#fff' : '#374151',
+                border: gender === g ? '2px solid #F5C518' : '2px solid #e5e7eb',
+                background: gender === g ? 'linear-gradient(135deg,#F5C518,#F58A07)' : '#f9fafb',
+                color: gender === g ? '#1C1C2E' : '#374151',
                 fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.18s', boxShadow: gender === g ? '0 4px 12px rgba(99,102,241,0.35)' : 'none',
+                transition: 'all 0.18s', boxShadow: gender === g ? '0 4px 12px rgba(245,197,24,0.35)' : 'none',
               }}>
                 <span style={{ fontSize: '1.5rem' }}>{g === 'hombre' ? '👨' : '👩'}</span>
                 <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
@@ -306,9 +306,9 @@ export default function TecnicoSettings() {
           disabled={loading}
           style={{
             width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
-            background: loading ? '#c7d2fe' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: loading ? 'none' : '0 6px 20px rgba(99,102,241,0.4)',
+            background: loading ? '#f0e68c' : 'linear-gradient(135deg, #F5C518, #F58A07)',
+            color: loading ? '#888' : '#1C1C2E', fontWeight: 800, fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: loading ? 'none' : '0 6px 20px rgba(245,197,24,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'all 0.18s',
           }}

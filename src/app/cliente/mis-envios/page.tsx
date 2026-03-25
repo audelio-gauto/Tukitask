@@ -16,7 +16,7 @@ const VEHICLE_LABELS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Buscando drivers...', color: '#f59e0b', bg: '#fffbeb' },
-  negotiating: { label: 'Ofertas recibidas', color: '#6366f1', bg: '#eef2ff' },
+  negotiating: { label: 'Ofertas recibidas', color: '#C8960A', bg: '#FEF9E7' },
   accepted: { label: 'Conductor asignado', color: '#10b981', bg: '#f0fdf4' },
   picking_up: { label: 'En recogida', color: '#f59e0b', bg: '#fffbeb' },
   in_transit: { label: 'En camino', color: '#3b82f6', bg: '#eff6ff' },
@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   cancelled: { label: 'Cancelado', color: '#ef4444', bg: '#fef2f2' },
   failed: { label: 'Entrega fallida', color: '#ef4444', bg: '#fef2f2' },
   returning: { label: 'Conductor devolviendo', color: '#d97706', bg: '#fffbeb' },
-  driver_returning: { label: 'En camino de vuelta', color: '#7c3aed', bg: '#f5f3ff' },
+  driver_returning: { label: 'En camino de vuelta', color: '#C8960A', bg: '#FEF9E7' },
   return_delivered: { label: 'Conductor llegó', color: '#5b21b6', bg: '#f5f3ff' },
   returned: { label: 'Devuelto ✓', color: '#059669', bg: '#ecfdf5' },
   return_rejected: { label: 'Devolución rechazada', color: '#dc2626', bg: '#fef2f2' },
@@ -154,7 +154,7 @@ function SlidingCard({ order, driverOffer }: { order: any; driverOffer?: DriverO
       <div style={{ padding: '0 1rem 0.75rem', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
-          background: driverPhoto ? `url(${driverPhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          background: driverPhoto ? `url(${driverPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: '#fff', fontWeight: 700, fontSize: '1.3rem', border: '3px solid #10b981',
         }}>
@@ -182,7 +182,7 @@ function SlidingCard({ order, driverOffer }: { order: any; driverOffer?: DriverO
       {/* Tracking badge */}
       <div style={{ padding: '0 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <span style={{
-          background: '#eef2ff', color: '#6366f1', padding: '4px 12px',
+          background: '#FEF9E7', color: '#C8960A', padding: '4px 12px',
           borderRadius: 99, fontSize: '0.78rem', fontWeight: 700,
         }}>
           #{trackCode}
@@ -526,13 +526,13 @@ export default function MisEnviosPage() {
         // ── Return / failed flow card ──
         const borderColor = order.status === 'failed' ? '#ef4444'
           : order.status === 'returning' ? '#f59e0b'
-          : order.status === 'driver_returning' ? '#7c3aed'
+          : order.status === 'driver_returning' ? '#C8960A'
           : order.status === 'return_rejected' ? '#dc2626'
           : '#5b21b6';
         const bgColor = order.status === 'failed' ? 'rgba(239,68,68,0.06)'
           : order.status === 'returning' ? 'rgba(245,158,11,0.06)'
           : order.status === 'return_rejected' ? 'rgba(220,38,38,0.06)'
-          : 'rgba(99,102,241,0.06)';
+          : 'rgba(245,197,24,0.06)';
         const statusInfo = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
         const isDoingAction = (s: string) => returningAction === order.id + s;
 
@@ -671,7 +671,7 @@ export default function MisEnviosPage() {
 
             {/* ─ Status: driver_returning — info only ─ */}
             {order.status === 'driver_returning' && (
-              <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.83rem', color: '#7c3aed', fontWeight: 600 }}>
+              <div style={{ background: '#FEF9E7', borderRadius: 10, padding: '0.65rem 0.75rem', fontSize: '0.83rem', color: '#C8960A', fontWeight: 600 }}>
                 🔄 El conductor está en camino de vuelta con tu envío
               </div>
             )}
@@ -819,8 +819,8 @@ export default function MisEnviosPage() {
                                 onClick={() => setNoDriverResets(prev => ({ ...prev, [order.id]: Date.now() }))}
                                 style={{
                                   flex: 2, padding: '0.75rem', border: 'none', borderRadius: 12,
-                                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                  color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem',
+                                  background: 'linear-gradient(135deg, #F5C518, #F58A07)',
+                                  color: '#1C1C2E', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem',
                                 }}>
                                 🔄 Volver a solicitar
                               </button>
@@ -850,7 +850,7 @@ export default function MisEnviosPage() {
                               Las ofertas aparecerán aquí automáticamente
                             </p>
                             <div style={{
-                              width: 40, height: 40, border: '3px solid #6366f1', borderTopColor: 'transparent',
+                              width: 40, height: 40, border: '3px solid #F5C518', borderTopColor: 'transparent',
                               borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '1rem auto 0'
                             }} />
                           </div>
@@ -869,7 +869,7 @@ export default function MisEnviosPage() {
                             }}>
                               <div style={{
                                 width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                                background: driverOffer.driver_photo ? `url(${driverOffer.driver_photo}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                background: driverOffer.driver_photo ? `url(${driverOffer.driver_photo}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 color: '#fff', fontWeight: 700, fontSize: '1.1rem'
                               }}>
@@ -879,7 +879,7 @@ export default function MisEnviosPage() {
                                 <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
                                   {driverOffer.driver_name || driverOffer.driver_email.split('@')[0]}
                                 </div>
-                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#6366f1' }}>
+                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#C8960A' }}>
                                   {Number(driverOffer.amount).toLocaleString()} Gs
                                 </div>
                               </div>

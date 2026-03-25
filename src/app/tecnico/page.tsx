@@ -448,7 +448,7 @@ export default function TecnicoDashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 12px', borderBottom: '1px solid #f1f5f9', marginBottom: 8 }}>
                 <span style={{ fontSize: '1.2rem' }}>{gender === 'hombre' ? '👨' : '👩'}</span>
                 <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
-                  Perfil: <strong style={{ color: '#6366f1' }}>{gender === 'hombre' ? 'Hombre' : 'Mujer'}</strong>
+                  Perfil: <strong style={{ color: '#F5C518' }}>{gender === 'hombre' ? 'Hombre' : 'Mujer'}</strong>
                   {' · '}{enabledCount}/{catalogue.length} activos
                 </span>
               </div>
@@ -481,12 +481,12 @@ export default function TecnicoDashboard() {
                 <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>
                   📍 Rango de trabajo
                 </label>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#6366f1' }}>{rangoKm} km</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#F5C518' }}>{rangoKm} km</span>
               </div>
               <input
                 type="range" min={1} max={100} step={1} value={rangoKm}
                 onChange={e => setRangoKm(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#6366f1' }}
+                style={{ width: '100%', accentColor: '#F5C518' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
                 <span>1 km</span><span>100 km</span>
@@ -525,22 +525,22 @@ export default function TecnicoDashboard() {
 
           {/* Active services summary chip strip */}
           {catalogue.length > 0 && (
-            <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
+            <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6366f1' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
                   🛠 Serv. activos · {rangoKm} km
                 </span>
                 <button
                   type="button"
                   onClick={() => setFilterOpen(true)}
-                  style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: '#C8960A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                 >
                   Editar →
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {catalogue.filter(s => serviceFilters[s.key]).map(s => (
-                  <span key={s.key} style={{ fontSize: '0.75rem', background: '#ede9fe', color: '#6d28d9', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
+                  <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
                     {s.icon} {s.label}
                   </span>
                 ))}
@@ -617,7 +617,7 @@ export default function TecnicoDashboard() {
 
             {/* Service + price */}
             <div style={{ background: '#f8fafc', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, color: '#6366f1', fontSize: '0.9rem', marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, color: '#F5C518', fontSize: '0.9rem', marginBottom: 4 }}>
                 🛠 {pendingPopup.service_type}
               </div>
               {pendingPopup.description && (
@@ -631,7 +631,7 @@ export default function TecnicoDashboard() {
                 const jLat = pendingPopup.lat; const jLng = pendingPopup.lng;
                 if (pos && jLat != null && jLng != null) {
                   const km = haversineKm(pos.lat, pos.lng, Number(jLat), Number(jLng));
-                  return <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#6366f1', marginTop: 2 }}>📏 Distancia: {km.toFixed(1)} km</div>;
+                  return <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#F5C518', marginTop: 2 }}>📏 Distancia: {km.toFixed(1)} km</div>;
                 }
                 return null;
               })()}
@@ -646,7 +646,7 @@ export default function TecnicoDashboard() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => { dismissPopup(); router.push('/tecnico/ofertas'); }}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
               >
                 👁 Ver solicitud
               </button>

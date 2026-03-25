@@ -184,7 +184,7 @@ export default function PricingConfigPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F5C518]" />
       </div>
     );
   }
@@ -295,7 +295,7 @@ export default function PricingConfigPage() {
                     value={v.base_price ?? ''}
                     placeholder="Usa el global"
                     onChange={e => updateVehicle(v.id, 'base_price', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-300"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-300"
                   />
                   <p className="text-[11px] text-gray-400 mt-1">
                     Precio base del envío para {v.emoji} {v.label}. Si vacío, usa el global.
@@ -310,7 +310,7 @@ export default function PricingConfigPage() {
                     value={v.price_per_km ?? ''}
                     placeholder="Usa el global"
                     onChange={e => updateVehicle(v.id, 'price_per_km', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-300"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-300"
                   />
                   <p className="text-[11px] text-gray-400 mt-1">
                     Precio por kilómetro para {v.emoji} {v.label}. Si vacío, usa el global.
@@ -327,7 +327,7 @@ export default function PricingConfigPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 
+          className="px-6 py-2.5 bg-[#F5C518] text-[#1C1C2E] rounded-lg font-medium text-sm hover:bg-[#E6A800] 
             disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           {saving ? 'Guardando...' : 'Guardar Cambios'}

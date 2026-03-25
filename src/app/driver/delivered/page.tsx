@@ -104,7 +104,7 @@ export default function DeliveredPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{
               width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-              background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 700, fontSize: '1.1rem',
               border: '2px solid #e5e7eb',

@@ -99,7 +99,7 @@ export default function UsersPage() {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 bg-[#F5C518] text-[#1C1C2E] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#E6A800] transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -119,7 +119,7 @@ export default function UsersPage() {
                 type="email"
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] outline-none"
                 placeholder="usuario@email.com"
                 required
               />
@@ -130,7 +130,7 @@ export default function UsersPage() {
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] outline-none"
                 placeholder="Mínimo 6 caracteres"
                 required
                 minLength={6}
@@ -141,7 +141,7 @@ export default function UsersPage() {
               <select
                 value={newRole}
                 onChange={e => setNewRole(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] outline-none"
               >
                 {roles.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -150,7 +150,7 @@ export default function UsersPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="bg-[#F5C518] text-[#1C1C2E] px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#E6A800] transition-colors disabled:opacity-50"
               >
                 {creating ? 'Creando...' : 'Crear'}
               </button>
@@ -185,7 +185,7 @@ export default function UsersPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar por email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] outline-none"
               />
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function UsersPage() {
                   onClick={() => setFilter(r)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                     ${filter === r
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-[#F5C518] text-[#1C1C2E]'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
@@ -214,7 +214,7 @@ export default function UsersPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -232,8 +232,8 @@ export default function UsersPage() {
                   <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-indigo-600">{u.email?.[0]?.toUpperCase()}</span>
+                        <div className="w-8 h-8 bg-[#FEF9E7] rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-[#C8960A]">{u.email?.[0]?.toUpperCase()}</span>
                         </div>
                         <span className="text-gray-700 font-medium">{u.email}</span>
                       </div>
@@ -243,7 +243,7 @@ export default function UsersPage() {
                         <select
                           value={editRole}
                           onChange={e => setEditRole(e.target.value)}
-                          className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#F5C518] outline-none"
                         >
                           {roles.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
@@ -289,7 +289,7 @@ export default function UsersPage() {
                           <>
                             <button
                               onClick={() => startEdit(u)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-100 transition-colors"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FEF9E7] text-[#C8960A] rounded-lg text-xs font-medium hover:bg-[#F5C518]/20 transition-colors"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

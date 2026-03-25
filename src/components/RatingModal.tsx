@@ -49,7 +49,7 @@ export default function RatingModal({
         {(avatarUrl || avatarName) && (
           <div style={{
             width: 76, height: 76, borderRadius: '50%', margin: '0 auto 1rem',
-            background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#fff', fontWeight: 800, fontSize: '2rem',
             border: '3px solid #10b981',

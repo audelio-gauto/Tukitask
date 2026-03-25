@@ -26,8 +26,8 @@ export default function AdminHeader() {
       <div className="flex items-center gap-4">
         {/* User info */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-bold">
+          <div className="w-8 h-8 bg-[#F5C518] rounded-full flex items-center justify-center">
+            <span className="text-[#1C1C2E] text-sm font-bold">
               {email ? email[0].toUpperCase() : 'A'}
             </span>
           </div>

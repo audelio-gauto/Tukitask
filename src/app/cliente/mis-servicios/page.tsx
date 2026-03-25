@@ -94,12 +94,12 @@ const SERVICE_LABELS: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; step: number }> = {
-  pending:            { label: 'En espera de ofertas', color: '#6366f1', bg: '#e0e7ff', step: 0 },
+  pending:            { label: 'En espera de ofertas', color: '#C8960A', bg: '#FEF9E7', step: 0 },
   accepted:           { label: 'Técnico confirmado',   color: '#059669', bg: '#d1fae5', step: 1 },
   en_camino:          { label: 'En camino',            color: '#0ea5e9', bg: '#e0f2fe', step: 2 },
-  llegue:             { label: 'Llegó',                color: '#8b5cf6', bg: '#ede9fe', step: 3 },
+  llegue:             { label: 'Llegó',                color: '#C8960A', bg: '#FEF9E7', step: 3 },
   en_proceso:         { label: 'Servicio en proceso',  color: '#d97706', bg: '#fef3c7', step: 4 },
-  completion_pending: { label: '¿Completado?',         color: '#6366f1', bg: '#ede9fe', step: 5 },
+  completion_pending: { label: '¿Completado?',         color: '#C8960A', bg: '#FEF9E7', step: 5 },
   completado:         { label: 'Completado ✅',        color: '#059669', bg: '#d1fae5', step: 6 },
   incidente:          { label: 'Incidente ⚠️',         color: '#ef4444', bg: '#fee2e2', step: 6 },
   cancelled:          { label: 'Cancelado',            color: '#94a3b8', bg: '#f1f5f9', step: 6 },
@@ -230,7 +230,7 @@ export default function MisServiciosPage() {
   return (
     <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: 80 }}>
       {/* Header */}
-      <div style={{ background: '#6366f1', color: '#fff', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ background: 'linear-gradient(135deg, #F5C518, #F58A07)', color: '#1C1C2E', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🛠 Mis Servicios</h1>
@@ -252,7 +252,7 @@ export default function MisServiciosPage() {
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📋</div>
             <p style={{ fontWeight: 600, color: '#6b7280' }}>Sin servicios activos</p>
             <button onClick={() => router.push('/cliente/servicio')}
-              style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+              style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 700, cursor: 'pointer' }}>
               Solicitar servicio
             </button>
           </div>
@@ -310,8 +310,8 @@ export default function MisServiciosPage() {
                       <div style={{ display: 'flex', gap: 2 }}>
                         {STEPS.map((label, i) => (
                           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                            <div style={{ height: 4, width: '100%', borderRadius: 2, background: i < st.step ? '#6366f1' : '#e2e8f0' }} />
-                            <span style={{ fontSize: '0.6rem', color: i < st.step ? '#6366f1' : '#94a3b8', fontWeight: i < st.step ? 700 : 400, textAlign: 'center' }}>{label}</span>
+                            <div style={{ height: 4, width: '100%', borderRadius: 2, background: i < st.step ? '#F5C518' : '#e2e8f0' }} />
+                            <span style={{ fontSize: '0.6rem', color: i < st.step ? '#C8960A' : '#94a3b8', fontWeight: i < st.step ? 700 : 400, textAlign: 'center' }}>{label}</span>
                           </div>
                         ))}
                       </div>
@@ -402,7 +402,7 @@ export default function MisServiciosPage() {
                           </div>
                         </div>
                       </div>
-                      <p style={{ margin: '0 0 10px', fontWeight: 700, color: '#6366f1', fontSize: '0.9rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 10px', fontWeight: 700, color: '#C8960A', fontSize: '0.9rem', textAlign: 'center' }}>
                         ¿El técnico completó el servicio? ({job.completion_attempts}/3)
                       </p>
                       {job.last_rejection_reason && (

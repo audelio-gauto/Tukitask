@@ -43,9 +43,9 @@ const SERVICE_LABELS: Record<string, string> = {
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   accepted:           { label: 'Confirmada',          color: '#059669', bg: '#d1fae5' },
   en_camino:          { label: 'En camino',            color: '#0ea5e9', bg: '#e0f2fe' },
-  llegue:             { label: 'Llegué',               color: '#8b5cf6', bg: '#ede9fe' },
+  llegue:             { label: 'Llegué',               color: '#C8960A', bg: '#FEF9E7' },
   en_proceso:         { label: 'En proceso',           color: '#d97706', bg: '#fef3c7' },
-  completion_pending: { label: 'Esperando cliente',    color: '#6366f1', bg: '#e0e7ff' },
+  completion_pending: { label: 'Esperando cliente',    color: '#C8960A', bg: '#FEF9E7' },
   incidente:          { label: 'Incidente',            color: '#ef4444', bg: '#fee2e2' },
 };
 
@@ -138,7 +138,7 @@ export default function CitasPage() {
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📭</div>
             <p style={{ fontWeight: 600, color: '#6b7280' }}>Sin citas activas</p>
             <p style={{ fontSize: '0.85rem' }}>Envía una oferta para que aparezca acá.</p>
-            <button onClick={() => router.push('/tecnico/ofertas')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={() => router.push('/tecnico/ofertas')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 700, cursor: 'pointer' }}>
               Ver ofertas
             </button>
           </div>
@@ -212,7 +212,7 @@ export default function CitasPage() {
 
                   {job.status === 'en_camino' && (
                     <button onClick={() => doAction(job.id, 'llegue')} disabled={busy}
-                      style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#8b5cf6', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
+                      style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
                       📍 Ya llegué
                     </button>
                   )}
@@ -238,7 +238,7 @@ export default function CitasPage() {
                   )}
 
                   {job.status === 'completion_pending' && (
-                    <div style={{ textAlign: 'center', padding: '10px', borderRadius: 12, background: '#e0e7ff', color: '#6366f1', fontWeight: 700, fontSize: '0.85rem' }}>
+                    <div style={{ textAlign: 'center', padding: '10px', borderRadius: 12, background: '#FEF9E7', color: '#C8960A', fontWeight: 700, fontSize: '0.85rem' }}>
                       ⏳ Esperando confirmación del cliente… ({job.completion_attempts}/3)
                     </div>
                   )}

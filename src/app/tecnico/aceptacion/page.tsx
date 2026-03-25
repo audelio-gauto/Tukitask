@@ -100,7 +100,7 @@ export default function AceptacionPage() {
                 <h2 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>Resumen actual</h2>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem', color: '#64748b' }}>
                   <span>Ofertas disponibles</span>
-                  <strong style={{ color: '#6366f1' }}>{stats.ofertasActivas}</strong>
+                  <strong style={{ color: '#F5C518' }}>{stats.ofertasActivas}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '0.85rem', color: '#64748b' }}>
                   <span>Citas confirmadas</span>

@@ -38,7 +38,7 @@ export default function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { label: 'Total Usuarios', value: stats.total, color: 'bg-indigo-600', icon: '👥' },
+    { label: 'Total Usuarios', value: stats.total, color: 'bg-[#F5C518]', icon: '👥' },
     { label: 'Conductores', value: stats.drivers, color: 'bg-emerald-600', icon: '🚗' },
     { label: 'Vendedores', value: stats.vendedores, color: 'bg-amber-500', icon: '🛒' },
     { label: 'Servicios', value: stats.servicios, color: 'bg-sky-600', icon: '🔧' },
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
           <div className="space-y-3">
             <Link
               href="/admin/users"
-              className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-lg bg-[#FEF9E7] hover:bg-[#F5C518]/20 text-[#C8960A] transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Usuarios recientes</h3>
-            <Link href="/admin/users" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+            <Link href="/admin/users" className="text-sm text-[#C8960A] hover:text-[#E6A800] font-medium">
               Ver todos →
             </Link>
           </div>
@@ -127,8 +127,8 @@ export default function AdminDashboard() {
                   <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-bold text-indigo-600">{u.email?.[0]?.toUpperCase()}</span>
+                        <div className="w-7 h-7 bg-[#FEF9E7] rounded-full flex items-center justify-center">
+                          <span className="text-xs font-bold text-[#C8960A]">{u.email?.[0]?.toUpperCase()}</span>
                         </div>
                         <span className="text-gray-700">{u.email}</span>
                       </div>

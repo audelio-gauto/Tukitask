@@ -1,8 +1,8 @@
 /* TukiTask Client Panel CSS */
 :root {
-  --client-primary: #8B5CF6;
-  --client-primary-dark: #7C3AED;
-  --client-primary-light: #A78BFA;
+  --client-primary: #F5C518;
+  --client-primary-dark: #E6A800;
+  --client-primary-light: #F7D060;
   --client-success: #10b981;
   --client-success-dark: #059669;
   --client-danger: #ef4444;
@@ -44,7 +44,7 @@
 
 .client-sidebar-header {
   padding: 2rem 1.5rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F5C518 0%, #F58A07 100%);
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -83,7 +83,7 @@
 }
 .client-sidebar-link svg { width: 20px; height: 20px; color: #6b7280; flex-shrink: 0; }
 .client-sidebar-link:hover,
-.client-sidebar-link.active { background: #f3f0ff; color: var(--client-primary); }
+.client-sidebar-link.active { background: rgba(245,197,24,0.10); color: var(--client-primary); }
 .client-sidebar-link:hover svg,
 .client-sidebar-link.active svg { color: var(--client-primary); }
 
@@ -138,7 +138,7 @@
 
 /* Welcome banner */
 .client-welcome {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F5C518 0%, #F58A07 100%);
   border-radius: var(--client-radius-lg);
   padding: 1.5rem;
   color: white;
@@ -270,9 +270,9 @@
   transform: translateY(-2px);
 }
 .client-delivery-btn.btn-enviar {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  background: linear-gradient(135deg, #F5C518, #F58A07);
+  color: #1C1C2E;
+  box-shadow: 0 4px 12px rgba(245,197,24,0.3);
 }
 .client-delivery-btn.btn-envios {
   background: white;
@@ -360,7 +360,7 @@
 }
 .client-form-input:focus {
   border-color: var(--client-primary);
-  box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.15);
 }
 .client-form-textarea {
   width: 100%;
@@ -375,7 +375,7 @@
 }
 .client-form-textarea:focus {
   border-color: var(--client-primary);
-  box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.15);
 }
 .client-form-select {
   width: 100%;
@@ -407,12 +407,12 @@
 }
 .client-btn-primary {
   background: linear-gradient(135deg, var(--client-primary), var(--client-primary-dark));
-  color: white;
-  box-shadow: 0 4px 12px rgba(139,92,246,0.3);
+  color: #1C1C2E;
+  box-shadow: 0 4px 12px rgba(245,197,24,0.3);
 }
 .client-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(139,92,246,0.4);
+  box-shadow: 0 6px 16px rgba(245,197,24,0.4);
 }
 .client-btn-success {
   background: linear-gradient(135deg, var(--client-success), var(--client-success-dark));
@@ -576,7 +576,7 @@
   background: var(--client-primary);
   border: 3px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(139,92,246,0.25), 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 0 0 4px rgba(245,197,24,0.25), 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* Floating buttons */
@@ -1009,9 +1009,9 @@
 }
 .enviar-pay-pill:active { transform: scale(0.97); }
 .enviar-pay-pill.active {
-  border-color: #6366f1;
-  background: #eef2ff;
-  color: #4338ca;
+  border-color: #F5C518;
+  background: #FEF9E7;
+  color: #C8960A;
 }
 .enviar-pay-pill-icon { font-size: 1.15rem; }
 

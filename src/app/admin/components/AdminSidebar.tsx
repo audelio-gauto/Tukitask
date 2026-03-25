@@ -173,7 +173,7 @@ export default function AdminSidebar() {
                   ${isActive
                     ? hasSubItems
                       ? 'text-white bg-white/5'
-                      : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                      : 'bg-[#F5C518] text-[#1C1C2E] shadow-lg shadow-[#F5C518]/30'
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
                   }
                   ${collapsed ? 'justify-center' : ''}
@@ -206,7 +206,7 @@ export default function AdminSidebar() {
                         href={sub.href}
                         className={`block px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
                           ${isSubItemActive
-                            ? 'bg-indigo-600/80 text-white'
+                            ? 'bg-[#F5C518] text-[#1C1C2E]'
                             : 'text-gray-400 hover:bg-white/5 hover:text-white'
                           }
                         `}
