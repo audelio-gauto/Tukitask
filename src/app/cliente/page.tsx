@@ -69,17 +69,12 @@ export default function ClienteDashboard() {
       )}
 
       <div className="client-content">
-        {/* Hero compact */}
-        <div className="client-hero">
-          <div
-            className="client-hero-avatar"
-            style={profilePhoto ? { backgroundImage: `url(${profilePhoto})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-          >
-            {!profilePhoto && (displayName?.[0]?.toUpperCase() || '👤')}
-          </div>
-          <div className="client-hero-text">
-            <p className="client-hero-greeting">{getGreeting()},</p>
-            <h2 className="client-hero-name">{displayName || 'Cliente'}</h2>
+        {/* Saludo */}
+        <div className="client-greeting-row">
+          <span className="client-greeting-wave">👋</span>
+          <div>
+            <span className="client-greeting-hi">{getGreeting()},&nbsp;</span>
+            <span className="client-greeting-name">{displayName || 'Cliente'}</span>
           </div>
         </div>
 
