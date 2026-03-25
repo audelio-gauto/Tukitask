@@ -36,6 +36,18 @@ export default function Auth() {
   const [success, setSuccess]   = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [logoUrl, setLogoUrl]   = useState('/logo.svg');
+  const [logoSize, setLogoSize] = useState(90);
+
+  useEffect(() => {
+    fetch('/api/admin/config')
+      .then(r => r.json())
+      .then(cfg => {
+        if (cfg.logo_url)  setLogoUrl(cfg.logo_url);
+        if (cfg.logo_size) setLogoSize(Number(cfg.logo_size));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,9 +154,9 @@ export default function Auth() {
               </div>
             ) : (
               <img
-                src="/logo.svg"
+                src={logoUrl}
                 alt="TukiTask"
-                style={{ height: 90, width: 'auto', objectFit: 'contain' }}
+                style={{ height: logoSize, width: 'auto', objectFit: 'contain' }}
                 onError={() => setLogoFailed(true)}
               />
             )}
