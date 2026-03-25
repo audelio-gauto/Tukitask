@@ -36,17 +36,17 @@ export default function Auth() {
   const [success, setSuccess]   = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
-  const [logoUrl, setLogoUrl]   = useState('/logo.svg');
+  const [logoUrl, setLogoUrl]   = useState<string | null>(null);
   const [logoSize, setLogoSize] = useState(90);
 
   useEffect(() => {
     fetch('/api/admin/config')
       .then(r => r.json())
       .then(cfg => {
-        if (cfg.logo_url)  setLogoUrl(cfg.logo_url);
+        setLogoUrl(cfg.logo_url || '/logo.svg');
         if (cfg.logo_size) setLogoSize(Number(cfg.logo_size));
       })
-      .catch(() => {});
+      .catch(() => { setLogoUrl('/logo.svg'); });
   }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -147,8 +147,11 @@ export default function Auth() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-            {logoFailed ? (
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, minHeight: 90 }}>
+            {logoUrl === null ? (
+              // Placeholder while config loads — no flash
+              <div style={{ width: 90, height: 90 }} />
+            ) : logoFailed ? (
               <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #2563EB, #F5C518)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
                 <span style={{ fontSize: '2.2rem' }}>📦</span>
               </div>
