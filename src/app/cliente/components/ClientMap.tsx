@@ -265,7 +265,7 @@ export default function ClientMap({
           onClick={handleMyLocation}
           aria-label="Mi ubicación"
           style={{
-            position: 'absolute', top: 16, right: 16, zIndex: 10,
+            position: 'absolute', bottom: 'calc(48vh + 16px)', right: 16, zIndex: 10,
             width: 44, height: 44, borderRadius: '50%', border: 'none',
             background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)',
             boxShadow: '0 2px 10px rgba(0,0,0,0.15)', cursor: 'pointer',
