@@ -14,11 +14,68 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── Static map with A & B pins ───────────────────────────────────────────────
-function staticMapUrl(aLat: number, aLng: number, bLat: number, bLng: number) {
-  if (!MAPBOX_TOKEN) return '';
-  const pins = `pin-s-a+10b981(${aLng},${aLat}),pin-s-b+ef4444(${bLng},${bLat})`;
-  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${pins}/auto/600x180@2x?padding=40&access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+// ── Interactive map component with A & B pins ───────────────────────────────
+function JobMap({ aLat, aLng, bLat, bLng }: { aLat: number; aLng: number; bLat: number; bLng: number }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!MAPBOX_TOKEN || !mapRef.current) return;
+
+    (async () => {
+      const mapboxgl = (await import('mapbox-gl')).default;
+
+      if (!document.getElementById('mapbox-gl-css')) {
+        const link = document.createElement('link');
+        link.id = 'mapbox-gl-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+        document.head.appendChild(link);
+      }
+
+      if (!mounted || !mapRef.current) return;
+
+      const map = new mapboxgl.Map({
+        container: mapRef.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [(aLng + bLng) / 2, (aLat + bLat) / 2],
+        zoom: 11,
+        accessToken: MAPBOX_TOKEN,
+        attributionControl: false,
+        failIfMajorPerformanceCaveat: false,
+      });
+
+      mapInstance.current = map;
+
+      // Marker A – green (my position)
+      const elA = document.createElement('div');
+      elA.style.cssText = 'width:28px;height:28px;border-radius:50%;background:#10b981;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
+      elA.textContent = 'A';
+      new mapboxgl.Marker({ element: elA }).setLngLat([aLng, aLat]).addTo(map);
+
+      // Marker B – red (destination)
+      const elB = document.createElement('div');
+      elB.style.cssText = 'width:28px;height:28px;border-radius:50%;background:#ef4444;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
+      elB.textContent = 'B';
+      new mapboxgl.Marker({ element: elB }).setLngLat([bLng, bLat]).addTo(map);
+
+      map.on('load', () => {
+        if (!mounted) return;
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([aLng, aLat]);
+        bounds.extend([bLng, bLat]);
+        map.fitBounds(bounds, { padding: 44, maxZoom: 15, duration: 600 });
+      });
+    })();
+
+    return () => {
+      mounted = false;
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
+    };
+  }, [aLat, aLng, bLat, bLng]);
+
+  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
 }
 
 interface Job {
@@ -167,17 +224,17 @@ export default function OfertasPage() {
                   boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
                   border: `1.5px solid ${alreadySent ? '#F5C518' : '#334155'}`,
                 }}>
-                  {/* Static map A→B */}
+                  {/* Interactive map A→B */}
                   {hasMap && MAPBOX_TOKEN ? (
-                    <div style={{ position: 'relative', height: 160, background: '#0f172a' }}>
-                      <img
-                        src={staticMapUrl(myPos!.lat, myPos!.lng, Number(job.lat), Number(job.lng))}
-                        alt="mapa"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    <div style={{ position: 'relative', height: 200, background: '#0f172a' }}>
+                      <JobMap
+                        aLat={myPos!.lat}
+                        aLng={myPos!.lng}
+                        bLat={Number(job.lat)}
+                        bLng={Number(job.lng)}
                       />
                       {distKm != null && (
-                        <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.75)', color: '#c8ff00', borderRadius: 8, padding: '3px 10px', fontSize: '0.78rem', fontWeight: 800 }}>
+                        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, background: 'rgba(0,0,0,0.75)', color: '#c8ff00', borderRadius: 8, padding: '3px 10px', fontSize: '0.78rem', fontWeight: 800, pointerEvents: 'none' }}>
                           📐 {distKm.toFixed(1)} km
                         </div>
                       )}
