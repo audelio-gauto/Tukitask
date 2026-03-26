@@ -4,6 +4,13 @@ import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 
+interface BankAlias {
+  id: number;
+  bank_name: string;
+  alias: string;
+  extra_info: string | null;
+}
+
 interface Transaction {
   id: string;
   type: 'recharge' | 'commission' | 'adjustment';
@@ -35,6 +42,7 @@ export default function DriverBilleteraPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [bankAliases, setBankAliases] = useState<BankAlias[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const fetchWallet = useCallback(async () => {
@@ -48,6 +56,13 @@ export default function DriverBilleteraPage() {
   }, [email]);
 
   useEffect(() => { fetchWallet(); }, [fetchWallet]);
+
+  useEffect(() => {
+    authFetch('/api/admin/bank-alias')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setBankAliases(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -69,6 +84,10 @@ export default function DriverBilleteraPage() {
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) {
       setMsg({ text: 'Ingresa un monto válido', ok: false });
+      return;
+    }
+    if (!receiptBase64) {
+      setMsg({ text: '⚠ Debes adjuntar el comprobante de pago', ok: false });
       return;
     }
     setSubmitting(true);
@@ -147,6 +166,22 @@ export default function DriverBilleteraPage() {
         <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '0.75rem' }}>
           Solicitar Recarga
         </h2>
+
+        {/* ─── Datos bancarios ─── */}
+        {bankAliases.length > 0 && (
+          <div style={{ background: '#eff6ff', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '0.75rem', border: '1px solid #bfdbfe' }}>
+            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e40af', margin: '0 0 0.4rem' }}>🏦 Transferí a estas cuentas:</p>
+            {bankAliases.map(b => (
+              <div key={b.id} style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#1e3a8a' }}>{b.bank_name}:</span>{' '}
+                <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1d4ed8' }}>{b.alias}</span>
+                {b.extra_info && <span style={{ fontSize: '0.78rem', color: '#3b82f6' }}> — {b.extra_info}</span>}
+              </div>
+            ))}
+            <p style={{ fontSize: '0.75rem', color: '#1e40af', margin: '0.4rem 0 0', fontStyle: 'italic' }}>Adjuntá el comprobante de la transferencia.</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmitRecharge} style={{ background: '#fff', borderRadius: 12, padding: '1rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
           <div style={{ marginBottom: '0.75rem' }}>
             <label style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: 4 }}>
@@ -176,11 +211,12 @@ export default function DriverBilleteraPage() {
               type="button"
               onClick={() => fileRef.current?.click()}
               style={{
-                width: '100%', padding: '0.6rem', borderRadius: 8, border: '1.5px dashed #d1d5db',
-                background: '#f9fafb', color: '#6b7280', fontSize: '0.85rem', cursor: 'pointer',
+                width: '100%', padding: '0.6rem', borderRadius: 8,
+                border: receiptPreview ? '1.5px solid #059669' : '1.5px dashed #f87171',
+                background: receiptPreview ? '#f0fdf4' : '#fff7f7', color: receiptPreview ? '#065f46' : '#b91c1c', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600,
               }}
             >
-              {receiptPreview ? '✓ Comprobante cargado — toca para cambiar' : '📷 Adjuntar foto de comprobante'}
+              {receiptPreview ? '✓ Comprobante cargado — toca para cambiar' : '📷 Requerido: Adjuntar foto de comprobante'}
             </button>
             {receiptPreview && (
               <img src={receiptPreview} alt="comprobante" style={{ marginTop: 8, height: 80, borderRadius: 6, objectFit: 'cover' }} />
