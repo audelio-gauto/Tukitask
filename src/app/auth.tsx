@@ -92,9 +92,8 @@ export default function Auth() {
     const { error } = await supabase.auth.signUp({ email, password });
     if (!error) {
       const emailNormalized = email.toLowerCase();
-      if (emailNormalized === 'audeliogauto@hotmail.com') {
-        await supabase.from('users').upsert({ email: emailNormalized, role: 'admin' }, { onConflict: 'email' });
-      }
+      const role = emailNormalized === 'audeliogauto@hotmail.com' ? 'admin' : 'cliente';
+      await supabase.from('users').upsert({ email: emailNormalized, role }, { onConflict: 'email' });
     }
     setLoading(false);
     if (error) setError(error.message);
