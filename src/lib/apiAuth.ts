@@ -40,10 +40,15 @@ export async function getAuthUser(req: Request): Promise<AuthUser | null> {
   const token = auth.slice(7);
   if (!token) return null;
   try {
-    const { data: { user } } = await sbAdmin().auth.getUser(token);
+    const { data: { user }, error } = await sbAdmin().auth.getUser(token);
+    if (error) {
+      console.error('[getAuthUser] auth.getUser error:', error.message);
+      return null;
+    }
     if (!user?.email) return null;
     return { id: user.id, email: user.email.toLowerCase() };
-  } catch {
+  } catch (err) {
+    console.error('[getAuthUser] unexpected error:', err);
     return null;
   }
 }

@@ -354,6 +354,7 @@ export default function EnviarPaquetePage() {
           delivery_lng: form.deliveryLng,
         }),
       });
+      if (res.status === 401) { router.push('/auth'); return; }
       if (!res.ok) throw new Error('Error al crear el pedido');
       // Redirect to mis-envios to see driver offers (inDrive style)
       router.push('/cliente/mis-envios');
