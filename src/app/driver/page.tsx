@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useDriverContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { authFetch } from '@/lib/authFetch';
 
 // Mapbox GL must be loaded client-side only (no SSR)
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
@@ -74,6 +75,16 @@ export default function DriverDashboard() {
 
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Wallet balance
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    authFetch('/api/wallet')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.balance !== undefined) setWalletBalance(Number(d.balance)); })
+      .catch(() => {});
+  }, [email]);
 
   // New request popup
   const [showPopup, setShowPopup] = useState(false);
@@ -304,6 +315,16 @@ export default function DriverDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
+
+      {/* Wallet balance pill — centered top */}
+      <Link href="/driver/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
+        <span className="tuki-wallet-pill-amount">
+          {walletBalance !== null
+            ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
+            : '₲ ...'}
+        </span>
+        <span className="tuki-wallet-pill-label">Billetera</span>
+      </Link>
 
       {/* Floating locate button */}
       <button className="tuki-float-btn locate" onClick={() => locateFnRef.current?.()} aria-label="Mi ubicación">

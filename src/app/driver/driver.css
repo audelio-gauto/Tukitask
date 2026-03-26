@@ -73,6 +73,42 @@
 .tuki-float-btn.menu { top: 16px; left: 16px; }
 .tuki-float-btn.locate { top: 16px; right: 16px; }
 
+/* Wallet balance pill — centered top header */
+.tuki-wallet-pill {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  border-radius: 22px;
+  padding: 6px 20px;
+  min-width: 100px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+}
+.tuki-wallet-pill:active { transform: translateX(-50%) scale(0.95); }
+.tuki-wallet-pill-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+.tuki-wallet-pill-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
 /* Drawer (sidebar) */
 .tuki-drawer {
   position: fixed;
