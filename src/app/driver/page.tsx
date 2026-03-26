@@ -100,37 +100,48 @@ export default function DriverDashboard() {
     return () => navigator.geolocation.clearWatch(id);
   }, []);
 
-  // Fetch driver stats (delivered/failed counts + earnings)
+  // Fetch driver stats (delivered/failed counts + earnings) — polls every 30 s
   useEffect(() => {
     if (!email) return;
-    fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
-      .then(r => r.json())
-      .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
-        const delivered = data.filter(o => o.status === 'delivered');
-        const failed = data.filter(o => o.status === 'failed');
-        setDeliveredCount(delivered.length);
-        setFailedCount(failed.length);
-        setTotalShipments(data.length);
-        const total = delivered.length + failed.length;
-        setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
+    const fetchStats = () => {
+      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+        .then(r => r.json())
+        .then((data: any[]) => {
+          if (!Array.isArray(data)) return;
+          const delivered = data.filter(o => o.status === 'delivered');
+          const failed = data.filter(o => ['failed', 'cancelled', 'return_rejected'].includes(o.status));
+          // For earnings: include delivered + returned (driver worked and should be paid)
+          const earnable = data.filter(o => ['delivered', 'returned'].includes(o.status));
+          setDeliveredCount(delivered.length);
+          setFailedCount(failed.length);
+          setTotalShipments(data.length);
+          const total = delivered.length + failed.length;
+          setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
 
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const sum = (from: Date) =>
-          delivered.filter(o => new Date(o.created_at) >= from)
-            .reduce((acc: number, o: any) => acc + Number(o.offer || o.suggested_price || 0), 0);
-        setEarningsData({
-          dia: sum(startOfDay),
-          semana: sum(startOfWeek),
-          mes: sum(startOfMonth),
-          año: sum(startOfYear),
-        });
-      })
-      .catch(() => {});
+          const now = new Date();
+          const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          // Use whichever price field is available on the order
+          const orderPrice = (o: any) =>
+            Number(o.offer ?? o.offer_price ?? o.accepted_price ?? o.suggested_price ?? 0);
+          const sum = (from: Date) =>
+            earnable
+              .filter(o => new Date(o.created_at) >= from)
+              .reduce((acc, o) => acc + orderPrice(o), 0);
+          setEarningsData({
+            dia: sum(startOfDay),
+            semana: sum(startOfWeek),
+            mes: sum(startOfMonth),
+            año: sum(startOfYear),
+          });
+        })
+        .catch(() => {});
+    };
+    fetchStats();
+    const iv = setInterval(fetchStats, 30_000);
+    return () => clearInterval(iv);
   }, [email]);
 
   useEffect(() => {
