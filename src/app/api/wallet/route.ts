@@ -7,7 +7,8 @@ export async function GET(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 
-  const db = sbAdmin();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = sbAdmin() as any;
 
   const [walletRes, txRes] = await Promise.all([
     db.from('driver_wallets').select('balance, updated_at').eq('driver_email', user.email).maybeSingle(),
@@ -36,7 +37,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Monto inválido' }, { status: 400 });
   }
 
-  const db = sbAdmin();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = sbAdmin() as any;
   let receiptUrl: string | null = null;
 
   // Subir comprobante si viene en base64

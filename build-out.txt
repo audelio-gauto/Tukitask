@@ -1,0 +1,5 @@
+ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
