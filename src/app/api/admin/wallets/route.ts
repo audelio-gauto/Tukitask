@@ -11,12 +11,8 @@ export async function GET(req: Request) {
   const status = searchParams.get('status') || 'pending';
   const driverEmail = searchParams.get('driver_email');
 
-  const db = sbAdmin();
-  let query = db
-    .from('recharge_requests')
-    .select('id, driver_email, amount, receipt_url, status, reviewed_by, reviewed_at, rejection_note, created_at')
-    .order('created_at', { ascending: false })
-    .limit(100);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = sbAdmin() as any;
 
   if (driverEmail) {
     // Vista de billetera de un driver específico: devolver saldo + transacciones
@@ -40,8 +36,12 @@ export async function GET(req: Request) {
     });
   }
 
-  query = query.eq('status', status);
-  const { data, error } = await query;
+  const { data, error } = await db
+    .from('recharge_requests')
+    .select('id, driver_email, amount, receipt_url, status, reviewed_by, reviewed_at, rejection_note, created_at')
+    .order('created_at', { ascending: false })
+    .limit(100)
+    .eq('status', status);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -59,7 +59,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
   }
 
-  const db = sbAdmin();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = sbAdmin() as any;
 
   if (action === 'approve') {
     const { data, error } = await db.rpc('approve_recharge', {
