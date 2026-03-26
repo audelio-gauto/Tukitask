@@ -43,6 +43,10 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
           if (profJson.profile?.pickup_range) setPickupRangeKm(Number(profJson.profile.pickup_range));
           if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
+          const firstName = profJson.profile?.first_name || '';
+          const lastName  = profJson.profile?.last_name  || '';
+          const fullName  = [firstName, lastName].filter(Boolean).join(' ');
+          if (fullName) setDisplayName(fullName);
         } catch {}
         setChecking(false);
       } catch {

@@ -332,7 +332,7 @@ export default function DeliveriesPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         paddingTop: 'max(env(safe-area-inset-top, 8px), 12px)',
       }}>
-        <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: 0.5 }}>Tuki Driver</span>
+        <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', letterSpacing: 0.5 }}>{displayName || 'Tuki Driver'}</span>
         {activeJob && (
           <span style={{ background: '#10b981', color: '#fff', paddingInline: 12, paddingBlock: 4, borderRadius: 99, fontSize: '0.78rem', fontWeight: 700 }}>● En servicio</span>
         )}

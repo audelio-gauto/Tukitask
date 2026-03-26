@@ -12,6 +12,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
 
@@ -36,6 +37,11 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
               const profRes = await fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
               const profJson = await profRes.json();
               if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
+              if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+              const fn = profJson.profile?.first_name || '';
+              const ln = profJson.profile?.last_name  || '';
+              const full = [fn, ln].filter(Boolean).join(' ');
+              if (full) setDisplayName(full);
             } catch {}
             setChecking(false);
             return;
@@ -73,6 +79,11 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           const profRes = await fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
           const profJson = await profRes.json();
           if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
+          if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+          const fn = profJson.profile?.first_name || '';
+          const ln = profJson.profile?.last_name  || '';
+          const full = [fn, ln].filter(Boolean).join(' ');
+          if (full) setDisplayName(full);
         } catch {}
         setChecking(false);
       } catch (err) {
@@ -126,7 +137,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
         role={role}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp: 'google_maps', pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}
         </main>

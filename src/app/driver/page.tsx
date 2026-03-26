@@ -545,6 +545,16 @@ export default function DriverDashboard() {
 
           {/* Stats Grid */}
           <div className="tuki-stats-grid">
+            {/* Ganancias Hoy — full width, first so always visible */}
+            <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
+              onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}>
+              <span className="tuki-stat-icon">💰</span>
+              <div className="tuki-stat-value">
+                {earningsData.dia.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
+              </div>
+              <div className="tuki-stat-label">Ganancias Hoy</div>
+            </div>
             {stats.map((s) => (
               s.onClick ? (
                 <div key={s.label} className="tuki-stat-card" onClick={s.onClick} role="button" tabIndex={0}
@@ -561,16 +571,6 @@ export default function DriverDashboard() {
                 </Link>
               )
             ))}
-            {/* Ganancias Hoy — full width, opens earnings modal */}
-            <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
-              onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}>
-              <span className="tuki-stat-icon">💰</span>
-              <div className="tuki-stat-value">
-                {earningsData.dia.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
-              </div>
-              <div className="tuki-stat-label">Ganancias Hoy</div>
-            </div>
             {/* Entregados + Fallidos side by side */}
             <Link href="/driver/delivered" className="tuki-stat-card">
               <span className="tuki-stat-icon">✅</span>
