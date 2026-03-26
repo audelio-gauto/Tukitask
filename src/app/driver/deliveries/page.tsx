@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { playNewOrderAlert, playAccepted } from '@/lib/audio';
 
 const DriverMap = dynamic(() => import('../components/DriverMap'), { ssr: false });
 
@@ -14,45 +15,6 @@ const VEHICLE_LABELS: Record<string, string> = {
   motocarro: '🛵 Moto Carro Fletes',
   camion2t: '🚛 Camión Fletes',
 };
-
-/* ── Web Audio ── */
-let _ac: AudioContext | null = null;
-function getAC() {
-  if (typeof window === 'undefined') return null;
-  if (!_ac || _ac.state === 'closed') _ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-  if (_ac.state === 'suspended') _ac.resume();
-  return _ac;
-}
-function ensureAudioUnlocked() {
-  const c = getAC();
-  if (c && c.state === 'suspended') c.resume();
-}
-if (typeof window !== 'undefined') {
-  const _unlock = () => { ensureAudioUnlocked(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
-  window.addEventListener('touchstart', _unlock, { once: true });
-  window.addEventListener('click', _unlock, { once: true });
-}
-function tone(f: number, t: number, d: number, v = 0.22) {
-  const c = getAC(); if (!c) return;
-  const o = c.createOscillator(), g = c.createGain();
-  o.connect(g); g.connect(c.destination);
-  o.type = 'sine'; o.frequency.value = f;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(v, t + 0.02);
-  g.gain.setValueAtTime(v, t + d * 0.7);
-  g.gain.linearRampToValueAtTime(0.001, t + d);
-  o.start(t); o.stop(t + d);
-}
-function playOrderAlert() {
-  try { const c = getAC(); if (!c) return; const n = c.currentTime;
-    for (let g = 0; g < 3; g++) { const t = n + g * 2.3; tone(880, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35); }
-  } catch { /* */ }
-}
-function playAccepted() {
-  try { const c = getAC(); if (!c) return; const n = c.currentTime;
-    [523, 659, 784, 1047].forEach((f, i) => tone(f, n + i * 0.18, 0.35, 0.28));
-  } catch { /* */ }
-}
 
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -98,7 +60,7 @@ export default function DeliveriesPage() {
         setOrders(data);
         const ids = new Set(data.map((o: any) => o.id as string));
         if (prevOrderIds.current.size > 0) {
-          for (const id of ids) { if (!prevOrderIds.current.has(id)) { playOrderAlert(); break; } }
+          for (const id of ids) { if (!prevOrderIds.current.has(id)) { playNewOrderAlert(); break; } }
         }
         prevOrderIds.current = ids;
         setLoading(false);
@@ -154,7 +116,7 @@ export default function DeliveriesPage() {
 
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
-    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 3000);
+    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 15000);
     return () => clearInterval(iv);
   }, [fetchOrders, fetchMyOffers, fetchActiveJob]);
 
@@ -168,7 +130,7 @@ export default function DeliveriesPage() {
         table: 'orders',
       }, () => {
         fetchOrders();
-        playOrderAlert();
+        playNewOrderAlert();
       })
       .subscribe();
 
@@ -204,7 +166,7 @@ export default function DeliveriesPage() {
   useEffect(() => {
     if (soundTimer.current) { clearInterval(soundTimer.current); soundTimer.current = null; }
     if (!loading && unrespondedCount > 0 && !activeJob) {
-      soundTimer.current = setInterval(playOrderAlert, 6000);
+      soundTimer.current = setInterval(playNewOrderAlert, 6000);
     }
     return () => { if (soundTimer.current) clearInterval(soundTimer.current); };
   }, [loading, unrespondedCount, activeJob]);

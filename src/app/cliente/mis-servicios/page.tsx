@@ -4,58 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
-
-// ── Web Audio alert ──────────────────────────────────────────────────────────
-let _clientAC: AudioContext | null = null;
-function getClientAC() {
-  if (typeof window === 'undefined') return null;
-  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioCtx) return null;
-  if (!_clientAC || _clientAC.state === 'closed') _clientAC = new AudioCtx();
-  if (_clientAC.state === 'suspended') _clientAC.resume();
-  return _clientAC;
-}
-if (typeof window !== 'undefined') {
-  const _u = () => { getClientAC(); window.removeEventListener('touchstart', _u); window.removeEventListener('click', _u); };
-  window.addEventListener('touchstart', _u, { once: true });
-  window.addEventListener('click', _u, { once: true });
-}
-function playOfferAlert() {
-  try {
-    const ctx = getClientAC();
-    if (!ctx) return;
-    const b = (t: number, f: number) => {
-      const o = ctx!.createOscillator(); const g = ctx!.createGain();
-      o.connect(g); g.connect(ctx!.destination);
-      o.type = 'sine'; o.frequency.value = f; g.gain.value = 0.6;
-      o.start(t); o.stop(t + 0.1);
-    };
-    b(ctx.currentTime, 1000); b(ctx.currentTime + 0.14, 1200); b(ctx.currentTime + 0.28, 1400);
-  } catch { /* silent */ }
-}
-function playStatusSound(status: string) {
-  try {
-    const ctx = getClientAC();
-    if (!ctx) return;
-    const b = (t: number, f: number, dur = 0.13) => {
-      const o = ctx!.createOscillator(); const g = ctx!.createGain();
-      o.connect(g); g.connect(ctx!.destination);
-      o.type = 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.55, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.start(t); o.stop(t + dur + 0.01);
-    };
-    const t = ctx.currentTime;
-    if (status === 'accepted')            { b(t, 880); b(t+0.16, 1100); b(t+0.32, 1320); }
-    else if (status === 'en_camino')      { b(t, 660); b(t+0.2, 880); }
-    else if (status === 'llegue')         { b(t, 880); b(t+0.13, 880); b(t+0.3, 1100); }
-    else if (status === 'en_proceso')     { b(t, 660, 0.28); b(t+0.35, 880, 0.18); }
-    else if (status === 'completion_pending') {
-      b(t, 1000); b(t+0.14, 1200); b(t+0.28, 1000); b(t+0.42, 1200);
-    }
-    else if (status === 'completado')     { b(t, 523); b(t+0.16, 659); b(t+0.32, 784); b(t+0.48, 1047); }
-  } catch { /* silent */ }
-}
+import { playClientOfferAlert as playOfferAlert, playStatusSound } from '@/lib/audio';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Job {

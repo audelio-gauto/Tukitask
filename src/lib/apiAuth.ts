@@ -14,11 +14,18 @@ export interface AuthUser {
 }
 
 /** Service-role Supabase client (server only, never exposed to browser). */
+// Module-level singleton — avoids creating a new DB connection on every request
+let _sbAdmin: ReturnType<typeof createClient> | null = null;
+
 export function sbAdmin() {
+  if (_sbAdmin) return _sbAdmin;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Missing Supabase server env vars');
-  return createClient(url, key);
+  _sbAdmin = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return _sbAdmin;
 }
 
 /**
@@ -51,7 +58,8 @@ export async function getAuthAdmin(req: Request): Promise<AuthUser | null> {
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
-    if (!ADMIN_ROLES.includes(data?.role ?? '')) return null;
+    const role = (data as unknown as { role?: string } | null)?.role ?? '';
+    if (!ADMIN_ROLES.includes(role)) return null;
     return user;
   } catch {
     return null;

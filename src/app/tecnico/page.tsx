@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
 import { authFetch } from '@/lib/authFetch';
+import { playNewJobAlert } from '@/lib/audio';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
@@ -14,37 +15,6 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-let _tecnicoAC: AudioContext | null = null;
-function getTecnicoAC() {
-  if (typeof window === 'undefined') return null;
-  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioCtx) return null;
-  if (!_tecnicoAC || _tecnicoAC.state === 'closed') _tecnicoAC = new AudioCtx();
-  if (_tecnicoAC.state === 'suspended') _tecnicoAC.resume();
-  return _tecnicoAC;
-}
-if (typeof window !== 'undefined') {
-  const _u = () => { getTecnicoAC(); window.removeEventListener('touchstart', _u); window.removeEventListener('click', _u); };
-  window.addEventListener('touchstart', _u, { once: true });
-  window.addEventListener('click', _u, { once: true });
-}
-function playNewJobAlert() {
-  try {
-    const ctx = getTecnicoAC();
-    if (!ctx) return;
-    const beep = (t: number, f: number, d: number) => {
-      const o = ctx!.createOscillator(); const g = ctx!.createGain();
-      o.connect(g); g.connect(ctx!.destination);
-      o.type = 'sine'; o.frequency.value = f; g.gain.value = 0.8;
-      o.start(t); o.stop(t + d);
-    };
-    for (let r = 0; r < 4; r++) {
-      const t = ctx.currentTime + r * 0.5;
-      beep(t, 660, 0.1); beep(t + 0.13, 880, 0.1); beep(t + 0.26, 1100, 0.14);
-    }
-  } catch { /* silent fail */ }
 }
 
 const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
@@ -341,7 +311,7 @@ export default function TecnicoDashboard() {
       } catch { /* ignore */ }
     };
     check();
-    const iv = setInterval(check, 15_000);
+    const iv = setInterval(check, 30_000);
     return () => { clearInterval(iv); if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [available, email, dismissPopup]);
 

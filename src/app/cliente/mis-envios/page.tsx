@@ -5,6 +5,8 @@ import Link from 'next/link';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
+import { supabase } from '@/lib/supabaseClient';
+import { playOfferAlert } from '@/lib/audio';
 
 const RatingModal = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -34,42 +36,13 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
 
 interface DriverOffer {
   id: string;
+  order_id: string;
   driver_email: string;
   driver_name: string | null;
   driver_photo: string | null;
   amount: number;
   status: string;
   created_at: string;
-}
-
-/* ── Web Audio notification ── */
-let _ac: AudioContext | null = null;
-function getAC() {
-  if (typeof window === 'undefined') return null;
-  if (!_ac || _ac.state === 'closed') _ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-  if (_ac.state === 'suspended') _ac.resume();
-  return _ac;
-}
-function tone(f: number, t: number, d: number, v = 0.22) {
-  const c = getAC(); if (!c) return;
-  const o = c.createOscillator(), g = c.createGain();
-  o.connect(g); g.connect(c.destination);
-  o.type = 'sine'; o.frequency.value = f;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(v, t + 0.02);
-  g.gain.setValueAtTime(v, t + d * 0.7);
-  g.gain.linearRampToValueAtTime(0.001, t + d);
-  o.start(t); o.stop(t + d);
-}
-function playOfferAlert() {
-  try { const c = getAC(); if (!c) return; const n = c.currentTime;
-    for (let g = 0; g < 3; g++) { const t = n + g * 2.3; tone(660, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35); }
-  } catch { /* */ }
-}
-if (typeof window !== 'undefined') {
-  const _unlock = () => { const c = getAC(); if (c && c.state === 'suspended') c.resume(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
-  window.addEventListener('touchstart', _unlock, { once: true });
-  window.addEventListener('click', _unlock, { once: true });
 }
 
 function genTrackingCode(id: string) {
@@ -314,9 +287,43 @@ export default function MisEnviosPage() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 6000);
+    const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
   }, [fetchOrders]);
+
+  // Supabase Realtime — instant order + offer updates without hammering the DB
+  useEffect(() => {
+    if (!email) return;
+    const ch = supabase
+      .channel(`mis-envios-${email}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `client_email=eq.${email}`,
+      }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+        } else if (payload.eventType === 'INSERT') {
+          setOrders(prev => [payload.new as any, ...prev]);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'driver_offers',
+      }, (payload) => {
+        const offer = payload.new as DriverOffer;
+        setOffers(prev => {
+          const current = prev[offer.order_id] || [];
+          if (current.some(o => o.id === offer.id)) return prev;
+          playOfferAlert();
+          return { ...prev, [offer.order_id]: [...current, offer] };
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [email]);
 
   // Fetch pending offers for negotiating orders
   useEffect(() => {
@@ -416,6 +423,10 @@ export default function MisEnviosPage() {
   const handleSubmitDriverRating = async (rating: number, note: string) => {
     if (!ratingOrderId) return;
     const res = await authFetch('/api/orders/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: ratingOrderId, rating, note }),
+    });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
     setLocalRatings(prev => ({ ...prev, [ratingOrderId]: rating }));

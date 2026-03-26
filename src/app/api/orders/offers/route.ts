@@ -113,53 +113,17 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'accept') {
-    const { data: offer, error: offerErr } = await supabaseServer
-      .from('driver_offers')
-      .select('*')
-      .eq('id', offer_id)
-      .single();
-
-    if (offerErr || !offer) {
-      return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
+    // Single atomic RPC — prevents double-acceptance race conditions via FOR UPDATE lock
+    const { data, error } = await supabaseServer.rpc('accept_offer', {
+      p_offer_id:    offer_id,
+      p_client_email: user.email,
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const result = data as { success: boolean; error?: string; status?: number; offer?: object };
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
     }
-
-    // Verificar que el pedido pertenece al usuario autenticado
-    const { data: order } = await supabaseServer
-      .from('orders')
-      .select('client_email')
-      .eq('id', offer.order_id)
-      .single();
-
-    if (!order || order.client_email !== user.email) {
-      return forbidden('Not your order');
-    }
-
-    const { error: updateErr } = await supabaseServer
-      .from('driver_offers')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() })
-      .eq('id', offer_id);
-
-    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
-
-    await supabaseServer
-      .from('driver_offers')
-      .update({ status: 'rejected', updated_at: new Date().toISOString() })
-      .eq('order_id', offer.order_id)
-      .neq('id', offer_id)
-      .eq('status', 'pending');
-
-    const { error: orderErr } = await supabaseServer
-      .from('orders')
-      .update({
-        status: 'accepted',
-        accepted_by: offer.driver_email,
-        accepted_at: new Date().toISOString(),
-        offer: offer.amount,
-      })
-      .eq('id', offer.order_id);
-
-    if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
-    return NextResponse.json({ success: true, offer });
+    return NextResponse.json({ success: true, offer: result.offer });
   }
 
   if (action === 'reject') {
