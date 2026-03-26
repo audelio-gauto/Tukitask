@@ -130,17 +130,7 @@ const menuItems: MenuItem[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(menuItems.filter(i => i.subItems?.length).map(i => [i.href, true]))
-  );
 
-  // Auto-expand parent menu when a sub-item is active
-  const isSubActive = (item: MenuItem) =>
-    item.subItems?.some(sub => pathname === sub.href) ?? false;
-
-  const toggleExpand = (href: string) => {
-    setExpandedMenus(prev => ({ ...prev, [href]: !prev[href] }));
-  };
 
   return (
     <aside
@@ -179,20 +169,11 @@ export default function AdminSidebar() {
         {menuItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isExpanded = expandedMenus[item.href] || isSubActive(item) || (hasSubItems && isActive);
-
-          const handleMainClick = (e: React.MouseEvent) => {
-            if (hasSubItems) {
-              e.preventDefault();
-              toggleExpand(item.href);
-            }
-          };
 
           return (
             <div key={item.href}>
               <Link
-                href={hasSubItems ? item.href : item.href}
-                onClick={handleMainClick}
+                href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
                   ${isActive
                     ? hasSubItems
@@ -210,17 +191,17 @@ export default function AdminSidebar() {
                     <span className="flex-1">{item.label}</span>
                     {hasSubItems && (
                       <svg
-                        className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        className="w-4 h-4 opacity-50"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     )}
                   </>
                 )}
               </Link>
               {/* Sub-items */}
-              {hasSubItems && isExpanded && !collapsed && (
+              {hasSubItems && !collapsed && (
                 <div className="ml-6 mt-1 space-y-1 border-l border-gray-700/50 pl-3">
                   {item.subItems!.map(sub => {
                     const isSubItemActive = pathname === sub.href;
