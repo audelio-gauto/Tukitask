@@ -1002,8 +1002,8 @@ export default function MisEnviosPage() {
                   </div>
                 )}
 
-                {/* Driver rating section */}
-                {order.status === 'delivered' && (
+                {/* Sección de confirmación y calificación */}
+                {['delivered', 'commission_charged'].includes(order.status) && (
                   <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <button
                       onClick={() => handleConfirmPayment(order.id)}
@@ -1015,7 +1015,7 @@ export default function MisEnviosPage() {
                         opacity: confirmingPayment === order.id ? 0.6 : 1,
                       }}
                     >
-                      {confirmingPayment === order.id ? 'Procesando...' : '✓ Confirmar Pago al Conductor'}
+                      {confirmingPayment === order.id ? 'Procesando...' : '✓ Marcar como Recibido'}
                     </button>
                     {canRate ? (
                       <button

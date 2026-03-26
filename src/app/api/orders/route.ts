@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabaseServer';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 
 // Comision mínima para poder ver pedidos disponibles (en la moneda base de la app)
@@ -11,8 +10,9 @@ export async function GET(req: Request) {
   const clientEmail = searchParams.get('client_email');
   const driverEmail = searchParams.get('driver_email');
   const history = searchParams.get('history');
+  const db = sbAdmin();
 
-  let query = supabaseServer
+  let query = db
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false })
@@ -21,29 +21,23 @@ export async function GET(req: Request) {
   if (clientEmail) {
     query = query.eq('client_email', clientEmail);
   } else if (driverEmail && searchParams.get('only_failed') === 'true') {
-    // Driver's failed / return-rejected orders (awaiting action)
     query = query.eq('accepted_by', driverEmail).in('status', ['failed', 'return_rejected']);
   } else if (driverEmail && history === 'true') {
-    // Driver delivery history: completed/failed/returned orders
     query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'cancelled', 'returned', 'return_rejected']);
   } else if (driverEmail) {
-    // Driver's active jobs (including return flow)
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected']);
   } else {
     // Pedidos disponibles para drivers — verificar saldo de billetera
     const user = await getAuthUser(req);
     if (user) {
-      const { data: wallet } = await sbAdmin()
+      const { data: wallet } = await db
         .from('driver_wallets')
         .select('balance')
         .eq('driver_email', user.email)
         .maybeSingle();
       const balance = Number(wallet?.balance ?? 0);
       if (balance < MIN_WALLET_BALANCE) {
-        return NextResponse.json(
-          { error: 'saldo_insuficiente', balance },
-          { status: 402 }
-        );
+        return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
       }
     }
     query = query.in('status', ['pending', 'negotiating']).limit(100);
@@ -61,7 +55,8 @@ export async function POST(req: Request) {
   const body = await req.json();
   // Forzar client_email desde el token — nunca confiar en el body
   const safeBody = { ...body, client_email: user.email };
-  const { data, error } = await supabaseServer
+  const db = sbAdmin();
+  const { data, error } = await db
     .from('orders')
     .insert([safeBody])
     .select()
@@ -87,18 +82,20 @@ export async function PATCH(req: Request) {
     in_transit: ['picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
     failed: ['in_transit'],
-    returning: ['failed', 'return_rejected'], // request return or re-request after rejection
+    returning: ['failed', 'return_rejected'],
     return_delivered: ['driver_returning'],
-    incident_closed: ['return_rejected'], // driver closes after 3 rejections
+    incident_closed: ['return_rejected'],
   };
 
   // Client-initiated transitions
   const clientAllowed: Record<string, string[]> = {
-    driver_returning: ['returning'],   // client accepts the return
-    returned: ['return_delivered'],    // client confirms receipt
-    return_rejected: ['return_delivered', 'returning'], // client rejects receipt or return request
-    cancelled: ['pending', 'negotiating'], // client cancels the search
-    client_confirmed: ['delivered'],   // client confirms payment to driver → triggers commission
+    driver_returning: ['returning'],
+    returned: ['return_delivered'],
+    return_rejected: ['return_delivered', 'returning'],
+    cancelled: ['pending', 'negotiating'],
+    // client_confirmed = comprobante/recibo para cliente y admin
+    // la comisión ya fue descontada automáticamente al marcar 'delivered'
+    client_confirmed: ['delivered', 'commission_charged'],
   };
 
   const isDriverStatus = status in driverAllowed;
@@ -108,7 +105,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Invalid status transition' }, { status: 400 });
   }
 
-  const { data: order } = await supabaseServer
+  const db = sbAdmin();
+  const { data: order } = await db
     .from('orders')
     .select('status, accepted_by, client_email, return_attempts')
     .eq('id', order_id)
@@ -116,7 +114,6 @@ export async function PATCH(req: Request) {
 
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
-  // Verificar ownership mediante el token — no trusting body emails
   if (isDriverStatus && order.accepted_by !== user.email) {
     return forbidden('Not your order');
   }
@@ -129,15 +126,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: `Cannot transition from ${order.status} to ${status}` }, { status: 409 });
   }
 
-  const coreUpdates: Record<string, unknown> = { status };
-  if (status === 'delivered') coreUpdates.completed_at = new Date().toISOString();
-  if (status === 'client_confirmed') coreUpdates.confirmed_at = new Date().toISOString();
-
-  const { error } = await supabaseServer.from('orders').update(coreUpdates).eq('id', order_id);
+  const { error } = await db.from('orders').update({ status }).eq('id', order_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Columnas opcionales añadidas en migration 011 — fallan silenciosamente si no existen
+  // Columnas opcionales — fallan silenciosamente si la columna no existe en producción
   const extraUpdates: Record<string, unknown> = {};
+  if (status === 'delivered') extraUpdates.completed_at = new Date().toISOString();
+  if (status === 'client_confirmed') extraUpdates.confirmed_at = new Date().toISOString();
   if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
   if (status === 'returning' && return_reason) extraUpdates.return_reason = return_reason;
   if (status === 'returning') extraUpdates.returning_at = new Date().toISOString();
@@ -146,14 +141,16 @@ export async function PATCH(req: Request) {
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {
-    await supabaseServer.from('orders').update(extraUpdates).eq('id', order_id);
+    await db.from('orders').update(extraUpdates).eq('id', order_id);
   }
 
-  // Deduct commission when client confirms payment
-  if (status === 'client_confirmed') {
-    const { error: rpcErr } = await supabaseServer.rpc('deduct_commission', { p_order_id: order_id });
-    if (!rpcErr) {
-      await supabaseServer.from('orders').update({ status: 'commission_charged' }).eq('id', order_id);
+  // ── Descontar comisión automáticamente cuando el driver confirma entrega ──
+  // El RPC deduct_commission también actualiza el status a 'commission_charged'
+  if (status === 'delivered') {
+    const { error: rpcErr } = await db.rpc('deduct_commission', { p_order_id: order_id });
+    if (rpcErr) {
+      // Registrar error pero no fallar — la entrega fue confirmada, comisión se gestiona manualmente
+      console.error('[orders PATCH] deduct_commission failed:', rpcErr.message);
     }
   }
 
