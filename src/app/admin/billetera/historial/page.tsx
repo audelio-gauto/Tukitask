@@ -132,10 +132,10 @@ export default function RechargeHistoryPage() {
   const totalPages = Math.ceil(total / LIMIT);
 
   // ── Styles ──
-  const S = {
-    card: { background: '#fff', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.07)', padding: '1.25rem' } as React.CSSProperties,
-    th: { padding: '10px 12px', textAlign: 'left', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' as const },
-    td: { padding: '12px 12px', fontSize: '0.875rem', color: '#334155', verticalAlign: 'middle' as const, borderBottom: '1px solid #f8fafc' },
+  const S: Record<string, React.CSSProperties> = {
+    card: { background: '#fff', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.07)', padding: '1.25rem' },
+    th: { padding: '10px 12px', textAlign: 'left', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' },
+    td: { padding: '12px 12px', fontSize: '0.875rem', color: '#334155', verticalAlign: 'middle', borderBottom: '1px solid #f8fafc' },
   };
 
   return (
