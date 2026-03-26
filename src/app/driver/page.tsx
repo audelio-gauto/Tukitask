@@ -100,11 +100,16 @@ export default function DriverDashboard() {
     return () => navigator.geolocation.clearWatch(id);
   }, []);
 
-  // Fetch driver stats (delivered/failed counts + earnings) — polls every 30 s
+  // Fetch driver stats (delivered/failed counts + earnings)
+  // Refreshes every 30 s AND immediately when the tab becomes visible again
+  // (browsers throttle/suspend setInterval when tab is in background)
   useEffect(() => {
     if (!email) return;
     const fetchStats = () => {
-      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+      // cache-busting param so browsers never serve a stale cached response
+      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+      })
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) return;
@@ -139,15 +144,31 @@ export default function DriverDashboard() {
         })
         .catch(() => {});
     };
+
     fetchStats();
+
+    // Regular interval (works while tab is focused)
     const iv = setInterval(fetchStats, 30_000);
-    return () => clearInterval(iv);
+
+    // Refresh immediately whenever the user returns to this tab/app
+    // This covers: switching tabs, app backgrounded on mobile, screen lock/unlock
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchStats(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    // Also refresh on window focus (desktop browsers)
+    window.addEventListener('focus', fetchStats);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchStats);
+    };
   }, [email]);
 
   useEffect(() => {
     const check = () => {
       if (!available) return;
-      fetch('/api/orders')
+      fetch(`/api/orders?_t=${Date.now()}`, { cache: 'no-store' })
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) return;
@@ -165,7 +186,12 @@ export default function DriverDashboard() {
     };
     check();
     const iv = setInterval(check, 5000);
-    return () => clearInterval(iv);
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [available]);
 
   // Touch drag state
