@@ -15,9 +15,11 @@ export interface AuthUser {
 
 /** Service-role Supabase client (server only, never exposed to browser). */
 // Module-level singleton — avoids creating a new DB connection on every request
-let _sbAdmin: ReturnType<typeof createClient> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sbAdmin: any = null;
 
-export function sbAdmin() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function sbAdmin(): any {
   if (_sbAdmin) return _sbAdmin;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
