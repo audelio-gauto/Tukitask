@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
@@ -329,7 +330,7 @@ export default function EnviarPaquetePage() {
     e.preventDefault();
     setSending(true);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

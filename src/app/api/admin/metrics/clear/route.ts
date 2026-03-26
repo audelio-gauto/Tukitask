@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { redis } from '../../../../../lib/redis'
+import { getAuthAdmin, unauthorized } from '../../../../../lib/apiAuth'
 
 export async function POST(req: Request) {
-  const auth = req.headers.get('authorization') || ''
-  const token = process.env.ADMIN_METRICS_TOKEN || ''
-  if (!token || !auth || auth !== `Bearer ${token}`) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const admin = await getAuthAdmin(req);
+  const staticToken = process.env.ADMIN_METRICS_TOKEN || '';
+  const authHeader = req.headers.get('authorization') || '';
+  const isStaticToken = staticToken && authHeader === `Bearer ${staticToken}`;
+  if (!admin && !isStaticToken) return unauthorized();
 
   const body = await req.json().catch(() => ({}))
   const type = body?.type || 'all' // all | metrics | alerts

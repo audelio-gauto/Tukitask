@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
+import { authFetch } from '@/lib/authFetch';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
@@ -348,7 +349,7 @@ export default function TecnicoDashboard() {
     if (!pendingPopup || !email || popupSending) return;
     setPopupSending(true);
     try {
-      await fetch('/api/tecnico/jobs', {
+      await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthAdmin, unauthorized, sbAdmin } from '@/lib/apiAuth';
 
 export async function POST(req: Request) {
+  // Solo admins pueden crear usuarios
+  const adminUser = await getAuthAdmin(req);
+  if (!adminUser) return unauthorized('Solo administradores pueden crear usuarios');
+
   try {
     const { email, password, role } = await req.json();
 
@@ -18,13 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Rol no válido' }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json({ error: 'Configuración del servidor incompleta' }, { status: 500 });
-    }
-
-    const sb = createClient(supabaseUrl, serviceKey);
+    const sb = sbAdmin();
     const emailNormalized = String(email).toLowerCase().trim();
 
     // 1. Create auth user in Supabase Auth

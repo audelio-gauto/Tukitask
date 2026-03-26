@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 
 function StarDisplay({ rating, total }: { rating: number; total: number }) {
   if (!rating) return null;
@@ -48,7 +49,7 @@ export default function ClientSettingsPage() {
       let binary = '';
       for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
       const base64 = btoa(binary);
-      const res = await fetch('/api/upload-photo', {
+      const res = await authFetch('/api/upload-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, base64, mimeType: file.type, role: 'client' }),
@@ -64,7 +65,7 @@ export default function ClientSettingsPage() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      const res = await fetch('/api/client-profile', {
+      const res = await authFetch('/api/client-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, display_name: nameInput, phone: phoneInput }),

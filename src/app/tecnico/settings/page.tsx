@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useDriverContext } from '../../driver/context';
+import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 
 export default function TecnicoSettings() {
@@ -118,7 +119,7 @@ export default function TecnicoSettings() {
         profile_photo: profilePhoto,
       };
       try {
-        const res = await fetch('/api/tecnico/settings', {
+        const res = await authFetch('/api/tecnico/settings', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
         });
         const json = await res.json();
@@ -202,7 +203,7 @@ export default function TecnicoSettings() {
               let binary = '';
               for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
               const base64 = btoa(binary);
-              const res = await fetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, base64, mimeType: file.type }) });
+              const res = await authFetch('/api/upload-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, base64, mimeType: file.type }) });
               const json = await res.json();
               if (json.url) { const photoUrl = json.url + '?t=' + Date.now(); setProfilePhoto(photoUrl); setCtxPhoto(photoUrl); setSuccess('Foto actualizada'); }
               else { setError(json.error || 'Error al subir foto'); }

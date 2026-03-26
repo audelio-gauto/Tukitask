@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 // ── Web Audio alert ──────────────────────────────────────────────────────────
 let _clientAC: AudioContext | null = null;
@@ -164,7 +165,7 @@ export default function MisServiciosPage() {
     if (!email || actionId) return;
     setActionId(jobId + action);
     try {
-      const res  = await fetch('/api/tecnico/jobs', {
+      const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, jobId, clientEmail: email, ...extra }),
@@ -181,7 +182,7 @@ export default function MisServiciosPage() {
     if (!email || actionId) return;
     setActionId(jobId + 'accept');
     try {
-      const res  = await fetch('/api/tecnico/jobs', {
+      const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'accept_offer', jobId, offerId }),
@@ -199,7 +200,7 @@ export default function MisServiciosPage() {
     if (!email || actionId) return;
     setActionId(offerId + 'reject');
     try {
-      await fetch('/api/tecnico/jobs', {
+      await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject_offer', offerId }),

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 
 const DriverMap = dynamic(() => import('../components/DriverMap'), { ssr: false });
 
@@ -235,7 +236,7 @@ export default function DeliveriesPage() {
     if (!activeJob) return;
     setTransitioning(true);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: activeJob.id, status: 'failed', driver_email: email, fail_reason: reason }),
@@ -253,7 +254,7 @@ export default function DeliveriesPage() {
   const handleTransition = async (orderId: string, newStatus: string) => {
     setTransitioning(true);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, status: newStatus, driver_email: email }),
@@ -277,7 +278,7 @@ export default function DeliveriesPage() {
     if (!amount || Number(amount) <= 0) return;
     setSending(s => ({ ...s, [orderId]: true }));
     try {
-      const res = await fetch('/api/orders/offers', {
+      const res = await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount) }),
@@ -290,7 +291,7 @@ export default function DeliveriesPage() {
   const handleAcceptPrice = async (orderId: string, clientOffer: number) => {
     setSending(s => ({ ...s, [orderId]: true }));
     try {
-      const res = await fetch('/api/orders/offers', {
+      const res = await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer }),

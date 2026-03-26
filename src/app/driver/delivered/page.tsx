@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 import RatingModal from '@/components/RatingModal';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
@@ -48,7 +49,7 @@ export default function DeliveredPage() {
 
   const handleSubmitRating = async (rating: number, note: string) => {
     if (!ratingOrderId) return;
-    const res = await fetch('/api/orders/rate', {
+    const res = await authFetch('/api/orders/rate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order_id: ratingOrderId, rated_by: 'driver', rating, note }),

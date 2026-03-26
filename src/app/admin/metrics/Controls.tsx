@@ -1,13 +1,19 @@
 'use client'
 import React, { useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function MetricsControls() {
   const [status, setStatus] = useState('')
-  const token = process.env.NEXT_PUBLIC_ADMIN_METRICS_TOKEN || ''
+
+  async function getToken() {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
 
   async function clearAll() {
     setStatus('Procesando...')
     try {
+      const token = await getToken()
       const res = await fetch('/api/admin/metrics/clear', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: 'all' }) })
       const j = await res.json()
       if (!res.ok) throw new Error(j.error || 'error')
@@ -21,6 +27,7 @@ export default function MetricsControls() {
   async function clearAlerts() {
     setStatus('Procesando...')
     try {
+      const token = await getToken()
       const res = await fetch('/api/admin/metrics/clear', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: 'alerts' }) })
       const j = await res.json()
       if (!res.ok) throw new Error(j.error || 'error')

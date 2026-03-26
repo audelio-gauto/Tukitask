@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
+import { authFetch } from '@/lib/authFetch';
 
 interface Job {
   id: string;
@@ -80,7 +81,7 @@ export default function CitasPage() {
     if (!email || actionId) return;
     setActionId(jobId + action);
     try {
-      const res  = await fetch('/api/tecnico/jobs', {
+      const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, jobId, tecnicoEmail: email }),
@@ -95,7 +96,7 @@ export default function CitasPage() {
     if (!extraModal || !email || extraSending || extraAmount <= 0) return;
     setExtraSending(true);
     try {
-      const res  = await fetch('/api/tecnico/jobs', {
+      const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'add_extra', jobId: extraModal.jobId, tecnicoEmail: email, extraCharge: extraAmount, extraReason }),

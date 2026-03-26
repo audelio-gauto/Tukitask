@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 const RatingModal = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -387,7 +388,7 @@ export default function MisEnviosPage() {
   const handleAcceptOffer = async (offerId: string) => {
     setAccepting(offerId);
     try {
-      const res = await fetch('/api/orders/offers', {
+      const res = await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
@@ -399,7 +400,7 @@ export default function MisEnviosPage() {
 
   const handleRejectOffer = async (offerId: string) => {
     try {
-      await fetch('/api/orders/offers', {
+      await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'reject' }),
@@ -414,11 +415,7 @@ export default function MisEnviosPage() {
 
   const handleSubmitDriverRating = async (rating: number, note: string) => {
     if (!ratingOrderId) return;
-    const res = await fetch('/api/orders/rate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: ratingOrderId, rated_by: 'client', rating, note }),
-    });
+    const res = await authFetch('/api/orders/rate', {
     const json = await res.json();
     if (json.error) throw new Error(json.error);
     setLocalRatings(prev => ({ ...prev, [ratingOrderId]: rating }));
@@ -432,7 +429,7 @@ export default function MisEnviosPage() {
     try {
       const body: Record<string, unknown> = { order_id: orderId, status: newStatus, client_email: email };
       if (rejectionReason) body.return_rejected_reason = rejectionReason;
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -451,7 +448,7 @@ export default function MisEnviosPage() {
   const handleCancelOrder = async (orderId: string) => {
     setCancellingOrder(orderId);
     try {
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, status: 'cancelled', client_email: email }),

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useDriverContext } from '../../driver/context';
+import { authFetch } from '@/lib/authFetch';
 
 const DriverMap = dynamic(() => import('../../driver/components/DriverMap'), { ssr: false });
 
@@ -95,7 +96,7 @@ export default function OfertasPage() {
     if (!price || price <= 0) return;
     setSending(jobId);
     try {
-      const res = await fetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'send_offer', jobId, tecnicoEmail: email, proposedPrice: price }),

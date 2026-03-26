@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
-// GET: Listar pedidos
+// GET: Listar pedidos — abierto (scoped por email de query param)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const clientEmail = searchParams.get('client_email');
   const driverEmail = searchParams.get('driver_email');
   const history = searchParams.get('history');
 
-  let query = supabase
+  let query = supabaseServer
     .from('orders')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (clientEmail) {
     query = query.eq('client_email', clientEmail);
@@ -25,7 +27,7 @@ export async function GET(req: Request) {
     // Driver's active jobs (including return flow)
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected']);
   } else {
-    query = query.in('status', ['pending', 'negotiating']);
+    query = query.in('status', ['pending', 'negotiating']).limit(100);
   }
 
   const { data, error } = await query;
@@ -33,22 +35,28 @@ export async function GET(req: Request) {
   return NextResponse.json(data);
 }
 
-// POST: Crear nuevo pedido
+// POST: Crear pedido — requiere auth; client_email se fuerza desde el token
 export async function POST(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
   const body = await req.json();
-  const { data, error } = await supabase
+  // Forzar client_email desde el token — nunca confiar en el body
+  const safeBody = { ...body, client_email: user.email };
+  const { data, error } = await supabaseServer
     .from('orders')
-    .insert([body])
+    .insert([safeBody])
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(data, { status: 201 });
 }
 
-// PATCH: Update order status (driver or client transitions)
+// PATCH: Transición de estado — requiere auth; ownership verificado via token
 export async function PATCH(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
   const body = await req.json();
-  const { order_id, status, driver_email, client_email, fail_reason, return_reason, return_rejected_reason } = body;
+  const { order_id, status, fail_reason, return_reason, return_rejected_reason } = body;
 
   if (!order_id || !status) {
     return NextResponse.json({ error: 'order_id and status required' }, { status: 400 });
@@ -80,7 +88,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Invalid status transition' }, { status: 400 });
   }
 
-  const { data: order } = await supabase
+  const { data: order } = await supabaseServer
     .from('orders')
     .select('status, accepted_by, client_email, return_attempts')
     .eq('id', order_id)
@@ -88,38 +96,36 @@ export async function PATCH(req: Request) {
 
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
+  // Verificar ownership mediante el token — no trusting body emails
+  if (isDriverStatus && order.accepted_by !== user.email) {
+    return forbidden('Not your order');
+  }
+  if (isClientStatus && order.client_email !== user.email) {
+    return forbidden('Not your order');
+  }
+
   const allowedPrev = isClientStatus ? clientAllowed[status] : driverAllowed[status];
   if (!allowedPrev.includes(order.status)) {
     return NextResponse.json({ error: `Cannot transition from ${order.status} to ${status}` }, { status: 409 });
   }
 
-  if (driver_email && order.accepted_by !== driver_email) {
-    return NextResponse.json({ error: 'Not your order' }, { status: 403 });
-  }
-  if (client_email && order.client_email !== client_email) {
-    return NextResponse.json({ error: 'Not your order' }, { status: 403 });
-  }
-
-  // Core update (always safe — only touches columns that exist before migration 011)
   const coreUpdates: Record<string, unknown> = { status };
   if (status === 'delivered') coreUpdates.completed_at = new Date().toISOString();
 
-  const { error } = await supabase.from('orders').update(coreUpdates).eq('id', order_id);
+  const { error } = await supabaseServer.from('orders').update(coreUpdates).eq('id', order_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Best-effort: store new columns added by migration 011 in a separate call.
-  // If the migration hasn't been run yet these will fail silently — status transition still succeeds.
+  // Columnas opcionales añadidas en migration 011 — fallan silenciosamente si no existen
   const extraUpdates: Record<string, unknown> = {};
   if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
   if (status === 'returning' && return_reason) extraUpdates.return_reason = return_reason;
   if (status === 'returning') extraUpdates.returning_at = new Date().toISOString();
-  if (status === 'returning') extraUpdates.return_attempts = (Number((order as any).return_attempts) || 0) + 1;
+  if (status === 'returning') extraUpdates.return_attempts = (Number(order.return_attempts) || 0) + 1;
   if (status === 'incident_closed') extraUpdates.incident_closed_at = new Date().toISOString();
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {
-    // Ignore error — migration 011 may not have been run yet
-    await supabase.from('orders').update(extraUpdates).eq('id', order_id);
+    await supabaseServer.from('orders').update(extraUpdates).eq('id', order_id);
   }
 
   return NextResponse.json({ success: true, status });

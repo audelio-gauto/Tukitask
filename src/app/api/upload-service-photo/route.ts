@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const getSupabase = () =>
-  createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-  );
+import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
+import { ALLOWED_IMAGE_TYPES } from '@/lib/constants';
 
 export async function POST(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   try {
     const { base64, mimeType } = await req.json();
 
@@ -15,8 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(mimeType)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType as any)) {
       return NextResponse.json({ error: 'Formato no soportado. Usa JPG, PNG o WebP' }, { status: 400 });
     }
 
@@ -28,7 +25,7 @@ export async function POST(req: Request) {
     const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
     const fileName = `service/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
-    const sb = getSupabase();
+    const sb = sbAdmin();
 
     const { error: uploadError } = await sb.storage
       .from('service-photos')

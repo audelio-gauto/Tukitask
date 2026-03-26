@@ -1,42 +1,35 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Body size is managed by Next.js App Router (default 1MB, sufficient for base64 photos)
-
-const getSupabase = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
-  return createClient(url, key);
-};
+import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
+import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO } from '@/lib/constants';
 
 export async function POST(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   try {
     const { email, base64, mimeType, role } = await req.json();
+    const emailNormalized = (email || '').toLowerCase();
+    if (emailNormalized !== user.email) return forbidden();
     const profileRole: 'driver' | 'client' = role === 'client' ? 'client' : 'driver';
-    if (!email || !base64) {
+    if (!emailNormalized || !base64) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(mimeType)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType as any)) {
       return NextResponse.json({ error: 'Formato no soportado. Usa JPG, PNG o WebP' }, { status: 400 });
     }
 
-    // Decode base64
     const buffer = Buffer.from(base64, 'base64');
-
-    // Max 2MB
-    if (buffer.length > 2 * 1024 * 1024) {
+    if (buffer.length > MAX_FILE_SIZE_PHOTO) {
       return NextResponse.json({ error: 'Imagen demasiado grande (máx 2MB)' }, { status: 400 });
     }
 
     const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
-    const emailSafe = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const emailSafe = emailNormalized.replace(/[^a-z0-9]/g, '_');
     const fileName = `${emailSafe}.${ext}`;
 
-    const sb = getSupabase();
+    const sb = sbAdmin();
 
-    // Upload to Supabase Storage (bucket: profile-photos)
     const { error: uploadError } = await sb.storage
       .from('profile-photos')
       .upload(fileName, buffer, {
@@ -51,15 +44,14 @@ export async function POST(req: Request) {
     // Get public URL
     const { data: urlData } = sb.storage.from('profile-photos').getPublicUrl(fileName);
 
-    // Save URL in the appropriate profile table
     if (profileRole === 'client') {
       await sb.from('client_profiles').upsert(
-        { email: email.toLowerCase(), photo_url: urlData.publicUrl, updated_at: new Date().toISOString() },
+        { email: emailNormalized, photo_url: urlData.publicUrl, updated_at: new Date().toISOString() },
         { onConflict: 'email' }
       );
     } else {
       await sb.from('driver_profiles').upsert(
-        { email: email.toLowerCase(), profile_photo: urlData.publicUrl },
+        { email: emailNormalized, profile_photo: urlData.publicUrl },
         { onConflict: 'email' }
       );
     }

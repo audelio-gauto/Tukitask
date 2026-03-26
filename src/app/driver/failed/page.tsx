@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDriverContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 
 function playReturnAlert() {
@@ -72,7 +73,7 @@ export default function FailedPage() {
     try {
       const body: Record<string, unknown> = { order_id: orderId, status: newStatus, driver_email: email };
       if (newStatus === 'returning' && returnReason) body.return_reason = returnReason;
-      const res = await fetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

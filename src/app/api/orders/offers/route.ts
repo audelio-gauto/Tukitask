@@ -1,29 +1,31 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServer } from '@/lib/supabaseServer';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
-// GET /api/orders/offers?order_id=xxx  → list offers for an order
-// GET /api/orders/offers?driver_email=xxx → list offers by a driver
+// GET — open (datos públicos para la negociación)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const orderId = searchParams.get('order_id');
   const driverEmail = searchParams.get('driver_email');
 
   if (orderId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('driver_offers')
       .select('*')
       .eq('order_id', orderId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   }
 
   if (driverEmail) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('driver_offers')
       .select('*, orders(*)')
       .eq('driver_email', driverEmail)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   }
@@ -31,18 +33,19 @@ export async function GET(req: Request) {
   return NextResponse.json({ error: 'Provide order_id or driver_email' }, { status: 400 });
 }
 
-// POST /api/orders/offers → driver sends an offer
-// Body: { order_id, driver_email, driver_name, driver_photo, amount }
+// POST — driver envía oferta; driver_email se fuerza desde el token
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { order_id, driver_email, amount } = body;
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
 
-  if (!order_id || !driver_email || !amount) {
-    return NextResponse.json({ error: 'order_id, driver_email, and amount are required' }, { status: 400 });
+  const body = await req.json();
+  const { order_id, amount } = body;
+
+  if (!order_id || !amount) {
+    return NextResponse.json({ error: 'order_id y amount son requeridos' }, { status: 400 });
   }
 
-  // Check order is still pending
-  const { data: order } = await supabase
+  const { data: order } = await supabaseServer
     .from('orders')
     .select('status')
     .eq('id', order_id)
@@ -52,18 +55,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Order is no longer available' }, { status: 409 });
   }
 
-  // Check if driver already has a pending offer for this order
-  const { data: existing } = await supabase
+  // Usar email del token — no del body
+  const driverEmail = user.email;
+
+  const { data: existing } = await supabaseServer
     .from('driver_offers')
     .select('id')
     .eq('order_id', order_id)
-    .eq('driver_email', driver_email)
+    .eq('driver_email', driverEmail)
     .eq('status', 'pending')
     .maybeSingle();
 
   if (existing) {
-    // Update existing offer
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('driver_offers')
       .update({ amount: Number(amount), updated_at: new Date().toISOString() })
       .eq('id', existing.id)
@@ -73,12 +77,11 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   }
 
-  // Insert new offer
-  const { data, error } = await supabase
+  const { data, error } = await supabaseServer
     .from('driver_offers')
     .insert([{
       order_id,
-      driver_email,
+      driver_email: driverEmail,
       driver_name: body.driver_name || null,
       driver_photo: body.driver_photo || null,
       amount: Number(amount),
@@ -88,8 +91,7 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Update order status to negotiating
-  await supabase
+  await supabaseServer
     .from('orders')
     .update({ status: 'negotiating' })
     .eq('id', order_id)
@@ -98,9 +100,11 @@ export async function POST(req: Request) {
   return NextResponse.json(data, { status: 201 });
 }
 
-// PATCH /api/orders/offers → client accepts/rejects an offer
-// Body: { offer_id, action: 'accept' | 'reject' }
+// PATCH — cliente acepta/rechaza oferta; se verifica que el cliente sea dueño del pedido
 export async function PATCH(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   const body = await req.json();
   const { offer_id, action } = body;
 
@@ -109,8 +113,7 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'accept') {
-    // Get the offer
-    const { data: offer, error: offerErr } = await supabase
+    const { data: offer, error: offerErr } = await supabaseServer
       .from('driver_offers')
       .select('*')
       .eq('id', offer_id)
@@ -120,24 +123,32 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
     }
 
-    // Accept this offer
-    const { error: updateErr } = await supabase
+    // Verificar que el pedido pertenece al usuario autenticado
+    const { data: order } = await supabaseServer
+      .from('orders')
+      .select('client_email')
+      .eq('id', offer.order_id)
+      .single();
+
+    if (!order || order.client_email !== user.email) {
+      return forbidden('Not your order');
+    }
+
+    const { error: updateErr } = await supabaseServer
       .from('driver_offers')
       .update({ status: 'accepted', updated_at: new Date().toISOString() })
       .eq('id', offer_id);
 
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
-    // Reject all other pending offers for this order
-    await supabase
+    await supabaseServer
       .from('driver_offers')
       .update({ status: 'rejected', updated_at: new Date().toISOString() })
       .eq('order_id', offer.order_id)
       .neq('id', offer_id)
       .eq('status', 'pending');
 
-    // Update order: accepted + assign driver
-    const { error: orderErr } = await supabase
+    const { error: orderErr } = await supabaseServer
       .from('orders')
       .update({
         status: 'accepted',
@@ -148,12 +159,26 @@ export async function PATCH(req: Request) {
       .eq('id', offer.order_id);
 
     if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
-
     return NextResponse.json({ success: true, offer });
   }
 
   if (action === 'reject') {
-    const { error } = await supabase
+    // Verificar ownership antes de rechazar
+    const { data: offer } = await supabaseServer
+      .from('driver_offers')
+      .select('order_id')
+      .eq('id', offer_id)
+      .single();
+    if (offer) {
+      const { data: order } = await supabaseServer
+        .from('orders')
+        .select('client_email')
+        .eq('id', offer.order_id)
+        .single();
+      if (!order || order.client_email !== user.email) return forbidden('Not your order');
+    }
+
+    const { error } = await supabaseServer
       .from('driver_offers')
       .update({ status: 'rejected', updated_at: new Date().toISOString() })
       .eq('id', offer_id);

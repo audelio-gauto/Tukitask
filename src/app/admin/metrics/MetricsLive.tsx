@@ -1,5 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 
 type MetricsResp = {
   metrics: Record<string, number | null>
@@ -13,12 +14,15 @@ export default function MetricsLive() {
   async function fetchMetrics() {
     setLoading(true)
     try {
-      const token = process.env.NEXT_PUBLIC_ADMIN_METRICS_TOKEN || ''
-      const res = await fetch('/api/admin/metrics', { headers: { Authorization: `Bearer ${token}` } })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const res = await fetch('/api/admin/metrics', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
       if (!res.ok) throw new Error('error')
       const json = await res.json()
       setData(json)
-    } catch (err) {
+    } catch {
       // ignore
     } finally { setLoading(false) }
   }

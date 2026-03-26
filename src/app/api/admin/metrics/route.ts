@@ -1,22 +1,24 @@
 import { NextResponse } from 'next/server'
 import { getMetric, incrementMetric } from '../../../../lib/metrics'
 import { sendWebhook, sendEmail } from '../../../../lib/notify'
+import { getAuthAdmin, unauthorized } from '../../../../lib/apiAuth'
 
 async function read(key: string) {
   try {
     const v = await getMetric(key)
     return v === null ? null : v
-  } catch (err) {
+  } catch {
     return null
   }
 }
 
 export async function GET(req: Request) {
-  const auth = req.headers.get('authorization') || ''
-  const token = process.env.ADMIN_METRICS_TOKEN || ''
-  if (!token || !auth || auth !== `Bearer ${token}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  // Requiere admin autenticado (JWT) O token estático de servidor
+  const admin = await getAuthAdmin(req);
+  const staticToken = process.env.ADMIN_METRICS_TOKEN || '';
+  const authHeader = req.headers.get('authorization') || '';
+  const isStaticToken = staticToken && authHeader === `Bearer ${staticToken}`;
+  if (!admin && !isStaticToken) return unauthorized();
 
   // keys we track
   const keys = {

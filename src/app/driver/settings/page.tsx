@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { useDriverContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 
@@ -78,7 +79,7 @@ export default function DriverSettingsPage() {
     };
 
     try {
-      const res = await fetch('/api/driver-profile', {
+      const res = await authFetch('/api/driver-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
@@ -190,7 +191,7 @@ export default function DriverSettingsPage() {
                     }
                     const base64 = btoa(binary);
 
-                    const res = await fetch('/api/upload-photo', {
+                    const res = await authFetch('/api/upload-photo', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ email, base64, mimeType: file.type }),
