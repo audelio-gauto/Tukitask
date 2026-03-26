@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
-import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
+import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
+
+// Comision mínima para poder ver pedidos disponibles (en la moneda base de la app)
+const MIN_WALLET_BALANCE = 0; // 0 = solo bloquear si saldo negativo; sube este valor para forzar saldo mínimo
 
 // GET: Listar pedidos — abierto (scoped por email de query param)
 export async function GET(req: Request) {
@@ -27,6 +30,22 @@ export async function GET(req: Request) {
     // Driver's active jobs (including return flow)
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected']);
   } else {
+    // Pedidos disponibles para drivers — verificar saldo de billetera
+    const user = await getAuthUser(req);
+    if (user) {
+      const { data: wallet } = await sbAdmin()
+        .from('driver_wallets')
+        .select('balance')
+        .eq('driver_email', user.email)
+        .maybeSingle();
+      const balance = Number(wallet?.balance ?? 0);
+      if (balance < MIN_WALLET_BALANCE) {
+        return NextResponse.json(
+          { error: 'saldo_insuficiente', balance },
+          { status: 402 }
+        );
+      }
+    }
     query = query.in('status', ['pending', 'negotiating']).limit(100);
   }
 
@@ -79,6 +98,7 @@ export async function PATCH(req: Request) {
     returned: ['return_delivered'],    // client confirms receipt
     return_rejected: ['return_delivered', 'returning'], // client rejects receipt or return request
     cancelled: ['pending', 'negotiating'], // client cancels the search
+    client_confirmed: ['delivered'],   // client confirms payment to driver → triggers commission
   };
 
   const isDriverStatus = status in driverAllowed;
@@ -111,6 +131,7 @@ export async function PATCH(req: Request) {
 
   const coreUpdates: Record<string, unknown> = { status };
   if (status === 'delivered') coreUpdates.completed_at = new Date().toISOString();
+  if (status === 'client_confirmed') coreUpdates.confirmed_at = new Date().toISOString();
 
   const { error } = await supabaseServer.from('orders').update(coreUpdates).eq('id', order_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -126,6 +147,14 @@ export async function PATCH(req: Request) {
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {
     await supabaseServer.from('orders').update(extraUpdates).eq('id', order_id);
+  }
+
+  // Deduct commission when client confirms payment
+  if (status === 'client_confirmed') {
+    const { error: rpcErr } = await supabaseServer.rpc('deduct_commission', { p_order_id: order_id });
+    if (!rpcErr) {
+      await supabaseServer.from('orders').update({ status: 'commission_charged' }).eq('id', order_id);
+    }
   }
 
   return NextResponse.json({ success: true, status });

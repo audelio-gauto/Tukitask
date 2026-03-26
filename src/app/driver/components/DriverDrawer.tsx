@@ -11,6 +11,7 @@ const driverMenuItems = [
   { slug: 'en-ruta', label: 'En Ruta', href: '/driver/en-ruta', icon: 'truck' },
   { slug: 'delivered', label: 'Entregados', href: '/driver/delivered', icon: 'check' },
   { slug: 'failed', label: 'Fallidos', href: '/driver/failed', icon: 'x' },
+  { slug: 'billetera', label: 'Mi Billetera', href: '/driver/billetera', icon: 'wallet' },
   { slug: 'settings', label: 'Configuración', href: '/driver/settings', icon: 'settings' },
 ];
 
@@ -20,6 +21,7 @@ const tecnicoMenuItems = [
   { slug: 'citas', label: 'Citas Confirmadas', href: '/tecnico/citas', icon: 'clipboard' },
   { slug: 'aceptacion', label: 'Tasa de Aceptación', href: '/tecnico/aceptacion', icon: 'check' },
   { slug: 'ganancias', label: 'Ganancias', href: '/tecnico/ganancias', icon: 'map' },
+  { slug: 'billetera', label: 'Mi Billetera', href: '/tecnico/billetera', icon: 'wallet' },
   { slug: 'settings', label: 'Configuración', href: '/tecnico/settings', icon: 'settings' },
 ];
 
@@ -35,6 +37,7 @@ const icons: Record<string, React.ReactNode> = {
   bars: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
   crosshair: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   map: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>,
+  wallet: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
 };
 
 interface DriverDrawerProps {

@@ -32,6 +32,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   returned: { label: 'Devuelto ✓', color: '#059669', bg: '#ecfdf5' },
   return_rejected: { label: 'Devolución rechazada', color: '#dc2626', bg: '#fef2f2' },
   incident_closed: { label: 'Incidencia cerrada', color: '#6b7280', bg: '#f3f4f6' },
+  client_confirmed: { label: 'Pago confirmado', color: '#059669', bg: '#ecfdf5' },
+  commission_charged: { label: 'Completado', color: '#059669', bg: '#ecfdf5' },
 };
 
 interface DriverOffer {
@@ -268,6 +270,7 @@ export default function MisEnviosPage() {
   // No-driver detection: maps orderId → timestamp of last "Volver a solicitar" click
   const [noDriverResets, setNoDriverResets] = useState<Record<string, number>>({});
   const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null);
 
   const prevOfferCount = useRef(0);
   const soundTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -456,8 +459,20 @@ export default function MisEnviosPage() {
     setReturningAction(key === returningAction ? null : returningAction);
   };
 
+  const handleConfirmPayment = async (orderId: string) => {
+    setConfirmingPayment(orderId);
+    try {
+      const res = await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'client_confirmed' }),
+      });
+      if (res.ok) fetchOrders();
+    } catch { /* */ }
+    setConfirmingPayment(null);
+  };
+
   const handleCancelOrder = async (orderId: string) => {
-    setCancellingOrder(orderId);
     try {
       const res = await authFetch('/api/orders', {
         method: 'PATCH',
@@ -493,7 +508,7 @@ export default function MisEnviosPage() {
     ['accepted', 'picking_up', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'].includes(o.status)
   );
   const completedOrders = orders.filter(o =>
-    ['delivered', 'cancelled', 'returned', 'incident_closed'].includes(o.status)
+    ['delivered', 'client_confirmed', 'commission_charged', 'cancelled', 'returned', 'incident_closed'].includes(o.status)
   );
 
   return (
@@ -989,7 +1004,19 @@ export default function MisEnviosPage() {
 
                 {/* Driver rating section */}
                 {order.status === 'delivered' && (
-                  <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
+                  <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <button
+                      onClick={() => handleConfirmPayment(order.id)}
+                      disabled={confirmingPayment === order.id}
+                      style={{
+                        width: '100%', padding: '0.65rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                        opacity: confirmingPayment === order.id ? 0.6 : 1,
+                      }}
+                    >
+                      {confirmingPayment === order.id ? 'Procesando...' : '✓ Confirmar Pago al Conductor'}
+                    </button>
                     {canRate ? (
                       <button
                         onClick={() => { setRatingOrder({ ...order, driver_name: driverName, driver_photo: driverPhoto }); setRatingOrderId(order.id); }}

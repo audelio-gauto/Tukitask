@@ -29,6 +29,8 @@ export const ORDER_STATUS = {
   RETURNED: 'returned',
   CANCELLED: 'cancelled',
   INCIDENT_CLOSED: 'incident_closed',
+  CLIENT_CONFIRMED: 'client_confirmed',
+  COMMISSION_CHARGED: 'commission_charged',
 } as const;
 
 export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
