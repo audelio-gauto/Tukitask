@@ -165,7 +165,7 @@ export default function AdminSidebar() {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-2 space-y-1">
+      <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           const hasSubItems = item.subItems && item.subItems.length > 0;
