@@ -83,6 +83,16 @@ export default function TecnicoDashboard() {
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
   const [rangoKm, setRangoKm]           = useState(20);
 
+  // ── Wallet balance ────────────────────────────────────────────────────────
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    authFetch('/api/wallet')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.balance !== undefined) setWalletBalance(Number(d.balance)); })
+      .catch(() => {});
+  }, [email]);
+
   // ── New-job popup ──────────────────────────────────────────────────────────
   interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; description?: string | null; address?: string | null; lat?: number | null; lng?: number | null; }
   const [pendingPopup, setPendingPopup] = useState<PendingJob | null>(null);
@@ -380,6 +390,16 @@ export default function TecnicoDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
+
+      {/* Wallet balance pill — centrada top */}
+      <Link href="/tecnico/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
+        <span className="tuki-wallet-pill-amount">
+          {walletBalance !== null
+            ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
+            : '₲ ...'}
+        </span>
+        <span className="tuki-wallet-pill-label">Billetera</span>
+      </Link>
 
       {/* ── Filtro button ── */}
       <button
