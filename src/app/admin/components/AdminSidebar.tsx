@@ -130,7 +130,9 @@ const menuItems: MenuItem[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(menuItems.filter(i => i.subItems?.length).map(i => [i.href, true]))
+  );
 
   // Auto-expand parent menu when a sub-item is active
   const isSubActive = (item: MenuItem) =>
