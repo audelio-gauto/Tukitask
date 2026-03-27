@@ -213,8 +213,115 @@ export default function MisServiciosPage() {
   const fmtGs   = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
   const fmtDate = (s: string | null) => !s ? '' : new Date(s).toLocaleDateString('es-PY', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+  // First job that is actively being tracked (tecnico moving/working)
+  const trackingJob = jobs.find(j => ['en_camino', 'llegue', 'en_proceso', 'completion_pending'].includes(j.status)) ?? null;
+
   return (
-    <div style={{ minHeight: '100dvh', background: '#0f172a', paddingBottom: 90 }}>
+    <>
+      {/* ── Full-screen live map (InDrive style) ────────────────────────── */}
+      {trackingJob && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#0b1220' }}>
+          {/* Map fills entire screen */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <TecnicoTrackMap
+              tecnicoLat={driverLocs[trackingJob.id]?.lat ?? null}
+              tecnicoLng={driverLocs[trackingJob.id]?.lng ?? null}
+              clientLat={trackingJob.lat}
+              clientLng={trackingJob.lng}
+              status={trackingJob.status}
+              tecnicoName={trackingJob.tecnico_name}
+            />
+          </div>
+
+          {/* Top gradient header */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, background: 'linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, transparent 100%)', padding: '48px 16px 48px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                onClick={() => router.back()}
+                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '50%', width: 42, height: 42, color: '#fff', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              >←</button>
+              <div>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{SERVICE_LABELS[trackingJob.service_type] ?? trackingJob.service_type}</div>
+                {trackingJob.address && (
+                  <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', marginTop: 2 }}>
+                    📍 {trackingJob.address.length > 38 ? trackingJob.address.slice(0, 38) + '…' : trackingJob.address}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom info sheet */}
+          {(() => {
+            const st   = STATUS_CONFIG[trackingJob.status] ?? { label: trackingJob.status, color: '#64748b', bg: '#334155', step: 0 };
+            const loc  = driverLocs[trackingJob.id];
+            const busy = !!actionId;
+            return (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, background: '#1e293b', borderRadius: '24px 24px 0 0', padding: '10px 20px 40px', boxShadow: '0 -12px 40px rgba(0,0,0,0.5)' }}>
+                {/* Drag handle */}
+                <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2, margin: '0 auto 16px' }} />
+
+                {/* Status + timestamp */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1.05rem' }}>{st.label}</span>
+                  {loc && (
+                    <span style={{ fontSize: '0.68rem', color: '#475569' }}>
+                      ↺ {new Date(loc.updated_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress steps */}
+                {st.step > 0 && st.step < 6 && (
+                  <div style={{ display: 'flex', gap: 3, marginBottom: 14 }}>
+                    {STEPS.map((_, i) => (
+                      <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < st.step ? '#F5C518' : '#334155', transition: 'background 0.4s' }} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Tecnico card */}
+                {trackingJob.tecnico_name && (
+                  <div style={{ background: '#0f172a', borderRadius: 14, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    {trackingJob.tecnico_photo
+                      ? <img src={trackingJob.tecnico_photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155', flexShrink: 0 }} />
+                      : <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>👷</div>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.95rem' }}>{trackingJob.tecnico_name}</div>
+                      {trackingJob.agreed_price != null && (
+                        <div style={{ fontSize: '0.8rem', color: '#22c55e', fontWeight: 700, marginTop: 2 }}>
+                          💰 {fmtGs(trackingJob.agreed_price)}
+                          {trackingJob.extra_charge != null && Number(trackingJob.extra_charge) > 0 && (
+                            <span style={{ color: '#f59e0b' }}> + {fmtGs(trackingJob.extra_charge)} extra</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* completion_pending — action buttons */}
+                {trackingJob.status === 'completion_pending' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => doJobAction(trackingJob.id, 'accept_completion')}
+                      disabled={busy}
+                      style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
+                    >✅ Sí, listo</button>
+                    <button
+                      onClick={() => setRejectModal({ jobId: trackingJob.id })}
+                      disabled={busy}
+                      style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#7f1d1d', color: '#fca5a5', fontWeight: 700, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}
+                    >✕ No listo</button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      <div style={{ minHeight: '100dvh', background: '#0f172a', paddingBottom: 90 }}>
       <div style={{ background: '#1e293b', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #334155' }}>
         <button onClick={() => router.back()} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', fontSize: '1.1rem', cursor: 'pointer', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
         <div style={{ flex: 1 }}>
@@ -410,22 +517,12 @@ export default function MisServiciosPage() {
                         </div>
                       )}
 
-                      {/* Live tracking map — shown when tecnico is moving or on site */}
-                      {['en_camino', 'llegue', 'en_proceso', 'accepted'].includes(job.status) && (
-                        <div style={{ marginBottom: 14 }}>
-                          <TecnicoTrackMap
-                            tecnicoLat={driverLocs[job.id]?.lat ?? null}
-                            tecnicoLng={driverLocs[job.id]?.lng ?? null}
-                            clientLat={job.lat}
-                            clientLng={job.lng}
-                            status={job.status}
-                            tecnicoName={job.tecnico_name}
-                          />
-                          {driverLocs[job.id] && (
-                            <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#475569', textAlign: 'right' }}>
-                              Actualizado {new Date(driverLocs[job.id]!.updated_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </p>
-                          )}
+                      {/* Live tracking indicator — full-screen map appears via overlay above */}
+                      {['en_camino', 'llegue', 'en_proceso', 'completion_pending'].includes(job.status) && (
+                        <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ width: 7, height: 7, background: '#22c55e', borderRadius: '50%', display: 'inline-block', animation: 'livepulse2 1.5s ease-in-out infinite', flexShrink: 0 }} />
+                          <span style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: 700 }}>Seguimiento en vivo activo</span>
+                          <style>{`@keyframes livepulse2{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
                         </div>
                       )}
 
@@ -536,5 +633,6 @@ export default function MisServiciosPage() {
         </>
       )}
     </div>
+    </>
   );
 }

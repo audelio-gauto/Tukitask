@@ -3,291 +3,286 @@ import { useEffect, useRef, useState } from 'react';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
-function createEl(emoji: string, bg: string, size = 38) {
+function mkMarker(emoji: string, bg: string, border: string) {
   const el = document.createElement('div');
   el.style.cssText = [
-    `width:${size}px;height:${size}px`,
+    'width:48px;height:48px',
     `background:${bg}`,
     'border-radius:50%',
     'display:flex;align-items:center;justify-content:center',
-    `font-size:${Math.round(size * 0.52)}px`,
-    'border:2.5px solid rgba(255,255,255,0.9)',
-    'box-shadow:0 2px 10px rgba(0,0,0,0.4)',
-    'cursor:default',
+    'font-size:22px',
+    `border:3px solid ${border}`,
+    'box-shadow:0 4px 16px rgba(0,0,0,0.6)',
+    'cursor:default;user-select:none',
   ].join(';');
   el.textContent = emoji;
   return el;
 }
 
-function staticMapUrl(lat: number, lng: number, zoom: number, w: number, h: number, markers = '') {
-  const base = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static`;
-  const ov   = markers ? `${markers}/` : '';
-  return `${base}/${ov}${lng},${lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+let _abortCtl: AbortController | null = null;
+
+function drawRoute(map: any, from: [number, number], to: [number, number]) {
+  if (_abortCtl) _abortCtl.abort();
+  _abortCtl = new AbortController();
+
+  const applyCoords = (coords: [number, number][]) => {
+    if (!map.getSource) return;
+    const geo: any = {
+      type: 'Feature', properties: {},
+      geometry: { type: 'LineString', coordinates: coords },
+    };
+    if (map.getSource('tr')) {
+      (map.getSource('tr') as any).setData(geo);
+    } else {
+      map.addSource('tr', { type: 'geojson', data: geo });
+      map.addLayer({
+        id: 'tr-casing', type: 'line', source: 'tr',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.18 },
+      });
+      map.addLayer({
+        id: 'tr-line', type: 'line', source: 'tr',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#38bdf8', 'line-width': 4.5, 'line-dasharray': [2, 2.2] },
+      });
+    }
+  };
+
+  fetch(
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${from[0]},${from[1]};${to[0]},${to[1]}?geometries=geojson&overview=simplified&access_token=${MAPBOX_TOKEN}`,
+    { signal: _abortCtl.signal },
+  )
+    .then(r => r.json())
+    .then(d => {
+      const c = d?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
+      applyCoords(c && c.length > 1 ? c : [from, to]);
+    })
+    .catch(() => applyCoords([from, to]));
+}
+
+function fitBounds(map: any, mb: any, a: [number, number], b: [number, number]) {
+  map.fitBounds(
+    new mb.LngLatBounds(
+      [Math.min(a[0], b[0]), Math.min(a[1], b[1])],
+      [Math.max(a[0], b[0]), Math.max(a[1], b[1])],
+    ),
+    { padding: { top: 100, bottom: 310, left: 50, right: 50 }, maxZoom: 16, duration: 900 },
+  );
 }
 
 interface Props {
-  tecnicoLat: number | null;
-  tecnicoLng: number | null;
-  clientLat:  number | null;
-  clientLng:  number | null;
-  status:     string;
+  tecnicoLat:   number | null;
+  tecnicoLng:   number | null;
+  clientLat:    number | null;
+  clientLng:    number | null;
+  status:       string;
   tecnicoName?: string | null;
 }
 
-export default function TecnicoTrackMap({ tecnicoLat, tecnicoLng, clientLat, clientLng, status, tecnicoName }: Props) {
-  const mapRef     = useRef<HTMLDivElement>(null);
-  const mapInst    = useRef<any>(null);
-  const mbRef      = useRef<any>(null);
-  const techMarker = useRef<any>(null);
-  const homeMarker = useRef<any>(null);
-  const initRef    = useRef(false);
-  const loadTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+export default function TecnicoTrackMap({
+  tecnicoLat, tecnicoLng, clientLat, clientLng, status, tecnicoName,
+}: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef       = useRef<any>(null);
+  const mbRef        = useRef<any>(null);
+  const techMkr      = useRef<any>(null);
+  const homeMkr      = useRef<any>(null);
+  const boundsSet    = useRef(false);
+  const initDone     = useRef(false);
 
-  const [glReady,  setGlReady]  = useState(false);
-  const [glFailed, setGlFailed] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [err,   setErr]   = useState(false);
 
   const hasTech   = tecnicoLat != null && tecnicoLng != null;
   const hasClient = clientLat  != null && clientLng  != null;
 
-  // Status label
-  const statusLabel: Record<string, string> = {
-    en_camino:          '🚗 Técnico en camino',
-    llegue:             '📍 Técnico llegó',
-    en_proceso:         '🔧 Técnico trabajando',
-    completion_pending: '✅ Esperando confirmación',
-    accepted:           '✅ Técnico confirmado',
-  };
-
-  // GL map init
+  /* ─── Init map once ───────────────────────────────────────────── */
   useEffect(() => {
-    if (!mapRef.current || initRef.current || glFailed || !MAPBOX_TOKEN) return;
-    initRef.current = true;
-    let mounted = true;
+    if (initDone.current || !containerRef.current || !MAPBOX_TOKEN) return;
+    initDone.current = true;
+    let alive = true;
 
     (async () => {
-      const mapboxgl = (await import('mapbox-gl')).default;
-
-      if (!document.getElementById('mapbox-gl-css')) {
-        const link  = document.createElement('link');
-        link.id     = 'mapbox-gl-css';
-        link.rel    = 'stylesheet';
-        link.href   = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
-        document.head.appendChild(link);
-      }
-
-      if (!mounted || !mapRef.current) return;
-
-      if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
-        if (mounted) setGlFailed(true);
-        return;
-      }
-
-      const center: [number, number] = hasTech
-        ? [tecnicoLng!, tecnicoLat!]
-        : hasClient ? [clientLng!, clientLat!] : [-57.5759, -25.2637];
-
-      mbRef.current = mapboxgl;
-      let map: any;
       try {
-        map = new mapboxgl.Map({
-          container: mapRef.current,
+        const mapboxgl = (await import('mapbox-gl')).default;
+
+        if (!document.getElementById('mapbox-gl-css')) {
+          const link = document.createElement('link');
+          link.id   = 'mapbox-gl-css';
+          link.rel  = 'stylesheet';
+          link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+          document.head.appendChild(link);
+        }
+
+        if (!alive || !containerRef.current) return;
+
+        if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
+          if (alive) setErr(true);
+          return;
+        }
+
+        mbRef.current = mapboxgl;
+
+        const center: [number, number] = hasTech
+          ? [tecnicoLng!, tecnicoLat!]
+          : hasClient
+            ? [clientLng!, clientLat!]
+            : [-57.5759, -25.2637];
+
+        const map = new mapboxgl.Map({
+          container: containerRef.current,
           style: 'mapbox://styles/mapbox/dark-v11',
           center,
           zoom: 14,
           accessToken: MAPBOX_TOKEN,
           attributionControl: false,
+          logoPosition: 'bottom-right',
           failIfMajorPerformanceCaveat: false,
         });
+
+        mapRef.current = map;
+
+        map.on('load', () => {
+          if (!alive) return;
+
+          if (hasClient) {
+            homeMkr.current = new mapboxgl.Marker({ element: mkMarker('🏠', '#F59E0B', 'rgba(255,255,255,0.9)') })
+              .setLngLat([clientLng!, clientLat!])
+              .addTo(map);
+          }
+
+          if (hasTech) {
+            techMkr.current = new mapboxgl.Marker({ element: mkMarker('🛺', '#0EA5E9', 'rgba(255,255,255,0.9)') })
+              .setLngLat([tecnicoLng!, tecnicoLat!])
+              .addTo(map);
+          }
+
+          if (hasTech && hasClient) {
+            drawRoute(map, [tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]);
+            fitBounds(map, mapboxgl, [tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]);
+            boundsSet.current = true;
+          } else if (hasTech) {
+            map.flyTo({ center: [tecnicoLng!, tecnicoLat!], zoom: 15 });
+          } else if (hasClient) {
+            map.flyTo({ center: [clientLng!, clientLat!], zoom: 15 });
+          }
+
+          setReady(true);
+        });
+
+        map.on('error', (e: any) => {
+          const msg: string = e?.error?.message ?? '';
+          if ((msg.toLowerCase().includes('webgl') || msg.toLowerCase().includes('gl context')) && alive) {
+            try { map.remove(); } catch {}
+            mapRef.current = null;
+            setErr(true);
+          }
+        });
       } catch {
-        if (mounted) setGlFailed(true);
-        return;
+        if (alive) setErr(true);
       }
-
-      if (!map.painter?.context?.gl) {
-        try { map.remove(); } catch {}
-        if (mounted) setGlFailed(true);
-        return;
-      }
-
-      mapInst.current = map;
-
-      map.on('error', () => {
-        if (mounted) {
-          try { map.remove(); } catch {}
-          mapInst.current = null;
-          setGlFailed(true);
-        }
-      });
-
-      loadTimer.current = setTimeout(() => {
-        if (mounted && !mapInst.current?._loaded) {
-          try { map.remove(); } catch {}
-          mapInst.current = null;
-          setGlFailed(true);
-        }
-      }, 6000);
-
-      map.on('load', () => {
-        if (loadTimer.current) clearTimeout(loadTimer.current);
-        if (mounted) setGlReady(true);
-      });
     })();
 
     return () => {
-      mounted = false;
-      if (loadTimer.current) clearTimeout(loadTimer.current);
-      if (mapInst.current) { mapInst.current.remove(); mapInst.current = null; }
-      techMarker.current = null;
-      homeMarker.current = null;
-      initRef.current = false;
+      alive = false;
+      if (_abortCtl) { _abortCtl.abort(); _abortCtl = null; }
+      if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; }
+      techMkr.current = homeMkr.current = null;
+      initDone.current = boundsSet.current = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [glFailed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Update markers and fit bounds when positions change
+  /* ─── Update tecnico marker + route on every GPS tick ────────── */
   useEffect(() => {
-    const map  = mapInst.current;
-    const mbox = mbRef.current;
-    if (!map || !mbox || !glReady) return;
+    const map = mapRef.current;
+    const mb  = mbRef.current;
+    if (!map || !mb || !ready || !hasTech) return;
 
-    // Tecnico marker (moving car)
-    if (hasTech) {
-      if (!techMarker.current) {
-        const el = createEl('🛺', '#0ea5e9');
-        techMarker.current = new mbox.Marker({ element: el })
-          .setLngLat([tecnicoLng!, tecnicoLat!])
-          .addTo(map);
-      } else {
-        techMarker.current.setLngLat([tecnicoLng!, tecnicoLat!]);
-      }
+    if (techMkr.current) {
+      techMkr.current.setLngLat([tecnicoLng!, tecnicoLat!]);
+    } else {
+      techMkr.current = new mb.Marker({ element: mkMarker('🛺', '#0EA5E9', 'rgba(255,255,255,0.9)') })
+        .setLngLat([tecnicoLng!, tecnicoLat!])
+        .addTo(map);
     }
 
-    // Client home marker
     if (hasClient) {
-      if (!homeMarker.current) {
-        const el = createEl('🏠', '#F5C518');
-        homeMarker.current = new mbox.Marker({ element: el })
-          .setLngLat([clientLng!, clientLat!])
-          .addTo(map);
-      } else {
-        homeMarker.current.setLngLat([clientLng!, clientLat!]);
+      drawRoute(map, [tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]);
+      if (!boundsSet.current) {
+        fitBounds(map, mb, [tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]);
+        boundsSet.current = true;
       }
     }
+  }, [tecnicoLat, tecnicoLng, ready, hasTech, hasClient, clientLat, clientLng]);
 
-    // Draw or update route line
-    const srcId  = 'track-route';
-    const layerId = 'track-route-layer';
-    const casingId = 'track-route-casing';
-
-    const applyRoute = (coords: [number, number][]) => {
-      const geojson: any = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
-      if (map.getSource(srcId)) {
-        (map.getSource(srcId) as any).setData(geojson);
-      } else {
-        map.addSource(srcId, { type: 'geojson', data: geojson });
-        map.addLayer({ id: casingId, type: 'line', source: srcId, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 6, 'line-opacity': 0.4 } }, 'road-label');
-        map.addLayer({ id: layerId,  type: 'line', source: srcId, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#0ea5e9', 'line-width': 3.5, 'line-dasharray': [2, 2] } }, 'road-label');
-      }
-    };
-
-    if (hasTech && hasClient) {
-      // Fetch real road route
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${tecnicoLng},${tecnicoLat};${clientLng},${clientLat}?geometries=geojson&overview=simplified&access_token=${MAPBOX_TOKEN}`;
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          const coords = data?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
-          if (coords && coords.length > 1) {
-            applyRoute(coords);
-          } else {
-            applyRoute([[tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]]);
-          }
-        })
-        .catch(() => {
-          applyRoute([[tecnicoLng!, tecnicoLat!], [clientLng!, clientLat!]]);
-        });
-
-      // Fit bounds
-      const bounds = new mbox.LngLatBounds(
-        [Math.min(tecnicoLng!, clientLng!), Math.min(tecnicoLat!, clientLat!)],
-        [Math.max(tecnicoLng!, clientLng!), Math.max(tecnicoLat!, clientLat!)],
-      );
-      map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 50, right: 50 }, maxZoom: 16, duration: 600 });
-    } else if (hasTech) {
-      map.flyTo({ center: [tecnicoLng!, tecnicoLat!], zoom: 15, duration: 600 });
-    } else if (hasClient) {
-      map.flyTo({ center: [clientLng!, clientLat!], zoom: 15, duration: 600 });
-    }
-  }, [glReady, tecnicoLat, tecnicoLng, clientLat, clientLng, hasTech, hasClient]);
-
-  // Fallback: dark Mapbox static image
-  const fallbackImg = () => {
-    if (!MAPBOX_TOKEN) return null;
-    if (hasTech && hasClient) {
-      const markers = [
-        `pin-l-home+F5C518(${clientLng},${clientLat})`,
-        `pin-l-car+0ea5e9(${tecnicoLng},${tecnicoLat})`,
-      ].join(',');
-      const midLat = ((tecnicoLat! + clientLat!) / 2);
-      const midLng = ((tecnicoLng! + clientLng!) / 2);
-      return staticMapUrl(midLat, midLng, 13, 640, 320, markers);
-    }
-    if (hasTech)   return staticMapUrl(tecnicoLat!, tecnicoLng!, 14, 640, 320, `pin-l-car+0ea5e9(${tecnicoLng},${tecnicoLat})`);
-    if (hasClient) return staticMapUrl(clientLat!,  clientLng!,  14, 640, 320, `pin-l-home+F5C518(${clientLng},${clientLat})`);
-    return null;
-  };
-
-  const fbImg = fallbackImg();
-
+  /* ─── Render ──────────────────────────────────────────────────── */
   return (
-    <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 16, overflow: 'hidden', background: '#0f172a' }}>
-      {/* Status chip */}
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 20, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)', borderRadius: 20, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, color: '#f1f5f9', border: '1px solid rgba(255,255,255,0.08)' }}>
-        {statusLabel[status] ?? '📍 En camino'}
-        {tecnicoName && <span style={{ color: '#94a3b8', marginLeft: 6 }}>· {tecnicoName}</span>}
-      </div>
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#0b1220' }}>
+      {/* Interactive GL map */}
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* Legend */}
-      <div style={{ position: 'absolute', bottom: 10, left: 10, zIndex: 20, display: 'flex', gap: 8, fontSize: '0.72rem', color: '#f1f5f9' }}>
-        <span style={{ background: 'rgba(15,23,42,0.8)', padding: '3px 8px', borderRadius: 10 }}>🛺 Técnico</span>
-        <span style={{ background: 'rgba(15,23,42,0.8)', padding: '3px 8px', borderRadius: 10 }}>🏠 Tu casa</span>
-      </div>
-
-      {/* Pulse dot on tec marker for "live" feel */}
-      {hasTech && glReady && (
-        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20, display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(15,23,42,0.8)', padding: '4px 9px', borderRadius: 20 }}>
-          <span style={{ width: 7, height: 7, background: '#22c55e', borderRadius: '50%', display: 'inline-block', animation: 'livepulse 1.4s ease-in-out infinite' }} />
-          <span style={{ fontSize: '0.7rem', color: '#4ade80', fontWeight: 700 }}>EN VIVO</span>
+      {/* Loading spinner */}
+      {!ready && !err && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <div style={{
+            width: 48, height: 48,
+            border: '4px solid #1e293b', borderTop: '4px solid #38bdf8',
+            borderRadius: '50%', animation: 'mapspin .75s linear infinite',
+          }} />
+          <span style={{ color: '#475569', fontSize: '0.82rem' }}>Cargando mapa…</span>
+          <style>{`@keyframes mapspin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
 
-      <style>{`
-        @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
-      `}</style>
-
-      {/* GL Map */}
-      {!glFailed && (
-        <div
-          ref={mapRef}
-          style={{ position: 'absolute', inset: 0, opacity: glReady ? 1 : 0, transition: 'opacity 0.4s', zIndex: 5 }}
-        />
-      )}
-
-      {/* Static fallback shown while GL is loading / failed */}
-      {(!glReady || glFailed) && fbImg && (
-        <img
-          src={fbImg}
-          alt="Mapa de seguimiento"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 3 }}
-        />
-      )}
-
-      {/* No token fallback */}
-      {!MAPBOX_TOKEN && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem', zIndex: 4 }}>
-          Mapa no disponible
+      {/* Hard WebGL error */}
+      {err && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: '2.5rem' }}>🗺️</span>
+          <span style={{ color: '#475569', fontSize: '0.82rem' }}>Mapa no disponible</span>
         </div>
       )}
+
+      {/* EN VIVO badge */}
+      {ready && hasTech && (
+        <div style={{
+          position: 'absolute', top: 60, right: 14, zIndex: 20,
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(10px)',
+          padding: '5px 12px', borderRadius: 20,
+          border: '1px solid rgba(34,197,94,0.5)',
+        }}>
+          <span style={{
+            width: 7, height: 7, background: '#22c55e', borderRadius: '50%', display: 'inline-block',
+            animation: 'livepulse 1.5s ease-in-out infinite',
+          }} />
+          <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: 800, letterSpacing: '0.06em' }}>EN VIVO</span>
+        </div>
+      )}
+
+      {/* Legend chips */}
+      {ready && (
+        <div style={{ position: 'absolute', bottom: 300, left: 14, zIndex: 20, display: 'flex', gap: 6 }}>
+          {hasTech && (
+            <span style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', padding: '4px 10px', borderRadius: 20, fontSize: '0.7rem', color: '#f1f5f9', border: '1px solid rgba(255,255,255,0.1)' }}>
+              🛺 Técnico
+            </span>
+          )}
+          {hasClient && (
+            <span style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', padding: '4px 10px', borderRadius: 20, fontSize: '0.7rem', color: '#f1f5f9', border: '1px solid rgba(255,255,255,0.1)' }}>
+              🏠 Tu casa
+            </span>
+          )}
+        </div>
+      )}
+
+      <style>{`@keyframes livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.7)}}`}</style>
     </div>
   );
 }
