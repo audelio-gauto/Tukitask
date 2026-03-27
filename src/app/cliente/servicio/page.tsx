@@ -689,7 +689,7 @@ export default function SolicitarServicioPage() {
                 {/* Price section */}
                 <div className="enviar-price-section">
                   <div className="enviar-price-label">
-                    Tu oferta al técnico
+                    Proponer precio
                     {suggestedPrice != null && suggestedPrice > 0 && (
                       <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
                         Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
