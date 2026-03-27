@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     if (orderError || !order) {
       return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
     }
-    if (order.status !== 'delivered') {
+    const DELIVERED_STATUSES = ['delivered', 'commission_charged', 'client_confirmed'];
+    if (!DELIVERED_STATUSES.includes(order.status)) {
       return NextResponse.json({ error: 'Solo se puede calificar un pedido entregado' }, { status: 400 });
     }
 
