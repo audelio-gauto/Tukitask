@@ -116,21 +116,10 @@ export default function SolicitarServicioPage() {
     ? (servicePrices[category] ?? null)
     : null;
   const [offerPrice, setOfferPrice] = useState(0);
-  const offerInitialized = useRef(false);
+  // Sync whenever suggestedPrice changes (category switch or pricing data loads from API)
   useEffect(() => {
-    // Reset when category changes
-    offerInitialized.current = false;
     setOfferPrice(suggestedPrice ?? 0);
-    offerInitialized.current = true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category]);
-  useEffect(() => {
-    // Update when pricing loads from server (only if not yet touched)
-    if (category && !offerInitialized.current) {
-      setOfferPrice(suggestedPrice ?? 0);
-      offerInitialized.current = true;
-    }
-  }, [servicePrices, category, suggestedPrice]);
+  }, [suggestedPrice]);
 
   // Step wizard state
   const [step, setStep] = useState<1 | 2 | 3>(1);
