@@ -68,6 +68,7 @@ export default function PricingConfigPage() {
         { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
         { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
       ];
+      setVehicles(filteredVehicles.length > 0 ? filteredVehicles : defaultVehicles);
       setSettings(data.pricing_settings || []);
       setAppSettings(data.app_settings || []);
       // ensure global pricing settings exist in local state for UI
