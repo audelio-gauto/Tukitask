@@ -34,7 +34,7 @@ export default function DeliveredPage() {
     fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setOrders(data.filter((o: any) => o.status === 'delivered'));
+        if (Array.isArray(data)) setOrders(data.filter((o: any) => ['delivered', 'commission_charged', 'client_confirmed'].includes(o.status)));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -62,15 +62,17 @@ export default function DeliveredPage() {
   };
 
   const deliveredToday = orders.filter(o => {
-    if (!o.completed_at) return false;
-    const d = new Date(o.completed_at);
+    const dateStr = o.completed_at || o.created_at;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
     const now = new Date();
     return d.toDateString() === now.toDateString();
   });
 
   const deliveredHistory = orders.filter(o => {
-    if (!o.completed_at) return true;
-    const d = new Date(o.completed_at);
+    const dateStr = o.completed_at || o.created_at;
+    if (!dateStr) return true;
+    const d = new Date(dateStr);
     const now = new Date();
     return d.toDateString() !== now.toDateString();
   });
