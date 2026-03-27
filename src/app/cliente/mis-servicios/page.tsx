@@ -214,7 +214,8 @@ export default function MisServiciosPage() {
   const fmtDate = (s: string | null) => !s ? '' : new Date(s).toLocaleDateString('es-PY', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   // First job that is actively being tracked (tecnico moving/working)
-  const trackingJob = jobs.find(j => ['en_camino', 'llegue', 'en_proceso', 'completion_pending'].includes(j.status)) ?? null;
+  // Show full-screen map for any non-terminal job (from pending onwards)
+  const trackingJob = jobs.find(j => !['completado', 'incidente', 'cancelled'].includes(j.status)) ?? null;
 
   return (
     <>
@@ -253,15 +254,16 @@ export default function MisServiciosPage() {
 
           {/* Bottom info sheet */}
           {(() => {
-            const st   = STATUS_CONFIG[trackingJob.status] ?? { label: trackingJob.status, color: '#64748b', bg: '#334155', step: 0 };
-            const loc  = driverLocs[trackingJob.id];
-            const busy = !!actionId;
+            const st        = STATUS_CONFIG[trackingJob.status] ?? { label: trackingJob.status, color: '#64748b', bg: '#334155', step: 0 };
+            const loc       = driverLocs[trackingJob.id];
+            const busy      = !!actionId;
+            const jobOffers = offers[trackingJob.id] ?? [];
             return (
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, background: '#1e293b', borderRadius: '24px 24px 0 0', padding: '10px 20px 40px', boxShadow: '0 -12px 40px rgba(0,0,0,0.5)' }}>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, background: '#1e293b', borderRadius: '24px 24px 0 0', padding: '10px 20px 40px', boxShadow: '0 -12px 40px rgba(0,0,0,0.5)', maxHeight: '55vh', overflowY: 'auto' }}>
                 {/* Drag handle */}
                 <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2, margin: '0 auto 16px' }} />
 
-                {/* Status + timestamp */}
+                {/* Status row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1.05rem' }}>{st.label}</span>
                   {loc && (
@@ -274,14 +276,67 @@ export default function MisServiciosPage() {
                 {/* Progress steps */}
                 {st.step > 0 && st.step < 6 && (
                   <div style={{ display: 'flex', gap: 3, marginBottom: 14 }}>
-                    {STEPS.map((_, i) => (
-                      <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < st.step ? '#F5C518' : '#334155', transition: 'background 0.4s' }} />
+                    {STEPS.map((label, i) => (
+                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                        <div style={{ height: 3, width: '100%', borderRadius: 2, background: i < st.step ? '#F5C518' : '#334155', transition: 'background 0.4s' }} />
+                        <span style={{ fontSize: '0.55rem', color: i < st.step ? '#F5C518' : '#475569', fontWeight: i < st.step ? 700 : 400 }}>{label}</span>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                {/* Tecnico card */}
-                {trackingJob.tecnico_name && (
+                {/* Pending — offers list */}
+                {trackingJob.status === 'pending' && (
+                  jobOffers.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <PulseDots />
+                      <span style={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.9rem' }}>Buscando técnicos cercanos…</span>
+                      <span style={{ color: '#475569', fontSize: '0.76rem' }}>Te notificamos cuando lleguen ofertas</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem', marginBottom: 4 }}>
+                        {jobOffers.length} oferta{jobOffers.length !== 1 ? 's' : ''} recibida{jobOffers.length !== 1 ? 's' : ''}
+                      </div>
+                      {jobOffers.map((offer, idx) => {
+                        const isMyPrice = trackingJob.client_initial_price != null &&
+                          Math.abs(offer.proposed_price - trackingJob.client_initial_price) / (trackingJob.client_initial_price || 1) < 0.05;
+                        const isBest = idx === 0 && jobOffers.length > 1 &&
+                          offer.proposed_price === Math.min(...jobOffers.map(o => o.proposed_price));
+                        return (
+                          <div key={offer.id} style={{ background: '#0f172a', borderRadius: 14, padding: '12px 13px', border: isMyPrice ? '1.5px solid #22c55e' : '1.5px solid #334155' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                              {offer.tecnico_photo
+                                ? <img src={offer.tecnico_photo} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155', flexShrink: 0 }} />
+                                : <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👷</div>}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.88rem' }}>{offer.tecnico_name ?? 'Técnico'}</div>
+                                <div style={{ fontSize: '0.82rem', color: '#22c55e', fontWeight: 800, marginTop: 2 }}>{fmtGs(offer.proposed_price)}</div>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+                                {isMyPrice && <span style={{ background: '#16a34a', color: '#fff', fontSize: '0.62rem', fontWeight: 800, borderRadius: 20, padding: '2px 8px' }}>👍 Tu tarifa</span>}
+                                {isBest && !isMyPrice && <span style={{ background: '#F5C518', color: '#1C1C2E', fontSize: '0.62rem', fontWeight: 800, borderRadius: 20, padding: '2px 8px' }}>⭐ Mejor</span>}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 7 }}>
+                              <button onClick={() => acceptOffer(trackingJob.id, offer.id)} disabled={busy}
+                                style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                                Aceptar
+                              </button>
+                              <button onClick={() => rejectOffer(offer.id)} disabled={busy}
+                                style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1px solid #334155', background: '#1e293b', color: '#94a3b8', fontWeight: 600, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer' }}>
+                                Rechazar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+
+                {/* Tecnico card (accepted / en_camino / etc.) */}
+                {trackingJob.tecnico_name && trackingJob.status !== 'pending' && (
                   <div style={{ background: '#0f172a', borderRadius: 14, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                     {trackingJob.tecnico_photo
                       ? <img src={trackingJob.tecnico_photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155', flexShrink: 0 }} />
@@ -300,7 +355,7 @@ export default function MisServiciosPage() {
                   </div>
                 )}
 
-                {/* completion_pending — action buttons */}
+                {/* completion_pending — confirm buttons */}
                 {trackingJob.status === 'completion_pending' && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
@@ -517,14 +572,7 @@ export default function MisServiciosPage() {
                         </div>
                       )}
 
-                      {/* Live tracking indicator — full-screen map appears via overlay above */}
-                      {['en_camino', 'llegue', 'en_proceso', 'completion_pending'].includes(job.status) && (
-                        <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 7, height: 7, background: '#22c55e', borderRadius: '50%', display: 'inline-block', animation: 'livepulse2 1.5s ease-in-out infinite', flexShrink: 0 }} />
-                          <span style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: 700 }}>Seguimiento en vivo activo</span>
-                          <style>{`@keyframes livepulse2{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-                        </div>
-                      )}
+
 
                       {job.tecnico_name && (
                         <div style={{ background: '#0f172a', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
