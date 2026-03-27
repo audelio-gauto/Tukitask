@@ -6,11 +6,10 @@ import { useDriverContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 
 const VEHICLE_TYPES = [
-  { value: 'bicicleta', label: 'Bicicleta', emoji: '🚲', color: '#10b981' },
-  { value: 'moto',      label: 'Moto',      emoji: '🏍️', color: '#f59e0b' },
-  { value: 'auto',      label: 'Auto',      emoji: '🚗', color: '#3b82f6' },
-  { value: 'camioneta', label: 'Camioneta', emoji: '🚙', color: '#8b5cf6' },
-  { value: 'camion',    label: 'Camión',    emoji: '🚛', color: '#ef4444' },
+  { value: 'moto',       label: 'Moto',       emoji: '🏍️', color: '#f59e0b' },
+  { value: 'auto',       label: 'Auto',       emoji: '🚗', color: '#3b82f6' },
+  { value: 'moto_carro', label: 'Moto carro', emoji: '🚙', color: '#8b5cf6' },
+  { value: 'camion',     label: 'Camión',     emoji: '🚛', color: '#ef4444' },
 ];
 
 const NAV_APPS = [
@@ -213,7 +212,7 @@ export default function DriverSettingsPage() {
           </div>
 
           {/* Cards de selección */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8, marginBottom: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: '1.25rem' }}>
             {VEHICLE_TYPES.map(v => {
               const active = vehicleType === v.value;
               return (
@@ -245,13 +244,13 @@ export default function DriverSettingsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                Modelo
+                Marca
               </label>
               <input
                 type="text"
                 value={vehicleModel}
                 onChange={e => setVehicleModel(e.target.value)}
-                placeholder={vehicleType === 'moto' ? 'Ej. Honda CB 150' : vehicleType === 'bicicleta' ? 'Ej. Trek FX3' : 'Ej. Toyota Hilux'}
+                placeholder={vehicleType === 'moto' ? 'Ej. Honda CB 150' : vehicleType === 'auto' ? 'Ej. Toyota Corolla' : vehicleType === 'moto_carro' ? 'Ej. Piaggio Ape' : 'Ej. Mercedes Sprinter'}
                 style={{
                   width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
                   border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
