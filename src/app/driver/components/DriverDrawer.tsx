@@ -7,8 +7,6 @@ import { supabase } from '@/lib/supabaseClient';
 const driverMenuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/driver', icon: 'home' },
   { slug: 'deliveries', label: 'Envíos', href: '/driver/deliveries', icon: 'box' },
-  { slug: 'assigned', label: 'Asignados', href: '/driver/assigned', icon: 'clipboard' },
-  { slug: 'en-ruta', label: 'En Ruta', href: '/driver/en-ruta', icon: 'truck' },
   { slug: 'delivered', label: 'Entregados', href: '/driver/delivered', icon: 'check' },
   { slug: 'failed', label: 'Fallidos', href: '/driver/failed', icon: 'x' },
   { slug: 'billetera', label: 'Mi Billetera', href: '/driver/billetera', icon: 'wallet' },
