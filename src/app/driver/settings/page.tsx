@@ -27,8 +27,7 @@ export default function DriverSettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [vehicleType, setVehicleType] = useState('moto');
-  const [vehicleModel, setVehicleModel] = useState('');
-  const [licensePlate, setLicensePlate] = useState('');
+  const [vehicleDetails, setVehicleDetails] = useState<Record<string, { marca: string; matricula: string }>>({});
   const [navApp, setNavApp] = useState('google_maps');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -47,9 +46,18 @@ export default function DriverSettingsPage() {
         const data = json.profile;
         if (data) {
           setProfilePhoto(data.profile_photo || '');
-          setVehicleType(data.transport_mode || data.vehicle_type || 'moto');
-          setVehicleModel(data.vehicle_type || '');
-          setLicensePlate(data.license_plate || '');
+          const savedType = data.transport_mode || 'moto';
+          setVehicleType(savedType);
+          try {
+            const parsed = JSON.parse(data.vehicle_type || '{}');
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+              setVehicleDetails(parsed);
+            } else {
+              setVehicleDetails({ [savedType]: { marca: data.vehicle_type || '', matricula: data.license_plate || '' } });
+            }
+          } catch {
+            setVehicleDetails({ [savedType]: { marca: data.vehicle_type || '', matricula: data.license_plate || '' } });
+          }
           setNavApp(data.nav_app || 'google_maps');
           setFirstName(data.first_name || '');
           setLastName(data.last_name || '');
@@ -72,8 +80,8 @@ export default function DriverSettingsPage() {
         body: JSON.stringify({
           email,
           transport_mode: vehicleType,
-          vehicle_type: vehicleModel,
-          license_plate: licensePlate.toUpperCase(),
+          vehicle_type: JSON.stringify(vehicleDetails),
+          license_plate: (vehicleDetails[vehicleType]?.matricula || '').toUpperCase(),
           nav_app: navApp,
           first_name: firstName,
           last_name: lastName,
@@ -192,8 +200,8 @@ export default function DriverSettingsPage() {
               }}>
                 <span style={{ fontSize: '0.85rem' }}>{selectedVehicle.emoji}</span>
                 <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: 600 }}>{selectedVehicle.label}</span>
-                {vehicleModel && <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>· {vehicleModel}</span>}
-                {licensePlate && <span style={{ color: '#9ca3af', fontSize: '0.72rem' }}>· {licensePlate}</span>}
+                {vehicleDetails[vehicleType]?.marca && <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>· {vehicleDetails[vehicleType].marca}</span>}
+                {vehicleDetails[vehicleType]?.matricula && <span style={{ color: '#9ca3af', fontSize: '0.72rem' }}>· {vehicleDetails[vehicleType].matricula}</span>}
               </div>
             )}
           </div>
@@ -248,8 +256,8 @@ export default function DriverSettingsPage() {
               </label>
               <input
                 type="text"
-                value={vehicleModel}
-                onChange={e => setVehicleModel(e.target.value)}
+                value={vehicleDetails[vehicleType]?.marca || ''}
+                onChange={e => setVehicleDetails(prev => ({ ...prev, [vehicleType]: { ...prev[vehicleType], marca: e.target.value } }))}
                 placeholder={vehicleType === 'moto' ? 'Ej. Honda CB 150' : vehicleType === 'auto' ? 'Ej. Toyota Corolla' : vehicleType === 'moto_carro' ? 'Ej. Piaggio Ape' : 'Ej. Mercedes Sprinter'}
                 style={{
                   width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
@@ -265,8 +273,8 @@ export default function DriverSettingsPage() {
               </label>
               <input
                 type="text"
-                value={licensePlate}
-                onChange={e => setLicensePlate(e.target.value.toUpperCase())}
+                value={vehicleDetails[vehicleType]?.matricula || ''}
+                onChange={e => setVehicleDetails(prev => ({ ...prev, [vehicleType]: { ...prev[vehicleType], matricula: e.target.value.toUpperCase() } }))}
                 placeholder="Ej. ABC 123"
                 maxLength={10}
                 style={{
