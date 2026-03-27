@@ -541,8 +541,8 @@ export default function SolicitarServicioPage() {
                       <span className="enviar-vehicle-icon">{cat.icon}</span>
                       <div className="enviar-vehicle-info">
                         <span className="enviar-vehicle-name">{cat.label}</span>
-                        {SERVICE_PRICES[cat.key] && (
-                          <span className="enviar-vehicle-sub">Desde {SERVICE_PRICES[cat.key].toLocaleString('es-PY')} Gs</span>
+                        {servicePrices[cat.key] != null && (servicePrices[cat.key] as number) > 0 && (
+                          <span className="enviar-vehicle-sub">Desde {(servicePrices[cat.key] as number).toLocaleString('es-PY')} Gs</span>
                         )}
                       </div>
                       {category === cat.key && (
