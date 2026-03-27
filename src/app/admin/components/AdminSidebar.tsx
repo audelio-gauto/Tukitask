@@ -53,8 +53,9 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
-      { label: 'Driver', href: '/admin/drivers/driver' },
+      { label: 'Lista de Conductores', href: '/admin/drivers/driver' },
       { label: 'Configuración de Precios', href: '/admin/drivers/pricing' },
+      { label: '💰 Comisión por Driver', href: '/admin/drivers/commission' },
     ],
   },
   {

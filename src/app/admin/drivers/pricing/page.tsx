@@ -19,6 +19,8 @@ interface VehiclePricing {
   emoji: string;
   base_price: number | null;
   price_per_km: number | null;
+  commission_pct: number | null;
+  commission_fixed: number | null;
 }
 
 interface PricingSetting {
@@ -61,10 +63,10 @@ export default function PricingConfigPage() {
       });
       // if backend has no vehicle rows yet, initialize sensible defaults so admin can set base and per-km
       const defaultVehicles = [
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
       ];
       setSettings(data.pricing_settings || []);
       setAppSettings(data.app_settings || []);
@@ -92,10 +94,10 @@ export default function PricingConfigPage() {
       setError(String(err));
       // Even on error, show default vehicles so admin can still see the UI
       setVehicles([
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
       ]);
     } finally {
       setLoading(false);
@@ -160,7 +162,7 @@ export default function PricingConfigPage() {
     setMultipliers(prev => prev.map(m => m.id === id ? { ...m, multiplier: parseFloat(value) || 0 } : m));
   };
 
-  const updateVehicle = (id: string, field: 'base_price' | 'price_per_km', value: string) => {
+  const updateVehicle = (id: string, field: 'base_price' | 'price_per_km' | 'commission_pct' | 'commission_fixed', value: string) => {
     setVehicles(prev => prev.map(v =>
       v.id === id ? { ...v, [field]: value === '' ? null : parseFloat(value) || 0 } : v
     ));
@@ -285,7 +287,7 @@ export default function PricingConfigPage() {
               <p className="text-xs text-gray-400 mb-3">
                 Configura precios, comisiones y límites para este tipo de vehículo.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Precio Base</label>
                   <input
@@ -297,9 +299,7 @@ export default function PricingConfigPage() {
                     onChange={e => updateVehicle(v.id, 'base_price', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-300"
                   />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Precio base del envío para {v.emoji} {v.label}. Si vacío, usa el global.
-                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">Precio base del envío. Si vacío, usa el global.</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Precio por KM</label>
@@ -312,9 +312,37 @@ export default function PricingConfigPage() {
                     onChange={e => updateVehicle(v.id, 'price_per_km', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-300"
                   />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Precio por kilómetro para {v.emoji} {v.label}. Si vacío, usa el global.
-                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">Precio por kilómetro. Si vacío, usa el global.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">💰 Comisión %</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={v.commission_pct ?? 10}
+                      onChange={e => updateVehicle(v.id, 'commission_pct', e.target.value)}
+                      className="w-full px-3 py-2 pr-8 border border-orange-200 bg-orange-50 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">% del monto del envío. Se descuenta de la billetera.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">💰 Comisión Fija</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={v.commission_fixed ?? 0}
+                      onChange={e => updateVehicle(v.id, 'commission_fixed', e.target.value)}
+                      className="w-full px-3 py-2 border border-orange-200 bg-orange-50 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">Monto fijo (Gs) adicional al %. Se acumula.</p>
                 </div>
               </div>
             </div>

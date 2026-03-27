@@ -95,6 +95,8 @@ export async function PUT(req: Request) {
       for (const item of vehicle_pricing) {
         const basePrice = item.base_price === '' || item.base_price === null ? null : parseFloat(item.base_price)
         const pricePerKm = item.price_per_km === '' || item.price_per_km === null ? null : parseFloat(item.price_per_km)
+        const commissionPct = item.commission_pct === '' || item.commission_pct === null ? 10.00 : parseFloat(item.commission_pct)
+        const commissionFixed = item.commission_fixed === '' || item.commission_fixed === null ? 0 : parseFloat(item.commission_fixed)
 
         if (basePrice !== null && (isNaN(basePrice) || basePrice < 0)) {
           errors.push(`Precio base inválido para ${item.vehicle_type}`)
@@ -104,10 +106,24 @@ export async function PUT(req: Request) {
           errors.push(`Precio por KM inválido para ${item.vehicle_type}`)
           continue
         }
+        if (isNaN(commissionPct) || commissionPct < 0 || commissionPct > 100) {
+          errors.push(`Comisión % inválida para ${item.vehicle_type}`)
+          continue
+        }
+        if (isNaN(commissionFixed) || commissionFixed < 0) {
+          errors.push(`Comisión fija inválida para ${item.vehicle_type}`)
+          continue
+        }
 
         const { error } = await supabaseServer
           .from('vehicle_pricing')
-          .update({ base_price: basePrice, price_per_km: pricePerKm, updated_at: new Date().toISOString() })
+          .update({
+            base_price: basePrice,
+            price_per_km: pricePerKm,
+            commission_pct: commissionPct,
+            commission_fixed: commissionFixed,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', item.id)
         if (error) errors.push(`vehicle_pricing ${item.id}: ${error.message}`)
       }
