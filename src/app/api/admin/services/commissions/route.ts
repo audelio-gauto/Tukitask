@@ -22,11 +22,13 @@ export async function GET(req: Request) {
   const auth = await authorize(req)
   if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  // Get emails of all users with tecnico/servicio role
+  // Get emails of all users with servicio/tecnico role
+  // Note: 'servicio' is the primary role for technicians in the user_role enum.
+  // If 'tecnico' has been added via migration 021, it is also included.
   const { data: userRows, error: usersErr } = await supabaseServer
     .from('users')
     .select('email')
-    .in('role', ['tecnico', 'servicio', 'technician'])
+    .in('role', ['servicio', 'tecnico'])
 
   if (usersErr) return NextResponse.json({ error: usersErr.message }, { status: 500 })
   const tecnicoEmails = (userRows || []).map((u: any) => u.email)

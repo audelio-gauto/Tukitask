@@ -2,6 +2,12 @@
 -- 021: Comisiones + suscripción para técnicos (tecnico_settings)
 -- =============================================
 
+-- 0. Asegurar que 'tecnico' existe en el enum user_role (por si no estaba)
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'tecnico';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- 1. Agregar comisión personalizada + suscripción a tecnico_settings
 ALTER TABLE tecnico_settings
   ADD COLUMN IF NOT EXISTS custom_commission_pct    NUMERIC(5,2),
