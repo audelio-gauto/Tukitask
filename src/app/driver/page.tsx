@@ -124,21 +124,30 @@ export default function DriverDashboard() {
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) return;
-          const delivered = data.filter(o => o.status === 'delivered');
-          const failed = data.filter(o => ['failed', 'cancelled', 'return_rejected'].includes(o.status));
-          // For earnings: include delivered + returned (driver worked and should be paid)
-          const earnable = data.filter(o => ['delivered', 'returned'].includes(o.status));
-          setDeliveredCount(delivered.length);
-          setFailedCount(failed.length);
-          setTotalShipments(data.length);
-          const total = delivered.length + failed.length;
-          setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
 
           const now = new Date();
           const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+          const isToday = (o: any) => new Date(o.created_at) >= startOfDay;
+
+          const delivered = data.filter(o => o.status === 'delivered');
+          const failed = data.filter(o => ['failed', 'cancelled', 'return_rejected'].includes(o.status));
+          // Cards: only today
+          const deliveredToday = delivered.filter(isToday);
+          const failedToday    = failed.filter(isToday);
+          const totalToday     = data.filter(isToday);
+
+          // For earnings: include delivered + returned (driver worked and should be paid)
+          const earnable = data.filter(o => ['delivered', 'returned'].includes(o.status));
+          setDeliveredCount(deliveredToday.length);
+          setFailedCount(failedToday.length);
+          setTotalShipments(totalToday.length);
+          const total = delivered.length + failed.length;
+          setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
+
           // Use whichever price field is available on the order
           const orderPrice = (o: any) =>
             Number(o.offer ?? o.offer_price ?? o.accepted_price ?? o.suggested_price ?? 0);
@@ -298,7 +307,7 @@ export default function DriverDashboard() {
 
   // Stats (placeholder — would come from Supabase)
   const stats = [
-    { label: 'Envíos', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
+    { label: 'Envíos Hoy', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
     { label: 'Tasa de Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—%', href: '#', icon: '📊', onClick: undefined as (() => void) | undefined },
   ];
 
@@ -633,12 +642,12 @@ export default function DriverDashboard() {
             <Link href="/driver/delivered" className="tuki-stat-card">
               <span className="tuki-stat-icon">✅</span>
               <div className="tuki-stat-value">{deliveredCount}</div>
-              <div className="tuki-stat-label">Entregados</div>
+              <div className="tuki-stat-label">Entregados Hoy</div>
             </Link>
             <Link href="/driver/failed" className="tuki-stat-card">
               <span className="tuki-stat-icon">❌</span>
               <div className="tuki-stat-value">{failedCount}</div>
-              <div className="tuki-stat-label">Fallidos</div>
+              <div className="tuki-stat-label">Fallidos Hoy</div>
             </Link>
           </div>
 
