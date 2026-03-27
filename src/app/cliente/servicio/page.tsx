@@ -47,26 +47,24 @@ const paymentMethods = [
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
-// Service pricing: fixed per category (no per-km)
-const SERVICE_PRICES: Record<string, number> = {
-  limpieza:         150000,
-  niera:            200000,
-  cocina:           150000,
-  eventos:          250000,
-  cuidado_mascotas: 150000,
-  cuidado_adultos:  250000,
-  otros:            150000,
-  aire_split:       300000,
-  electrico:        250000,
-  plomeria:         200000,
-  cerrajeria:       180000,
-};
+// Service pricing: loaded from admin config (service_pricing table)
+// Falls back to empty object — when no suggested_price, client enters their own price
+const EMPTY_PRICES: Record<string, number | null> = {};
 
 export default function SolicitarServicioPage() {
   const { openDrawer, email, displayName } = useClientContext();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Service pricing from admin panel
+  const [servicePrices, setServicePrices] = useState<Record<string, number | null>>(EMPTY_PRICES);
+  useEffect(() => {
+    fetch('/api/service-pricing')
+      .then(r => r.json())
+      .then(d => { if (d.pricing) setServicePrices(d.pricing); })
+      .catch(() => {});
+  }, []);
 
   // Location state (same pattern as enviar)
   const [locationAddress, setLocationAddress] = useState('');
@@ -113,21 +111,26 @@ export default function SolicitarServicioPage() {
   const [photosUploading, setPhotosUploading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
 
-  // Pricing state
-  const suggestedPrice = category ? (SERVICE_PRICES[category] || 200000) : 200000;
+  // Pricing state — driven by admin-configured suggested_price (null = client sets own)
+  const suggestedPrice = category != null
+    ? (servicePrices[category] ?? null)
+    : null;
   const [offerPrice, setOfferPrice] = useState(0);
   const offerInitialized = useRef(false);
   useEffect(() => {
-    if (suggestedPrice > 0 && !offerInitialized.current) {
-      setOfferPrice(suggestedPrice);
+    // Reset when category changes
+    offerInitialized.current = false;
+    setOfferPrice(suggestedPrice ?? 0);
+    offerInitialized.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
+  useEffect(() => {
+    // Update when pricing loads from server (only if not yet touched)
+    if (category && !offerInitialized.current) {
+      setOfferPrice(suggestedPrice ?? 0);
       offerInitialized.current = true;
     }
-  }, [suggestedPrice]);
-  useEffect(() => {
-    if (offerInitialized.current && suggestedPrice > 0) {
-      setOfferPrice(suggestedPrice);
-    }
-  }, [suggestedPrice]);
+  }, [servicePrices, category, suggestedPrice]);
 
   // Step wizard state
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -698,7 +701,7 @@ export default function SolicitarServicioPage() {
                 <div className="enviar-price-section">
                   <div className="enviar-price-label">
                     Tu oferta al técnico
-                    {suggestedPrice > 0 && (
+                    {suggestedPrice != null && suggestedPrice > 0 && (
                       <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
                         Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
                       </button>
