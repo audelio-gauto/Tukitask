@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '../../../../lib/supabaseServer';
 
+export const dynamic = 'force-dynamic';
+
 // Public endpoint — returns service_pricing for client-side use
 export async function GET() {
   const { data, error } = await supabaseServer
@@ -15,5 +17,7 @@ export async function GET() {
   for (const row of data || []) {
     pricing[row.service_type] = row.suggested_price ?? null;
   }
-  return NextResponse.json({ pricing });
+  return NextResponse.json({ pricing }, {
+    headers: { 'Cache-Control': 'no-store, max-age=0' },
+  });
 }
