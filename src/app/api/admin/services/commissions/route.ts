@@ -41,7 +41,7 @@ export async function GET(req: Request) {
             email, first_name, last_name, profile_photo, gender,
             custom_commission_pct, custom_commission_fixed,
             subscription_active, subscription_plan, subscription_expires_at,
-            commission_pct, accepted_services
+            commission_pct
           `)
           .in('email', tecnicoEmails)
           .order('first_name')

@@ -8,7 +8,6 @@ interface Tecnico {
   last_name: string | null;
   profile_photo: string | null;
   gender: string | null;
-  accepted_services: string[] | null;
   custom_commission_pct: number | null;
   custom_commission_fixed: number | null;
   subscription_active: boolean;
