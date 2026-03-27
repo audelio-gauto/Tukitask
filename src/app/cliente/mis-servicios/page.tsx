@@ -216,6 +216,8 @@ export default function MisServiciosPage() {
   // First job that is actively being tracked (tecnico moving/working)
   // Show full-screen map for any non-terminal job (from pending onwards)
   const trackingJob = jobs.find(j => !['completado', 'incidente', 'cancelled'].includes(j.status)) ?? null;
+  // Only pass tecnico location when they are actually moving/working
+  const SHOW_TECNICO_STATUSES = ['en_camino', 'llegue', 'en_proceso', 'completion_pending'];
 
   return (
     <>
@@ -225,8 +227,8 @@ export default function MisServiciosPage() {
           {/* Map fills entire screen */}
           <div style={{ position: 'absolute', inset: 0 }}>
             <TecnicoTrackMap
-              tecnicoLat={driverLocs[trackingJob.id]?.lat ?? null}
-              tecnicoLng={driverLocs[trackingJob.id]?.lng ?? null}
+              tecnicoLat={SHOW_TECNICO_STATUSES.includes(trackingJob.status) ? (driverLocs[trackingJob.id]?.lat ?? null) : null}
+              tecnicoLng={SHOW_TECNICO_STATUSES.includes(trackingJob.status) ? (driverLocs[trackingJob.id]?.lng ?? null) : null}
               clientLat={trackingJob.lat}
               clientLng={trackingJob.lng}
               status={trackingJob.status}
