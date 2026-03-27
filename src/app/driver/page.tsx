@@ -133,15 +133,16 @@ export default function DriverDashboard() {
 
           const isToday = (o: any) => new Date(o.created_at) >= startOfDay;
 
-          const delivered = data.filter(o => o.status === 'delivered');
+          const DELIVERED_STATUSES = ['delivered', 'commission_charged', 'client_confirmed'];
+          const delivered = data.filter(o => DELIVERED_STATUSES.includes(o.status));
           const failed = data.filter(o => ['failed', 'cancelled', 'return_rejected'].includes(o.status));
           // Cards: only today
           const deliveredToday = delivered.filter(isToday);
           const failedToday    = failed.filter(isToday);
           const totalToday     = data.filter(isToday);
 
-          // For earnings: include delivered + returned (driver worked and should be paid)
-          const earnable = data.filter(o => ['delivered', 'returned'].includes(o.status));
+          // For earnings: include delivered + commission_charged + client_confirmed + returned
+          const earnable = data.filter(o => [...DELIVERED_STATUSES, 'returned'].includes(o.status));
           setDeliveredCount(deliveredToday.length);
           setFailedCount(failedToday.length);
           setTotalShipments(totalToday.length);
