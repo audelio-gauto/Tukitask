@@ -18,6 +18,7 @@ ALTER TABLE driver_profiles
 -- 3. Actualizar deduct_commission para usar lógica de suscripción
 --    Prioridad: suscripción activa → comisión personalizada del driver
 --               sin suscripción / vencida → comisión del tipo de vehículo
+DROP FUNCTION IF EXISTS deduct_commission(uuid);
 CREATE OR REPLACE FUNCTION deduct_commission(p_order_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
