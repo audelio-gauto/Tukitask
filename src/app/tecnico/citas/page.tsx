@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
@@ -62,6 +62,73 @@ export default function CitasPage() {
   const [extraAmount, setExtraAmount]     = useState(0);
   const [extraReason, setExtraReason]     = useState('');
   const [extraSending, setExtraSending]   = useState(false);
+
+  // GPS broadcasting refs
+  const watchIdRef     = useRef<number | null>(null);
+  const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPosRef     = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Start/stop GPS broadcast depending on active jobs
+  useEffect(() => {
+    if (!email) return;
+
+    const TRACKING_STATUSES = ['en_camino', 'en_proceso', 'llegue'];
+    const trackingJob = jobs.find(j => TRACKING_STATUSES.includes(j.status));
+
+    if (trackingJob) {
+      if (!navigator.geolocation) return;
+
+      const broadcast = (lat: number, lng: number) => {
+        lastPosRef.current = { lat, lng };
+        fetch('/api/driver-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driver_email: email, job_id: trackingJob.id, lat, lng }),
+        }).catch(() => {});
+      };
+
+      // Start watching position
+      if (watchIdRef.current === null) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => broadcast(pos.coords.latitude, pos.coords.longitude),
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 5000 },
+        );
+      }
+
+      // Also poll every 6s in case watchPosition fires slowly
+      if (gpsIntervalRef.current === null) {
+        gpsIntervalRef.current = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => broadcast(pos.coords.latitude, pos.coords.longitude),
+            () => {},
+            { enableHighAccuracy: true, timeout: 5000 },
+          );
+        }, 6000);
+      }
+    } else {
+      // No active tracking job — stop broadcasting
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (gpsIntervalRef.current !== null) {
+        clearInterval(gpsIntervalRef.current);
+        gpsIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (gpsIntervalRef.current !== null) {
+        clearInterval(gpsIntervalRef.current);
+        gpsIntervalRef.current = null;
+      }
+    };
+  }, [jobs, email]);
 
   const loadJobs = useCallback(() => {
     if (!email) return;

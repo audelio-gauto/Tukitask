@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { playClientOfferAlert as playOfferAlert, playStatusSound } from '@/lib/audio';
+
+const TecnicoTrackMap = dynamic(() => import('./TecnicoTrackMap'), { ssr: false });
 
 interface Job {
   id: string;
@@ -13,6 +16,8 @@ interface Job {
   service_type: string;
   description: string | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   scheduled_at: string | null;
   client_initial_price: number | null;
   agreed_price: number | null;
@@ -22,6 +27,12 @@ interface Job {
   last_rejection_reason: string | null;
   tecnico_name: string | null;
   tecnico_photo: string | null;
+}
+
+interface DriverLocation {
+  lat: number;
+  lng: number;
+  updated_at: string;
 }
 
 interface Offer {
@@ -96,6 +107,7 @@ export default function MisServiciosPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ jobId: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [driverLocs, setDriverLocs] = useState<Record<string, DriverLocation | null>>({});
   const jobStatusRef      = useRef<Record<string, string>>({});
   const prevOfferCountRef = useRef<Record<string, number>>({});
   const newOfferJobRef    = useRef<string | null>(null);
@@ -113,6 +125,15 @@ export default function MisServiciosPage() {
       });
       setJobs(data);
       setLoading(false);
+
+      // Fetch live location for active (non-pending) jobs with a tecnico
+      const trackableStatuses = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
+      const trackableJobs = data.filter((j: Job) => trackableStatuses.includes(j.status));
+      for (const job of trackableJobs) {
+        const locRes  = await fetch(`/api/driver-location?job_id=${job.id}`);
+        const locData = await locRes.json();
+        setDriverLocs(prev => ({ ...prev, [job.id]: locData ?? null }));
+      }
 
       const pendingIds = data.filter((j: Job) => j.status === 'pending').map((j: Job) => j.id);
       for (const jobId of pendingIds) {
@@ -386,6 +407,25 @@ export default function MisServiciosPage() {
                               </div>
                             ))}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Live tracking map — shown when tecnico is moving or on site */}
+                      {['en_camino', 'llegue', 'en_proceso', 'accepted'].includes(job.status) && (
+                        <div style={{ marginBottom: 14 }}>
+                          <TecnicoTrackMap
+                            tecnicoLat={driverLocs[job.id]?.lat ?? null}
+                            tecnicoLng={driverLocs[job.id]?.lng ?? null}
+                            clientLat={job.lat}
+                            clientLng={job.lng}
+                            status={job.status}
+                            tecnicoName={job.tecnico_name}
+                          />
+                          {driverLocs[job.id] && (
+                            <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#475569', textAlign: 'right' }}>
+                              Actualizado {new Date(driverLocs[job.id]!.updated_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
+                          )}
                         </div>
                       )}
 
