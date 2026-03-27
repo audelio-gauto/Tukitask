@@ -428,7 +428,7 @@ export default function MisEnviosPage() {
     const res = await authFetch('/api/orders/rate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: ratingOrderId, rating, note }),
+      body: JSON.stringify({ order_id: ratingOrderId, rated_by: 'client', rating, note }),
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
@@ -955,7 +955,7 @@ export default function MisEnviosPage() {
             const driverName = acceptedOffers[order.id]?.driver_name || order.accepted_by?.split('@')[0];
             const driverPhoto = acceptedOffers[order.id]?.driver_photo || null;
             const existingRating = order.driver_rating ?? localRatings[order.id] ?? null;
-            const canRate = order.status === 'delivered' && existingRating == null;
+            const canRate = ['delivered', 'commission_charged', 'client_confirmed'].includes(order.status) && existingRating == null;
 
             return (
               <div key={order.id} style={{
@@ -1003,20 +1003,22 @@ export default function MisEnviosPage() {
                 )}
 
                 {/* Sección de confirmación y calificación */}
-                {['delivered', 'commission_charged'].includes(order.status) && (
+                {['delivered', 'commission_charged', 'client_confirmed'].includes(order.status) && (
                   <div style={{ marginTop: 10, borderTop: '1px solid #f1f5f9', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <button
-                      onClick={() => handleConfirmPayment(order.id)}
-                      disabled={confirmingPayment === order.id}
-                      style={{
-                        width: '100%', padding: '0.65rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        color: '#fff', fontWeight: 700, fontSize: '0.88rem',
-                        opacity: confirmingPayment === order.id ? 0.6 : 1,
-                      }}
-                    >
-                      {confirmingPayment === order.id ? 'Procesando...' : '✓ Marcar como Recibido'}
-                    </button>
+                    {order.status !== 'client_confirmed' && (
+                      <button
+                        onClick={() => handleConfirmPayment(order.id)}
+                        disabled={confirmingPayment === order.id}
+                        style={{
+                          width: '100%', padding: '0.65rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                          opacity: confirmingPayment === order.id ? 0.6 : 1,
+                        }}
+                      >
+                        {confirmingPayment === order.id ? 'Procesando...' : '✓ Marcar como Recibido'}
+                      </button>
+                    )}
                     {canRate ? (
                       <button
                         onClick={() => { setRatingOrder({ ...order, driver_name: driverName, driver_photo: driverPhoto }); setRatingOrderId(order.id); }}
