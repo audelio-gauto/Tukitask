@@ -158,6 +158,20 @@ export async function GET(req: Request) {
       return NextResponse.json(data ?? []);
     }
 
+    // ── Client: service history (completado / incidente / cancelled) ──────────
+    if (url.searchParams.get('client_history') === 'true') {
+      if (!clientEmail) return NextResponse.json({ error: 'Missing client_email' }, { status: 400 });
+      const { data, error } = await sb
+        .from('tecnico_jobs')
+        .select('*')
+        .eq('client_email', clientEmail)
+        .in('status', HISTORY_STATUSES)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data ?? []);
+    }
+
     // ── All offers on a specific job (client picks a tecnico) ────────────────
     const jobOffersId = url.searchParams.get('job_offers');
     if (jobOffersId) {
@@ -396,6 +410,60 @@ export async function POST(req: Request) {
         .select()
         .maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // ── Deduct commission from tecnico wallet ──────────────────────────────
+      if (data?.tecnico_email) {
+        const tecnicoEmail = data.tecnico_email as string;
+        const totalPrice   = Number(data.total_price ?? data.agreed_price ?? 0);
+
+        if (totalPrice > 0) {
+          // Resolve commission rate: custom override > tecnico setting > service pricing > default 10%
+          const { data: settings } = await sb
+            .from('tecnico_settings')
+            .select('commission_pct, custom_commission_pct, custom_commission_fixed')
+            .eq('email', tecnicoEmail)
+            .maybeSingle();
+
+          let commissionPct   = 10;
+          let commissionFixed = 0;
+
+          if (settings?.custom_commission_pct != null) {
+            commissionPct   = Number(settings.custom_commission_pct);
+            commissionFixed = Number(settings.custom_commission_fixed ?? 0);
+          } else if (settings?.commission_pct != null) {
+            commissionPct = Number(settings.commission_pct);
+            const { data: pricing } = await sb
+              .from('service_pricing')
+              .select('commission_fixed')
+              .eq('service_type', data.service_type)
+              .maybeSingle();
+            commissionFixed = Number(pricing?.commission_fixed ?? 0);
+          } else {
+            const { data: pricing } = await sb
+              .from('service_pricing')
+              .select('commission_pct, commission_fixed')
+              .eq('service_type', data.service_type)
+              .maybeSingle();
+            if (pricing) {
+              commissionPct   = Number(pricing.commission_pct ?? 10);
+              commissionFixed = Number(pricing.commission_fixed ?? 0);
+            }
+          }
+
+          const commissionAmount = Math.round(totalPrice * commissionPct / 100 + commissionFixed);
+          if (commissionAmount > 0) {
+            const { error: rpcErr } = await sb.rpc('deduct_tecnico_commission', {
+              p_job_id: jobId,
+              p_email:  tecnicoEmail,
+              p_amount: commissionAmount,
+            });
+            if (rpcErr) {
+              console.error('[accept_completion] deduct_tecnico_commission failed:', rpcErr.message);
+            }
+          }
+        }
+      }
+
       return NextResponse.json({ job: data });
     }
 
@@ -426,6 +494,52 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ job: data });
+    }
+
+    // ── rate_tecnico (client rates the tecnico after completion) ───────────────
+    if (action === 'rate_tecnico') {
+      const { jobId, clientEmail, rating, note } = body;
+      if (!jobId || !clientEmail || rating == null) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      }
+      const ratingNum = Number(rating);
+      if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+        return NextResponse.json({ error: 'Rating must be 1–5' }, { status: 400 });
+      }
+
+      const { data: job } = await sb
+        .from('tecnico_jobs')
+        .select('id, status, tecnico_email, tecnico_rating')
+        .eq('id', jobId)
+        .eq('client_email', String(clientEmail).toLowerCase())
+        .maybeSingle();
+
+      if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      if (job.status !== 'completado') return NextResponse.json({ error: 'Solo se pueden calificar servicios completados' }, { status: 400 });
+      if (job.tecnico_rating != null) return NextResponse.json({ error: 'Ya calificaste este servicio' }, { status: 409 });
+
+      await sb.from('tecnico_jobs').update({
+        tecnico_rating:      ratingNum,
+        tecnico_rating_note: note || null,
+      }).eq('id', jobId);
+
+      // Recalculate tecnico avg_rating
+      if (job.tecnico_email) {
+        const { data: ratings } = await sb
+          .from('tecnico_jobs')
+          .select('tecnico_rating')
+          .eq('tecnico_email', job.tecnico_email)
+          .not('tecnico_rating', 'is', null);
+        if (ratings && ratings.length > 0) {
+          const avg = ratings.reduce((s: number, r: { tecnico_rating: number }) => s + Number(r.tecnico_rating), 0) / ratings.length;
+          await sb.from('tecnico_settings').update({
+            avg_rating:    Math.round(avg * 10) / 10,
+            total_ratings: ratings.length,
+          }).eq('email', job.tecnico_email);
+        }
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     // ── cancel ────────────────────────────────────────────────────────────────

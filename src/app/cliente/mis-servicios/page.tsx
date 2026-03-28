@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { playClientOfferAlert as playOfferAlert, playStatusSound } from '@/lib/audio';
+import RatingModal from '@/components/RatingModal';
 
 const TecnicoTrackMap = dynamic(() => import('./TecnicoTrackMap'), { ssr: false });
 
@@ -27,6 +28,7 @@ interface Job {
   last_rejection_reason: string | null;
   tecnico_name: string | null;
   tecnico_photo: string | null;
+  tecnico_rating: number | null;
 }
 
 interface DriverLocation {
@@ -108,6 +110,8 @@ export default function MisServiciosPage() {
   const [rejectModal, setRejectModal] = useState<{ jobId: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [driverLocs, setDriverLocs] = useState<Record<string, DriverLocation | null>>({});
+  const [historyJobs, setHistoryJobs] = useState<Job[]>([]);
+  const [ratingModal, setRatingModal] = useState<{ jobId: string; tecnicoName: string | null; tecnicoPhoto: string | null } | null>(null);
   const jobStatusRef      = useRef<Record<string, string>>({});
   const prevOfferCountRef = useRef<Record<string, number>>({});
   const newOfferJobRef    = useRef<string | null>(null);
@@ -153,11 +157,22 @@ export default function MisServiciosPage() {
     } catch { setLoading(false); }
   }, [email]);
 
+  const loadHistory = useCallback(async () => {
+    if (!email) return;
+    try {
+      const res  = await fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_history=true`);
+      const data = await res.json();
+      if (Array.isArray(data)) setHistoryJobs(data);
+    } catch {}
+  }, [email]);
+
   useEffect(() => {
     loadJobs();
-    const iv = setInterval(loadJobs, 5000);
-    return () => clearInterval(iv);
-  }, [loadJobs]);
+    loadHistory();
+    const iv1 = setInterval(loadJobs,    5000);
+    const iv2 = setInterval(loadHistory, 30000);
+    return () => { clearInterval(iv1); clearInterval(iv2); };
+  }, [loadJobs, loadHistory]);
 
   const acceptOffer = async (jobId: string, offerId: string) => {
     if (!email || actionId) return;
@@ -208,6 +223,20 @@ export default function MisServiciosPage() {
       if (json.job) setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...json.job } : j));
     } catch {}
     finally { setActionId(null); }
+  };
+
+  const handleRating = async (rating: number, note: string) => {
+    if (!ratingModal || !email) return;
+    const res  = await authFetch('/api/tecnico/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'rate_tecnico', jobId: ratingModal.jobId, clientEmail: email, rating, note }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setHistoryJobs(prev => prev.map(j => j.id === ratingModal.jobId ? { ...j, tecnico_rating: rating } : j));
+      setRatingModal(null);
+    }
   };
 
   const fmtGs   = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
@@ -682,7 +711,67 @@ export default function MisServiciosPage() {
           </div>
         </>
       )}
+
+      {/* ── Historial de servicios ─────────────────────────────────────── */}
+      {historyJobs.length > 0 && (
+        <div style={{ padding: '0 12px 24px' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.72rem', color: '#475569', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 10, paddingTop: 4 }}>
+            Historial
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {historyJobs.map(job => {
+              const st       = STATUS_CONFIG[job.status] ?? { label: job.status, color: '#64748b', bg: '#1e293b', step: 0 };
+              const canRate  = job.status === 'completado' && (job.tecnico_rating == null || job.tecnico_rating === undefined);
+              return (
+                <div key={job.id} style={{ background: '#1e293b', borderRadius: 16, border: '1px solid #334155', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.88rem' }}>
+                        {SERVICE_LABELS[job.service_type] ?? job.service_type}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, background: st.bg, color: st.color, borderRadius: 20, padding: '2px 9px', flexShrink: 0 }}>
+                        {st.label}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 12px', fontSize: '0.75rem', color: '#64748b', marginBottom: canRate || job.tecnico_rating != null ? 10 : 0 }}>
+                      {job.tecnico_name && <span>👷 {job.tecnico_name}</span>}
+                      {job.total_price != null && <span style={{ color: '#22c55e', fontWeight: 700 }}>💰 {fmtGs(job.total_price)}</span>}
+                      <span>📅 {fmtDate(job.created_at)}</span>
+                    </div>
+                    {canRate && (
+                      <button
+                        onClick={() => setRatingModal({ jobId: job.id, tecnicoName: job.tecnico_name, tecnicoPhoto: job.tecnico_photo })}
+                        style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}
+                      >
+                        ⭐ Calificar técnico
+                      </button>
+                    )}
+                    {job.tecnico_rating != null && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: '#64748b' }}>
+                        <span>Tu calificación:</span>
+                        <StarRating rating={job.tecnico_rating} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
+
+    {/* ── Rating modal ─────────────────────────────────────────────────── */}
+    {ratingModal && (
+      <RatingModal
+        title="Calificar técnico"
+        subtitle={ratingModal.tecnicoName ?? undefined}
+        avatarUrl={ratingModal.tecnicoPhoto ?? undefined}
+        avatarName={ratingModal.tecnicoName ?? undefined}
+        onSubmit={handleRating}
+        onClose={() => setRatingModal(null)}
+      />
+    )}
     </>
   );
 }
