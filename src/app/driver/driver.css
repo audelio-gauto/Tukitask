@@ -70,8 +70,8 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .tuki-float-btn:active { transform: scale(0.92); }
-.tuki-float-btn.menu { top: 16px; left: 16px; }
-.tuki-float-btn.locate { top: 16px; right: 16px; }
+.tuki-float-btn.menu { top: 16px; right: 16px; }
+.tuki-float-btn.locate { bottom: calc(50vh + 72px); right: 16px; }
 
 /* Wallet balance pill — centered top header */
 .tuki-wallet-pill {

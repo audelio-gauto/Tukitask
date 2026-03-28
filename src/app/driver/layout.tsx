@@ -13,6 +13,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [avgRating, setAvgRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
   const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
@@ -43,6 +45,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
           if (profJson.profile?.pickup_range) setPickupRangeKm(Number(profJson.profile.pickup_range));
           if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
+          if (profJson.profile?.avg_rating) setAvgRating(Number(profJson.profile.avg_rating));
+          if (profJson.profile?.total_ratings) setTotalRatings(Number(profJson.profile.total_ratings));
           const firstName = profJson.profile?.first_name || '';
           const lastName  = profJson.profile?.last_name  || '';
           const fullName  = [firstName, lastName].filter(Boolean).join(' ');
@@ -76,7 +80,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
       </DriverContext.Provider>
     </div>

@@ -59,7 +59,7 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
 
 export default function TecnicoDashboard() {
   const router = useRouter();
-  const { openDrawer, email } = useDriverContext();
+  const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
 
   // ── Availability – persisted ───────────────────────────────────────────────
   const [available, setAvailable] = useState(false);
@@ -384,7 +384,24 @@ export default function TecnicoDashboard() {
         <DriverMap onLocate={() => {}} />
       </div>
 
-      {/* ── Menú ── */}
+      {/* Profile pill — top left */}
+      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {profilePhoto ? (
+          <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
+            {displayName?.[0]?.toUpperCase() || '👤'}
+          </div>
+        )}
+        {avgRating > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(28,28,46,0.88)', borderRadius: 8, padding: '2px 8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(245,197,24,0.35)' }}>
+            <span style={{ color: '#F5C518', fontSize: '0.7rem' }}>★</span>
+            <span style={{ color: '#F5C518', fontSize: '0.7rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Menú ── — top right */}
       <button className="tuki-float-btn menu" aria-label="Menú" onClick={openDrawer}>
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
