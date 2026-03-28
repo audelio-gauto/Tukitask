@@ -89,6 +89,27 @@ export default function ClienteHomePage() {
   const [loading, setLoading]                 = useState(true);
   const [actionId, setActionId]               = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [mapTouched, setMapTouched]           = useState(false);
+
+  const handleMapTouch = useCallback(() => {
+    setMapTouched(true);
+    const onEnd = () => {
+      setMapTouched(false);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    };
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+  }, []);
+
+  const handleMapMouseDown = useCallback(() => {
+    setMapTouched(true);
+    const onUp = () => {
+      setMapTouched(false);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mouseup', onUp);
+  }, []);
 
   const loadOffers = useCallback(async () => {
     if (!email) return;
@@ -169,7 +190,18 @@ export default function ClienteHomePage() {
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', pointerEvents: 'none', zIndex: 1 }} />
 
       {/* Scrollable content layer */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: 90, padding: '16px 14px 90px' }}>
+      <div
+        style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', overflowY: mapTouched ? 'hidden' : 'auto', padding: '16px 14px 90px', pointerEvents: mapTouched ? 'none' : 'auto' }}
+        onTouchStart={e => { if ((e.target as HTMLElement) === e.currentTarget) handleMapTouch(); }}
+        onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) handleMapMouseDown(); }}
+      >
+        <div style={{
+          transition: 'opacity 0.28s ease, transform 0.28s ease',
+          opacity: mapTouched ? 0 : 1,
+          transform: mapTouched ? 'translateY(-10px)' : 'translateY(0)',
+          pointerEvents: mapTouched ? 'none' : 'auto',
+          display: 'flex', flexDirection: 'column', gap: 0,
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {profilePhoto ? (
               <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
@@ -281,6 +313,7 @@ export default function ClienteHomePage() {
             </div>
           )}
         </div>
+        </div>{/* end animated content wrapper */}
       </div>
 
       {/* Publish Modal */}
