@@ -402,9 +402,9 @@ export default function TecnicoDashboard() {
             </div>
           )}
           {avgRating > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 6, padding: '1px 6px' }}>
-              <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
-              <span style={{ color: '#F5C518', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(37,99,235,0.18)', borderRadius: 6, padding: '1px 6px' }}>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>★</span>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
             </div>
           )}
         </div>

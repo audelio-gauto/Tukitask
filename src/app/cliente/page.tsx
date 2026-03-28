@@ -202,14 +202,15 @@ export default function ClienteHomePage() {
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', pointerEvents: 'none', zIndex: 1 }} />
 
       {/* Scrollable content layer — pointer-events:none en el contenedor para que el mapa reciba todos los toques vacíos (incluyendo pinch-zoom). Solo los hijos interactivos tienen pointer-events:auto */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', padding: '16px 14px 90px', pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', paddingBottom: 90, pointerEvents: 'none' }}>
+        {/* Header — fijo arriba */}
         <div
           style={{
             transition: 'opacity 0.28s ease, transform 0.28s ease',
             opacity: mapTouched ? 0 : 1,
             transform: mapTouched ? 'translateY(-10px)' : 'translateY(0)',
             pointerEvents: 'auto',
-            display: 'flex', flexDirection: 'column', gap: 0,
+            padding: '16px 14px 0',
           }}
           onTouchStart={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
           onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
@@ -254,9 +255,10 @@ export default function ClienteHomePage() {
               </div>
             </div>
           )}
+        </div>{/* end header */}
 
-        {/* Offers list */}
-        <div style={{ flex: 1, padding: '14px 12px', overflowY: 'auto' }}>
+        {/* Offers list — ocupa el espacio restante y hace scroll */}
+        <div style={{ flex: 1, overflowY: 'auto', pointerEvents: 'auto', padding: '0 14px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', paddingTop: 80 }}>
               <PulseDots />
@@ -339,9 +341,8 @@ export default function ClienteHomePage() {
               {/* TODO: Pending orders (drivers) - similar UI */}
             </div>
           )}
-        </div>
-        </div>{/* end animated content wrapper */}
-      </div>
+        </div>{/* end offers list */}
+      </div>{/* end content layer */}
 
       {/* Publish Modal */}
       {showPublishModal && (
