@@ -1,4 +1,4 @@
--- 023: Tecnico commission deduction function + rating columns
+--- 023: Tecnico commission deduction function + rating columns
 -- Allows atomic wallet deduction when a tecnico job is completed,
 -- and stores the client's rating for the tecnico on each job.
 
