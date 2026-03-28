@@ -160,9 +160,6 @@ export default function ClienteHomePage() {
       {/* Map background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
         <div style={{ position: 'absolute', inset: 0, background: 'url(/map-dark.png) center/cover', filter: 'brightness(0.3) blur(2px)' }} />
-        {userLat && userLng && (
-          <ClientMap clientLat={userLat} clientLng={userLng} />
-        )}
       </div>
 
       {/* Overlay gradient */}
