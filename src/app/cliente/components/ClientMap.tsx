@@ -17,12 +17,14 @@ function staticMapUrl(
   w: number,
   h: number,
   markers?: { lat: number; lng: number; label: string; color: string }[],
+  dark = false,
 ) {
+  const style = dark ? 'dark-v11' : 'streets-v12';
   const pins = (markers || [])
     .map(m => `pin-s-${m.label.toLowerCase()}+${m.color.replace('#', '')}(${m.lng},${m.lat})`)
     .join(',');
   const overlay = pins ? `${pins}/` : '';
-  return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${overlay}${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+  return `https://api.mapbox.com/styles/v1/mapbox/${style}/static/${overlay}${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
 export default function ClientMap({
@@ -243,11 +245,11 @@ export default function ClientMap({
   };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
+    <div style={{ position: 'absolute', inset: 0, background: dark ? '#0d0d1a' : '#e5e7eb' }}>
       {/* Static image — always visible as base layer until GL loads */}
       {!glReady && MAPBOX_TOKEN && (
         <img
-          src={staticMapUrl(center, zoom, 600, 600, staticMarkers)}
+          src={staticMapUrl(center, zoom, 600, 600, staticMarkers, dark)}
           alt="Mapa"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}

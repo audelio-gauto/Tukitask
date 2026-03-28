@@ -165,8 +165,8 @@ export default function ClienteHomePage() {
         <ClientMap dark showMyLocationButton={false} />
       </div>
 
-      {/* Overlay gradient */}
-      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(to bottom, rgba(28,28,46,0.88) 0%, rgba(22,33,62,0.75) 50%, rgba(15,52,96,0.85) 100%)', zIndex: 0, pointerEvents: 'none' }} />
+      {/* Overlay - light top/bottom vignette so map stays visible */}
+      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', zIndex: 0, pointerEvents: 'none' }} />
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', paddingBottom: 90, padding: '16px 14px 90px', display: 'flex', flexDirection: 'column' }}>
