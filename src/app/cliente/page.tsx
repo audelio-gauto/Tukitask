@@ -81,7 +81,7 @@ function PulseDots() {
 
 export default function ClienteHomePage() {
   const router = useRouter();
-  const { email, displayName, profilePhoto } = useClientContext();
+  const { email, displayName, profilePhoto, avgRating, totalRatings, openDrawer } = useClientContext();
 
   const [pendingOrders, setPendingOrders]     = useState<Order[]>([]);
   const [jobOffers, setJobOffers]             = useState<JobOffer[]>([]);
@@ -90,6 +90,16 @@ export default function ClienteHomePage() {
   const [actionId, setActionId]               = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [mapTouched, setMapTouched]           = useState(false);
+  const [locating, setLocating]               = useState(false);
+
+  const openPublishWithLocation = useCallback(() => {
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      () => { setLocating(false); setShowPublishModal(true); },
+      ()  => { setLocating(false); setShowPublishModal(true); },
+      { timeout: 6000, enableHighAccuracy: true }
+    );
+  }, []);
 
   const startMapTouch = useCallback(() => {
     setMapTouched(true);
@@ -196,19 +206,34 @@ export default function ClienteHomePage() {
           onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            {profilePhoto ? (
-              <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
-            ) : (
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518' }}>
-                {displayName?.[0]?.toUpperCase() || '👤'}
-              </div>
-            )}
+            {/* Avatar + rating */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
+              ) : (
+                <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518' }}>
+                  {displayName?.[0]?.toUpperCase() || '👤'}
+                </div>
+              )}
+              {avgRating > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(245,197,24,0.18)', borderRadius: 8, padding: '2px 7px' }}>
+                  <span style={{ color: '#F5C518', fontSize: '0.72rem' }}>★</span>
+                  <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+                </div>
+              )}
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Buen día</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>{displayName || 'Cliente'}</div>
+              {totalRatings > 0 && (
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>{totalRatings} valoracion{totalRatings !== 1 ? 'es' : ''}</div>
+              )}
             </div>
-            <button onClick={loadOffers} style={{ background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518', borderRadius: 10, padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 700 }}>
-              ↺
+            {/* Menú */}
+            <button onClick={openDrawer} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: 10, padding: '8px 12px', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
+              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
+              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
             </button>
           </div>
           {totalOffers > 0 && (
@@ -361,10 +386,10 @@ export default function ClienteHomePage() {
           { icon: '👤', label: 'Cuenta', path: '/cliente/settings' },
         ].map(item => (
           item.path === null ? (
-            <button key={item.label} onClick={() => setShowPublishModal(true)}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 12 }}>
-              <div style={{ fontSize: '1.5rem', transition: 'transform 0.2s' }}>{item.icon}</div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+            <button key={item.label} onClick={openPublishWithLocation} disabled={locating}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'none', border: 'none', cursor: locating ? 'default' : 'pointer', borderRadius: 12 }}>
+              <div style={{ fontSize: '1.5rem', transition: 'transform 0.2s', opacity: locating ? 0.5 : 1 }}>{locating ? '📡' : item.icon}</div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{locating ? 'Ubicando…' : item.label}</span>
             </button>
           ) : (
             <Link key={item.label} href={item.path}
