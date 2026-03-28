@@ -12,6 +12,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [avgRating, setAvgRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
   const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
@@ -38,6 +40,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
               const profJson = await profRes.json();
               if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
               if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+              if (profJson.profile?.avg_rating) setAvgRating(Number(profJson.profile.avg_rating));
+              if (profJson.profile?.total_ratings) setTotalRatings(Number(profJson.profile.total_ratings));
               const fn = profJson.profile?.first_name || '';
               const ln = profJson.profile?.last_name  || '';
               const full = [fn, ln].filter(Boolean).join(' ');
@@ -80,6 +84,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           const profJson = await profRes.json();
           if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+          if (profJson.profile?.avg_rating) setAvgRating(Number(profJson.profile.avg_rating));
+          if (profJson.profile?.total_ratings) setTotalRatings(Number(profJson.profile.total_ratings));
           const fn = profJson.profile?.first_name || '';
           const ln = profJson.profile?.last_name  || '';
           const full = [fn, ln].filter(Boolean).join(' ');
@@ -137,7 +143,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
         role={role}
       />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
+      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}
         </main>
