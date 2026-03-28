@@ -259,10 +259,10 @@ export default function ClienteHomePage() {
             <div style={{ textAlign: 'center', paddingTop: 80 }}>
               <div style={{ fontSize: '4rem', marginBottom: 16 }}>📭</div>
               <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', marginBottom: 8 }}>No tenés ofertas pendientes</p>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', marginBottom: 28 }}>Publicá un envío o servicio para recibir ofertas</p>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', marginBottom: 28 }}>¿Qué ayuda necesitás hoy?</p>
               <button onClick={() => setShowPublishModal(true)}
                 style={{ padding: '14px 32px', borderRadius:14, border: 'none', background: 'linear-gradient(135deg, #F5C518, #F58A07)', color: '#1C1C2E', fontWeight: 800, cursor: 'pointer', fontSize: '0.98rem', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
-                ➕ Publicar ahora
+                ➕ Pedir ahora
               </button>
             </div>
           ) : (
