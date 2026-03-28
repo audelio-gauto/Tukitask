@@ -60,14 +60,27 @@ export default function ClienteHistorialPage() {
   const loadHistory = useCallback(async () => {
     if (!email) return;
     try {
-      const [ordersRes, jobsRes] = await Promise.all([
-        fetch(`/api/orders?client_email=${encodeURIComponent(email)}&history=true`),
+      const [ordersRes, jobsRes, activeJobsRes] = await Promise.all([
+        fetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
         fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_history=true`),
+        fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
       ]);
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
+      const activeJobsData = await activeJobsRes.json();
+      
+      // Combine all orders and jobs
       setOrders(Array.isArray(ordersData) ? ordersData : []);
-      setJobs(Array.isArray(jobsData) ? jobsData : []);
+      const allJobs = [
+        ...(Array.isArray(activeJobsData) ? activeJobsData : []),
+        ...(Array.isArray(jobsData) ? jobsData : [])
+      ];
+      // Remove duplicates
+      const uniqueJobs = allJobs.reduce((acc, job) => {
+        if (!acc.find((j: Job) => j.id === job.id)) acc.push(job);
+        return acc;
+      }, [] as Job[]);
+      setJobs(uniqueJobs);
       setLoading(false);
     } catch { setLoading(false); }
   }, [email]);
@@ -90,6 +103,36 @@ export default function ClienteHistorialPage() {
   const fmtGs   = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
   const fmtDate = (s: string | null) => !s ? '' : new Date(s).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: '⏳ Buscando',
+      negotiating: '💬 Negociando',
+      assigned: '✅ Asignado',
+      accepted: '✅ Asignado',
+      in_progress: '🔧 En progreso',
+      picking_up: '🚗 Recogiendo',
+      in_transit: '🚚 En camino',
+      completado: '✅ Completado',
+      completed: '✅ Completado',
+      delivered: '✅ Entregado',
+      cancelled: '❌ Cancelado',
+      failed: '⚠️ Fallido',
+      incidente: '⚠️ Incidente',
+      client_confirmed: '✅ Confirmado',
+      commission_charged: '✅ Completado',
+    };
+    return labels[status] || status;
+  };
+
+  // Separate active vs completed
+  const activeStatuses = ['pending', 'negotiating', 'assigned', 'accepted', 'in_progress', 'picking_up', 'in_transit'];
+  const completedStatuses = ['completado', 'completed', 'delivered', 'cancelled', 'failed', 'incidente', 'return_delivered', 'returned', 'client_confirmed', 'commission_charged'];
+
+  const activeJobs = jobs.filter(j => activeStatuses.includes(j.status));
+  const completedJobs = jobs.filter(j => completedStatuses.includes(j.status));
+  const activeOrders = orders.filter(o => activeStatuses.includes(o.status));
+  const completedOrders = orders.filter(o => completedStatuses.includes(o.status));
+
   const total = orders.length + jobs.length;
 
   return (
@@ -108,87 +151,150 @@ export default function ClienteHistorialPage() {
           </div>
         </div>
 
-        <div style={{ padding: '14px 12px' }}>
+        <div style={{ padding: '14px 12px', paddingBottom: 100 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', paddingTop: 80, color: 'rgba(255,255,255,0.6)' }}>Cargando historial…</div>
+            <div style={{ textAlign: 'center', paddingTop: 80, color: 'rgba(255,255,255,0.6)' }}>Cargando…</div>
           ) : total === 0 ? (
             <div style={{ textAlign: 'center', paddingTop: 80 }}>
               <div style={{ fontSize: '4rem', marginBottom: 16 }}>📂</div>
               <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', marginBottom: 8 }}>Sin historial aún</p>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem' }}>Tus envíos y servicios completados aparecerán aquí</p>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem' }}>Tus envíos y servicios aparecerán aquí</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Services */}
-              {jobs.map(job => (
-                <div key={job.id} style={{
-                  background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.18)',
-                  borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{ fontSize: '1.5rem' }}>{SERVICE_LABELS[job.service_type]?.split(' ')[0] || '✨'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
-                        {SERVICE_LABELS[job.service_type] || job.service_type}
+            <>
+              {/* Active orders section */}
+              {(activeJobs.length > 0 || activeOrders.length > 0) && (
+                <>
+                  <h2 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>En Progreso</h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
+                    {/* Active Services */}
+                    {activeJobs.map(job => (
+                      <div key={job.id} style={{
+                        background: 'rgba(99,102,241,0.12)', backdropFilter: 'blur(20px)', border: '1px solid rgba(99,102,241,0.25)',
+                        borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '1.5rem' }}>{SERVICE_LABELS[job.service_type]?.split(' ')[0] || '✨'}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
+                              {SERVICE_LABELS[job.service_type] || job.service_type}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                              {getStatusLabel(job.status)}
+                            </div>
+                          </div>
+                        </div>
+                        <Link href="/cliente/mis-servicios" 
+                          style={{ display: 'block', width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
+                          📍 Ver tracking
+                        </Link>
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
-                        {job.status === 'completado' ? '✅ Completado' : job.status === 'cancelled' ? 'Cancelado' : '⚠️ Incidente'}
+                    ))}
+                    {/* Active Orders */}
+                    {activeOrders.map(order => (
+                      <div key={order.id} style={{
+                        background: 'rgba(245,197,24,0.12)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.25)',
+                        borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '1.5rem' }}>📦</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
+                              {order.origin_address ? order.origin_address.slice(0, 30) : 'Envío'}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                              {getStatusLabel(order.status)}
+                            </div>
+                          </div>
+                        </div>
+                        <Link href="/cliente/mis-envios" 
+                          style={{ display: 'block', width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
+                          📍 Ver tracking
+                        </Link>
                       </div>
-                    </div>
-                    {job.total_price != null && (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1rem' }}>{fmtGs(job.total_price)}</div>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: job.status === 'completado' && !job.tecnico_rating ? 10 : 0 }}>
-                    {job.tecnico_name && <span>👷 {job.tecnico_name}</span>}
-                    <span>📅 {fmtDate(job.completed_at ?? job.created_at)}</span>
-                  </div>
-                  {job.status === 'completado' && !job.tecnico_rating && (
-                    <button onClick={() => setRatingModal({ jobId: job.id, tecnicoName: job.tecnico_name, tecnicoPhoto: job.tecnico_photo })}
-                      style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}>
-                      ⭐ Calificar técnico
-                    </button>
-                  )}
-                  {job.tecnico_rating != null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                      <span>Tu calificación:</span>
-                      <StarRating rating={job.tecnico_rating} />
-                    </div>
-                  )}
-                </div>
-              ))}
+                </>
+              )}
 
-              {/* Orders */}
-              {orders.map(order => (
-                <div key={order.id} style={{
-                  background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.18)',
-                  borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{ fontSize: '1.5rem' }}>📦</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
-                        {order.origin_address ? order.origin_address.slice(0, 30) : 'Envío'}
+              {/* Completed section */}
+              {(completedJobs.length > 0 || completedOrders.length > 0) && (
+                <>
+                  <h2 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Completados</h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {/* Completed Services */}
+                    {completedJobs.map(job => (
+                      <div key={job.id} style={{
+                        background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.18)',
+                        borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '1.5rem' }}>{SERVICE_LABELS[job.service_type]?.split(' ')[0] || '✨'}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
+                              {SERVICE_LABELS[job.service_type] || job.service_type}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                              {job.status === 'completado' ? '✅ Completado' : job.status === 'cancelled' ? 'Cancelado' : '⚠️ Incidente'}
+                            </div>
+                          </div>
+                          {job.total_price != null && (
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1rem' }}>{fmtGs(job.total_price)}</div>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: job.status === 'completado' && !job.tecnico_rating ? 10 : 0 }}>
+                          {job.tecnico_name && <span>👷 {job.tecnico_name}</span>}
+                          <span>📅 {fmtDate(job.completed_at ?? job.created_at)}</span>
+                        </div>
+                        {job.status === 'completado' && !job.tecnico_rating && (
+                          <button onClick={() => setRatingModal({ jobId: job.id, tecnicoName: job.tecnico_name, tecnicoPhoto: job.tecnico_photo })}
+                            style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}>
+                            ⭐ Calificar técnico
+                          </button>
+                        )}
+                        {job.tecnico_rating != null && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                            <span>Tu calificación:</span>
+                            <StarRating rating={job.tecnico_rating} />
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
-                        {order.status === 'delivered' || order.status === 'client_confirmed' ? '✅ Entregado' : order.status === 'cancelled' ? 'Cancelado' : order.status}
+                    ))}
+
+                    {/* Completed Orders */}
+                    {completedOrders.map(order => (
+                      <div key={order.id} style={{
+                        background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.18)',
+                        borderRadius: 18, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <span style={{ fontSize: '1.5rem' }}>📦</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
+                              {order.origin_address ? order.origin_address.slice(0, 30) : 'Envío'}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                              {order.status === 'delivered' || order.status === 'client_confirmed' || order.status === 'commission_charged' ? '✅ Entregado' : order.status === 'cancelled' ? 'Cancelado' : order.status}
+                            </div>
+                          </div>
+                          {order.price != null && (
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1rem' }}>{fmtGs(order.price)}</div>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                          {order.driver_name && <span>🚗 {order.driver_name} · </span>}
+                          <span>📅 {fmtDate(order.completed_at ?? order.created_at)}</span>
+                        </div>
                       </div>
-                    </div>
-                    {order.price != null && (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1rem' }}>{fmtGs(order.price)}</div>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                    {order.driver_name && <span>🚗 {order.driver_name} · </span>}
-                    <span>📅 {fmtDate(order.completed_at ?? order.created_at)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                </>
+              )}
+            </>
           )}
         </div>
       </div>

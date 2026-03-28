@@ -3,8 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
 import { authFetch } from '@/lib/authFetch';
+
+const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
 interface Order {
   id: string;
@@ -159,14 +162,14 @@ export default function ClienteHomePage() {
     <>
       {/* Map background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'url(/map-dark.png) center/cover', filter: 'brightness(0.3) blur(2px)' }} />
+        <ClientMap showMyLocationButton={false} />
       </div>
 
       {/* Overlay gradient */}
       <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(to bottom, rgba(28,28,46,0.88) 0%, rgba(22,33,62,0.75) 50%, rgba(15,52,96,0.85) 100%)', zIndex: 0, pointerEvents: 'none' }} />
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', paddingBottom: 90, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', paddingBottom: 90, padding: '16px 14px 90px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {profilePhoto ? (
               <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
