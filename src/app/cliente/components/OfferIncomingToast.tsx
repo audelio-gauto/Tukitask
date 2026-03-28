@@ -346,17 +346,6 @@ export default function OfferIncomingToast({ email }: Props) {
           >
             Más tarde
           </button>
-          <button
-            onClick={handleView}
-            style={{
-              flex: 2, padding: '13px', borderRadius: 14,
-              border: 'none', background: '#c8ff00',
-              color: '#111', fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            Ver oferta →
-          </button>
         </div>
       </div>
     </>
