@@ -91,24 +91,17 @@ export default function ClienteHomePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [mapTouched, setMapTouched]           = useState(false);
 
-  const handleMapTouch = useCallback(() => {
+  const startMapTouch = useCallback(() => {
     setMapTouched(true);
     const onEnd = () => {
       setMapTouched(false);
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onEnd);
+      document.removeEventListener('mouseup', onEnd);
     };
     document.addEventListener('touchend', onEnd);
     document.addEventListener('touchcancel', onEnd);
-  }, []);
-
-  const handleMapMouseDown = useCallback(() => {
-    setMapTouched(true);
-    const onUp = () => {
-      setMapTouched(false);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('mouseup', onEnd);
   }, []);
 
   const loadOffers = useCallback(async () => {
@@ -189,19 +182,19 @@ export default function ClienteHomePage() {
       {/* Vignette overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', pointerEvents: 'none', zIndex: 1 }} />
 
-      {/* Scrollable content layer */}
-      <div
-        style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', overflowY: mapTouched ? 'hidden' : 'auto', padding: '16px 14px 90px', pointerEvents: mapTouched ? 'none' : 'auto' }}
-        onTouchStart={e => { if ((e.target as HTMLElement) === e.currentTarget) handleMapTouch(); }}
-        onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) handleMapMouseDown(); }}
-      >
-        <div style={{
-          transition: 'opacity 0.28s ease, transform 0.28s ease',
-          opacity: mapTouched ? 0 : 1,
-          transform: mapTouched ? 'translateY(-10px)' : 'translateY(0)',
-          pointerEvents: mapTouched ? 'none' : 'auto',
-          display: 'flex', flexDirection: 'column', gap: 0,
-        }}>
+      {/* Scrollable content layer — pointer-events:none en el contenedor para que el mapa reciba todos los toques vacíos (incluyendo pinch-zoom). Solo los hijos interactivos tienen pointer-events:auto */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', padding: '16px 14px 90px', pointerEvents: 'none' }}>
+        <div
+          style={{
+            transition: 'opacity 0.28s ease, transform 0.28s ease',
+            opacity: mapTouched ? 0 : 1,
+            transform: mapTouched ? 'translateY(-10px)' : 'translateY(0)',
+            pointerEvents: 'auto',
+            display: 'flex', flexDirection: 'column', gap: 0,
+          }}
+          onTouchStart={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
+          onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {profilePhoto ? (
               <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
