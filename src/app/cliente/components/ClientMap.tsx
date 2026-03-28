@@ -30,11 +30,13 @@ export default function ClientMap({
   delivery,
   routeCoords,
   showMyLocationButton = false,
+  dark = false,
 }: {
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
   routeCoords?: Array<{ lat: number; lng: number }> | null;
   showMyLocationButton?: boolean;
+  dark?: boolean;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -79,7 +81,7 @@ export default function ClientMap({
       try {
         map = new mapboxgl.Map({
           container: mapRef.current,
-          style: 'mapbox://styles/mapbox/streets-v12',
+          style: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12',
           center: [DEFAULT_CENTER.lng, DEFAULT_CENTER.lat],
           zoom: 15,
           accessToken: MAPBOX_TOKEN,

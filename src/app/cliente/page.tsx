@@ -162,7 +162,7 @@ export default function ClienteHomePage() {
     <>
       {/* Map background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
-        <ClientMap showMyLocationButton={false} />
+        <ClientMap dark showMyLocationButton={false} />
       </div>
 
       {/* Overlay gradient */}
