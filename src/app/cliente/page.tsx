@@ -159,17 +159,17 @@ export default function ClienteHomePage() {
   const busy = !!actionId;
 
   return (
-    <>
-      {/* Map background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
+    <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      {/* Map base layer */}
+      <div style={{ position: 'absolute', inset: 0 }}>
         <ClientMap dark showMyLocationButton={false} />
       </div>
 
-      {/* Overlay - light top/bottom vignette so map stays visible */}
-      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', zIndex: 0, pointerEvents: 'none' }} />
+      {/* Vignette overlay */}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', pointerEvents: 'none', zIndex: 1 }} />
 
-      {/* Content */}
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100dvh', paddingBottom: 90, padding: '16px 14px 90px', display: 'flex', flexDirection: 'column' }}>
+      {/* Scrollable content layer */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: 90, padding: '16px 14px 90px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {profilePhoto ? (
               <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
@@ -321,7 +321,7 @@ export default function ClienteHomePage() {
 
       {/* Footer with 4 buttons */}
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 3,
         background: 'rgba(28,28,46,0.95)', backdropFilter: 'blur(20px)',
         borderTop: '1px solid rgba(245,197,24,0.18)',
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
@@ -349,6 +349,6 @@ export default function ClienteHomePage() {
           )
         ))}
       </div>
-    </>
+    </div>
   );
 }
