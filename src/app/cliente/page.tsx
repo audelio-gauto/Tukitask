@@ -32,6 +32,7 @@ interface JobOffer {
   note: string | null;
   distance_km: number | null;
   service_type: string;
+  total_services: number | null;
 }
 
 interface PendingJob {
@@ -277,54 +278,80 @@ export default function ClienteHomePage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Job offers (tecnicos) */}
-              {jobOffers.map(offer => (
+              {jobOffers.map(offer => {
+                const arrivalMin = offer.distance_km != null ? Math.max(1, Math.round(offer.distance_km * 2)) : null;
+                return (
                 <div key={offer.id} style={{
-                  background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(245,197,24,0.18)',
-                  borderRadius: 18, padding: '16px 14px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                  background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(245,197,24,0.2)', borderRadius: 20,
+                  padding: '14px 14px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                  marginBottom: 2,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <span style={{ fontSize: '1.8rem' }}>{SERVICE_LABELS[offer.service_type]?.split(' ')[0] || '✨'}</span>
+                  {/* Service type header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: '1.5rem' }}>{SERVICE_LABELS[offer.service_type]?.split(' ')[0] || '✨'}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>
-                        {SERVICE_LABELS[offer.service_type] || offer.service_type}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>Oferta de técnico</div>
+                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{SERVICE_LABELS[offer.service_type] || offer.service_type}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>Oferta de técnico</div>
+                    </div>
+                    {/* Price top-right */}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.4rem', lineHeight: 1 }}>{Number(offer.proposed_price).toLocaleString('es-PY')}</div>
+                      <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem' }}>Gs</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, padding: '12px', background: 'rgba(0,0,0,0.25)', borderRadius: 12 }}>
-                    {offer.tecnico_photo ? (
-                      <img src={offer.tecnico_photo} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(245,197,24,0.3)' }} />
-                    ) : (
-                      <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', border: '2px solid rgba(245,197,24,0.3)' }}>👷</div>
-                    )}
+
+                  {/* Main row: photo + info */}
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: 14, marginBottom: 10 }}>
+                    {/* Photo + stars below */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                      {offer.tecnico_photo ? (
+                        <img src={offer.tecnico_photo} alt="" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2.5px solid #F5C518', boxShadow: '0 2px 12px rgba(245,197,24,0.3)' }} />
+                      ) : (
+                        <div style={{ width: 62, height: 62, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', border: '2.5px solid rgba(245,197,24,0.4)', flexShrink: 0 }}>👷</div>
+                      )}
+                      {offer.tecnico_rating != null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 8, padding: '2px 7px' }}>
+                          <span style={{ color: '#F5C518', fontSize: '0.68rem' }}>★</span>
+                          <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{Number(offer.tecnico_rating).toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name + stat pills */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.93rem', marginBottom: 2 }}>
-                        {offer.tecnico_name || 'Técnico'}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {offer.tecnico_rating != null && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <StarRating rating={offer.tecnico_rating} />
-                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>{offer.tecnico_rating.toFixed(1)}</span>
-                          </span>
+                      <div style={{ fontWeight: 800, color: '#fff', fontSize: '1rem', marginBottom: 8 }}>{offer.tecnico_name || 'Técnico'}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {arrivalMin != null && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(37,99,235,0.22)', border: '1px solid rgba(37,99,235,0.4)', borderRadius: 20, padding: '4px 10px' }}>
+                            <span style={{ fontSize: '0.8rem' }}>⏱️</span>
+                            <span style={{ color: '#60a5fa', fontSize: '0.78rem', fontWeight: 700 }}>{arrivalMin} min</span>
+                          </div>
+                        )}
+                        {offer.total_services != null && offer.total_services > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '4px 10px' }}>
+                            <span style={{ fontSize: '0.8rem' }}>✅</span>
+                            <span style={{ color: '#4ade80', fontSize: '0.78rem', fontWeight: 700 }}>{offer.total_services} servicio{offer.total_services !== 1 ? 's' : ''}</span>
+                          </div>
                         )}
                         {offer.distance_km != null && (
-                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>📍 {offer.distance_km.toFixed(1)} km</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 20, padding: '4px 10px' }}>
+                            <span style={{ fontSize: '0.8rem' }}>📍</span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', fontWeight: 600 }}>{offer.distance_km.toFixed(1)} km</span>
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.35rem', lineHeight: 1 }}>
-                        {Number(offer.proposed_price).toLocaleString('es-PY')}
-                      </div>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginTop: 2 }}>Gs</div>
-                    </div>
                   </div>
+
+                  {/* Note */}
                   {offer.note && (
-                    <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', padding: '8px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, borderLeft: '3px solid #F5C518' }}>
+                    <p style={{ margin: '0 0 10px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', padding: '8px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, borderLeft: '3px solid #F5C518' }}>
                       "{offer.note}"
                     </p>
                   )}
+
+                  {/* Action buttons */}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => rejectJobOffer(offer.id)} disabled={busy}
                       style={{ flex: 1, padding: '11px 0', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer' }}>
@@ -336,7 +363,7 @@ export default function ClienteHomePage() {
                     </button>
                   </div>
                 </div>
-              ))}
+              );})
 
               {/* TODO: Pending orders (drivers) - similar UI */}
             </div>

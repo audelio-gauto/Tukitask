@@ -182,7 +182,22 @@ export async function GET(req: Request) {
         .eq('status', 'pending')
         .order('proposed_price', { ascending: true });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json(data ?? []);
+      const offers = data ?? [];
+      if (offers.length > 0) {
+        const emails = [...new Set(offers.map((o: Record<string, unknown>) => o.tecnico_email as string))];
+        const { data: settings } = await sb
+          .from('tecnico_settings')
+          .select('email, total_ratings')
+          .in('email', emails);
+        const settingsMap = Object.fromEntries(
+          (settings ?? []).map((s: Record<string, unknown>) => [s.email, s])
+        );
+        return NextResponse.json(offers.map((o: Record<string, unknown>) => ({
+          ...o,
+          total_services: (settingsMap[o.tecnico_email as string] as Record<string, unknown>)?.total_ratings ?? null,
+        })));
+      }
+      return NextResponse.json(offers);
     }
 
     return NextResponse.json({ error: 'Invalid query params' }, { status: 400 });
