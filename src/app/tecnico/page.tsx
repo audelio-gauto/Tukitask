@@ -385,20 +385,26 @@ export default function TecnicoDashboard() {
       </div>
 
       {/* Profile pill — top left */}
-      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        {profilePhoto ? (
-          <img src={profilePhoto} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }} />
-        ) : (
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
-            {displayName?.[0]?.toUpperCase() || '👤'}
-          </div>
-        )}
-        {avgRating > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(28,28,46,0.88)', borderRadius: 8, padding: '2px 8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(245,197,24,0.35)' }}>
-            <span style={{ color: '#F5C518', fontSize: '0.7rem' }}>★</span>
-            <span style={{ color: '#F5C518', fontSize: '0.7rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
-          </div>
-        )}
+      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, background: 'rgba(28,28,46,0.82)', borderRadius: 14, padding: '6px 12px 6px 6px', backdropFilter: 'blur(12px)', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518' }}>
+              {displayName?.[0]?.toUpperCase() || '👤'}
+            </div>
+          )}
+          {avgRating > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 6, padding: '1px 6px' }}>
+              <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
+              <span style={{ color: '#F5C518', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+        <div>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, lineHeight: 1.2 }}>Buen día</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Técnico'}</div>
+        </div>
       </div>
 
       {/* ── Menú ── — top right */}
