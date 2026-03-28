@@ -195,7 +195,6 @@ export default function ClienteHomePage() {
               </div>
             </div>
           )}
-        </div>
 
         {/* Offers list */}
         <div style={{ flex: 1, padding: '14px 12px', overflowY: 'auto' }}>
