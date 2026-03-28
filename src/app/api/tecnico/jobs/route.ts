@@ -417,28 +417,22 @@ export async function POST(req: Request) {
         const totalPrice   = Number(data.total_price ?? data.agreed_price ?? 0);
 
         if (totalPrice > 0) {
-          // Resolve commission rate: custom override > tecnico setting > service pricing > default 10%
+          // Resolve commission rate: custom override (per tecnico) > service pricing (per service_type) > default 10%
           const { data: settings } = await sb
             .from('tecnico_settings')
-            .select('commission_pct, custom_commission_pct, custom_commission_fixed')
+            .select('custom_commission_pct, custom_commission_fixed')
             .eq('email', tecnicoEmail)
             .maybeSingle();
 
           let commissionPct   = 10;
           let commissionFixed = 0;
 
+          // Priority 1: Custom override per tecnico (admin sets individual override)
           if (settings?.custom_commission_pct != null) {
             commissionPct   = Number(settings.custom_commission_pct);
             commissionFixed = Number(settings.custom_commission_fixed ?? 0);
-          } else if (settings?.commission_pct != null) {
-            commissionPct = Number(settings.commission_pct);
-            const { data: pricing } = await sb
-              .from('service_pricing')
-              .select('commission_fixed')
-              .eq('service_type', data.service_type)
-              .maybeSingle();
-            commissionFixed = Number(pricing?.commission_fixed ?? 0);
           } else {
+            // Priority 2: Service pricing by service_type (admin sets per service)
             const { data: pricing } = await sb
               .from('service_pricing')
               .select('commission_pct, commission_fixed')
