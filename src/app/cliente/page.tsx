@@ -91,6 +91,8 @@ export default function ClienteHomePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [mapTouched, setMapTouched]           = useState(false);
   const [locating, setLocating]               = useState(false);
+  const locateRef = useRef<(() => void) | null>(null);
+  const [locatingMap, setLocatingMap]         = useState(false);
 
   const openPublishWithLocation = useCallback(() => {
     setLocating(true);
@@ -186,7 +188,7 @@ export default function ClienteHomePage() {
     <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
       {/* Map base layer */}
       <div style={{ position: 'absolute', inset: 0 }}>
-        <ClientMap dark showMyLocationButton={false} />
+        <ClientMap dark showMyLocationButton={false} locateRef={locateRef} />
       </div>
 
       {/* Vignette overlay */}
@@ -369,6 +371,28 @@ export default function ClienteHomePage() {
           </div>
         </div>
       )}
+
+      {/* Floating locate-me button */}
+      <button
+        onClick={() => {
+          setLocatingMap(true);
+          locateRef.current?.();
+          setTimeout(() => setLocatingMap(false), 3000);
+        }}
+        style={{
+          position: 'absolute', right: 16, bottom: 110, zIndex: 5,
+          width: 48, height: 48, borderRadius: '50%',
+          background: locatingMap ? 'rgba(245,197,24,0.9)' : 'rgba(28,28,46,0.92)',
+          border: '2px solid rgba(245,197,24,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.4rem', cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          transition: 'background 0.2s',
+        }}
+        aria-label="Mi ubicación"
+      >
+        {locatingMap ? '⌛' : '📍'}
+      </button>
 
       {/* Footer with 4 buttons */}
       <div style={{

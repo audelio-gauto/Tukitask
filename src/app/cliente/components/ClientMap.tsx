@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 const DEFAULT_CENTER = { lat: -25.2637, lng: -57.5759 };
@@ -33,12 +33,14 @@ export default function ClientMap({
   routeCoords,
   showMyLocationButton = false,
   dark = false,
+  locateRef,
 }: {
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
   routeCoords?: Array<{ lat: number; lng: number }> | null;
   showMyLocationButton?: boolean;
   dark?: boolean;
+  locateRef?: React.MutableRefObject<(() => void) | null>;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -243,6 +245,11 @@ export default function ClientMap({
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
+
+  // Expose flyToUser via ref
+  useEffect(() => {
+    if (locateRef) locateRef.current = handleMyLocation;
+  });
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: dark ? '#0d0d1a' : '#e5e7eb' }}>
