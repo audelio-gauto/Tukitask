@@ -57,6 +57,13 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
   return f;
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 13) return 'Buen día';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 export default function TecnicoDashboard() {
   const router = useRouter();
   const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
@@ -385,12 +392,12 @@ export default function TecnicoDashboard() {
       </div>
 
       {/* Profile pill — top left */}
-      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, background: 'rgba(28,28,46,0.82)', borderRadius: 14, padding: '6px 12px 6px 6px', backdropFilter: 'blur(12px)', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           {profilePhoto ? (
-            <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
+            <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               {displayName?.[0]?.toUpperCase() || '👤'}
             </div>
           )}
@@ -401,8 +408,8 @@ export default function TecnicoDashboard() {
             </div>
           )}
         </div>
-        <div>
-          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, lineHeight: 1.2 }}>Buen día</div>
+        <div style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, lineHeight: 1.2 }}>{getGreeting()}</div>
           <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Técnico'}</div>
         </div>
       </div>

@@ -49,6 +49,13 @@ const SERVICE_LABELS: Record<string, string> = {
   cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
 };
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 13) return 'Buen día';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 function StarRating({ rating }: { rating: number }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -225,7 +232,7 @@ export default function ClienteHomePage() {
               )}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Buen día</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{getGreeting()}</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>{displayName || 'Cliente'}</div>
               {totalRatings > 0 && (
                 <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>{totalRatings} valoracion{totalRatings !== 1 ? 'es' : ''}</div>
