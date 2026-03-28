@@ -5,7 +5,6 @@ import { ClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import './cliente.css';
 import { ClientDrawer } from './components/ClientDrawer';
-import OfferIncomingToast from './components/OfferIncomingToast';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -83,7 +82,6 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         totalRatings, setTotalRatings,
       }}>
         {children}
-        {email && <OfferIncomingToast email={email} />}
       </ClientContext.Provider>
     </div>
   );
