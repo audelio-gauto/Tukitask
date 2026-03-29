@@ -334,12 +334,6 @@ export default function ClienteHomePage() {
                             <span style={{ color: '#4ade80', fontSize: '0.78rem', fontWeight: 700 }}>{offer.total_services} servicio{offer.total_services !== 1 ? 's' : ''}</span>
                           </div>
                         )}
-                        {offer.distance_km != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 20, padding: '4px 10px' }}>
-                            <span style={{ fontSize: '0.8rem' }}>📍</span>
-                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', fontWeight: 600 }}>{offer.distance_km.toFixed(1)} km</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
