@@ -6,6 +6,7 @@ import '../driver/driver.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  usePushNotifications(email || undefined);
 
   useEffect(() => {
     let mounted = true;

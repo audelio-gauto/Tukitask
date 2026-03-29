@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import './driver.css';
 import { DriverDrawer } from './components/DriverDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
+  usePushNotifications(email || undefined);
 
   useEffect(() => {
     (async () => {

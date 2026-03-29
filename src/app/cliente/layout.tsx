@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import './cliente.css';
 import { ClientDrawer } from './components/ClientDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  usePushNotifications(email || undefined);
 
   useEffect(() => {
     (async () => {

@@ -1,17 +1,33 @@
 /**
- * Push notification dispatch service — prep for FCM/APNs integration.
- *
- * Currently a no-op dispatcher that logs push intents.
- * To activate: set FIREBASE_SERVER_KEY or use Firebase Admin SDK.
+ * Push notification dispatch service — Firebase Admin SDK / FCM HTTP v1.
  *
  * Architecture:
  * 1. emitNotification() emits in-app notification via Supabase
  * 2. After in-app emit, call dispatchPush() for urgent/high notifications
- * 3. dispatchPush() looks up user's push_tokens and sends via FCM
+ * 3. dispatchPush() looks up push_tokens and sends via FCM multicast
+ *
+ * Required env var (server-only):
+ *   FIREBASE_SERVICE_ACCOUNT_JSON — stringified service account JSON from Firebase Console
  */
 import { sbAdmin } from '@/lib/apiAuth';
 import type { NotifPriority, PushPlatform } from '@/lib/notifications';
 import { getPushChannel } from '@/lib/notifications';
+import * as admin from 'firebase-admin';
+import type { ServiceAccount } from 'firebase-admin';
+
+// ── Firebase Admin singleton ─────────────────────────────────────────────────
+function getAdminApp(): admin.app.App | null {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) return null;
+  try {
+    if (admin.apps.length > 0) return admin.apps[0]!;
+    const serviceAccount = JSON.parse(
+      process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+    ) as ServiceAccount;
+    return admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  } catch {
+    return null;
+  }
+}
 
 interface PushPayload {
   title: string;
@@ -51,17 +67,7 @@ export async function dispatchPush(
     priority: notifPriority === 'urgent' ? 'high' : 'normal',
   };
 
-  // TODO: Replace with Firebase Admin SDK or FCM HTTP v1 API
-  // For now, log the push intent for development visibility
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[push] Would send to ${tokens.length} device(s) for ${userEmail}:`, payload.title);
-  }
-
-  // Placeholder for actual FCM dispatch:
-  // const sent = await sendFCM(tokens, payload);
-  // return sent;
-
-  return tokens.length;
+  return sendFCM(tokens.map((t: { token: string }) => t.token), payload);
 }
 
 /**
@@ -75,38 +81,39 @@ export async function removeStaleToken(token: string): Promise<void> {
     .eq('token', token);
 }
 
-// ── Future: FCM HTTP v1 dispatch ─────────────────────────────────────────────
-// Uncomment and configure when ready:
-//
-// async function sendFCM(
-//   tokens: Array<{ token: string; platform: PushPlatform }>,
-//   payload: PushPayload,
-// ): Promise<number> {
-//   const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
-//   if (!FIREBASE_SERVER_KEY) return 0;
-//
-//   let sent = 0;
-//   for (const { token } of tokens) {
-//     const res = await fetch('https://fcm.googleapis.com/fcm/send', {
-//       method: 'POST',
-//       headers: {
-//         Authorization: `key=${FIREBASE_SERVER_KEY}`,
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({
-//         to: token,
-//         notification: { title: payload.title, body: payload.body },
-//         data: payload.data,
-//         priority: payload.priority,
-//       }),
-//     });
-//     if (res.ok) sent++;
-//     else {
-//       const err = await res.json();
-//       if (err?.results?.[0]?.error === 'InvalidRegistration') {
-//         await removeStaleToken(token);
-//       }
-//     }
-//   }
-//   return sent;
-// }
+// ── FCM dispatch via Firebase Admin SDK ────────────────────────────────────
+async function sendFCM(tokens: string[], payload: PushPayload): Promise<number> {
+  const app = getAdminApp();
+  if (!app || !tokens.length) return 0;
+
+  const messaging = admin.messaging(app);
+  const CHUNK = 500; // FCM multicast limit
+  let sent = 0;
+
+  for (let i = 0; i < tokens.length; i += CHUNK) {
+    const chunk = tokens.slice(i, i + CHUNK);
+    try {
+      const response = await messaging.sendEachForMulticast({
+        tokens: chunk,
+        notification: { title: payload.title, body: payload.body },
+        data: payload.data,
+        android: { priority: payload.priority === 'high' ? 'high' : 'normal' },
+        webpush: payload.priority === 'high'
+          ? { headers: { Urgency: 'high' } }
+          : undefined,
+      });
+      sent += response.successCount;
+      // Remove tokens that are no longer valid
+      for (let j = 0; j < response.responses.length; j++) {
+        const r = response.responses[j];
+        if (!r.success && r.error?.code === 'messaging/registration-token-not-registered') {
+          await removeStaleToken(chunk[j]);
+        }
+      }
+    } catch {
+      // Partial failure — continue with next chunk
+    }
+  }
+
+  return sent;
+}
