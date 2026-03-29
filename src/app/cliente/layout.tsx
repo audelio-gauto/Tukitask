@@ -5,6 +5,7 @@ import { ClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import './cliente.css';
 import { ClientDrawer } from './components/ClientDrawer';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -74,6 +75,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
+      <NotificationBell userEmail={email} className="" />
       <ClientContext.Provider value={{
         openDrawer: () => setDrawerOpen(true),
         email, displayName, profilePhoto, setProfilePhoto,

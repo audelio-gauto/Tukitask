@@ -29,7 +29,7 @@ export default function MetricsLive() {
 
   useEffect(() => {
     fetchMetrics()
-    const id = setInterval(fetchMetrics, 5000)
+    const id = setInterval(fetchMetrics, 15_000)
     return () => clearInterval(id)
   }, [])
 
@@ -37,7 +37,7 @@ export default function MetricsLive() {
 
   return (
     <div>
-      <div className="mb-2 text-sm text-gray-600">Actualizado en vivo (polling cada 5s)</div>
+      <div className="mb-2 text-sm text-gray-600">Actualizado en vivo (polling cada 15s)</div>
       <pre className="text-xs bg-gray-50 p-3 rounded">{JSON.stringify(data, null, 2)}</pre>
     </div>
   )

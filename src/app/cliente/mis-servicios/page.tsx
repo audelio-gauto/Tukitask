@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { playClientOfferAlert as playOfferAlert, playStatusSound } from '@/lib/audio';
 import RatingModal from '@/components/RatingModal';
@@ -169,10 +170,32 @@ export default function MisServiciosPage() {
   useEffect(() => {
     loadJobs();
     loadHistory();
-    const iv1 = setInterval(loadJobs,    5000);
-    const iv2 = setInterval(loadHistory, 30000);
-    return () => { clearInterval(iv1); clearInterval(iv2); };
-  }, [loadJobs, loadHistory]);
+    // Fallback polling at 60s; realtime is primary
+    const iv1 = setInterval(loadJobs,    60_000);
+    const iv2 = setInterval(loadHistory, 60_000);
+
+    // Realtime: job status changes + new offers for client's jobs
+    const ch = email
+      ? supabase.channel(`client-servicios-${email}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'tecnico_jobs',
+            filter: `client_email=eq.${email}`,
+          } as never, () => { loadJobs(); loadHistory(); })
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'tecnico_job_offers',
+          } as never, () => loadJobs())
+          .subscribe()
+      : null;
+
+    return () => {
+      clearInterval(iv1); clearInterval(iv2);
+      if (ch) supabase.removeChannel(ch);
+    };
+  }, [loadJobs, loadHistory, email]);
 
   const acceptOffer = async (jobId: string, offerId: string) => {
     if (!email || actionId) return;

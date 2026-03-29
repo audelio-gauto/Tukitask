@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
+import { cacheGet, cacheSet } from '@/lib/cache';
+import { emitNotification } from '@/lib/notificationEmitter';
 
 // Comision mínima para poder ver pedidos disponibles (en la moneda base de la app)
 const MIN_WALLET_BALANCE = 0; // 0 = solo bloquear si saldo negativo; sube este valor para forzar saldo mínimo
@@ -40,11 +42,21 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
       }
     }
+    // Cache available orders for 5s (all drivers see the same list)
+    const cachedOrders = await cacheGet<unknown[]>('orders:available');
+    if (cachedOrders) return NextResponse.json(cachedOrders);
+
     query = query.in('status', ['pending', 'negotiating']).limit(100);
   }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Cache the available orders result if this was the unfiltered query
+  if (!clientEmail && !driverEmail && data) {
+    await cacheSet('orders:available', data, 5);
+  }
+
   return NextResponse.json(data);
 }
 
@@ -151,6 +163,34 @@ export async function PATCH(req: Request) {
     if (rpcErr) {
       // Registrar error pero no fallar — la entrega fue confirmada, comisión se gestiona manualmente
       console.error('[orders PATCH] deduct_commission failed:', rpcErr.message);
+    }
+  }
+
+  // ── Notify the other party about the status change ──
+  const statusLabels: Record<string, string> = {
+    picking_up: 'El conductor va en camino a recoger tu paquete',
+    in_transit: 'Tu paquete está en tránsito',
+    delivered: '¡Tu paquete fue entregado!',
+    failed: 'Hubo un problema con la entrega',
+    returning: 'Tu paquete está siendo devuelto',
+    returned: 'Tu paquete fue devuelto',
+    cancelled: 'El pedido fue cancelado',
+    client_confirmed: 'El cliente confirmó la recepción',
+  };
+  // Urgent statuses deserve popup + sound
+  const urgentStatuses = ['picking_up', 'delivered', 'failed', 'returned'];
+  const label = statusLabels[status];
+  if (label) {
+    const targetEmail = isDriverStatus ? order.client_email : order.accepted_by;
+    if (targetEmail) {
+      emitNotification(
+        targetEmail,
+        'status_change',
+        'Actualización de envío',
+        label,
+        { order_id, status },
+        { priority: urgentStatuses.includes(status) ? 'urgent' : 'high' },
+      );
     }
   }
 

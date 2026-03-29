@@ -6,7 +6,28 @@ import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const orderId = searchParams.get('order_id');
+  const orderIds = searchParams.get('order_ids'); // batch: comma-separated IDs
   const driverEmail = searchParams.get('driver_email');
+
+  // Batch fetch: offers for multiple orders in one query
+  if (orderIds) {
+    const ids = orderIds.split(',').filter(Boolean).slice(0, 50); // max 50
+    if (ids.length === 0) return NextResponse.json({});
+    const { data, error } = await supabaseServer
+      .from('driver_offers')
+      .select('*')
+      .in('order_id', ids)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Group by order_id
+    const grouped: Record<string, typeof data> = {};
+    for (const offer of data ?? []) {
+      if (!grouped[offer.order_id]) grouped[offer.order_id] = [];
+      grouped[offer.order_id].push(offer);
+    }
+    return NextResponse.json(grouped);
+  }
 
   if (orderId) {
     const { data, error } = await supabaseServer
@@ -34,6 +55,7 @@ export async function GET(req: Request) {
 }
 
 // POST — driver envía oferta; driver_email se fuerza desde el token
+import { emitNotification } from '@/lib/notificationEmitter';
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
@@ -97,6 +119,23 @@ export async function POST(req: Request) {
     .eq('id', order_id)
     .eq('status', 'pending');
 
+  // Notify the client about the new offer
+  const { data: orderInfo } = await supabaseServer
+    .from('orders')
+    .select('client_email')
+    .eq('id', order_id)
+    .single();
+  if (orderInfo?.client_email) {
+    emitNotification(
+      orderInfo.client_email,
+      'new_offer',
+      'Nueva oferta recibida',
+      `Un conductor ofreció ${Number(amount).toLocaleString('es-PY')} ₲ para tu envío`,
+      { order_id, offer_id: data.id },
+      { groupKey: `offer:order:${order_id}` },
+    );
+  }
+
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -123,6 +162,18 @@ export async function PATCH(req: Request) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
     }
+    // Notify the driver that their offer was accepted
+    const accepted = result.offer as Record<string, unknown> | undefined;
+    if (accepted?.driver_email) {
+      emitNotification(
+        String(accepted.driver_email),
+        'offer_accepted',
+        '¡Oferta aceptada!',
+        'Tu oferta de envío fue aceptada. Dirígete al punto de recogida.',
+        { order_id: accepted.order_id, offer_id },
+        { priority: 'urgent' },
+      );
+    }
     return NextResponse.json({ success: true, offer: result.offer });
   }
 
@@ -142,12 +193,31 @@ export async function PATCH(req: Request) {
       if (!order || order.client_email !== user.email) return forbidden('Not your order');
     }
 
+    // Get driver email before rejecting so we can notify them
+    const { data: offerForNotif } = await supabaseServer
+      .from('driver_offers')
+      .select('driver_email')
+      .eq('id', offer_id)
+      .single();
+
     const { error } = await supabaseServer
       .from('driver_offers')
       .update({ status: 'rejected', updated_at: new Date().toISOString() })
       .eq('id', offer_id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Notify driver of rejection
+    if (offerForNotif?.driver_email) {
+      emitNotification(
+        offerForNotif.driver_email,
+        'offer_rejected',
+        'Oferta rechazada',
+        'Tu oferta fue rechazada por el cliente.',
+        { offer_id },
+        { priority: 'high' },
+      );
+    }
     return NextResponse.json({ success: true });
   }
 

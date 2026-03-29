@@ -6,6 +6,7 @@ import type { ServiceFilters } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import './driver.css';
 import { DriverDrawer } from './components/DriverDrawer';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -80,6 +81,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         displayName={displayName}
         profilePhoto={profilePhoto}
       />
+      <NotificationBell userEmail={email} className="" />
       <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
       </DriverContext.Provider>

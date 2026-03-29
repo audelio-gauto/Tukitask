@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useDriverContext } from '../../driver/context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 
 const DriverMap = dynamic(() => import('../../driver/components/DriverMap'), { ssr: false });
@@ -86,8 +87,20 @@ export default function OfertasPage() {
 
   useEffect(() => {
     loadOffers();
-    const iv = setInterval(loadOffers, 8_000);
-    return () => clearInterval(iv);
+    // Fallback polling at 60s; realtime is primary
+    const iv = setInterval(loadOffers, 60_000);
+
+    // Realtime: new pending jobs + offer status changes
+    const ch = supabase.channel('tecnico-ofertas-marketplace')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_jobs' } as never, () => loadOffers())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tecnico_jobs' } as never, () => loadOffers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tecnico_job_offers' } as never, () => loadOffers())
+      .subscribe();
+
+    return () => {
+      clearInterval(iv);
+      supabase.removeChannel(ch);
+    };
   }, [loadOffers]);
 
   const sendOffer = async (jobId: string, directPrice?: number) => {

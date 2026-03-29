@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import '../driver/driver.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -151,6 +152,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
         role={role}
       />
+      <NotificationBell userEmail={email} className="" />
       <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}

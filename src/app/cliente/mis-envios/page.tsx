@@ -342,20 +342,26 @@ export default function MisEnviosPage() {
     });
     if (activeOrders.length === 0) return;
     const fetchAllOffers = () => {
-      for (const order of activeOrders) {
-        fetch(`/api/orders/offers?order_id=${order.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setOffers(prev => ({ ...prev, [order.id]: data.filter((o: DriverOffer) => o.status === 'pending') }));
-              setOffersLoaded(prev => { const n = new Set(prev); n.add(order.id); return n; });
-            }
-          })
-          .catch(() => {});
-      }
+      const ids = activeOrders.map(o => o.id).join(',');
+      fetch(`/api/orders/offers?order_ids=${encodeURIComponent(ids)}`)
+        .then(res => res.json())
+        .then((grouped: Record<string, DriverOffer[]>) => {
+          if (grouped && typeof grouped === 'object' && !Array.isArray(grouped)) {
+            setOffers(prev => {
+              const next = { ...prev };
+              for (const order of activeOrders) {
+                next[order.id] = (grouped[order.id] ?? []).filter((o: DriverOffer) => o.status === 'pending');
+                setOffersLoaded(p => { const n = new Set(p); n.add(order.id); return n; });
+              }
+              return next;
+            });
+          }
+        })
+        .catch(() => {});
     };
     fetchAllOffers();
-    const interval = setInterval(fetchAllOffers, 6000);
+    // Fallback polling at 60s; realtime driver_offers INSERT handles the rest
+    const interval = setInterval(fetchAllOffers, 60_000);
     return () => clearInterval(interval);
   }, [orders]);
 

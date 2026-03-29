@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from './context';
+import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { authFetch } from '@/lib/authFetch';
@@ -213,12 +214,21 @@ export default function DriverDashboard() {
         .catch(() => {});
     };
     check();
-    const iv = setInterval(check, 5000);
+    // Realtime handles instant pushes; fallback poll at 60s for resiliency
+    const iv = setInterval(check, 60_000);
     const onVisible = () => { if (document.visibilityState === 'visible') check(); };
     document.addEventListener('visibilitychange', onVisible);
+
+    // Realtime: new orders + status changes
+    const ch = supabase.channel('driver-dash-orders')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' } as never, () => check())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' } as never, () => check())
+      .subscribe();
+
     return () => {
       clearInterval(iv);
       document.removeEventListener('visibilitychange', onVisible);
+      supabase.removeChannel(ch);
     };
   }, [available]);
 

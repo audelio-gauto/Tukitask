@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { playNewJobAlert } from '@/lib/audio';
 import dynamic from 'next/dynamic';
@@ -328,8 +329,23 @@ export default function TecnicoDashboard() {
       } catch { /* ignore */ }
     };
     check();
-    const iv = setInterval(check, 30_000);
-    return () => { clearInterval(iv); if (countdownRef.current) clearInterval(countdownRef.current); };
+    // Fallback polling at 60s; realtime INSERT on tecnico_jobs is primary
+    const iv = setInterval(check, 60_000);
+
+    // Realtime: new pending jobs for this técnico
+    const ch = supabase.channel(`tecnico-dash-jobs-${email}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tecnico_jobs',
+      } as never, () => check())
+      .subscribe();
+
+    return () => {
+      clearInterval(iv);
+      supabase.removeChannel(ch);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, [available, email, dismissPopup]);
 
   const sendPopupOffer = async () => {

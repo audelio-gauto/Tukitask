@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDriverContext } from '../context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 
@@ -63,9 +64,26 @@ export default function FailedPage() {
 
   useEffect(() => {
     fetchFailed();
-    const iv = setInterval(fetchFailed, 5000);
-    return () => clearInterval(iv);
-  }, [fetchFailed]);
+    // Fallback polling at 60s; realtime is primary
+    const iv = setInterval(fetchFailed, 60_000);
+
+    // Realtime: order status changes (return_rejected, failed, etc.)
+    const ch = email
+      ? supabase.channel(`driver-failed-${email}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+            filter: `accepted_by=eq.${email}`,
+          } as never, () => fetchFailed())
+          .subscribe()
+      : null;
+
+    return () => {
+      clearInterval(iv);
+      if (ch) supabase.removeChannel(ch);
+    };
+  }, [fetchFailed, email]);
 
   const handleAction = async (orderId: string, newStatus: 'in_transit' | 'returning' | 'incident_closed', returnReason?: string) => {
     const key = orderId + newStatus;

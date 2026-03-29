@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
@@ -155,8 +156,41 @@ export default function ClienteHomePage() {
 
   useEffect(() => {
     loadOffers();
-    const iv = setInterval(loadOffers, 5000);
-    return () => clearInterval(iv);
+    // Fallback polling at 60s; realtime is primary
+    const iv = setInterval(loadOffers, 60_000);
+
+    // Realtime: new orders/jobs + offers
+    const ch = email
+      ? supabase.channel(`client-dashboard-${email}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `client_email=eq.${email}`,
+          } as never, () => loadOffers())
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'tecnico_jobs',
+            filter: `client_email=eq.${email}`,
+          } as never, () => loadOffers())
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'driver_offers',
+          } as never, () => loadOffers())
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'tecnico_job_offers',
+          } as never, () => loadOffers())
+          .subscribe()
+      : null;
+
+    return () => {
+      clearInterval(iv);
+      if (ch) supabase.removeChannel(ch);
+    };
   }, [loadOffers]);
 
   const acceptJobOffer = async (jobId: string, offerId: string) => {

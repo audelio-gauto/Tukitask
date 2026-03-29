@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
+import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 
 interface Job {
@@ -78,7 +79,17 @@ export default function CitasPage() {
     if (trackingJob) {
       if (!navigator.geolocation) return;
 
+      const MIN_DISTANCE_M = 30; // Only broadcast if moved > 30 meters
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const haversineDist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+        const R = 6371000;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+      };
       const broadcast = (lat: number, lng: number) => {
+        if (lastPosRef.current && haversineDist(lastPosRef.current, { lat, lng }) < MIN_DISTANCE_M) return;
         lastPosRef.current = { lat, lng };
         fetch('/api/driver-location', {
           method: 'POST',
@@ -104,7 +115,7 @@ export default function CitasPage() {
             () => {},
             { enableHighAccuracy: true, timeout: 5000 },
           );
-        }, 6000);
+        }, 10_000);
       }
     } else {
       // No active tracking job — stop broadcasting
@@ -140,9 +151,26 @@ export default function CitasPage() {
 
   useEffect(() => {
     loadJobs();
-    const iv = setInterval(loadJobs, 20_000);
-    return () => clearInterval(iv);
-  }, [loadJobs]);
+    // Fallback polling at 60s; realtime is primary
+    const iv = setInterval(loadJobs, 60_000);
+
+    // Realtime: job status changes for this técnico
+    const ch = email
+      ? supabase.channel(`tecnico-citas-${email}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'tecnico_jobs',
+            filter: `tecnico_email=eq.${email}`,
+          } as never, () => loadJobs())
+          .subscribe()
+      : null;
+
+    return () => {
+      clearInterval(iv);
+      if (ch) supabase.removeChannel(ch);
+    };
+  }, [loadJobs, email]);
 
   const doAction = async (jobId: string, action: string) => {
     if (!email || actionId) return;

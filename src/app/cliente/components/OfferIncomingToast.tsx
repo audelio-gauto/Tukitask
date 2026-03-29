@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ─── Web Audio ──────────────────────────────────────────────────────────── */
 let _gAC: AudioContext | null = null;
@@ -210,10 +211,27 @@ export default function OfferIncomingToast({ email }: Props) {
 
   useEffect(() => {
     if (!email) return;
-    poll();
-    const iv = setInterval(poll, 6_000);
+    poll(); // Initial load
+    // Fallback polling at 60s; realtime is primary for instant offers
+    const iv = setInterval(poll, 60_000);
+
+    // Realtime: new driver offers + tecnico offers → instant toast
+    const ch = supabase.channel(`offer-toast-${email}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'driver_offers',
+      } as never, () => poll())
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tecnico_job_offers',
+      } as never, () => poll())
+      .subscribe();
+
     return () => {
       clearInterval(iv);
+      supabase.removeChannel(ch);
       stopSound();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
