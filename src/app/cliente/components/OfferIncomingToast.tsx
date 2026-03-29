@@ -216,16 +216,19 @@ export default function OfferIncomingToast({ email }: Props) {
     const iv = setInterval(poll, 60_000);
 
     // Realtime: new driver offers + tecnico offers → instant toast
+    // Filter by client_email so this client only receives their own offers
     const ch = supabase.channel(`offer-toast-${email}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'driver_offers',
+        filter: `client_email=eq.${email}`,
       } as never, () => poll())
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'tecnico_job_offers',
+        filter: `client_email=eq.${email}`,
       } as never, () => poll())
       .subscribe();
 
@@ -363,6 +366,16 @@ export default function OfferIncomingToast({ email }: Props) {
             }}
           >
             Más tarde
+          </button>
+          <button
+            onClick={handleView}
+            style={{
+              flex: 2, padding: '13px', borderRadius: 14,
+              border: 'none', background: '#c8ff00',
+              color: '#000', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+            }}
+          >
+            Ver oferta →
           </button>
         </div>
       </div>

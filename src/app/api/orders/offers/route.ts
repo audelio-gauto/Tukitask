@@ -99,6 +99,14 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
   }
 
+  // Fetch client_email to store on offer (enables filtered realtime subscriptions)
+  const { data: orderForClient } = await supabaseServer
+    .from('orders')
+    .select('client_email')
+    .eq('id', order_id)
+    .single();
+  const clientEmail = orderForClient?.client_email ?? null;
+
   const { data, error } = await supabaseServer
     .from('driver_offers')
     .insert([{
@@ -107,6 +115,7 @@ export async function POST(req: Request) {
       driver_name: body.driver_name || null,
       driver_photo: body.driver_photo || null,
       amount: Number(amount),
+      client_email: clientEmail,
     }])
     .select()
     .single();

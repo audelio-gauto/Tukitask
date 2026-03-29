@@ -264,6 +264,14 @@ export async function POST(req: Request) {
       if (!jobId || !tecnicoEmail || proposedPrice == null) {
         return NextResponse.json({ error: 'Missing jobId, tecnicoEmail or proposedPrice' }, { status: 400 });
       }
+      // Fetch client_email to store on offer (enables filtered realtime subscriptions)
+      const { data: jobForClient } = await sb
+        .from('tecnico_jobs')
+        .select('client_email')
+        .eq('id', jobId)
+        .single();
+      const offerClientEmail = jobForClient?.client_email ?? null;
+
       const { data, error } = await sb
         .from('tecnico_job_offers')
         .upsert({
@@ -276,6 +284,7 @@ export async function POST(req: Request) {
           note:           note          || null,
           distance_km:    distanceKm ? Number(distanceKm) : null,
           status:         'pending',
+          client_email:   offerClientEmail,
         }, { onConflict: 'job_id,tecnico_email', ignoreDuplicates: false })
         .select()
         .maybeSingle();
