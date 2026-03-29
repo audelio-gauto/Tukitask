@@ -44,7 +44,7 @@ const SERVICE_LABELS: Record<string, string> = {
 
 export default function OfertasPage() {
   const router = useRouter();
-  const { email } = useDriverContext();
+  const { email, profilePhoto, displayName, avgRating } = useDriverContext();
   const [jobs, setJobs]               = useState<Job[]>([]);
   const [loading, setLoading]         = useState(true);
   const [offerPrices, setOfferPrices] = useState<Record<string, number>>({});
@@ -99,7 +99,17 @@ export default function OfertasPage() {
       const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send_offer', jobId, tecnicoEmail: email, proposedPrice: price }),
+        body: JSON.stringify({
+          action: 'send_offer', jobId,
+          tecnicoEmail: email,
+          tecnicoName: displayName || null,
+          tecnicoPhoto: profilePhoto || null,
+          tecnicoRating: avgRating > 0 ? avgRating : null,
+          proposedPrice: price,
+          distanceKm: (myPos && currentJob?.lat != null && currentJob?.lng != null)
+            ? haversineKm(myPos.lat, myPos.lng, Number(currentJob.lat), Number(currentJob.lng))
+            : null,
+        }),
       });
       const json = await res.json();
       if (json.offer) {

@@ -336,6 +336,10 @@ export default function TecnicoDashboard() {
     if (!pendingPopup || !email || popupSending) return;
     setPopupSending(true);
     try {
+      const pos = tecnicoPosRef.current;
+      const distKm = (pos && pendingPopup.lat != null && pendingPopup.lng != null)
+        ? haversineKm(pos.lat, pos.lng, Number(pendingPopup.lat), Number(pendingPopup.lng))
+        : null;
       await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,7 +347,11 @@ export default function TecnicoDashboard() {
           action: 'send_offer',
           jobId: pendingPopup.id,
           tecnicoEmail: email,
+          tecnicoName: displayName || null,
+          tecnicoPhoto: profilePhoto || null,
+          tecnicoRating: avgRating > 0 ? avgRating : null,
           proposedPrice: popupOfferPrice,
+          distanceKm: distKm,
         }),
       });
     } catch { /* ignore */ }
