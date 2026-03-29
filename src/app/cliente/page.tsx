@@ -363,7 +363,8 @@ export default function ClienteHomePage() {
                     </button>
                   </div>
                 </div>
-              );})
+                );
+              })}
 
               {/* TODO: Pending orders (drivers) - similar UI */}
             </div>
