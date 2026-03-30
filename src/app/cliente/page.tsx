@@ -1,7 +1,6 @@
 ﻿'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
@@ -254,17 +253,16 @@ function OfferCard({
 
 /* ─── Main component ──────────────────────────────────────────────────────── */
 export default function ClienteHomePage() {
-  const router = useRouter();
   const { email, displayName, profilePhoto, avgRating, totalRatings, openDrawer } = useClientContext();
 
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [jobs,      setJobs]      = useState<ActiveJob[]>([]);
   const [driverOffers, setDriverOffers] = useState<Record<string, DriverOffer[]>>({});
   const [jobOffers,    setJobOffers]    = useState<Record<string, TecnicoJobOffer[]>>({});
+  const [acceptedDriverInfo, setAcceptedDriverInfo] = useState<Record<string, { name: string|null; photo: string|null }>>({});
   const [loading,   setLoading]   = useState(true);
   const [actionId,  setActionId]  = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
-  const [locating, setLocating]   = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
   const locateRef = useRef<(() => void) | null>(null);
@@ -282,6 +280,7 @@ export default function ClienteHomePage() {
       const jobsData   = await jobsRes.json();
 
       const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress'];
+      const TRACKING_STS_LOAD = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress'];
       const activeOrders: Order[] = Array.isArray(ordersData)
         ? ordersData.filter((o: Order) => ALL_ACTIVE_STS.includes(o.status))
         : [];
@@ -290,21 +289,29 @@ export default function ClienteHomePage() {
       setOrders(activeOrders);
       setJobs(activeJobs);
 
-      // Fetch driver offers for pending/negotiating orders
+      // Fetch ALL offers for ALL active orders (pending offers → offer cards; accepted offers → tracking driver info)
       if (activeOrders.length > 0) {
         const ids = activeOrders.map(o => o.id).join(',');
         const offersRes  = await fetch(`/api/orders/offers?order_ids=${encodeURIComponent(ids)}`);
         const offersData = await offersRes.json();
         if (offersData && typeof offersData === 'object') {
-          // keep only pending offers
-          const cleaned: Record<string, DriverOffer[]> = {};
-          for (const id of activeOrders.map(o => o.id)) {
-            cleaned[id] = (offersData[id] ?? []).filter((o: DriverOffer) => o.status === 'pending');
+          const pendingMap: Record<string, DriverOffer[]> = {};
+          const driverInfoMap: Record<string, { name: string|null; photo: string|null }> = {};
+          for (const order of activeOrders) {
+            const allOffs: DriverOffer[] = offersData[order.id] ?? [];
+            pendingMap[order.id] = allOffs.filter((o: DriverOffer) => o.status === 'pending');
+            // For tracking orders, grab driver info from the accepted offer
+            if (TRACKING_STS_LOAD.includes(order.status)) {
+              const accepted = allOffs.find((o: DriverOffer) => o.status === 'accepted');
+              if (accepted) driverInfoMap[order.id] = { name: accepted.driver_name, photo: accepted.driver_photo };
+            }
           }
-          setDriverOffers(cleaned);
+          setDriverOffers(pendingMap);
+          setAcceptedDriverInfo(driverInfoMap);
         }
       } else {
         setDriverOffers({});
+        setAcceptedDriverInfo({});
       }
 
       // Fetch tecnico job offers
@@ -655,7 +662,10 @@ export default function ClienteHomePage() {
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px max(24px, env(safe-area-inset-bottom))' }}>
               {[
-                ...trackingOrders.map(o => ({ type: 'delivery' as const, id: o.id, status: o.status, name: o.driver_name, photo: o.driver_photo, rating: o.driver_rating, price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
+                ...trackingOrders.map(o => ({ type: 'delivery' as const, id: o.id, status: o.status,
+                  name: acceptedDriverInfo[o.id]?.name ?? o.driver_name,
+                  photo: acceptedDriverInfo[o.id]?.photo ?? o.driver_photo,
+                  rating: o.driver_rating, price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
                 ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, price: null, origin: null, dest: null, svcType: j.service_type })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
