@@ -623,25 +623,79 @@ export default function ClienteHomePage() {
         )}
       </div>
 
-      {/* ── IDLE — floating action button ─────────────────────────────────── */}
+      {/* ── IDLE — centered content ──────────────────────────────────────── */}
       {mode === 'idle' && !loading && (
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5, padding: '0 14px 20px' }}>
-          {/* Quick action grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <Link href="/cliente/enviar" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: 'rgba(245,197,24,0.12)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(245,197,24,0.3)', textDecoration: 'none' }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>📦</div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Enviar</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Paquete</div>
-              </div>
-            </Link>
-            <Link href="/cliente/servicio" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: 'rgba(99,102,241,0.12)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(99,102,241,0.3)', textDecoration: 'none' }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🛠️</div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Servicio</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Técnico</div>
-              </div>
-            </Link>
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 10, textAlign: 'center', padding: '0 24px',
+        }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: 4 }}>📭</div>
+          <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>No tenés ofertas pendientes</div>
+          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', textShadow: '0 1px 6px rgba(0,0,0,0.8)', marginBottom: 8 }}>¿Qué ayuda necesitás hoy?</div>
+          <button
+            onClick={() => setShowPublishModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '16px 32px', borderRadius: 50, border: 'none',
+              background: 'linear-gradient(135deg, #F5C518, #F58A07)',
+              color: '#1C1C2E', fontWeight: 900, fontSize: '1.05rem',
+              cursor: 'pointer', boxShadow: '0 6px 24px rgba(245,197,24,0.5)',
+            }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>➕</span> Pedir ahora
+          </button>
+        </div>
+      )}
+
+      {/* ── PUBLISH MODAL ─────────────────────────────────────────────── */}
+      {showPublishModal && (
+        <div
+          onClick={() => setShowPublishModal(false)}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 30,
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'flex-end',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', background: '#0f172a',
+              borderRadius: '24px 24px 0 0',
+              border: '1px solid rgba(245,197,24,0.2)',
+              padding: '20px 20px max(20px, env(safe-area-inset-bottom))',
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2, margin: '0 auto 16px' }} />
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#fff' }}>¿Qué necesitás?</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Link
+                href="/cliente/enviar"
+                onClick={() => setShowPublishModal(false)}
+                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px', borderRadius: 18, background: 'rgba(245,197,24,0.1)', border: '1.5px solid rgba(245,197,24,0.3)', textDecoration: 'none' }}
+              >
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>📦</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Enviar un paquete</div>
+                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Delivery rápido a domicilio</div>
+                </div>
+              </Link>
+              <Link
+                href="/cliente/servicio"
+                onClick={() => setShowPublishModal(false)}
+                style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px', borderRadius: 18, background: 'rgba(99,102,241,0.1)', border: '1.5px solid rgba(99,102,241,0.3)', textDecoration: 'none' }}
+              >
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>🛠️</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Contratar un técnico</div>
+                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Servicios en tu hogar</div>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -654,21 +708,26 @@ export default function ClienteHomePage() {
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 4, justifyContent: 'space-around',
         boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
-        // Hidden when offer sheet is open to avoid overlap
-        transform: mode !== 'idle' && sheetOpen ? 'translateY(100%)' : 'translateY(0)',
-        transition: 'transform 0.4s ease',
-      }}>
+        }}>
         {[
-          { icon: '🏠', label: 'Home', path: '/cliente', active: true },
-          { icon: '📋', label: 'Mis envíos', path: '/cliente/mis-envios' },
-          { icon: '🛠', label: 'Servicios', path: '/cliente/mis-servicios' },
-          { icon: '👤', label: 'Cuenta', path: '/cliente/settings' },
+          { icon: '🏠', label: 'Home', path: '/cliente', active: true, onClick: undefined as (() => void) | undefined },
+          { icon: '➕', label: 'Publicar', path: '', active: false, onClick: () => setShowPublishModal(true) },
+          { icon: '📋', label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined },
+          { icon: '👤', label: 'Cuenta', path: '/cliente/settings', active: false, onClick: undefined as (() => void) | undefined },
         ].map(item => (
-          <Link key={item.label} href={item.path}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent' }}>
-            <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.5)' }}>{item.label}</span>
-          </Link>
+            item.onClick ? (
+              <button key={item.label} onClick={item.onClick}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
+                <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+              </button>
+            ) : (
+              <Link key={item.label} href={item.path}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent' }}>
+                <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+              </Link>
+            )
         ))}
       </div>
 

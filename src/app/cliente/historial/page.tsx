@@ -182,8 +182,8 @@ export default function ClienteHistorialPage() {
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(job.created_at)}</span>
                       </div>
-                      <Link href="/cliente/mis-servicios" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                        📍 Ver tracking
+                      <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
+                        📍 Ver en inicio
                       </Link>
                     </div>
                   ))}
@@ -197,8 +197,8 @@ export default function ClienteHistorialPage() {
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(order.created_at)}</span>
                       </div>
-                      <Link href="/cliente/mis-envios" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                        📍 Ver tracking
+                      <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
+                        📍 Ver en inicio
                       </Link>
                     </div>
                   ))}
