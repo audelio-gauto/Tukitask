@@ -251,7 +251,7 @@ export default function DeliveriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount) }),
       });
-      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: Number(amount) })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); }
+      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); }
     } catch { /* */ }
     setSending(s => ({ ...s, [orderId]: false }));
   };
@@ -264,7 +264,7 @@ export default function DeliveriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer }),
       });
-      if (res.ok) setSentOffers(s => ({ ...s, [orderId]: clientOffer }));
+      if (res.ok) setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } }));
     } catch { /* */ }
     setSending(s => ({ ...s, [orderId]: false }));
   };
