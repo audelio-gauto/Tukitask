@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 // GET — open (datos públicos para la negociación)
 export async function GET(req: Request) {
@@ -57,6 +58,12 @@ export async function GET(req: Request) {
 // POST — driver envía oferta; driver_email se fuerza desde el token
 import { emitNotification } from '@/lib/notificationEmitter';
 export async function POST(req: Request) {
+
+  // Rate limit por IP+endpoint
+  const ip = req.headers.get('x-forwarded-for') || 'local';
+  const allowed = await allowRequest(`rl:offers:post:${ip}`, 10, 60);
+  if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 
@@ -147,9 +154,13 @@ export async function POST(req: Request) {
 
   return NextResponse.json(data, { status: 201 });
 }
-
-// PATCH — cliente acepta/rechaza oferta; se verifica que el cliente sea dueño del pedido
 export async function PATCH(req: Request) {
+
+  // Rate limit por IP+endpoint
+  const ip = req.headers.get('x-forwarded-for') || 'local';
+  const allowed = await allowRequest(`rl:offers:patch:${ip}`, 10, 60);
+  if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 

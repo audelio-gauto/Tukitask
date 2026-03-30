@@ -69,6 +69,7 @@ interface UnifiedOffer {
   note: string | null;
   distanceKm: number | null;
   totalJobs: number | null;
+  status: string; // pending, accepted, rejected, cancelled, expired
 }
 
 /* unified active request (delivery or service) */
@@ -166,13 +167,33 @@ function OfferCard({
   const accentBg    = isDriver ? 'rgba(245,197,24,0.12)' : 'rgba(99,102,241,0.12)';
   const accentBorder = isDriver ? 'rgba(245,197,24,0.3)' : 'rgba(99,102,241,0.3)';
 
+
+  // Estado de la oferta: pending, accepted, rejected, expired, cancelled
+  let status = offer.status || 'pending';
+  let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
+  if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — te eligieron'; }
+  else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada'; }
+  else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
+  else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+
   return (
     <div style={{
       background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(16px)',
       borderRadius: 20, padding: '16px 14px 14px',
       border: `1.5px solid ${accentBorder}`,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      marginBottom: 2
     }}>
+      {/* Estado de la oferta */}
+      <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}`, margin: '0 0 12px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: bg }}>
+          <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
+          <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
+          <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
+            ₲{Number(offer.price).toLocaleString()}
+          </span>
+        </div>
+      </div>
       {/* Type badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{
@@ -181,13 +202,16 @@ function OfferCard({
         }}>
           {isDriver ? '🚗 Envío' : '🛠 Servicio'}
         </span>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.5rem', lineHeight: 1 }}>
-            {Number(offer.price).toLocaleString('es-PY')}
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem' }}>Gs</div>
-        </div>
       </div>
+
+      {/* Botón cancelar oferta si está pendiente */}
+      {status === 'pending' && (
+        <button
+          onClick={onReject}
+          disabled={busy}
+          style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #f59e42', background: 'rgba(245,158,66,0.08)', color: '#f59e42', fontWeight: 700, fontSize: '0.95rem', marginBottom: 10, cursor: busy ? 'default' : 'pointer' }}
+        >✕ Cancelar mi oferta</button>
+      )}
 
       {/* Driver / Tecnico info */}
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, marginBottom: 12 }}>
@@ -373,6 +397,7 @@ export default function ClienteHomePage() {
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo, rating: null,
       price: Number(off.amount), note: null, distanceKm: null, totalJobs: null,
+      status: off.status,
     }))
   );
   const allJobOffers: UnifiedOffer[] = jobs.flatMap(j =>
@@ -380,9 +405,15 @@ export default function ClienteHomePage() {
       id: off.id, requestId: j.id, requestType: 'service' as const,
       name: off.tecnico_name, photo: off.tecnico_photo, rating: off.tecnico_rating,
       price: Number(off.proposed_price), note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
+      status: off.status,
     }))
   );
+
+  // Pagination for offers
+  const [offersPage, setOffersPage] = useState(1);
+  const OFFERS_PER_PAGE = 10;
   const allOffers = [...allDriverOffers, ...allJobOffers];
+  const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
   const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
   const SEARCHING_STS = ['pending', 'negotiating'];
@@ -658,7 +689,8 @@ export default function ClienteHomePage() {
 
             {/* Scrollable offer cards */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {allOffers.map(offer => (
+
+              {paginatedOffers.map(offer => (
                 <OfferCard
                   key={offer.id}
                   offer={offer}
@@ -673,6 +705,27 @@ export default function ClienteHomePage() {
                   }
                 />
               ))}
+
+              {/* Pagination: Load more button */}
+              {allOffers.length > paginatedOffers.length && (
+                <button
+                  onClick={() => setOffersPage(p => p + 1)}
+                  style={{
+                    width: '100%',
+                    padding: '13px',
+                    borderRadius: 14,
+                    border: '1px solid #F5C518',
+                    background: 'rgba(245,197,24,0.08)',
+                    color: '#F5C518',
+                    fontWeight: 800,
+                    fontSize: '0.98rem',
+                    marginTop: 10,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cargar más ofertas
+                </button>
+              )}
 
               {/* Cancel links below offers */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>

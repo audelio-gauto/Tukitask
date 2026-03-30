@@ -125,15 +125,21 @@ export default function ClienteHistorialPage() {
   const sortByDate = (a: UnifiedItem, b: UnifiedItem) =>
     new Date(b.date).getTime() - new Date(a.date).getTime();
 
+
+  // Pagination for historial
+  const [activePage, setActivePage] = useState(1);
+  const [donePage, setDonePage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const activeItems: UnifiedItem[] = [
     ...jobs.filter(j => activeStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.created_at })),
     ...orders.filter(o => activeStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.created_at })),
   ].sort(sortByDate);
-
   const doneItems: UnifiedItem[] = [
     ...jobs.filter(j => doneStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.completed_at ?? j.created_at })),
     ...orders.filter(o => doneStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.completed_at ?? o.created_at })),
   ].sort(sortByDate);
+  const paginatedActive = activeItems.slice(0, activePage * ITEMS_PER_PAGE);
+  const paginatedDone = doneItems.slice(0, donePage * ITEMS_PER_PAGE);
 
   const total = jobs.length + orders.length;
 
@@ -185,7 +191,7 @@ export default function ClienteHistorialPage() {
               <div style={{ marginBottom: 28 }}>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 2 }}>En Progreso</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {activeItems.map(item => item.kind === 'job' ? (
+                  {paginatedActive.map(item => item.kind === 'job' ? (
                     <div key={item.data.id} style={{ background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ fontSize: '1.5rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
@@ -222,7 +228,47 @@ export default function ClienteHistorialPage() {
               <div>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {doneItems.map(item => item.kind === 'job' ? (
+                  {paginatedDone.map(item => item.kind === 'job' ? (
+                                    {/* Pagination: Load more for active */}
+                                    {activeItems.length > paginatedActive.length && (
+                                      <button
+                                        onClick={() => setActivePage(p => p + 1)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '11px',
+                                          borderRadius: 14,
+                                          border: '1px solid #F5C518',
+                                          background: 'rgba(245,197,24,0.08)',
+                                          color: '#F5C518',
+                                          fontWeight: 800,
+                                          fontSize: '0.98rem',
+                                          marginTop: 10,
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        Cargar más en progreso
+                                      </button>
+                                    )}
+                                    {/* Pagination: Load more for done */}
+                                    {doneItems.length > paginatedDone.length && (
+                                      <button
+                                        onClick={() => setDonePage(p => p + 1)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '11px',
+                                          borderRadius: 14,
+                                          border: '1px solid #F5C518',
+                                          background: 'rgba(245,197,24,0.08)',
+                                          color: '#F5C518',
+                                          fontWeight: 800,
+                                          fontSize: '0.98rem',
+                                          marginTop: 10,
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        Cargar más completados
+                                      </button>
+                                    )}
                     <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
                         <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>

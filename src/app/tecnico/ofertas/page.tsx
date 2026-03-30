@@ -135,7 +135,11 @@ export default function OfertasPage() {
   };
 
   // Visible (not dismissed) jobs
-  const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)), [jobs, dismissed]);
+
+  // Pagination for visibleJobs
+  const [jobsPage, setJobsPage] = useState(1);
+  const JOBS_PER_PAGE = 10;
+  const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)).slice(0, jobsPage * JOBS_PER_PAGE), [jobs, dismissed, jobsPage]);
   const safeIndex   = visibleJobs.length > 0 ? Math.min(sheetIndex, visibleJobs.length - 1) : 0;
   const currentJob  = visibleJobs[safeIndex] ?? null;
 
@@ -320,22 +324,31 @@ export default function OfertasPage() {
 
               {/* ── OFFER ZONE ── */}
               {alreadySent ? (
-                <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${job.my_offer!.status === 'accepted' ? '#10b981' : '#F5C518'}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: job.my_offer!.status === 'accepted' ? 'rgba(16,185,129,0.15)' : 'rgba(245,197,24,0.15)' }}>
-                    <span style={{ fontSize: '0.85rem', color: job.my_offer!.status === 'accepted' ? '#6ee7b7' : '#F7D060', fontWeight: 700 }}>
-                      {job.my_offer!.status === 'accepted' ? '✅ Aceptada — el cliente te eligió' : '📤 Oferta enviada · esperando...'}
-                    </span>
-                    <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
-                      ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
-                    </span>
-                  </div>
-                  {job.my_offer!.status === 'accepted' && gmapsUrl && (
-                    <button onClick={() => window.open(gmapsUrl, '_blank')}
-                      style={{ width: '100%', padding: '12px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      🧭 Navegar al cliente
-                    </button>
-                  )}
-                </div>
+                {(() => {
+                  const status = job.my_offer!.status;
+                  let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
+                  if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — el cliente te eligió'; }
+                  else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada por el cliente'; }
+                  else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
+                  else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+                  return (
+                    <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: bg }}>
+                        <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
+                        <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
+                        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
+                          ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
+                        </span>
+                      </div>
+                      {status === 'accepted' && gmapsUrl && (
+                        <button onClick={() => window.open(gmapsUrl, '_blank')}
+                          style={{ width: '100%', padding: '12px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          🧭 Navegar al cliente
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               ) : isOpen ? (
                 <div>
                   {/* Quick chips */}
@@ -401,6 +414,27 @@ export default function OfertasPage() {
                     <button key={i} onClick={() => setSheetIndex(i)}
                       style={{ width: i === safeIndex ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'width 0.2s', background: i === safeIndex ? '#c8ff00' : '#333' }} />
                   ))}
+                </div>
+              )}
+
+              {/* Pagination: Load more button */}
+              {jobs.filter(j => !dismissed.has(j.id)).length > visibleJobs.length && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+                  <button
+                    onClick={() => setJobsPage(p => p + 1)}
+                    style={{
+                      padding: '13px 28px',
+                      borderRadius: 14,
+                      border: '1px solid #F5C518',
+                      background: 'rgba(245,197,24,0.08)',
+                      color: '#F5C518',
+                      fontWeight: 800,
+                      fontSize: '0.98rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cargar más trabajos
+                  </button>
                 </div>
               )}
             </div>

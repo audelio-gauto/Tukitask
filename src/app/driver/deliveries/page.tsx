@@ -31,7 +31,8 @@ export default function DeliveriesPage() {
   const [loading, setLoading] = useState(true);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
-  const [sentOffers, setSentOffers] = useState<Record<string, number>>({});
+  // sentOffers: { [orderId]: { amount: number, status: string } }
+  const [sentOffers, setSentOffers] = useState<Record<string, { amount: number, status: string }>>({});
   const [activeJob, setActiveJob] = useState<any>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
@@ -99,17 +100,15 @@ export default function DeliveriesPage() {
       .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
-        const pending: Record<string, number> = {};
+        const offers: Record<string, { amount: number, status: string }> = {};
         for (const o of data) {
-          if (o.status === 'pending' && o.order_id) pending[o.order_id] = Number(o.amount);
-          // NOTE: activeJob is managed exclusively by fetchActiveJob to avoid competing setters.
-          // Sound: play once when first accepted offer appears
+          if (o.order_id) offers[o.order_id] = { amount: Number(o.amount), status: o.status };
           if (o.status === 'accepted' && !prevAccepted.current) {
             playAccepted();
             prevAccepted.current = true;
           }
         }
-        setSentOffers(pending);
+        setSentOffers(offers);
       })
       .catch(() => {});
   }, [email]);
@@ -275,9 +274,13 @@ export default function DeliveriesPage() {
     setSheetIndex(0);
   }, []);
 
+
+  // Pagination for sheetOrders
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ORDERS_PER_PAGE = 10;
   const sheetOrders = useMemo(() =>
-    filteredOrders.filter(o => !dismissedOrders.has(o.id)),
-  [filteredOrders, dismissedOrders]);
+    filteredOrders.filter(o => !dismissedOrders.has(o.id)).slice(0, ordersPage * ORDERS_PER_PAGE),
+  [filteredOrders, dismissedOrders, ordersPage]);
 
   const safeIndex = sheetOrders.length > 0 ? Math.min(sheetIndex, sheetOrders.length - 1) : 0;
   const currentSheetOrder = sheetOrders[safeIndex] ?? null;
@@ -496,7 +499,8 @@ export default function DeliveriesPage() {
       {/* ════════════ INCOMING REQUEST BOTTOM SHEET ════════════ */}
       {!activeJob && currentSheetOrder && (() => {
         const req = currentSheetOrder;
-        const alreadyOffered = sentOffers[req.id];
+        const offerObj = sentOffers[req.id];
+        const alreadyOffered = !!offerObj;
         const isSending = sending[req.id];
         const clientPrice = Number(req.offer || req.suggested_price || 0);
         const qo1 = Math.round(clientPrice * 1.1 / 1000) * 1000;
@@ -528,6 +532,29 @@ export default function DeliveriesPage() {
                 </button>
               </div>
             </div>
+
+            {/* Estado de la oferta */}
+            {offerObj && (
+              (() => {
+                const status = offerObj.status;
+                let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
+                if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — el cliente te eligió'; }
+                else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada por el cliente'; }
+                else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
+                else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+                return (
+                  <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}`, margin: '0 0 14px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: bg }}>
+                      <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
+                      <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
+                      <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
+                        ₲{Number(offerObj.amount).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
 
             {/* Scrollable content */}
             <div style={{ flex: 1, overflowY: 'auto', paddingInline: 16, paddingBottom: 16 }}>
@@ -619,6 +646,27 @@ export default function DeliveriesPage() {
                       style={{ width: i === safeIndex ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'width 0.2s',
                         background: i === safeIndex ? '#c8ff00' : '#333' }} />
                   ))}
+                </div>
+              )}
+
+              {/* Pagination: Load more button */}
+              {filteredOrders.filter(o => !dismissedOrders.has(o.id)).length > sheetOrders.length && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+                  <button
+                    onClick={() => setOrdersPage(p => p + 1)}
+                    style={{
+                      padding: '13px 28px',
+                      borderRadius: 14,
+                      border: '1px solid #F5C518',
+                      background: 'rgba(245,197,24,0.08)',
+                      color: '#F5C518',
+                      fontWeight: 800,
+                      fontSize: '0.98rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cargar más pedidos
+                  </button>
                 </div>
               )}
             </div>
