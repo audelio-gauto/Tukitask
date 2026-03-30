@@ -325,8 +325,7 @@ export default function SolicitarServicioPage() {
 
   useEffect(() => {
     if (!success) return;
-    const t = setTimeout(() => router.push('/cliente'), 2500);
-    return () => clearTimeout(t);
+    router.replace('/cliente');
   }, [success, router]);
 
   if (success) {

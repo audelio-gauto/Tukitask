@@ -10,19 +10,27 @@ import { authFetch } from '@/lib/authFetch';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 interface Order {
   id: string;
   status: string;
   origin_address: string | null;
   destination_address: string | null;
   price: number | null;
-  driver_name: string | null;
-  driver_photo: string | null;
-  driver_rating: number | null;
   created_at: string;
 }
 
-interface JobOffer {
+interface DriverOffer {
+  id: string;
+  order_id: string;
+  driver_name: string | null;
+  driver_photo: string | null;
+  driver_email: string;
+  amount: number;
+  status: string;
+}
+
+interface TecnicoJobOffer {
   id: string;
   job_id: string;
   tecnico_email: string;
@@ -32,16 +40,40 @@ interface JobOffer {
   proposed_price: number;
   note: string | null;
   distance_km: number | null;
-  service_type: string;
   total_services: number | null;
 }
 
-interface PendingJob {
+interface ActiveJob {
   id: string;
   service_type: string;
   address: string | null;
   lat: number | null;
   lng: number | null;
+  status: string;
+}
+
+/* unified offer card */
+interface UnifiedOffer {
+  id: string;
+  requestId: string;
+  requestType: 'delivery' | 'service';
+  name: string | null;
+  photo: string | null;
+  rating: number | null;
+  price: number;
+  note: string | null;
+  distanceKm: number | null;
+  totalJobs: number | null;
+}
+
+/* unified active request (delivery or service) */
+interface ActiveRequest {
+  id: string;
+  type: 'delivery' | 'service';
+  icon: string;
+  label: string;
+  subtitle: string;
+  createdAt: string;
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -58,74 +90,170 @@ function getGreeting() {
   return 'Buenas noches';
 }
 
-function StarRating({ rating }: { rating: number }) {
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5;
-  return (
-    <span style={{ color: '#F5C518', fontSize: '0.82rem', letterSpacing: 1 }}>
-      {'★'.repeat(full)}{half ? '½' : ''}{'☆'.repeat(5 - full - (half ? 1 : 0))}
-    </span>
-  );
+function fmtGs(n: number | null) {
+  return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
 }
 
-function PulseDots() {
+function elapsed(iso: string) {
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}min`;
+}
+
+/* ─── Radar animation component ─────────────────────────────────────────── */
+function RadarPulse() {
   return (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-      {[0, 1, 2].map(i => (
-        <span key={i} style={{
-          width: 7, height: 7, borderRadius: '50%', background: '#F5C518',
-          animation: `pulse-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
-          display: 'inline-block',
-        }} />
-      ))}
+    <div style={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <style>{`
+        @keyframes radar-ring {
+          0%   { transform: scale(0.3); opacity: 0.7; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
         @keyframes pulse-dot {
-          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1.2); }
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+          40%            { opacity: 1;    transform: scale(1.2); }
         }
       `}</style>
-    </span>
+      {[0, 0.55, 1.1].map((delay, i) => (
+        <div key={i} style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: '2px solid rgba(245,197,24,0.6)',
+          animation: `radar-ring 2.2s ease-out ${delay}s infinite`,
+        }} />
+      ))}
+      <div style={{
+        width: 48, height: 48, borderRadius: '50%',
+        background: 'linear-gradient(135deg, #F5C518, #F58A07)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1.5rem', boxShadow: '0 0 20px rgba(245,197,24,0.5)',
+        position: 'relative', zIndex: 1,
+      }}>📡</div>
+    </div>
   );
 }
 
+/* ─── Offer card ─────────────────────────────────────────────────────────── */
+function OfferCard({
+  offer, onAccept, onReject, busy,
+}: {
+  offer: UnifiedOffer;
+  onAccept: () => void;
+  onReject: () => void;
+  busy: boolean;
+}) {
+  const eta = offer.distanceKm != null ? Math.max(1, Math.round(offer.distanceKm * 2.5)) : null;
+  const isDriver = offer.requestType === 'delivery';
+  const accentColor = isDriver ? '#F5C518' : '#6366f1';
+  const accentBg    = isDriver ? 'rgba(245,197,24,0.12)' : 'rgba(99,102,241,0.12)';
+  const accentBorder = isDriver ? 'rgba(245,197,24,0.3)' : 'rgba(99,102,241,0.3)';
+
+  return (
+    <div style={{
+      background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(16px)',
+      borderRadius: 20, padding: '16px 14px 14px',
+      border: `1.5px solid ${accentBorder}`,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    }}>
+      {/* Type badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{
+          fontSize: '0.72rem', fontWeight: 800, borderRadius: 20, padding: '3px 10px',
+          background: accentBg, border: `1px solid ${accentBorder}`, color: accentColor,
+        }}>
+          {isDriver ? '🚗 Envío' : '🛠 Servicio'}
+        </span>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.5rem', lineHeight: 1 }}>
+            {Number(offer.price).toLocaleString('es-PY')}
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.7rem' }}>Gs</div>
+        </div>
+      </div>
+
+      {/* Driver / Tecnico info */}
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, marginBottom: 12 }}>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          {offer.photo ? (
+            <img src={offer.photo} alt="" style={{ width: 58, height: 58, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}` }} />
+          ) : (
+            <div style={{ width: 58, height: 58, borderRadius: '50%', background: `linear-gradient(135deg, ${accentColor}, #1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', border: `2px solid ${accentBorder}` }}>
+              {isDriver ? '🚗' : '👷'}
+            </div>
+          )}
+          {offer.rating != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.15)', borderRadius: 8, padding: '2px 7px' }}>
+              <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
+              <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{Number(offer.rating).toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.02rem', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {eta != null && (
+              <span style={{ background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#60a5fa', fontWeight: 700 }}>
+                ⏱ {eta} min
+              </span>
+            )}
+            {offer.distanceKm != null && (
+              <span style={{ background: 'rgba(100,116,139,0.25)', border: '1px solid rgba(100,116,139,0.35)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                📍 {offer.distanceKm.toFixed(1)} km
+              </span>
+            )}
+            {offer.totalJobs != null && offer.totalJobs > 0 && (
+              <span style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#4ade80', fontWeight: 700 }}>
+                ✅ {offer.totalJobs}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {offer.note && (
+        <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: 10, borderLeft: `3px solid ${accentColor}`, lineHeight: 1.5 }}>
+          "{offer.note}"
+        </p>
+      )}
+
+      {/* Buttons */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          onClick={onReject} disabled={busy}
+          style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
+        >Rechazar</button>
+        <button
+          onClick={onAccept} disabled={busy}
+          style={{ flex: 2, padding: '13px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(34,197,94,0.4)' }}
+        >✓ Aceptar</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main component ──────────────────────────────────────────────────────── */
 export default function ClienteHomePage() {
   const router = useRouter();
   const { email, displayName, profilePhoto, avgRating, totalRatings, openDrawer } = useClientContext();
 
-  const [pendingOrders, setPendingOrders]     = useState<Order[]>([]);
-  const [jobOffers, setJobOffers]             = useState<JobOffer[]>([]);
-  const [pendingJobs, setPendingJobs]         = useState<PendingJob[]>([]);
-  const [loading, setLoading]                 = useState(true);
-  const [actionId, setActionId]               = useState<string | null>(null);
+  const [orders,    setOrders]    = useState<Order[]>([]);
+  const [jobs,      setJobs]      = useState<ActiveJob[]>([]);
+  const [driverOffers, setDriverOffers] = useState<Record<string, DriverOffer[]>>({});
+  const [jobOffers,    setJobOffers]    = useState<Record<string, TecnicoJobOffer[]>>({});
+  const [loading,   setLoading]   = useState(true);
+  const [actionId,  setActionId]  = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
-  const [mapTouched, setMapTouched]           = useState(false);
-  const [locating, setLocating]               = useState(false);
+  const [locating, setLocating]   = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
   const locateRef = useRef<(() => void) | null>(null);
-  const [locatingMap, setLocatingMap]         = useState(false);
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const openPublishWithLocation = useCallback(() => {
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      () => { setLocating(false); setShowPublishModal(true); },
-      ()  => { setLocating(false); setShowPublishModal(true); },
-      { timeout: 6000, enableHighAccuracy: true }
-    );
-  }, []);
-
-  const startMapTouch = useCallback(() => {
-    setMapTouched(true);
-    const onEnd = () => {
-      setMapTouched(false);
-      document.removeEventListener('touchend', onEnd);
-      document.removeEventListener('touchcancel', onEnd);
-      document.removeEventListener('mouseup', onEnd);
-    };
-    document.addEventListener('touchend', onEnd);
-    document.addEventListener('touchcancel', onEnd);
-    document.addEventListener('mouseup', onEnd);
-  }, []);
-
-  const loadOffers = useCallback(async () => {
+  /* ─── Data loading ──────────────────────────────────────────────────────── */
+  const loadAll = useCallback(async () => {
     if (!email) return;
     try {
       const [ordersRes, jobsRes] = await Promise.all([
@@ -135,81 +263,160 @@ export default function ClienteHomePage() {
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
 
-      const pending = Array.isArray(ordersData) ? ordersData.filter((o: Order) => o.status === 'pending' || o.status === 'negotiating') : [];
-      setPendingOrders(pending);
+      const activeOrders: Order[] = Array.isArray(ordersData)
+        ? ordersData.filter((o: Order) => o.status === 'pending' || o.status === 'negotiating')
+        : [];
+      const activeJobs: ActiveJob[] = Array.isArray(jobsData) ? jobsData : [];
 
-      const pendingServiceJobs = Array.isArray(jobsData) ? jobsData.filter((j: PendingJob) => j) : [];
-      setPendingJobs(pendingServiceJobs);
+      setOrders(activeOrders);
+      setJobs(activeJobs);
 
-      const allOffers: JobOffer[] = [];
-      for (const job of pendingServiceJobs) {
-        const offersRes  = await fetch(`/api/tecnico/jobs?job_offers=${job.id}`);
+      // Fetch driver offers for pending/negotiating orders
+      if (activeOrders.length > 0) {
+        const ids = activeOrders.map(o => o.id).join(',');
+        const offersRes  = await fetch(`/api/orders/offers?order_ids=${encodeURIComponent(ids)}`);
         const offersData = await offersRes.json();
-        if (Array.isArray(offersData)) {
-          allOffers.push(...offersData.map((o: JobOffer) => ({ ...o, job_id: job.id, service_type: job.service_type })));
+        if (offersData && typeof offersData === 'object') {
+          // keep only pending offers
+          const cleaned: Record<string, DriverOffer[]> = {};
+          for (const id of activeOrders.map(o => o.id)) {
+            cleaned[id] = (offersData[id] ?? []).filter((o: DriverOffer) => o.status === 'pending');
+          }
+          setDriverOffers(cleaned);
         }
+      } else {
+        setDriverOffers({});
       }
-      setJobOffers(allOffers);
+
+      // Fetch tecnico job offers
+      if (activeJobs.length > 0) {
+        const allJobOffers: Record<string, TecnicoJobOffer[]> = {};
+        await Promise.all(activeJobs.map(async job => {
+          const r    = await fetch(`/api/tecnico/jobs?job_offers=${job.id}`);
+          const data = await r.json();
+          allJobOffers[job.id] = Array.isArray(data) ? data : [];
+        }));
+        setJobOffers(allJobOffers);
+      } else {
+        setJobOffers({});
+      }
+
       setLoading(false);
     } catch { setLoading(false); }
   }, [email]);
 
   useEffect(() => {
-    loadOffers();
-    // Fallback polling at 60s; realtime is primary
-    const iv = setInterval(loadOffers, 60_000);
-
-    // Realtime: new orders/jobs + offers
+    loadAll();
+    const iv = setInterval(loadAll, 30_000);
     const ch = email
-      ? supabase.channel(`client-dashboard-${email}`)
-          .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'orders',
-            filter: `client_email=eq.${email}`,
-          } as never, () => loadOffers())
-          .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'tecnico_jobs',
-            filter: `client_email=eq.${email}`,
-          } as never, () => loadOffers())
-          .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'driver_offers',
-          } as never, () => loadOffers())
-          .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'tecnico_job_offers',
-          } as never, () => loadOffers())
+      ? supabase.channel(`client-home-${email}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `client_email=eq.${email}` } as never, () => loadAll())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tecnico_jobs', filter: `client_email=eq.${email}` } as never, () => loadAll())
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers' } as never, () => loadAll())
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers' } as never, () => loadAll())
           .subscribe()
       : null;
+    return () => { clearInterval(iv); if (ch) supabase.removeChannel(ch); };
+  }, [loadAll]);
 
-    return () => {
-      clearInterval(iv);
-      if (ch) supabase.removeChannel(ch);
-    };
-  }, [loadOffers]);
+  /* ─── Elapsed timer for searching state ────────────────────────────────── */
+  useEffect(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    const isSearching = (orders.length > 0 || jobs.length > 0);
+    if (isSearching) {
+      timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [orders.length, jobs.length]);
 
-  const acceptJobOffer = async (jobId: string, offerId: string) => {
-    if (!email || actionId) return;
+  /* ─── Derived state ─────────────────────────────────────────────────────── */
+  const allDriverOffers: UnifiedOffer[] = orders.flatMap(o =>
+    (driverOffers[o.id] ?? []).map(off => ({
+      id: off.id, requestId: o.id, requestType: 'delivery' as const,
+      name: off.driver_name, photo: off.driver_photo, rating: null,
+      price: Number(off.amount), note: null, distanceKm: null, totalJobs: null,
+    }))
+  );
+  const allJobOffers: UnifiedOffer[] = jobs.flatMap(j =>
+    (jobOffers[j.id] ?? []).map(off => ({
+      id: off.id, requestId: j.id, requestType: 'service' as const,
+      name: off.tecnico_name, photo: off.tecnico_photo, rating: off.tecnico_rating,
+      price: Number(off.proposed_price), note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
+    }))
+  );
+  const allOffers = [...allDriverOffers, ...allJobOffers];
+
+  const activeRequests: ActiveRequest[] = [
+    ...orders.map(o => ({
+      id: o.id, type: 'delivery' as const, icon: '📦',
+      label: 'Envío de paquete',
+      subtitle: [o.origin_address, o.destination_address].filter(Boolean).join(' → ') || 'Sin dirección',
+      createdAt: o.created_at,
+    })),
+    ...jobs.map(j => ({
+      id: j.id, type: 'service' as const, icon: '🛠',
+      label: SERVICE_LABELS[j.service_type] ?? j.service_type,
+      subtitle: j.address ?? 'Sin dirección',
+      createdAt: new Date().toISOString(),
+    })),
+  ];
+
+  const mode: 'idle' | 'searching' | 'offers' =
+    activeRequests.length === 0 ? 'idle'
+    : allOffers.length > 0    ? 'offers'
+    : 'searching';
+
+  const busy = !!actionId;
+
+  /* ─── Open sheet when offers arrive ────────────────────────────────────── */
+  useEffect(() => {
+    if (mode === 'offers') setSheetOpen(true);
+    if (mode === 'searching') setSheetOpen(true);
+    if (mode === 'idle') setSheetOpen(false);
+  }, [mode]);
+
+  /* ─── Actions ───────────────────────────────────────────────────────────── */
+  const acceptDriverOffer = async (offerId: string) => {
+    if (busy) return;
     setActionId(offerId);
     try {
-      const res = await authFetch('/api/tecnico/jobs', {
+      await authFetch('/api/orders/offers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const rejectDriverOffer = async (offerId: string) => {
+    if (busy) return;
+    setActionId(offerId);
+    try {
+      await authFetch('/api/orders/offers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offer_id: offerId, action: 'reject' }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const acceptJobOffer = async (jobId: string, offerId: string) => {
+    if (busy || !email) return;
+    setActionId(offerId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
-      if (!res.ok) { const e = await res.json(); console.error('[acceptJobOffer]', e); }
-      loadOffers();
-    } catch (e) { console.error('[acceptJobOffer]', e); }
-    finally { setActionId(null); }
+      loadAll();
+    } finally { setActionId(null); }
   };
 
   const rejectJobOffer = async (offerId: string) => {
-    if (!email || actionId) return;
+    if (busy) return;
     setActionId(offerId);
     try {
       await authFetch('/api/tecnico/jobs', {
@@ -217,278 +424,262 @@ export default function ClienteHomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject_offer', offerId }),
       });
-      loadOffers();
-    } catch {}
-    finally { setActionId(null); }
+      loadAll();
+    } finally { setActionId(null); }
   };
 
-  const fmtGs = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
+  const cancelOrder = async (orderId: string) => {
+    if (busy || !email) return;
+    setActionId('cancel_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', orderId, email }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
 
-  const totalOffers = pendingOrders.length + jobOffers.length;
-  const busy = !!actionId;
+  const cancelJob = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('cancel_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', jobId, clientEmail: email }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
 
+  /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
     <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      {/* Map base layer */}
+      {/* Map base */}
       <div style={{ position: 'absolute', inset: 0 }}>
         <ClientMap dark showMyLocationButton={false} locateRef={locateRef} />
       </div>
 
-      {/* Vignette overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(12,12,26,0.65) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 65%, rgba(12,12,26,0.55) 100%)', pointerEvents: 'none', zIndex: 1 }} />
+      {/* Top gradient */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
 
-      {/* Scrollable content layer — pointer-events:none en el contenedor para que el mapa reciba todos los toques vacíos (incluyendo pinch-zoom). Solo los hijos interactivos tienen pointer-events:auto */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', paddingBottom: 90, pointerEvents: 'none' }}>
-        {/* Header — fijo arriba */}
-        <div
-          style={{
-            transition: 'opacity 0.28s ease, transform 0.28s ease',
-            opacity: mapTouched ? 0 : 1,
-            transform: mapTouched ? 'translateY(-10px)' : 'translateY(0)',
-            pointerEvents: 'auto',
-            padding: '16px 14px 0',
-          }}
-          onTouchStart={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
-          onMouseDown={e => { if ((e.target as HTMLElement) === e.currentTarget) startMapTouch(); }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            {/* Avatar + rating */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
-              ) : (
-                <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518' }}>
-                  {displayName?.[0]?.toUpperCase() || '👤'}
-                </div>
-              )}
-              {avgRating > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(245,197,24,0.18)', borderRadius: 8, padding: '2px 7px' }}>
-                  <span style={{ color: '#F5C518', fontSize: '0.72rem' }}>★</span>
-                  <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{getGreeting()}</div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>{displayName || 'Cliente'}</div>
-              {totalRatings > 0 && (
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>{totalRatings} valoracion{totalRatings !== 1 ? 'es' : ''}</div>
-              )}
-            </div>
-            {/* Menú */}
-            <button onClick={openDrawer} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', borderRadius: 10, padding: '8px 12px', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
-              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
-              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
-              <span style={{ display: 'block', width: 18, height: 2, background: '#fff', borderRadius: 2 }} />
-            </button>
-          </div>
-          {totalOffers > 0 && (
-            <div style={{ padding: '10px 14px', borderRadius: 12, background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: '1.5rem' }}>📬</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.95rem' }}>{totalOffers} oferta{totalOffers !== 1 ? 's' : ''} disponible{totalOffers !== 1 ? 's' : ''}</div>
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Revisá y aceptá la mejor opción</div>
-              </div>
-            </div>
-          )}
-        </div>{/* end header */}
-
-        {/* Offers list — ocupa el espacio restante y hace scroll */}
-        <div style={{ flex: 1, overflowY: 'auto', pointerEvents: 'auto', padding: '0 14px' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', paddingTop: 80 }}>
-              <PulseDots />
-              <p style={{ marginTop: 16, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Cargando ofertas…</p>
-            </div>
-          ) : totalOffers === 0 ? (
-            <div style={{ textAlign: 'center', paddingTop: 80 }}>
-              <div style={{ fontSize: '4rem', marginBottom: 16 }}>📭</div>
-              <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', marginBottom: 8 }}>No tenés ofertas pendientes</p>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', marginBottom: 28 }}>¿Qué ayuda necesitás hoy?</p>
-              <button onClick={() => setShowPublishModal(true)}
-                style={{ padding: '14px 32px', borderRadius:14, border: 'none', background: 'linear-gradient(135deg, #F5C518, #F58A07)', color: '#1C1C2E', fontWeight: 800, cursor: 'pointer', fontSize: '0.98rem', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
-                ➕ Pedir ahora
-              </button>
-            </div>
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: '16px 14px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Job offers (tecnicos) */}
-              {jobOffers.map(offer => {
-                const arrivalMin = offer.distance_km != null ? Math.max(1, Math.round(offer.distance_km * 2)) : null;
-                return (
-                <div key={offer.id} style={{
-                  background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(245,197,24,0.2)', borderRadius: 20,
-                  padding: '14px 14px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-                  marginBottom: 2,
-                }}>
-                  {/* Service type header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <span style={{ fontSize: '1.5rem' }}>{SERVICE_LABELS[offer.service_type]?.split(' ')[0] || '✨'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{SERVICE_LABELS[offer.service_type] || offer.service_type}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>Oferta de técnico</div>
-                    </div>
-                    {/* Price top-right */}
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.4rem', lineHeight: 1 }}>{Number(offer.proposed_price).toLocaleString('es-PY')}</div>
-                      <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.68rem' }}>Gs</div>
-                    </div>
+            <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid rgba(245,197,24,0.5)', flexShrink: 0 }}>
+              {displayName?.[0]?.toUpperCase() || '👤'}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{getGreeting()}</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Cliente'}</div>
+          </div>
+          {avgRating > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 20, padding: '5px 11px', flexShrink: 0 }}>
+              <span style={{ color: '#F5C518', fontSize: '0.85rem' }}>★</span>
+              <span style={{ color: '#F5C518', fontSize: '0.82rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+            </div>
+          )}
+          <button onClick={openDrawer} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, width: 42, height: 42, color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 16, height: 2, background: '#fff', borderRadius: 2 }} />)}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Locate button ─────────────────────────────────────────────────── */}
+      <button
+        onClick={() => { locateRef.current?.(); }}
+        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,23,42,0.92)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+      >📍</button>
+
+      {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+        transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)',
+        transition: 'transform 0.4s cubic-bezier(0.32,0.72,0,1)',
+      }}>
+
+        {/* ── IDLE — hidden, only floating button shows ─────────────────── */}
+
+        {/* ── SEARCHING ────────────────────────────────────────────────────── */}
+        {mode === 'searching' && (
+          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
+            {/* Handle */}
+            <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
+            </div>
+
+            {/* Searching content */}
+            <div style={{ padding: '16px 20px 28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <RadarPulse />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1.05rem', marginBottom: 4 }}>
+                    Buscando cerca de ti…
                   </div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    Te notificamos cuando lleguen ofertas
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>Transcurrido</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#F5C518' }}>
+                    {Math.floor(elapsed2 / 60).toString().padStart(2, '0')}:{(elapsed2 % 60).toString().padStart(2, '0')}
+                  </div>
+                </div>
+              </div>
 
-                  {/* Main row: photo + info */}
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: 14, marginBottom: 10 }}>
-                    {/* Photo + stars below */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                      {offer.tecnico_photo ? (
-                        <img src={offer.tecnico_photo} alt="" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2.5px solid #F5C518', boxShadow: '0 2px 12px rgba(245,197,24,0.3)' }} />
-                      ) : (
-                        <div style={{ width: 62, height: 62, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', border: '2.5px solid rgba(245,197,24,0.4)', flexShrink: 0 }}>👷</div>
-                      )}
-                      {offer.tecnico_rating != null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 8, padding: '2px 7px' }}>
-                          <span style={{ color: '#F5C518', fontSize: '0.68rem' }}>★</span>
-                          <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{Number(offer.tecnico_rating).toFixed(1)}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Name + stat pills */}
+              {/* Active requests */}
+              {activeRequests.map(req => (
+                <div key={req.id} style={{ background: '#1e293b', borderRadius: 16, padding: '12px 14px', marginBottom: 10, border: '1px solid #334155' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.4rem' }}>{req.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, color: '#fff', fontSize: '1rem', marginBottom: 8 }}>{offer.tecnico_name || 'Técnico'}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {arrivalMin != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(37,99,235,0.22)', border: '1px solid rgba(37,99,235,0.4)', borderRadius: 20, padding: '4px 10px' }}>
-                            <span style={{ fontSize: '0.8rem' }}>⏱️</span>
-                            <span style={{ color: '#60a5fa', fontSize: '0.78rem', fontWeight: 700 }}>{arrivalMin} min</span>
-                          </div>
-                        )}
-                        {offer.total_services != null && offer.total_services > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '4px 10px' }}>
-                            <span style={{ fontSize: '0.8rem' }}>✅</span>
-                            <span style={{ color: '#4ade80', fontSize: '0.78rem', fontWeight: 700 }}>{offer.total_services} servicio{offer.total_services !== 1 ? 's' : ''}</span>
-                          </div>
-                        )}
-                      </div>
+                      <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>{req.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
                     </div>
-                  </div>
-
-                  {/* Note */}
-                  {offer.note && (
-                    <p style={{ margin: '0 0 10px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', padding: '8px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, borderLeft: '3px solid #F5C518' }}>
-                      "{offer.note}"
-                    </p>
-                  )}
-
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => rejectJobOffer(offer.id)} disabled={busy}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer' }}>
-                      Rechazar
-                    </button>
-                    <button onClick={() => acceptJobOffer(offer.job_id, offer.id)} disabled={busy}
-                      style={{ flex: 2, padding: '11px 0', borderRadius: 12, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 14px rgba(34,197,94,0.35)' }}>
-                      Aceptar
+                    <button
+                      onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
+                      disabled={busy}
+                      style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#f87171', cursor: busy ? 'default' : 'pointer', flexShrink: 0 }}
+                    >
+                      Cancelar
                     </button>
                   </div>
                 </div>
-                );
-              })}
-
-              {/* TODO: Pending orders (drivers) - similar UI */}
+              ))}
             </div>
-          )}
-        </div>{/* end offers list */}
-      </div>{/* end content layer */}
+          </div>
+        )}
 
-      {/* Publish Modal */}
-      {showPublishModal && (
-        <div onClick={() => setShowPublishModal(false)} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 0 90px' }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: '100%', maxWidth: 420, background: 'rgba(28,28,46,0.98)', backdropFilter: 'blur(30px)',
-            borderRadius: '24px 24px 0 0', padding: '24px 20px 32px', border: '1px solid rgba(245,197,24,0.18)', boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, margin: '0 auto 20px' }} />
-            <h3 style={{ margin: '0 0 8px', fontWeight: 800, fontSize: '1.3rem', color: '#fff', textAlign: 'center' }}>¿Qué necesitás hoy?</h3>
-            <p style={{ margin: '0 0 24px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>Elegí el tipo de publicación</p>
-            
-            <Link href="/cliente/enviar" onClick={() => setShowPublishModal(false)} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', borderRadius: 16, background: 'rgba(245,197,24,0.12)', border: '2px solid rgba(245,197,24,0.25)', marginBottom: 12, textDecoration: 'none', transition: 'all 0.2s' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0 }}>
-                📦
+        {/* ── OFFERS ─────────────────────────────────────────────────────── */}
+        {mode === 'offers' && (
+          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.25)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '78vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Handle + count */}
+            <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1rem' }}>
+                    {allOffers.length} oferta{allOffers.length !== 1 ? 's' : ''} recibida{allOffers.length !== 1 ? 's' : ''}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Revisá y elegí la mejor opción</div>
+                </div>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#1e293b', fontSize: '1.05rem', boxShadow: '0 2px 12px rgba(245,197,24,0.4)', flexShrink: 0 }}>
+                  {allOffers.length}
+                </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', marginBottom: 2 }}>Enviar Paquete</div>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Delivery rápido y seguro</div>
+
+              {/* Active request tabs (if multiple) */}
+              {activeRequests.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, width: '100%', overflowX: 'auto', paddingBottom: 4 }}>
+                  {activeRequests.map(req => (
+                    <div key={req.id} style={{ flexShrink: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: 20, padding: '4px 12px', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                      {req.icon} {req.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Scrollable offer cards */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {allOffers.map(offer => (
+                <OfferCard
+                  key={offer.id}
+                  offer={offer}
+                  busy={busy}
+                  onAccept={() => offer.requestType === 'delivery'
+                    ? acceptDriverOffer(offer.id)
+                    : acceptJobOffer(offer.requestId, offer.id)
+                  }
+                  onReject={() => offer.requestType === 'delivery'
+                    ? rejectDriverOffer(offer.id)
+                    : rejectJobOffer(offer.id)
+                  }
+                />
+              ))}
+
+              {/* Cancel links below offers */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                {activeRequests.map(req => (
+                  <button
+                    key={req.id}
+                    onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
+                    disabled={busy}
+                    style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.86rem', cursor: busy ? 'default' : 'pointer' }}
+                  >
+                    ✕ Cancelar solicitud {req.type === 'delivery' ? 'de envío' : `de ${req.label}`}
+                  </button>
+                ))}
               </div>
-              <span style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.3)' }}>→</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── IDLE — floating action button ─────────────────────────────────── */}
+      {mode === 'idle' && !loading && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5, padding: '0 14px 20px' }}>
+          {/* Quick action grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <Link href="/cliente/enviar" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: 'rgba(245,197,24,0.12)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(245,197,24,0.3)', textDecoration: 'none' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>📦</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Enviar</div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Paquete</div>
+              </div>
             </Link>
-
-            <Link href="/cliente/servicio" onClick={() => setShowPublishModal(false)} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', borderRadius: 16, background: 'rgba(99,102,241,0.12)', border: '2px solid rgba(99,102,241,0.25)', textDecoration: 'none', transition: 'all 0.2s' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0 }}>
-                🛠️
+            <Link href="/cliente/servicio" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: 'rgba(99,102,241,0.12)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(99,102,241,0.3)', textDecoration: 'none' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🛠️</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>Servicio</div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>Técnico</div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', marginBottom: 2 }}>Solicitar Servicio</div>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Técnicos, limpieza, plomería...</div>
-              </div>
-              <span style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.3)' }}>→</span>
             </Link>
           </div>
         </div>
       )}
 
-      {/* Floating locate-me button */}
-      <button
-        onClick={() => {
-          setLocatingMap(true);
-          locateRef.current?.();
-          setTimeout(() => setLocatingMap(false), 3000);
-        }}
-        style={{
-          position: 'absolute', right: 16, bottom: 110, zIndex: 5,
-          width: 48, height: 48, borderRadius: '50%',
-          background: locatingMap ? 'rgba(245,197,24,0.9)' : 'rgba(28,28,46,0.92)',
-          border: '2px solid rgba(245,197,24,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.4rem', cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          transition: 'background 0.2s',
-        }}
-        aria-label="Mi ubicación"
-      >
-        {locatingMap ? '⌛' : '📍'}
-      </button>
-
-      {/* Footer with 4 buttons */}
+      {/* ── BOTTOM NAVBAR ─────────────────────────────────────────────────── */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 3,
-        background: 'rgba(28,28,46,0.95)', backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(245,197,24,0.18)',
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+        background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(245,197,24,0.15)',
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 4, justifyContent: 'space-around',
-        boxShadow: '0 -8px 24px rgba(0,0,0,0.3)',
+        boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
+        // Hidden when offer sheet is open to avoid overlap
+        transform: mode !== 'idle' && sheetOpen ? 'translateY(100%)' : 'translateY(0)',
+        transition: 'transform 0.4s ease',
       }}>
         {[
           { icon: '🏠', label: 'Home', path: '/cliente', active: true },
-          { icon: '➕', label: 'Publicar', path: null },
-          { icon: '📋', label: 'Historial', path: '/cliente/historial' },
+          { icon: '📋', label: 'Mis envíos', path: '/cliente/mis-envios' },
+          { icon: '🛠', label: 'Servicios', path: '/cliente/mis-servicios' },
           { icon: '👤', label: 'Cuenta', path: '/cliente/settings' },
         ].map(item => (
-          item.path === null ? (
-            <button key={item.label} onClick={openPublishWithLocation} disabled={locating}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'none', border: 'none', cursor: locating ? 'default' : 'pointer', borderRadius: 12 }}>
-              <div style={{ fontSize: '1.5rem', transition: 'transform 0.2s', opacity: locating ? 0.5 : 1 }}>{locating ? '📡' : item.icon}</div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{locating ? 'Ubicando…' : item.label}</span>
-            </button>
-          ) : (
-            <Link key={item.label} href={item.path}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent' }}>
-              <div style={{ fontSize: '1.5rem', transition: 'transform 0.2s' }}>{item.icon}</div>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.5)' }}>{item.label}</span>
-            </Link>
-          )
+          <Link key={item.label} href={item.path}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent' }}>
+            <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+          </Link>
         ))}
       </div>
+
+      {/* ── Loading overlay ──────────────────────────────────────────────── */}
+      {loading && (
+        <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 5, background: 'rgba(15,23,42,0.9)', borderRadius: 40, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(245,197,24,0.3)', borderTopColor: '#F5C518', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600 }}>Cargando…</span>
+        </div>
+      )}
     </div>
   );
 }
