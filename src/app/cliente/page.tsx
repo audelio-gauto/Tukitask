@@ -43,6 +43,7 @@ interface TecnicoJobOffer {
   note: string | null;
   distance_km: number | null;
   total_services: number | null;
+  status: string;
 }
 
 interface ActiveJob {
