@@ -108,6 +108,7 @@ export default function MisServiciosPage() {
   const [loading, setLoading]   = useState(true);
   const [offers, setOffers]     = useState<Record<string, Offer[]>>({});
   const [actionId, setActionId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ jobId: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [driverLocs, setDriverLocs] = useState<Record<string, DriverLocation | null>>({});
@@ -200,18 +201,20 @@ export default function MisServiciosPage() {
   const acceptOffer = async (jobId: string, offerId: string) => {
     if (!email || actionId) return;
     setActionId(jobId + 'accept');
+    setActionError(null);
     try {
       const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'accept_offer', jobId, offerId }),
+        body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
       const json = await res.json();
+      if (json.error) { setActionError(json.error); }
       if (json.job) {
         setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...json.job } : j));
         setOffers(prev => { const n = { ...prev }; delete n[jobId]; return n; });
       }
-    } catch {}
+    } catch (e) { setActionError('Error de conexión'); }
     finally { setActionId(null); }
   };
 
@@ -236,6 +239,7 @@ export default function MisServiciosPage() {
   const doJobAction = async (jobId: string, action: string, extra?: object) => {
     if (!email || actionId) return;
     setActionId(jobId + action);
+    setActionError(null);
     try {
       const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
@@ -243,8 +247,9 @@ export default function MisServiciosPage() {
         body: JSON.stringify({ action, jobId, clientEmail: email, ...extra }),
       });
       const json = await res.json();
+      if (json.error) { setActionError(json.error); }
       if (json.job) setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...json.job } : j));
-    } catch {}
+    } catch { setActionError('Error de conexión'); }
     finally { setActionId(null); }
   };
 
@@ -273,6 +278,17 @@ export default function MisServiciosPage() {
 
   return (
     <>
+      {/* Error banner */}
+      {actionError && (
+        <div onClick={() => setActionError(null)} style={{
+          position: 'fixed', top: 16, left: 16, right: 16, zIndex: 9999,
+          background: '#ef4444', color: '#fff', borderRadius: 12,
+          padding: '12px 16px', fontWeight: 700, fontSize: '0.88rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', cursor: 'pointer',
+        }}>
+          ⚠️ {actionError} · Toca para cerrar
+        </div>
+      )}
       {/* ── Full-screen live map (InDrive style) ────────────────────────── */}
       {trackingJob && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#0b1220' }}>

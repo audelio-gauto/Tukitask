@@ -197,13 +197,14 @@ export default function ClienteHomePage() {
     if (!email || actionId) return;
     setActionId(offerId);
     try {
-      await authFetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'accept_offer', jobId, offerId }),
+        body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
+      if (!res.ok) { const e = await res.json(); console.error('[acceptJobOffer]', e); }
       loadOffers();
-    } catch {}
+    } catch (e) { console.error('[acceptJobOffer]', e); }
     finally { setActionId(null); }
   };
 

@@ -126,10 +126,10 @@ export async function PATCH(req: Request) {
 
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
-  if (isDriverStatus && order.accepted_by !== user.email) {
+  if (isDriverStatus && order.accepted_by?.toLowerCase() !== user.email) {
     return forbidden('Not your order');
   }
-  if (isClientStatus && order.client_email !== user.email) {
+  if (isClientStatus && order.client_email?.toLowerCase() !== user.email) {
     return forbidden('Not your order');
   }
 

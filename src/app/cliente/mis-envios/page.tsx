@@ -255,6 +255,7 @@ export default function MisEnviosPage() {
   const [offersLoaded, setOffersLoaded] = useState<Set<string>>(new Set());
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [acceptedOffers, setAcceptedOffers] = useState<Record<string, DriverOffer>>({});
   const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<any>(null);
@@ -403,14 +404,16 @@ export default function MisEnviosPage() {
 
   const handleAcceptOffer = async (offerId: string) => {
     setAccepting(offerId);
+    setActionError(null);
     try {
       const res = await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
       });
-      if (res.ok) fetchOrders();
-    } catch { /* */ }
+      if (res.ok) { fetchOrders(); }
+      else { const e = await res.json(); setActionError(e.error || 'Error al aceptar oferta'); }
+    } catch { setActionError('Error de conexión'); }
     setAccepting(null);
   };
 
@@ -479,14 +482,16 @@ export default function MisEnviosPage() {
   };
 
   const handleCancelOrder = async (orderId: string) => {
+    setActionError(null);
     try {
       const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, status: 'cancelled', client_email: email }),
       });
-      if (res.ok) fetchOrders();
-    } catch { /* */ }
+      if (res.ok) { fetchOrders(); }
+      else { const e = await res.json(); setActionError(e.error || 'Error al cancelar'); }
+    } catch { setActionError('Error de conexión'); }
     setCancellingOrder(null);
   };
 
@@ -519,6 +524,16 @@ export default function MisEnviosPage() {
 
   return (
     <ClientScreenLayout title="Mis Envíos">
+      {actionError && (
+        <div onClick={() => setActionError(null)} style={{
+          position: 'fixed', top: 16, left: 16, right: 16, zIndex: 9999,
+          background: '#ef4444', color: '#fff', borderRadius: 12,
+          padding: '12px 16px', fontWeight: 700, fontSize: '0.88rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', cursor: 'pointer',
+        }}>
+          ⚠️ {actionError} · Toca para cerrar
+        </div>
+      )}
       {loading && <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>Cargando...</div>}
 
       {!loading && orders.length === 0 && (
