@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useClientContext } from '../../context';
+import { useClientContext } from '../context';
 import { DriverOffer, TecnicoJobOffer } from '@/types';
 
 export default function HistorialOfertasCliente() {
