@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTecnicoContext } from '../context';
+import { useTecnicoContext } from '../../context';
 import { TecnicoJobOffer } from '@/types';
 
 export default function HistorialOfertasTecnico() {
