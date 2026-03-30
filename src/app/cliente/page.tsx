@@ -486,6 +486,32 @@ export default function ClienteHomePage() {
     } finally { setActionId(null); }
   };
 
+  const acceptCompletion = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('accept_completion_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept_completion', jobId, clientEmail: email }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const rejectCompletion = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('reject_completion_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject_completion', jobId, clientEmail: email }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
     <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -721,6 +747,26 @@ export default function ClienteHomePage() {
                         disabled={busy}
                         style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer' }}
                       >✕ Cancelar solicitud</button>
+                    )}
+                    {/* Confirm completion */}
+                    {item.type === 'service' && item.status === 'completion_pending' && (
+                      <div>
+                        <p style={{ margin: '0 0 10px', fontSize: '0.83rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                          ¿El servicio fue realizado correctamente?
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button
+                            onClick={() => rejectCompletion(item.id)}
+                            disabled={busy}
+                            style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontWeight: 800, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
+                          >❌ Rechazar</button>
+                          <button
+                            onClick={() => acceptCompletion(item.id)}
+                            disabled={busy}
+                            style={{ flex: 2, padding: '13px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(34,197,94,0.35)' }}
+                          >✔ Confirmar</button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
