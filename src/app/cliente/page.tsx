@@ -334,15 +334,26 @@ export default function ClienteHomePage() {
   useEffect(() => {
     loadAll();
     const iv = setInterval(loadAll, 30_000);
+
+    // Re-load immediately when user returns to app (e.g. taps a push notification)
+    const onVisible = () => { if (document.visibilityState === 'visible') loadAll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', loadAll);
+
     const ch = email
       ? supabase.channel(`client-home-${email}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `client_email=eq.${email}` } as never, () => loadAll())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'tecnico_jobs', filter: `client_email=eq.${email}` } as never, () => loadAll())
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers' } as never, () => loadAll())
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers' } as never, () => loadAll())
+          .on('postgres_changes', { event: '*',    schema: 'public', table: 'orders',           filter: `client_email=eq.${email}` } as never, () => loadAll())
+          .on('postgres_changes', { event: '*',    schema: 'public', table: 'tecnico_jobs',     filter: `client_email=eq.${email}` } as never, () => loadAll())
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers', filter: `client_email=eq.${email}` } as never, () => loadAll())
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers', filter: `client_email=eq.${email}` } as never, () => loadAll())
           .subscribe()
       : null;
-    return () => { clearInterval(iv); if (ch) supabase.removeChannel(ch); };
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', loadAll);
+      if (ch) supabase.removeChannel(ch);
+    };
   }, [loadAll]);
 
   /* ─── Elapsed timer for searching state ────────────────────────────────── */

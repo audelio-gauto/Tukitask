@@ -332,6 +332,11 @@ export default function TecnicoDashboard() {
     // Fallback polling at 60s; realtime INSERT on tecnico_jobs is primary
     const iv = setInterval(check, 60_000);
 
+    // Re-check immediately when tecnico returns to app (notification tap)
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', check);
+
     // Realtime: new pending jobs for this técnico
     const ch = supabase.channel(`tecnico-dash-jobs-${email}`)
       .on('postgres_changes', {
@@ -343,6 +348,8 @@ export default function TecnicoDashboard() {
 
     return () => {
       clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', check);
       supabase.removeChannel(ch);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
