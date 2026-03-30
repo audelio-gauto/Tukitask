@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/lib/useNotifications';
 import { UrgentNotificationPopup } from '@/components/UrgentNotificationPopup';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
@@ -15,7 +16,21 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(h / 24)}d`;
 }
 
-// ── Visual config per notification type ──────────────────────────────────────
+// Map notification type → URL to navigate when tapped
+const typeUrl: Record<string, string> = {
+  new_order:       '/driver/deliveries',
+  new_offer:       '/cliente/mis-envios',
+  offer_accepted:  '/driver/deliveries',
+  offer_rejected:  '/cliente/mis-envios',
+  status_change:   '/cliente/mis-envios',
+  new_job:         '/tecnico',
+  new_job_offer:   '/cliente/mis-servicios',
+  job_accepted:    '/tecnico',
+  job_status:      '/cliente/mis-servicios',
+  commission:      '/driver/billetera',
+  wallet:          '/cliente/mis-envios',
+  rating:          '/cliente/mis-envios',
+};
 const typeStyle: Record<string, { icon: string; accent: string }> = {
   new_order:       { icon: '📦', accent: '#8b5cf6' },
   new_offer:       { icon: '💰', accent: '#F5C518' },
@@ -46,6 +61,7 @@ interface Props {
 }
 
 export function NotificationBell({ userEmail, className, soundEnabled = true }: Props) {
+  const router = useRouter();
   const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail);
   const [open, setOpen] = useState(false);
   const [bellAnim, setBellAnim] = useState(false);
@@ -72,7 +88,22 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
 
   const handleNotifClick = (n: AppNotification) => {
     if (!n.read) markRead([n.id]);
+    setOpen(false);
+    const url = typeUrl[n.type];
+    if (url) router.push(url);
   };
+
+  // Don't render the bell at all when there's nothing to show
+  // (UrgentNotificationPopup is always rendered separately for urgent popups)
+  if (unreadCount === 0) {
+    return (
+      <UrgentNotificationPopup
+        notification={latestUrgent}
+        onDismiss={dismissUrgent}
+        soundEnabled={soundEnabled}
+      />
+    );
+  }
 
   return (
     <>
