@@ -310,27 +310,63 @@ export async function POST(req: Request) {
       return NextResponse.json({ offer: data });
     }
 
-    // ── accept_offer (client picks a tecnico) — ATOMIC via RPC ─────────────
+    // ── accept_offer (client picks a tecnico) — inline logic (no RPC needed) ──
     if (action === 'accept_offer') {
       const { jobId, offerId, clientEmail } = body;
       if (!jobId || !offerId) return NextResponse.json({ error: 'Missing jobId or offerId' }, { status: 400 });
+      const normalizedEmail = String(clientEmail || '').toLowerCase();
 
-      const { data, error } = await sb.rpc('accept_tecnico_offer', {
-        p_offer_id: offerId,
-        p_client_email: String(clientEmail || '').toLowerCase(),
-      });
+      // Fetch the offer
+      const { data: offer, error: offerErr } = await sb
+        .from('tecnico_job_offers')
+        .select('*')
+        .eq('id', offerId)
+        .maybeSingle();
+      if (offerErr) return NextResponse.json({ error: offerErr.message }, { status: 500 });
+      if (!offer) return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
+      if (offer.status !== 'pending') return NextResponse.json({ error: 'Offer is no longer pending' }, { status: 409 });
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      // Verify the job belongs to this client
+      const { data: jobRow, error: jobErr } = await sb
+        .from('tecnico_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .maybeSingle();
+      if (jobErr) return NextResponse.json({ error: jobErr.message }, { status: 500 });
+      if (!jobRow) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      if (jobRow.client_email?.toLowerCase() !== normalizedEmail) return NextResponse.json({ error: 'Not your job' }, { status: 403 });
+      if (jobRow.status !== 'pending') return NextResponse.json({ error: 'Job already assigned' }, { status: 409 });
 
-      const result = data as { success: boolean; error?: string; status?: number; tecnico_email?: string };
-      if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
-      }
+      // Accept this offer
+      await sb.from('tecnico_job_offers').update({ status: 'accepted', responded_at: now }).eq('id', offerId);
+
+      // Reject all other pending offers for this job
+      await sb.from('tecnico_job_offers')
+        .update({ status: 'rejected', responded_at: now })
+        .eq('job_id', jobId)
+        .neq('id', offerId)
+        .eq('status', 'pending');
+
+      // Assign the job to the tecnico
+      const { data: updatedJob, error: updateErr } = await sb
+        .from('tecnico_jobs')
+        .update({
+          status:        'accepted',
+          accepted_at:   now,
+          tecnico_email: offer.tecnico_email,
+          tecnico_name:  offer.tecnico_name,
+          tecnico_photo: offer.tecnico_photo,
+          agreed_price:  offer.proposed_price,
+        })
+        .eq('id', jobId)
+        .select()
+        .maybeSingle();
+      if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
       // Notify the tecnico that their offer was accepted
-      if (result.tecnico_email) {
+      if (offer.tecnico_email) {
         emitNotification(
-          result.tecnico_email,
+          offer.tecnico_email,
           'job_accepted',
           '¡Oferta aceptada!',
           'Tu oferta de servicio fue aceptada. Revisa los detalles.',
@@ -339,14 +375,7 @@ export async function POST(req: Request) {
         );
       }
 
-      // Return the updated job
-      const { data: job } = await sb
-        .from('tecnico_jobs')
-        .select('*')
-        .eq('id', jobId)
-        .maybeSingle();
-
-      return NextResponse.json({ job });
+      return NextResponse.json({ job: updatedJob });
     }
 
     // ── reject_offer (client rejects one offer) ───────────────────────────────
