@@ -358,10 +358,19 @@ export default function MisServiciosPage() {
                 {/* Pending — offers list */}
                 {trackingJob.status === 'pending' && (
                   jobOffers.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '20px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <PulseDots />
-                      <span style={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.9rem' }}>Buscando técnicos cercanos…</span>
-                      <span style={{ color: '#475569', fontSize: '0.76rem' }}>Te notificamos cuando lleguen ofertas</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <div style={{ textAlign: 'center', padding: '20px 8px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                        <PulseDots />
+                        <span style={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.9rem' }}>Buscando técnicos cercanos…</span>
+                        <span style={{ color: '#475569', fontSize: '0.76rem' }}>Te notificamos cuando lleguen ofertas</span>
+                      </div>
+                      <button
+                        onClick={() => doJobAction(trackingJob.id, 'cancel', { clientEmail: email })}
+                        disabled={busy}
+                        style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', background: '#7f1d1d', color: '#fca5a5', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        ✕ Cancelar solicitud
+                      </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
