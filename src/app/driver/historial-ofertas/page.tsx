@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useDriverContext } from '../context';
+import { useDriverContext } from './context';
 import { DriverOffer } from '@/types';
 
 export default function HistorialOfertasDriver() {
