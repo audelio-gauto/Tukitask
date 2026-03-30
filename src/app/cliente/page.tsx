@@ -18,6 +18,9 @@ interface Order {
   destination_address: string | null;
   price: number | null;
   created_at: string;
+  driver_name: string | null;
+  driver_photo: string | null;
+  driver_rating: number | null;
 }
 
 interface DriverOffer {
@@ -50,6 +53,9 @@ interface ActiveJob {
   lat: number | null;
   lng: number | null;
   status: string;
+  tecnico_name: string | null;
+  tecnico_photo: string | null;
+  tecnico_rating: number | null;
 }
 
 /* unified offer card */
@@ -81,6 +87,18 @@ const SERVICE_LABELS: Record<string, string> = {
   eventos: '🎉 Eventos', cuidado_mascotas: '🐾 Mascotas', cuidado_adultos: '👴 Adultos',
   aire_split: '❄️ Aire Split', electrico: '⚡ Eléctrico', plomeria: '🔧 Plomería',
   cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
+};
+
+const TRACKING_STATUS_INFO: Record<string, { emoji: string; text: string; color: string }> = {
+  accepted:            { emoji: '✅', text: '¡Asignado! En camino a recoger', color: '#22c55e' },
+  assigned:            { emoji: '✅', text: '¡Asignado! En camino a recoger', color: '#22c55e' },
+  picking_up:          { emoji: '🔔', text: 'Llegó al punto de recogida',     color: '#f59e0b' },
+  in_transit:          { emoji: '🚚', text: 'En camino al destino',           color: '#3b82f6' },
+  in_progress:         { emoji: '🔧', text: 'Servicio en progreso',           color: '#6366f1' },
+  en_camino:           { emoji: '🚗', text: 'Técnico en camino',              color: '#22c55e' },
+  llegue:              { emoji: '🔔', text: 'Técnico llegó, listo para comenzar', color: '#f59e0b' },
+  en_proceso:          { emoji: '🔧', text: 'Servicio en progreso',           color: '#6366f1' },
+  completion_pending:  { emoji: '⏳', text: 'Esperando confirmación',     color: '#a78bfa' },
 };
 
 function getGreeting() {
@@ -263,8 +281,9 @@ export default function ClienteHomePage() {
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
 
+      const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress'];
       const activeOrders: Order[] = Array.isArray(ordersData)
-        ? ordersData.filter((o: Order) => o.status === 'pending' || o.status === 'negotiating')
+        ? ordersData.filter((o: Order) => ALL_ACTIVE_STS.includes(o.status))
         : [];
       const activeJobs: ActiveJob[] = Array.isArray(jobsData) ? jobsData : [];
 
@@ -322,12 +341,13 @@ export default function ClienteHomePage() {
   /* ─── Elapsed timer for searching state ────────────────────────────────── */
   useEffect(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    const isSearching = (orders.length > 0 || jobs.length > 0);
+    const isSearching = orders.some(o => ['pending', 'negotiating'].includes(o.status))
+                     || jobs.some(j => ['pending', 'negotiating'].includes(j.status));
     if (isSearching) {
       timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [orders.length, jobs.length]);
+  }, [orders, jobs]);
 
   /* ─── Derived state ─────────────────────────────────────────────────────── */
   const allDriverOffers: UnifiedOffer[] = orders.flatMap(o =>
@@ -346,14 +366,19 @@ export default function ClienteHomePage() {
   );
   const allOffers = [...allDriverOffers, ...allJobOffers];
 
+  const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
+  const SEARCHING_STS = ['pending', 'negotiating'];
+  const trackingOrders = orders.filter(o => TRACKING_STS.includes(o.status));
+  const trackingJobs   = jobs.filter(j => TRACKING_STS.includes(j.status));
+
   const activeRequests: ActiveRequest[] = [
-    ...orders.map(o => ({
+    ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => ({
       id: o.id, type: 'delivery' as const, icon: '📦',
       label: 'Envío de paquete',
       subtitle: [o.origin_address, o.destination_address].filter(Boolean).join(' → ') || 'Sin dirección',
       createdAt: o.created_at,
     })),
-    ...jobs.map(j => ({
+    ...jobs.filter(j => SEARCHING_STS.includes(j.status)).map(j => ({
       id: j.id, type: 'service' as const, icon: '🛠',
       label: SERVICE_LABELS[j.service_type] ?? j.service_type,
       subtitle: j.address ?? 'Sin dirección',
@@ -361,17 +386,17 @@ export default function ClienteHomePage() {
     })),
   ];
 
-  const mode: 'idle' | 'searching' | 'offers' =
-    activeRequests.length === 0 ? 'idle'
-    : allOffers.length > 0    ? 'offers'
-    : 'searching';
+  const mode: 'idle' | 'searching' | 'offers' | 'tracking' =
+    trackingOrders.length > 0 || trackingJobs.length > 0 ? 'tracking'
+    : allOffers.length > 0                               ? 'offers'
+    : activeRequests.length > 0                          ? 'searching'
+    : 'idle';
 
   const busy = !!actionId;
 
   /* ─── Open sheet when offers arrive ────────────────────────────────────── */
   useEffect(() => {
-    if (mode === 'offers') setSheetOpen(true);
-    if (mode === 'searching') setSheetOpen(true);
+    if (mode !== 'idle') setSheetOpen(true);
     if (mode === 'idle') setSheetOpen(false);
   }, [mode]);
 
@@ -618,6 +643,78 @@ export default function ClienteHomePage() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TRACKING ─────────────────────────────────────────────────── */}
+        {mode === 'tracking' && (
+          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px max(24px, env(safe-area-inset-bottom))' }}>
+              {[
+                ...trackingOrders.map(o => ({ type: 'delivery' as const, id: o.id, status: o.status, name: o.driver_name, photo: o.driver_photo, rating: o.driver_rating, price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
+                ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, price: null, origin: null, dest: null, svcType: j.service_type })),
+              ].map(item => {
+                const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
+                const canCancel = ['accepted', 'assigned'].includes(item.status);
+                return (
+                  <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, marginBottom: 12, border: `1px solid ${info.color}40` }}>
+                    {/* Status banner */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                      <span style={{ fontSize: '1.4rem' }}>{info.emoji}</span>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: info.color }}>{info.text}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                          {item.type === 'delivery' ? '📦 Envío' : `🛠 ${SERVICE_LABELS[item.svcType] ?? item.svcType}`}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Provider card */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: 14, marginBottom: 12 }}>
+                      {item.photo ? (
+                        <img src={item.photo} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${info.color}` }} />
+                      ) : (
+                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: `linear-gradient(135deg,${info.color},#1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+                          {item.type === 'delivery' ? '🚗' : '👷'}
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{item.name || (item.type === 'delivery' ? 'Conductor' : 'Técnico')}</div>
+                        {item.rating != null && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <span style={{ color: '#F5C518' }}>★</span>
+                            <span style={{ color: '#F5C518', fontWeight: 700, fontSize: '0.85rem' }}>{Number(item.rating).toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+                      {item.price != null && (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.25rem' }}>{Number(item.price).toLocaleString('es-PY')}</div>
+                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)' }}>Gs</div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Addresses */}
+                    {(item.origin || item.dest) && (
+                      <div style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 12, marginBottom: 12 }}>
+                        {item.origin && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>📍 {item.origin}</div>}
+                        {item.dest   && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>🏁 {item.dest}</div>}
+                      </div>
+                    )}
+                    {/* Cancel */}
+                    {canCancel && (
+                      <button
+                        onClick={() => item.type === 'delivery' ? cancelOrder(item.id) : cancelJob(item.id)}
+                        disabled={busy}
+                        style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer' }}
+                      >✕ Cancelar solicitud</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
