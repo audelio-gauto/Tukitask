@@ -1,9 +1,10 @@
+'use client';
 import { useEffect, useState } from 'react';
-import { useTecnicoContext } from './context';
+import { useDriverContext } from '../../driver/context';
 import { TecnicoJobOffer } from '@/types';
 
 export default function HistorialOfertasTecnico() {
-  const { email } = useTecnicoContext();
+  const { email } = useDriverContext();
   const [offers, setOffers] = useState<TecnicoJobOffer[]>([]);
   const [loading, setLoading] = useState(true);
 

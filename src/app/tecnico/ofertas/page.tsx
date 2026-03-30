@@ -324,7 +324,7 @@ export default function OfertasPage() {
 
               {/* ── OFFER ZONE ── */}
               {alreadySent ? (
-                {(() => {
+                (() => {
                   const status = job.my_offer!.status;
                   let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
                   if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — el cliente te eligió'; }
@@ -348,7 +348,7 @@ export default function OfertasPage() {
                       )}
                     </div>
                   );
-                })()}
+                })()
               ) : isOpen ? (
                 <div>
                   {/* Quick chips */}

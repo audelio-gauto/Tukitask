@@ -221,6 +221,14 @@ export default function ClienteHistorialPage() {
                     </div>
                   ))}
                 </div>
+                {activeItems.length > paginatedActive.length && (
+                  <button
+                    onClick={() => setActivePage(p => p + 1)}
+                    style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.98rem', marginTop: 10, cursor: 'pointer' }}
+                  >
+                    Cargar más en progreso
+                  </button>
+                )}
               </div>
             )}
 
@@ -229,46 +237,6 @@ export default function ClienteHistorialPage() {
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {paginatedDone.map(item => item.kind === 'job' ? (
-                                    {/* Pagination: Load more for active */}
-                                    {activeItems.length > paginatedActive.length && (
-                                      <button
-                                        onClick={() => setActivePage(p => p + 1)}
-                                        style={{
-                                          width: '100%',
-                                          padding: '11px',
-                                          borderRadius: 14,
-                                          border: '1px solid #F5C518',
-                                          background: 'rgba(245,197,24,0.08)',
-                                          color: '#F5C518',
-                                          fontWeight: 800,
-                                          fontSize: '0.98rem',
-                                          marginTop: 10,
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        Cargar más en progreso
-                                      </button>
-                                    )}
-                                    {/* Pagination: Load more for done */}
-                                    {doneItems.length > paginatedDone.length && (
-                                      <button
-                                        onClick={() => setDonePage(p => p + 1)}
-                                        style={{
-                                          width: '100%',
-                                          padding: '11px',
-                                          borderRadius: 14,
-                                          border: '1px solid #F5C518',
-                                          background: 'rgba(245,197,24,0.08)',
-                                          color: '#F5C518',
-                                          fontWeight: 800,
-                                          fontSize: '0.98rem',
-                                          marginTop: 10,
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        Cargar más completados
-                                      </button>
-                                    )}
                     <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
                         <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
@@ -319,6 +287,14 @@ export default function ClienteHistorialPage() {
                     </div>
                   ))}
                 </div>
+                {doneItems.length > paginatedDone.length && (
+                  <button
+                    onClick={() => setDonePage(p => p + 1)}
+                    style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.98rem', marginTop: 10, cursor: 'pointer' }}
+                  >
+                    Cargar más completados
+                  </button>
+                )}
               </div>
             )}
           </>
