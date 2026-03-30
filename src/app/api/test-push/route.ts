@@ -49,7 +49,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     ok: sent > 0,
     email,
     tokensFound: tokens.length,
-    tokens: tokens.map(t => ({ platform: t.platform, created_at: t.created_at })),
+    tokens: tokens.map((t: { platform: string; created_at: string }) => ({ platform: t.platform, created_at: t.created_at })),
     sent,
     diagnosis: sent > 0
       ? '✅ Push enviado exitosamente. Revisa el dispositivo.'
