@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useClientContext } from '../context';
-import { DriverOffer, TecnicoJobOffer } from '@/types';
+import { DriverOffer, TecnicoOffer } from '@/types';
 
 export default function HistorialOfertasCliente() {
   const { email } = useClientContext();
   const [driverOffers, setDriverOffers] = useState<DriverOffer[]>([]);
-  const [jobOffers, setJobOffers] = useState<TecnicoJobOffer[]>([]);
+  const [jobOffers, setJobOffers] = useState<TecnicoOffer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +54,6 @@ export default function HistorialOfertasCliente() {
                 </div>
                 <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.1rem' }}>₲{Number(of.proposed_price).toLocaleString()}</div>
               </div>
-              <div style={{ marginTop: 6, fontSize: '0.85rem', color: '#a3a3a3' }}>Estado: <b>{of.status}</b></div>
             </div>
           ))}
         </>

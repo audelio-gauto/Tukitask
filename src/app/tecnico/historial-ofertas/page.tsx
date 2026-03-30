@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useDriverContext } from '../../driver/context';
-import { TecnicoJobOffer } from '@/types';
+import { TecnicoOffer } from '@/types';
 
 export default function HistorialOfertasTecnico() {
   const { email } = useDriverContext();
-  const [offers, setOffers] = useState<TecnicoJobOffer[]>([]);
+  const [offers, setOffers] = useState<TecnicoOffer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,12 +28,10 @@ export default function HistorialOfertasTecnico() {
         <div key={of.id} style={{ background: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10, border: '1px solid #334155' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontWeight: 700, color: '#f1f5f9' }}>Servicio: {of.job_id}</div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{of.tecnico_email}</div>
+              <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{of.tecnico_name || of.tecnico_email}</div>
             </div>
             <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.1rem' }}>₲{Number(of.proposed_price).toLocaleString()}</div>
           </div>
-          <div style={{ marginTop: 6, fontSize: '0.85rem', color: '#a3a3a3' }}>Estado: <b>{of.status}</b></div>
         </div>
       ))}
     </div>
