@@ -115,13 +115,26 @@ export default function ClienteHistorialPage() {
     return labels[status] || status;
   };
 
-  const activeStatuses = ['pending', 'negotiating', 'assigned', 'accepted', 'in_progress', 'picking_up', 'in_transit'];
+  const activeStatuses = ['pending', 'negotiating', 'assigned', 'accepted', 'in_progress', 'picking_up', 'in_transit', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
   const doneStatuses = ['completado', 'completed', 'delivered', 'cancelled', 'failed', 'incidente', 'return_delivered', 'returned', 'client_confirmed', 'commission_charged'];
 
-  const activeJobs = jobs.filter(j => activeStatuses.includes(j.status));
-  const doneJobs = jobs.filter(j => doneStatuses.includes(j.status));
-  const activeOrders = orders.filter(o => activeStatuses.includes(o.status));
-  const doneOrders = orders.filter(o => doneStatuses.includes(o.status));
+  type UnifiedItem =
+    | { kind: 'job';   data: Job;   date: string }
+    | { kind: 'order'; data: Order; date: string };
+
+  const sortByDate = (a: UnifiedItem, b: UnifiedItem) =>
+    new Date(b.date).getTime() - new Date(a.date).getTime();
+
+  const activeItems: UnifiedItem[] = [
+    ...jobs.filter(j => activeStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.created_at })),
+    ...orders.filter(o => activeStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.created_at })),
+  ].sort(sortByDate);
+
+  const doneItems: UnifiedItem[] = [
+    ...jobs.filter(j => doneStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.completed_at ?? j.created_at })),
+    ...orders.filter(o => doneStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.completed_at ?? o.created_at })),
+  ].sort(sortByDate);
+
   const total = jobs.length + orders.length;
 
   return (
@@ -168,34 +181,33 @@ export default function ClienteHistorialPage() {
           </div>
         ) : (
           <>
-            {(activeJobs.length > 0 || activeOrders.length > 0) && (
+            {activeItems.length > 0 && (
               <div style={{ marginBottom: 28 }}>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 2 }}>En Progreso</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {activeJobs.map(job => (
-                    <div key={job.id} style={{ background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 16, padding: '14px' }}>
+                  {activeItems.map(item => item.kind === 'job' ? (
+                    <div key={item.data.id} style={{ background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ fontSize: '1.5rem' }}>{SERVICE_ICONS[job.service_type] || '✨'}</span>
+                        <span style={{ fontSize: '1.5rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{SERVICE_LABELS[job.service_type] || job.service_type}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(job.status)}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(job.created_at)}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
                       <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
                         📍 Ver en inicio
                       </Link>
                     </div>
-                  ))}
-                  {activeOrders.map(order => (
-                    <div key={order.id} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 16, padding: '14px' }}>
+                  ) : (
+                    <div key={item.data.id} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ fontSize: '1.5rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{order.origin_address?.slice(0, 28) || 'Envío'}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(order.status)}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{(item.data as Order).origin_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(order.created_at)}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
                       <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
                         📍 Ver en inicio
@@ -206,57 +218,56 @@ export default function ClienteHistorialPage() {
               </div>
             )}
 
-            {(doneJobs.length > 0 || doneOrders.length > 0) && (
+            {doneItems.length > 0 && (
               <div>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {doneJobs.map(job => (
-                    <div key={job.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: job.status === 'completado' ? 10 : 0 }}>
-                        <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[job.service_type] || '✨'}</span>
+                  {doneItems.map(item => item.kind === 'job' ? (
+                    <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
+                        <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[job.service_type] || job.service_type}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: job.status === 'completado' ? '#4ade80' : '#f87171' }}>
-                              {job.status === 'completado' ? '✅ Completado' : job.status === 'cancelled' ? '❌ Cancelado' : '⚠️ Incidente'}
+                            <span style={{ fontSize: '0.73rem', color: item.data.status === 'completado' ? '#4ade80' : '#f87171' }}>
+                              {item.data.status === 'completado' ? '✅ Completado' : item.data.status === 'cancelled' ? '❌ Cancelado' : '⚠️ Incidente'}
                             </span>
-                            {job.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{job.tecnico_name}</span>}
+                            {item.data.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{item.data.tecnico_name}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {job.total_price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs(job.total_price)}</div>}
-                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate(job.completed_at ?? job.created_at)}</div>
+                          {item.data.total_price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs(item.data.total_price)}</div>}
+                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
-                      {job.status === 'completado' && !job.tecnico_rating && (
-                        <button onClick={() => setRatingModal({ jobId: job.id, tecnicoName: job.tecnico_name, tecnicoPhoto: job.tecnico_photo })}
+                      {item.data.status === 'completado' && !item.data.tecnico_rating && (
+                        <button onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
                           style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}>
                           ⭐ Calificar técnico
                         </button>
                       )}
-                      {job.tecnico_rating != null && (
+                      {item.data.tecnico_rating != null && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
-                          Tu calificación: <StarRating rating={job.tecnico_rating} />
+                          Tu calificación: <StarRating rating={item.data.tecnico_rating} />
                         </div>
                       )}
                     </div>
-                  ))}
-                  {doneOrders.map(order => (
-                    <div key={order.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
+                  ) : (
+                    <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: '1.4rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{order.origin_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).origin_address?.slice(0, 28) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(order.status) ? '#4ade80' : '#f87171' }}>
-                              {['delivered','client_confirmed','commission_charged'].includes(order.status) ? '✅ Entregado' : '❌ Cancelado'}
+                            <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
+                              {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '✅ Entregado' : '❌ Cancelado'}
                             </span>
-                            {order.driver_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{order.driver_name}</span>}
+                            {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{(item.data as Order).driver_name}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {order.price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs(order.price)}</div>}
-                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate(order.completed_at ?? order.created_at)}</div>
+                          {(item.data as Order).price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs((item.data as Order).price)}</div>}
+                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
                     </div>
