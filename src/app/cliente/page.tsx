@@ -557,7 +557,7 @@ export default function ClienteHomePage() {
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+        position: 'absolute', bottom: 65, left: 0, right: 0, zIndex: 10,
         transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)',
         transition: 'transform 0.4s cubic-bezier(0.32,0.72,0,1)',
       }}>
@@ -682,11 +682,11 @@ export default function ClienteHomePage() {
 
         {/* ── TRACKING ─────────────────────────────────────────────────── */}
         {mode === 'tracking' && (
-          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px max(24px, env(safe-area-inset-bottom))' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 20px' }}>
               {[
                 ...trackingOrders.map(o => ({ type: 'delivery' as const, id: o.id, status: o.status,
                   name: acceptedDriverInfo[o.id]?.name ?? o.driver_name,
