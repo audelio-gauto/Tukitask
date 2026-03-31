@@ -23,7 +23,7 @@ const paymentMethods = [
 ];
 
 export default function EnviarPaquetePage() {
-  const { openDrawer, email, displayName, profilePhoto } = useClientContext();
+  const { openDrawer, email, displayName, profilePhoto, avgRating } = useClientContext();
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -337,6 +337,7 @@ export default function EnviarPaquetePage() {
           client_email: email,
           client_name: displayName || email.split('@')[0],
           client_photo: profilePhoto || '',
+          client_avg_rating: avgRating > 0 ? avgRating : null,
           pickup_address: form.pickupAddress,
           delivery_address: form.deliveryAddress,
           vehicle_type: form.vehicleType,

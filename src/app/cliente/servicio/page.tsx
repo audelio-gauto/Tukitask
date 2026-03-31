@@ -52,7 +52,7 @@ const paymentMethods = [
 const EMPTY_PRICES: Record<string, number | null> = {};
 
 export default function SolicitarServicioPage() {
-  const { openDrawer, email, displayName } = useClientContext();
+  const { openDrawer, email, displayName, profilePhoto, avgRating } = useClientContext();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -286,6 +286,8 @@ export default function SolicitarServicioPage() {
           service_gender: genderPreference,
           client_email:   email,
           client_name:    displayName || email.split('@')[0] || null,
+          client_photo:   profilePhoto || null,
+          client_rating:  avgRating > 0 ? avgRating : null,
           address:        locationAddress || null,
           lat:            locationLat   ? Number(locationLat)  : null,
           lng:            locationLng   ? Number(locationLng)  : null,
