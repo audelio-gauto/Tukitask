@@ -139,6 +139,9 @@ export default function OfertasPage() {
   const dismissJob = (jobId: string) => {
     setDismissed(prev => new Set([...prev, jobId]));
     setShowInput(null);
+    setTimeout(() => {
+      setDismissed(prev => { const next = new Set(prev); next.delete(jobId); return next; });
+    }, 60_000);
   };
 
   return (
@@ -200,6 +203,7 @@ export default function OfertasPage() {
               const clientPrice = Number(job.client_initial_price || 0);
               const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
               const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;
+              const qo_50 = Math.round(clientPrice * 1.50 / 1000) * 1000;
               const cardDistKm = (myPos && job.lat != null && job.lng != null)
                 ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng)) : null;
               const gmapsUrl = job.lat && job.lng
@@ -257,11 +261,14 @@ export default function OfertasPage() {
                       <button onClick={() => setShowInput(null)} style={{ padding: '7px 10px', borderRadius: 10, border: '1.5px solid #334155', background: 'transparent', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>←</button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id} style={{ flex: 3, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '0.83rem', opacity: sending === job.id ? 0.6 : 1 }}>₲{clientPrice.toLocaleString()}</button>
-                      <button onClick={() => sendOffer(job.id, qo_15)} disabled={sending === job.id} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_15.toLocaleString()}</button>
-                      <button onClick={() => sendOffer(job.id, qo_30)} disabled={sending === job.id} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_30.toLocaleString()}</button>
-                      <button onClick={() => setShowInput(job.id)} style={{ width: 34, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id} style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: sending === job.id ? 0.6 : 1, letterSpacing: '0.01em' }}>Aceptar · ₲{clientPrice.toLocaleString()}</button>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => sendOffer(job.id, qo_15)} disabled={sending === job.id} style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span>₲{qo_15.toLocaleString()}</span><span style={{ fontSize: '0.58rem', color: '#64748b' }}>+15%</span></button>
+                        <button onClick={() => sendOffer(job.id, qo_30)} disabled={sending === job.id} style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span>₲{qo_30.toLocaleString()}</span><span style={{ fontSize: '0.58rem', color: '#64748b' }}>+30%</span></button>
+                        <button onClick={() => sendOffer(job.id, qo_50)} disabled={sending === job.id} style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span>₲{qo_50.toLocaleString()}</span><span style={{ fontSize: '0.58rem', color: '#64748b' }}>+50%</span></button>
+                        <button onClick={() => setShowInput(job.id)} style={{ width: 36, flexShrink: 0, border: '1px solid #334155', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem' }}>+</button>
+                      </div>
                     </div>
                   )}
                 </div>
