@@ -36,7 +36,6 @@ export default function DeliveriesPage() {
   const [activeJob, setActiveJob] = useState<any>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
-  const [sheetIndex, setSheetIndex] = useState(0);
 
   // Fail delivery modal state
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
@@ -271,7 +270,6 @@ export default function DeliveriesPage() {
 
   const handleDismiss = useCallback((orderId: string) => {
     setDismissedOrders(prev => new Set([...prev, orderId]));
-    setSheetIndex(0);
   }, []);
 
 
@@ -281,9 +279,6 @@ export default function DeliveriesPage() {
   const sheetOrders = useMemo(() =>
     filteredOrders.filter(o => !dismissedOrders.has(o.id)).slice(0, ordersPage * ORDERS_PER_PAGE),
   [filteredOrders, dismissedOrders, ordersPage]);
-
-  const safeIndex = sheetOrders.length > 0 ? Math.min(sheetIndex, sheetOrders.length - 1) : 0;
-  const currentSheetOrder = sheetOrders[safeIndex] ?? null;
 
   const activeJobPickup = activeJob?.pickup_lat != null ? { lat: activeJob.pickup_lat, lng: activeJob.pickup_lng } : null;
   const activeJobDelivery = activeJob?.delivery_lat != null ? { lat: activeJob.delivery_lat, lng: activeJob.delivery_lng } : null;
@@ -497,185 +492,94 @@ export default function DeliveriesPage() {
       )}
 
       {/* ════════════ INCOMING REQUEST BOTTOM SHEET ════════════ */}
-      {!activeJob && currentSheetOrder && (() => {
-        const req = currentSheetOrder;
-        const offerObj = sentOffers[req.id];
-        const alreadyOffered = !!offerObj;
-        const isSending = sending[req.id];
-        const clientPrice = Number(req.offer || req.suggested_price || 0);
-        const qo1 = Math.round(clientPrice * 1.1 / 1000) * 1000;
-        const qo2 = Math.round(clientPrice * 1.2 / 1000) * 1000;
-        const qo3 = Math.round(clientPrice * 1.3 / 1000) * 1000;
-        return (
-          <div key={req.id} style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-            height: '68vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
-            display: 'flex', flexDirection: 'column',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
-            animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-          }}>
-            {/* Pull tab */}
-            <div style={{ flexShrink: 0, paddingTop: 10, paddingBottom: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
-            </div>
-
-            {/* Header row: title + counter + cerrar */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingInline: 16, paddingBottom: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Solicitud de envío</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {sheetOrders.length > 1 && (
-                  <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{safeIndex + 1}/{sheetOrders.length}</span>
-                )}
-                <button onClick={() => handleDismiss(req.id)}
-                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#9ca3af', borderRadius: 99, padding: '4px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            {/* Estado de la oferta */}
-            {offerObj && (
-              (() => {
-                const status = offerObj.status;
-                let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
-                if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — el cliente te eligió'; }
-                else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada por el cliente'; }
-                else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
-                else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
-                return (
-                  <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}`, margin: '0 0 14px 0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: bg }}>
-                      <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
-                      <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
-                      <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
-                        ₲{Number(offerObj.amount).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()
-            )}
-
-            {/* Scrollable content */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingInline: 16, paddingBottom: 16 }}>
-              {/* Client info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-                {req.client_photo ? (
-                  <img src={req.client_photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #333', flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#2d2d2d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>👤</div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
-                    {req.client_name || req.client_email?.split('@')[0] || 'Cliente'}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                    {VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type} · {new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1.5rem', color: '#c8ff00', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Gs</div>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: '#2d2d2d', marginBottom: 14 }} />
-
-              {/* Route A → B */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>A</div>
-                  <div style={{ width: 2, flex: 1, minHeight: 18, background: '#333', margin: '4px 0' }} />
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>B</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35, marginBottom: 4 }}>{req.pickup_address}</div>
-                  <div style={{ height: 10 }} />
-                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35 }}>{req.delivery_address}</div>
-                </div>
-              </div>
-
-              {req.instructions && (
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '0.45rem 0.75rem', marginBottom: 12, fontSize: '0.8rem', color: '#C8960A' }}>
-                  📝 {req.instructions}
-                </div>
-              )}
-
-              {/* Actions */}
-              {alreadyOffered ? (
-                <div style={{ background: 'rgba(245,197,24,0.15)', borderRadius: 14, padding: '1rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 4 }}>Tu oferta enviada</div>
-                  <div style={{ fontWeight: 800, color: '#C8960A', fontSize: '1.4rem' }}>{alreadyOffered.toLocaleString()} Gs</div>
-                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>Esperando respuesta del cliente...</div>
-                </div>
-              ) : (
-                <>
-                  {/* Accept at client price */}
-                  <button onClick={() => handleAcceptPrice(req.id, clientPrice)} disabled={isSending}
-                    style={{ width: '100%', padding: '0.95rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1.05rem', marginBottom: 12, opacity: isSending ? 0.6 : 1 }}>
-                    {isSending ? 'Enviando...' : `Aceptar por ${clientPrice.toLocaleString()} Gs`}
-                  </button>
-
-                  {/* Ofrece tu tarifa */}
-                  <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#6b7280', marginBottom: 8 }}>Ofrece tu tarifa</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                    {[qo1, qo2, qo3].map(q => (
-                      <button key={q} onClick={() => handleSendOffer(req.id, q)} disabled={isSending}
-                        style={{ flex: 1, padding: '0.65rem 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
-                        {q.toLocaleString()}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => {
-                        const custom = prompt('Tu contraoferta (Gs):');
-                        if (custom && Number(custom) > 0) handleSendOffer(req.id, Number(custom));
-                      }}
-                      style={{ width: 44, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
-                      +
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Nav dots if multiple orders */}
-              {sheetOrders.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-                  {sheetOrders.map((_, i) => (
-                    <button key={i} onClick={() => setSheetIndex(i)}
-                      style={{ width: i === safeIndex ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'width 0.2s',
-                        background: i === safeIndex ? '#c8ff00' : '#333' }} />
-                  ))}
-                </div>
-              )}
-
-              {/* Pagination: Load more button */}
-              {filteredOrders.filter(o => !dismissedOrders.has(o.id)).length > sheetOrders.length && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
-                  <button
-                    onClick={() => setOrdersPage(p => p + 1)}
-                    style={{
-                      padding: '13px 28px',
-                      borderRadius: 14,
-                      border: '1px solid #F5C518',
-                      background: 'rgba(245,197,24,0.08)',
-                      color: '#F5C518',
-                      fontWeight: 800,
-                      fontSize: '0.98rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cargar más pedidos
-                  </button>
-                </div>
-              )}
-            </div>
+      {!activeJob && sheetOrders.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          maxHeight: '80vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
+          animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}>
+          {/* Pull tab */}
+          <div style={{ flexShrink: 0, padding: '10px 0 6px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
           </div>
-        );
-      })()}
+          {/* Header */}
+          <div style={{ flexShrink: 0, paddingInline: 16, paddingBottom: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
+              {sheetOrders.length} solicitud{sheetOrders.length !== 1 ? 'es' : ''} pendiente{sheetOrders.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {/* Scrollable list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 24px', display: 'flex', flexDirection: 'column', gap: 10, WebkitOverflowScrolling: 'touch' as never }}>
+            {sheetOrders.map(req => {
+              const offerObj = sentOffers[req.id];
+              const alreadyOffered = !!offerObj;
+              const isSending = sending[req.id];
+              const clientPrice = Number(req.offer || req.suggested_price || 0);
+              const qo1 = Math.round(clientPrice * 1.1 / 1000) * 1000;
+              const qo2 = Math.round(clientPrice * 1.2 / 1000) * 1000;
+              const qo3 = Math.round(clientPrice * 1.3 / 1000) * 1000;
+              return (
+                <div key={req.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
+                  {/* Row 1: vehicle + client + price + dismiss */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: '1.2rem' }}>{VEHICLE_LABELS[req.vehicle_type] ? '🚚' : '📦'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                        {req.client_name || req.client_email?.split('@')[0] || 'Cliente'} · {new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>{clientPrice.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
+                    </div>
+                    <button onClick={() => handleDismiss(req.id)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280', borderRadius: 99, padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                  </div>
+                  {/* Row 2: route */}
+                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#10b981', flexShrink: 0 }}>🟢</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.pickup_address}</span></div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#ef4444', flexShrink: 0 }}>🟥</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.delivery_address}</span></div>
+                  </div>
+                  {req.instructions && (
+                    <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {req.instructions}</div>
+                  )}
+                  {/* Offer status or action buttons */}
+                  {alreadyOffered ? (() => {
+                    const status = offerObj.status;
+                    let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Enviada · esperando...';
+                    if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada'; }
+                    else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada'; }
+                    else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
+                    else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: bg, borderRadius: 10, border: `1.5px solid ${color}` }}>
+                        <span style={{ color, fontWeight: 700 }}>{icon}</span>
+                        <span style={{ fontSize: '0.8rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
+                        <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '0.95rem' }}>₲{Number(offerObj.amount).toLocaleString()}</span>
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => handleAcceptPrice(req.id, clientPrice)} disabled={isSending} style={{ flex: 3, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '0.83rem', opacity: isSending ? 0.6 : 1 }}>₲{clientPrice.toLocaleString()}</button>
+                      <button onClick={() => handleSendOffer(req.id, qo1)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+10%</button>
+                      <button onClick={() => handleSendOffer(req.id, qo2)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+20%</button>
+                      <button onClick={() => handleSendOffer(req.id, qo3)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+30%</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {filteredOrders.filter(o => !dismissedOrders.has(o.id)).length > sheetOrders.length && (
+              <button onClick={() => setOrdersPage(p => p + 1)} style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}>Cargar más</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ════════════ EMPTY STATE ════════════ */}
-      {!activeJob && !currentSheetOrder && !loading && (
+      {!activeJob && sheetOrders.length === 0 && !loading && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           background: '#1a1a2e', borderRadius: '24px 24px 0 0',

@@ -180,97 +180,58 @@ function OfferCard({
   return (
     <div style={{
       background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(16px)',
-      borderRadius: 20, padding: '16px 14px 14px',
+      borderRadius: 16, padding: '10px 12px',
       border: `1.5px solid ${accentBorder}`,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-      marginBottom: 2
+      boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
     }}>
-      {/* Estado de la oferta */}
-      <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}`, margin: '0 0 12px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: bg }}>
-          <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
-          <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
-          <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
-            ₲{Number(offer.price).toLocaleString()}
-          </span>
-        </div>
+      {/* Row 1: status + price */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '6px 10px', background: bg, borderRadius: 10, border: `1px solid ${color}` }}>
+        <span style={{ fontSize: '0.95rem', color, fontWeight: 700 }}>{icon}</span>
+        <span style={{ fontSize: '0.78rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
+        <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>₲{Number(offer.price).toLocaleString()}</span>
       </div>
-      {/* Type badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{
-          fontSize: '0.72rem', fontWeight: 800, borderRadius: 20, padding: '3px 10px',
-          background: accentBg, border: `1px solid ${accentBorder}`, color: accentColor,
-        }}>
-          {isDriver ? '🚗 Envío' : '🛠 Servicio'}
-        </span>
-      </div>
-
-      {/* Botón cancelar oferta si está pendiente */}
-      {status === 'pending' && (
-        <button
-          onClick={onReject}
-          disabled={busy}
-          style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #f59e42', background: 'rgba(245,158,66,0.08)', color: '#f59e42', fontWeight: 700, fontSize: '0.95rem', marginBottom: 10, cursor: busy ? 'default' : 'pointer' }}
-        >✕ Cancelar mi oferta</button>
-      )}
-
-      {/* Driver / Tecnico info */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, marginBottom: 12 }}>
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          {offer.photo ? (
-            <img src={offer.photo} alt="" style={{ width: 58, height: 58, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}` }} />
-          ) : (
-            <div style={{ width: 58, height: 58, borderRadius: '50%', background: `linear-gradient(135deg, ${accentColor}, #1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', border: `2px solid ${accentBorder}` }}>
-              {isDriver ? '🚗' : '👷'}
-            </div>
-          )}
-          {offer.rating != null && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.15)', borderRadius: 8, padding: '2px 7px' }}>
-              <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
-              <span style={{ color: '#F5C518', fontSize: '0.72rem', fontWeight: 800 }}>{Number(offer.rating).toFixed(1)}</span>
-            </div>
-          )}
-        </div>
+      {/* Row 2: photo + name + badges */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+        {offer.photo ? (
+          <img src={offer.photo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}`, flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${accentColor}, #1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', border: `2px solid ${accentBorder}`, flexShrink: 0 }}>
+            {isDriver ? '🚗' : '👷'}
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.02rem', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, borderRadius: 20, padding: '2px 7px', background: accentBg, border: `1px solid ${accentBorder}`, color: accentColor }}>
+              {isDriver ? '🚗 Envío' : '🛠 Servicio'}
+            </span>
+            {offer.rating != null && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, borderRadius: 20, padding: '2px 7px', background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518' }}>★ {Number(offer.rating).toFixed(1)}</span>
+            )}
             {eta != null && (
-              <span style={{ background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#60a5fa', fontWeight: 700 }}>
-                ⏱ {eta} min
-              </span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, borderRadius: 20, padding: '2px 7px', background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)', color: '#60a5fa' }}>⏱ {eta}m</span>
             )}
             {offer.distanceKm != null && (
-              <span style={{ background: 'rgba(100,116,139,0.25)', border: '1px solid rgba(100,116,139,0.35)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
-                📍 {offer.distanceKm.toFixed(1)} km
-              </span>
-            )}
-            {offer.totalJobs != null && offer.totalJobs > 0 && (
-              <span style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '3px 9px', fontSize: '0.75rem', color: '#4ade80', fontWeight: 700 }}>
-                ✅ {offer.totalJobs}
-              </span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 600, borderRadius: 20, padding: '2px 7px', background: 'rgba(100,116,139,0.25)', border: '1px solid rgba(100,116,139,0.35)', color: '#94a3b8' }}>📍 {offer.distanceKm.toFixed(1)}km</span>
             )}
           </div>
         </div>
       </div>
-
       {offer.note && (
-        <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: 10, borderLeft: `3px solid ${accentColor}`, lineHeight: 1.5 }}>
-          "{offer.note}"
-        </p>
+        <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', padding: '5px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, borderLeft: `2px solid ${accentColor}`, lineHeight: 1.4 }}>"{offer.note}"</p>
       )}
-
       {/* Buttons */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          onClick={onReject} disabled={busy}
-          style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
-        >Rechazar</button>
-        <button
-          onClick={onAccept} disabled={busy}
-          style={{ flex: 2, padding: '13px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(34,197,94,0.4)' }}
-        >✓ Aceptar</button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {status === 'pending' ? (
+          <>
+            <button onClick={onReject} disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer' }}>Rechazar</button>
+            <button onClick={onAccept} disabled={busy} style={{ flex: 2, padding: '9px 0', borderRadius: 12, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer' }}>✓ Aceptar</button>
+          </>
+        ) : (
+          <button onClick={onReject} disabled={busy} style={{ flex: 1, padding: '8px', borderRadius: 12, border: '1px solid #f59e42', background: 'rgba(245,158,66,0.08)', color: '#f59e42', fontWeight: 700, fontSize: '0.78rem', cursor: busy ? 'default' : 'pointer' }}>✕ Cancelar oferta</button>
+        )}
       </div>
     </div>
   );
@@ -689,7 +650,7 @@ export default function ClienteHomePage() {
             </div>
 
             {/* Scrollable offer cards */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px 32px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
               {paginatedOffers.map(offer => (
                 <OfferCard

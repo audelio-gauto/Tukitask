@@ -53,7 +53,6 @@ export default function OfertasPage() {
   const [showInput, setShowInput]     = useState<string | null>(null);
   const [lightbox, setLightbox]       = useState<string | null>(null);
   const [myPos, setMyPos]             = useState<{ lat: number; lng: number } | null>(null);
-  const [sheetIndex, setSheetIndex]   = useState(0);
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set());
 
   // GPS live position
@@ -119,9 +118,7 @@ export default function OfertasPage() {
           tecnicoPhoto: profilePhoto || null,
           tecnicoRating: avgRating > 0 ? avgRating : null,
           proposedPrice: price,
-          distanceKm: (myPos && currentJob?.lat != null && currentJob?.lng != null)
-            ? haversineKm(myPos.lat, myPos.lng, Number(currentJob.lat), Number(currentJob.lng))
-            : null,
+          distanceKm: null,
         }),
       });
       const json = await res.json();
@@ -135,22 +132,12 @@ export default function OfertasPage() {
   };
 
   // Visible (not dismissed) jobs
-
-  // Pagination for visibleJobs
   const [jobsPage, setJobsPage] = useState(1);
   const JOBS_PER_PAGE = 10;
   const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)).slice(0, jobsPage * JOBS_PER_PAGE), [jobs, dismissed, jobsPage]);
-  const safeIndex   = visibleJobs.length > 0 ? Math.min(sheetIndex, visibleJobs.length - 1) : 0;
-  const currentJob  = visibleJobs[safeIndex] ?? null;
 
-  const distKm = (myPos && currentJob?.lat != null && currentJob?.lng != null)
-    ? haversineKm(myPos.lat, myPos.lng, Number(currentJob.lat), Number(currentJob.lng))
-    : null;
-
-  const dismissCurrent = () => {
-    if (!currentJob) return;
-    setDismissed(prev => new Set([...prev, currentJob.id]));
-    setSheetIndex(0);
+  const dismissJob = (jobId: string) => {
+    setDismissed(prev => new Set([...prev, jobId]));
     setShowInput(null);
   };
 
@@ -162,7 +149,7 @@ export default function OfertasPage() {
       <div style={{ position: 'absolute', inset: 0 }}>
         <DriverMap
           pickup={myPos ?? undefined}
-          delivery={currentJob?.lat != null ? { lat: Number(currentJob.lat), lng: Number(currentJob.lng) } : null}
+          delivery={null}
         />
       </div>
 
@@ -200,247 +187,101 @@ export default function OfertasPage() {
         </div>
       )}
 
-      {/* ── BOTTOM SHEET: incoming request ── */}
-      {!loading && currentJob && (() => {
-        const job         = currentJob;
-        const alreadySent = !!job.my_offer;
-        const isOpen      = showInput === job.id;
-        const clientPrice = Number(job.client_initial_price || 0);
-        const qo1 = Math.round(clientPrice * 1.0 / 1000) * 1000;
-        const qo2 = Math.round(clientPrice * 1.1 / 1000) * 1000;
-        const qo3 = Math.round(clientPrice * 1.2 / 1000) * 1000;
-        const gmapsUrl = job.lat && job.lng
-          ? `https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}`
-          : null;
-
-        return (
-          <div key={job.id} style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-            height: '68vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
-            display: 'flex', flexDirection: 'column',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
-            animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-            border: alreadySent ? '1.5px solid rgba(245,197,24,0.35)' : 'none',
-            borderBottom: 'none',
-          }}>
-            {/* Pull tab */}
-            <div style={{ flexShrink: 0, paddingTop: 10, paddingBottom: 6, display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
-            </div>
-
-            {/* Sheet header */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingInline: 16, paddingBottom: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Solicitud de servicio</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {visibleJobs.length > 1 && (
-                  <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{safeIndex + 1}/{visibleJobs.length}</span>
-                )}
-                <button onClick={dismissCurrent}
-                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#9ca3af', borderRadius: 99, padding: '4px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable body */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingInline: 16, paddingBottom: 20, WebkitOverflowScrolling: 'touch' as never }}>
-
-              {/* Client + price hero */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-                {job.client_photo ? (
-                  <img src={job.client_photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155', flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>👤</div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{job.client_name ?? 'Cliente'}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                    {SERVICE_LABELS[job.service_type] ?? job.service_type}
-                    {job.client_rating != null && ` · ⭐ ${job.client_rating.toFixed(1)}`}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>
-                    {new Date(job.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1.5rem', color: '#c8ff00', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Gs</div>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: '#2d2d2d', marginBottom: 14 }} />
-
-              {/* Route A → B */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>A</div>
-                  <div style={{ width: 2, flex: 1, minHeight: 18, background: '#333', margin: '4px 0' }} />
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800 }}>B</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35, marginBottom: 4 }}>
-                    Tu ubicación actual
-                  </div>
-                  {distKm != null && (
-                    <div style={{ fontSize: '0.75rem', color: '#c8ff00', fontWeight: 700, marginBottom: 6 }}>📐 {distKm.toFixed(1)} km</div>
-                  )}
-                  <div style={{ height: 4 }} />
-                  <div style={{ fontSize: '0.88rem', color: '#e5e7eb', lineHeight: 1.35 }}>{job.address ?? 'Dirección no especificada'}</div>
-                </div>
-              </div>
-
-              {/* Description */}
-              {job.description && (
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: 10, borderLeft: '3px solid #F5C518' }}>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#C8960A', lineHeight: 1.45 }}>📝 {job.description}</p>
-                </div>
-              )}
-
-              {/* Audio */}
-              {job.audio_url && (
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(16,185,129,0.08)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.2)' }}>
-                  <p style={{ margin: '0 0 5px', fontSize: '0.72rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎙 Audio del cliente</p>
-                  <audio controls src={job.audio_url} style={{ width: '100%', height: 36 }} />
-                </div>
-              )}
-
-              {/* Photos */}
-              {job.photos && job.photos.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fotos del cliente</p>
-                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-                    {job.photos.map((url, i) => (
-                      <img key={i} src={url} alt={`foto ${i + 1}`}
-                        onClick={() => setLightbox(url)}
-                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', border: '1.5px solid #334155' }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ height: 1, background: '#2d2d2d', marginBottom: 14 }} />
-
-              {/* ── OFFER ZONE ── */}
-              {alreadySent ? (
-                (() => {
-                  const status = job.my_offer!.status;
-                  let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
-                  if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — el cliente te eligió'; }
-                  else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada por el cliente'; }
-                  else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
-                  else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
-                  return (
-                    <div style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${color}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: bg }}>
-                        <span style={{ fontSize: '1.1rem', color, fontWeight: 700 }}>{icon}</span>
-                        <span style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{text}</span>
-                        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#c8ff00', fontSize: '1.1rem' }}>
-                          ₲{Number(job.my_offer!.proposed_price).toLocaleString()}
-                        </span>
-                      </div>
-                      {status === 'accepted' && gmapsUrl && (
-                        <button onClick={() => window.open(gmapsUrl, '_blank')}
-                          style={{ width: '100%', padding: '12px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                          🧭 Navegar al cliente
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()
-              ) : isOpen ? (
-                <div>
-                  {/* Quick chips */}
-                  {clientPrice > 0 && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                      {[{ label: 'Exacto', val: qo1 }, { label: '+10%', val: qo2 }, { label: '+20%', val: qo3 }].map(ch => (
-                        <button key={ch.val}
-                          onClick={() => setOfferPrices(prev => ({ ...prev, [job.id]: ch.val }))}
-                          style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: `1.5px solid ${offerPrices[job.id] === ch.val ? '#F5C518' : '#334155'}`, background: offerPrices[job.id] === ch.val ? 'rgba(245,197,24,0.15)' : '#0f172a', color: offerPrices[job.id] === ch.val ? '#F5C518' : '#9ca3af', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
-                          {ch.label}<br />
-                          <span style={{ fontSize: '0.72rem' }}>₲{ch.val.toLocaleString()}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ marginBottom: 10 }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Tu precio (Gs.)</label>
-                    <input type="number"
-                      value={offerPrices[job.id] || ''}
-                      onChange={e => setOfferPrices(prev => ({ ...prev, [job.id]: Number(e.target.value) }))}
-                      placeholder={clientPrice ? String(clientPrice) : 'Ej: 150000'}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #F5C518', background: '#0f172a', color: '#f1f5f9', fontSize: '1.05rem', fontWeight: 700, boxSizing: 'border-box' as never, outline: 'none' }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => sendOffer(job.id)}
-                      disabled={sending === job.id || !(offerPrices[job.id] > 0)}
-                      style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: (sending === job.id || !(offerPrices[job.id] > 0)) ? '#334155' : '#F5C518', color: (sending === job.id || !(offerPrices[job.id] > 0)) ? '#fff' : '#1C1C2E', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem' }}>
-                      {sending === job.id ? 'Enviando…' : '📤 Enviar oferta'}
-                    </button>
-                    <button onClick={() => setShowInput(null)}
-                      style={{ padding: '12px 14px', borderRadius: 12, border: '1.5px solid #334155', background: 'transparent', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>←</button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Accept at client price */}
-                  <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id}
-                    style={{ width: '100%', padding: '0.95rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1.05rem', marginBottom: 12, opacity: sending === job.id ? 0.6 : 1 }}>
-                    {sending === job.id ? 'Enviando...' : `Aceptar por ${clientPrice.toLocaleString()} Gs`}
-                  </button>
-
-                  {/* Counter-offer chips */}
-                  <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#6b7280', marginBottom: 8 }}>Ofrece tu tarifa</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                    {[qo2, qo3].map(q => (
-                      <button key={q} onClick={() => sendOffer(job.id, q)} disabled={sending === job.id}
-                        style={{ flex: 1, padding: '0.65rem 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
-                        {q.toLocaleString()}
-                      </button>
-                    ))}
-                    <button onClick={() => setShowInput(job.id)}
-                      style={{ width: 44, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
-                      +
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Nav dots for multiple jobs */}
-              {visibleJobs.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-                  {visibleJobs.map((_, i) => (
-                    <button key={i} onClick={() => setSheetIndex(i)}
-                      style={{ width: i === safeIndex ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'width 0.2s', background: i === safeIndex ? '#c8ff00' : '#333' }} />
-                  ))}
-                </div>
-              )}
-
-              {/* Pagination: Load more button */}
-              {jobs.filter(j => !dismissed.has(j.id)).length > visibleJobs.length && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
-                  <button
-                    onClick={() => setJobsPage(p => p + 1)}
-                    style={{
-                      padding: '13px 28px',
-                      borderRadius: 14,
-                      border: '1px solid #F5C518',
-                      background: 'rgba(245,197,24,0.08)',
-                      color: '#F5C518',
-                      fontWeight: 800,
-                      fontSize: '0.98rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cargar más trabajos
-                  </button>
-                </div>
-              )}
-            </div>
+      {/* ── BOTTOM SHEET: lista scrollable de solicitudes ── */}
+      {!loading && visibleJobs.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          maxHeight: '80vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
+          animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}>
+          {/* Pull tab */}
+          <div style={{ flexShrink: 0, padding: '10px 0 6px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
           </div>
-        );
-      })()}
+          {/* Header */}
+          <div style={{ flexShrink: 0, paddingInline: 16, paddingBottom: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
+              {visibleJobs.length} solicitud{visibleJobs.length !== 1 ? 'es' : ''} pendiente{visibleJobs.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {/* Scrollable list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 24px', display: 'flex', flexDirection: 'column', gap: 10, WebkitOverflowScrolling: 'touch' as never }}>
+            {visibleJobs.map(job => {
+              const alreadySent = !!job.my_offer;
+              const isOpen = showInput === job.id;
+              const clientPrice = Number(job.client_initial_price || 0);
+              const qo2 = Math.round(clientPrice * 1.1 / 1000) * 1000;
+              const qo3 = Math.round(clientPrice * 1.2 / 1000) * 1000;
+              const cardDistKm = (myPos && job.lat != null && job.lng != null)
+                ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng)) : null;
+              const gmapsUrl = job.lat && job.lng
+                ? `https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}` : null;
+              return (
+                <div key={job.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
+                  {/* Row 1: icon + service + client + price + dismiss */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: '1.2rem' }}>{SERVICE_LABELS[job.service_type]?.split(' ')[0] ?? '✨'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[job.service_type] ?? job.service_type}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                        {job.client_name ?? 'Cliente'}{job.client_rating != null ? ` · ⭐${job.client_rating.toFixed(1)}` : ''}{cardDistKm != null ? ` · 📐${cardDistKm.toFixed(1)}km` : ''}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>{clientPrice.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
+                    </div>
+                    <button onClick={() => dismissJob(job.id)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280', borderRadius: 99, padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                  </div>
+                  {/* Row 2: address */}
+                  {job.address && (
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 8, display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <span style={{ color: '#ef4444', flexShrink: 0 }}>📍</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{job.address}</span>
+                      {gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0, textDecoration: 'none' }}>🗺</a>}
+                    </div>
+                  )}
+                  {/* Row 3: offer zone */}
+                  {alreadySent ? (() => {
+                    const status = job.my_offer!.status;
+                    let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Enviada · esperando...';
+                    if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada'; }
+                    else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada'; }
+                    else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
+                    else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: bg, borderRadius: 10, border: `1.5px solid ${color}` }}>
+                        <span style={{ color, fontWeight: 700 }}>{icon}</span>
+                        <span style={{ fontSize: '0.8rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
+                        <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '0.95rem' }}>₲{Number(job.my_offer!.proposed_price).toLocaleString()}</span>
+                        {status === 'accepted' && gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '3px 8px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '0.72rem', textDecoration: 'none', flexShrink: 0 }}>🧭 Ir</a>}
+                      </div>
+                    );
+                  })() : isOpen ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input type="number" value={offerPrices[job.id] || ''} onChange={e => setOfferPrices(prev => ({ ...prev, [job.id]: Number(e.target.value) }))} placeholder={clientPrice ? String(clientPrice) : '150000'} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid #F5C518', background: '#0f172a', color: '#f1f5f9', fontSize: '0.95rem', fontWeight: 700, outline: 'none' }} />
+                      <button onClick={() => sendOffer(job.id)} disabled={sending === job.id || !(offerPrices[job.id] > 0)} style={{ padding: '7px 12px', borderRadius: 10, border: 'none', background: (sending === job.id || !(offerPrices[job.id] > 0)) ? '#334155' : '#F5C518', color: (sending === job.id || !(offerPrices[job.id] > 0)) ? '#fff' : '#1C1C2E', fontWeight: 800, cursor: 'pointer' }}>📤</button>
+                      <button onClick={() => setShowInput(null)} style={{ padding: '7px 10px', borderRadius: 10, border: '1.5px solid #334155', background: 'transparent', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}>←</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id} style={{ flex: 3, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '0.83rem', opacity: sending === job.id ? 0.6 : 1 }}>₲{clientPrice.toLocaleString()}</button>
+                      <button onClick={() => sendOffer(job.id, qo2)} disabled={sending === job.id} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+10%</button>
+                      <button onClick={() => sendOffer(job.id, qo3)} disabled={sending === job.id} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+20%</button>
+                      <button onClick={() => setShowInput(job.id)} style={{ width: 34, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {jobs.filter(j => !dismissed.has(j.id)).length > visibleJobs.length && (
+              <button onClick={() => setJobsPage(p => p + 1)} style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}>Cargar más</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── EMPTY STATE ── */}
       {!loading && visibleJobs.length === 0 && (
