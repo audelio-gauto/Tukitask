@@ -231,7 +231,7 @@ export default function OfertasPage() {
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 8, display: 'flex', gap: 4, alignItems: 'center' }}>
                       <span style={{ color: '#ef4444', flexShrink: 0 }}>📍</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{job.address}</span>
-                      {gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0, textDecoration: 'none' }}>🗺</a>}
+                      {gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', fontWeight: 700, fontSize: '0.68rem', flexShrink: 0, textDecoration: 'none', background: 'rgba(16,185,129,0.12)', padding: '2px 7px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.3)' }}>Mapa</a>}
                     </div>
                   )}
                   {/* Row 3: offer zone */}
