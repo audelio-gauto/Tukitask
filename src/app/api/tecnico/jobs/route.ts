@@ -135,6 +135,17 @@ export async function GET(req: Request) {
       const { data: jobs, error } = await q;
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+      // Enrich with live client profile (photo + avg_rating) — works for old and new jobs
+      const clientEmails = [...new Set((jobs ?? []).map(j => j.client_email).filter(Boolean))];
+      const clientProfileMap: Record<string, { photo_url: string | null; avg_rating: number | null }> = {};
+      if (clientEmails.length > 0) {
+        const { data: profiles } = await sb
+          .from('client_profiles')
+          .select('email, photo_url, avg_rating')
+          .in('email', clientEmails);
+        (profiles ?? []).forEach(p => { clientProfileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null }; });
+      }
+
       // Attach whether this tecnico already sent an offer for each job
       const jobIds = (jobs ?? []).map(j => j.id);
       if (jobIds.length > 0) {
@@ -147,11 +158,22 @@ export async function GET(req: Request) {
         (myOffers ?? []).forEach(o => { offerMap[o.job_id] = { status: o.status, proposed_price: o.proposed_price }; });
         return NextResponse.json(
           (jobs ?? [])
-            .map(j => ({ ...j, my_offer: offerMap[j.id] ?? null }))
+            .map(j => ({
+              ...j,
+              client_photo:  clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
+              client_rating: clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+              my_offer: offerMap[j.id] ?? null,
+            }))
             .filter(j => j.my_offer?.status !== 'rejected')
         );
       }
-      return NextResponse.json(jobs ?? []);
+      return NextResponse.json(
+        (jobs ?? []).map(j => ({
+          ...j,
+          client_photo:  clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
+          client_rating: clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+        }))
+      );
     }
 
     // ── Client: active service jobs ──────────────────────────────────────────

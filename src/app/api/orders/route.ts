@@ -52,9 +52,26 @@ export async function GET(req: Request) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Cache the available orders result if this was the unfiltered query
+  // For the driver marketplace — enrich with live client_profiles (photo + avg_rating)
   if (!clientEmail && !driverEmail && data) {
-    await cacheSet('orders:available', data, 5);
+    const emails = [...new Set(data.map((o: Record<string,unknown>) => o.client_email as string).filter(Boolean))];
+    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null }> = {};
+    if (emails.length > 0) {
+      const { data: profiles } = await db
+        .from('client_profiles')
+        .select('email, photo_url, avg_rating')
+        .in('email', emails);
+      (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
+        profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null };
+      });
+    }
+    const enriched = data.map((o: Record<string,unknown>) => ({
+      ...o,
+      client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
+      client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
+    }));
+    await cacheSet('orders:available', enriched, 5);
+    return NextResponse.json(enriched);
   }
 
   return NextResponse.json(data);
