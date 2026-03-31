@@ -620,7 +620,7 @@ export default function ClienteHomePage() {
 
         {/* ── OFFERS ─────────────────────────────────────────────────────── */}
         {mode === 'offers' && (
-          <div style={{ maxHeight: '72vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             {/* Count header */}
             <div style={{ padding: '6px 14px 2px', flexShrink: 0 }}>
               <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.9rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>

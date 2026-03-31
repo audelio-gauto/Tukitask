@@ -193,7 +193,7 @@ export default function OfertasPage() {
       {!loading && visibleJobs.length > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: '72vh', display: 'flex', flexDirection: 'column',
+          maxHeight: '85vh', display: 'flex', flexDirection: 'column',
         }}>
           {/* Scrollable list */}
           <div style={{ overflowY: 'auto', padding: '0 10px 16px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
