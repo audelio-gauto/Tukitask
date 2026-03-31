@@ -198,21 +198,26 @@ export default function OfertasPage() {
               const alreadySent = !!job.my_offer;
               const isOpen = showInput === job.id;
               const clientPrice = Number(job.client_initial_price || 0);
-              const qo2 = Math.round(clientPrice * 1.1 / 1000) * 1000;
-              const qo3 = Math.round(clientPrice * 1.2 / 1000) * 1000;
+              const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
+              const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;
               const cardDistKm = (myPos && job.lat != null && job.lng != null)
                 ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng)) : null;
               const gmapsUrl = job.lat && job.lng
                 ? `https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}` : null;
               return (
                 <div key={job.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
-                  {/* Row 1: icon + service + client + price + dismiss */}
+                  {/* Row 1: photo + service + client + price + dismiss */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: '1.2rem' }}>{SERVICE_LABELS[job.service_type]?.split(' ')[0] ?? '✨'}</span>
+                    {job.client_photo
+                      ? <img src={job.client_photo} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #c8ff00', flexShrink: 0 }} />
+                      : <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
+                    }
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[job.service_type] ?? job.service_type}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                        {job.client_name ?? 'Cliente'}{job.client_rating != null ? ` · ⭐${job.client_rating.toFixed(1)}` : ''}{cardDistKm != null ? ` · 📐${cardDistKm.toFixed(1)}km` : ''}
+                      <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>{job.client_name ?? 'Cliente'}</span>
+                        {job.client_rating != null && <span style={{ color: '#f59e0b', fontWeight: 700 }}>⭐{job.client_rating.toFixed(1)}</span>}
+                        {cardDistKm != null && <span>📐{cardDistKm.toFixed(1)}km</span>}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -254,8 +259,8 @@ export default function OfertasPage() {
                   ) : (
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id} style={{ flex: 3, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '0.83rem', opacity: sending === job.id ? 0.6 : 1 }}>₲{clientPrice.toLocaleString()}</button>
-                      <button onClick={() => sendOffer(job.id, qo2)} disabled={sending === job.id} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+10%</button>
-                      <button onClick={() => sendOffer(job.id, qo3)} disabled={sending === job.id} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+20%</button>
+                      <button onClick={() => sendOffer(job.id, qo_15)} disabled={sending === job.id} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_15.toLocaleString()}</button>
+                      <button onClick={() => sendOffer(job.id, qo_30)} disabled={sending === job.id} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_30.toLocaleString()}</button>
                       <button onClick={() => setShowInput(job.id)} style={{ width: 34, flexShrink: 0, border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
                     </div>
                   )}

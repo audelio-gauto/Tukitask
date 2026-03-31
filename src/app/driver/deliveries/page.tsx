@@ -503,14 +503,16 @@ export default function DeliveriesPage() {
               const alreadyOffered = !!offerObj;
               const isSending = sending[req.id];
               const clientPrice = Number(req.offer || req.suggested_price || 0);
-              const qo1 = Math.round(clientPrice * 1.1 / 1000) * 1000;
-              const qo2 = Math.round(clientPrice * 1.2 / 1000) * 1000;
-              const qo3 = Math.round(clientPrice * 1.3 / 1000) * 1000;
+              const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
+              const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;
               return (
                 <div key={req.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
-                  {/* Row 1: vehicle + client + price + dismiss */}
+                  {/* Row 1: photo + vehicle + client + price + dismiss */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: '1.2rem' }}>{VEHICLE_LABELS[req.vehicle_type] ? '🚚' : '📦'}</span>
+                    {req.client_photo
+                      ? <img src={req.client_photo} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #c8ff00', flexShrink: 0 }} />
+                      : <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
+                    }
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}</div>
                       <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
@@ -549,9 +551,8 @@ export default function DeliveriesPage() {
                   })() : (
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => handleAcceptPrice(req.id, clientPrice)} disabled={isSending} style={{ flex: 3, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '0.83rem', opacity: isSending ? 0.6 : 1 }}>₲{clientPrice.toLocaleString()}</button>
-                      <button onClick={() => handleSendOffer(req.id, qo1)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+10%</button>
-                      <button onClick={() => handleSendOffer(req.id, qo2)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+20%</button>
-                      <button onClick={() => handleSendOffer(req.id, qo3)} disabled={isSending} style={{ flex: 2, padding: '8px 0', border: '1px solid #333', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>+30%</button>
+                      <button onClick={() => handleSendOffer(req.id, qo_15)} disabled={isSending} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_15.toLocaleString()}</button>
+                      <button onClick={() => handleSendOffer(req.id, qo_30)} disabled={isSending} style={{ flex: 2.5, padding: '8px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>₲{qo_30.toLocaleString()}</button>
                     </div>
                   )}
                 </div>
