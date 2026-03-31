@@ -179,10 +179,9 @@ function OfferCard({
 
   return (
     <div style={{
-      background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(16px)',
-      borderRadius: 16, padding: '10px 12px',
-      border: `1.5px solid ${accentBorder}`,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+      background: '#0f172a',
+      borderRadius: 14, padding: '10px 12px',
+      border: `1px solid ${accentBorder}`,
     }}>
       {/* Row 1: status + price */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '6px 10px', background: bg, borderRadius: 10, border: `1px solid ${color}` }}>
@@ -373,7 +372,7 @@ export default function ClienteHomePage() {
 
   // Pagination for offers
   const [offersPage, setOffersPage] = useState(1);
-  const OFFERS_PER_PAGE = 10;
+  const OFFERS_PER_PAGE = 3;
   const allOffers = [...allDriverOffers, ...allJobOffers];
   const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
@@ -621,36 +620,16 @@ export default function ClienteHomePage() {
 
         {/* ── OFFERS ─────────────────────────────────────────────────────── */}
         {mode === 'offers' && (
-          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.25)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '78vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Handle + count */}
-            <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1rem' }}>
-                    {allOffers.length} oferta{allOffers.length !== 1 ? 's' : ''} recibida{allOffers.length !== 1 ? 's' : ''}
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#64748b' }}>Revisá y elegí la mejor opción</div>
-                </div>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#1e293b', fontSize: '1.05rem', boxShadow: '0 2px 12px rgba(245,197,24,0.4)', flexShrink: 0 }}>
-                  {allOffers.length}
-                </div>
+          <div style={{ maxHeight: '72vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Count header */}
+            <div style={{ padding: '6px 14px 2px', flexShrink: 0 }}>
+              <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.9rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+                {allOffers.length} oferta{allOffers.length !== 1 ? 's' : ''} recibida{allOffers.length !== 1 ? 's' : ''}
               </div>
-
-              {/* Active request tabs (if multiple) */}
-              {activeRequests.length > 1 && (
-                <div style={{ display: 'flex', gap: 6, width: '100%', overflowX: 'auto', paddingBottom: 4 }}>
-                  {activeRequests.map(req => (
-                    <div key={req.id} style={{ flexShrink: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: 20, padding: '4px 12px', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
-                      {req.icon} {req.label}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Scrollable offer cards */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px 32px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ overflowY: 'auto', padding: '4px 10px 24px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
 
               {paginatedOffers.map(offer => (
                 <OfferCard

@@ -115,7 +115,7 @@ export default function DeliveriesPage() {
   // Initial load + lazy fallback polling (realtime is primary)
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
-    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 60_000);
+    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 20_000);
     return () => clearInterval(iv);
   }, [fetchOrders, fetchMyOffers, fetchActiveJob]);
 
@@ -275,7 +275,7 @@ export default function DeliveriesPage() {
 
   // Pagination for sheetOrders
   const [ordersPage, setOrdersPage] = useState(1);
-  const ORDERS_PER_PAGE = 10;
+  const ORDERS_PER_PAGE = 3;
   const sheetOrders = useMemo(() =>
     filteredOrders.filter(o => !dismissedOrders.has(o.id)).slice(0, ordersPage * ORDERS_PER_PAGE),
   [filteredOrders, dismissedOrders, ordersPage]);
@@ -285,7 +285,6 @@ export default function DeliveriesPage() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a2e', zIndex: 0 }}>
-      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
 
       {/* ── MAP BACKGROUND ── */}
       <div style={{ position: 'absolute', inset: 0 }}>
@@ -491,27 +490,14 @@ export default function DeliveriesPage() {
         </div>
       )}
 
-      {/* ════════════ INCOMING REQUEST BOTTOM SHEET ════════════ */}
+      {/* ════════════ LISTA SOLICITUDES (flotante) ════════════ */}
       {!activeJob && sheetOrders.length > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: '80vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
-          display: 'flex', flexDirection: 'column',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
-          animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+          maxHeight: '72vh', display: 'flex', flexDirection: 'column',
         }}>
-          {/* Pull tab */}
-          <div style={{ flexShrink: 0, padding: '10px 0 6px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
-          </div>
-          {/* Header */}
-          <div style={{ flexShrink: 0, paddingInline: 16, paddingBottom: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
-              {sheetOrders.length} solicitud{sheetOrders.length !== 1 ? 'es' : ''} pendiente{sheetOrders.length !== 1 ? 's' : ''}
-            </span>
-          </div>
           {/* Scrollable list */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 24px', display: 'flex', flexDirection: 'column', gap: 10, WebkitOverflowScrolling: 'touch' as never }}>
+          <div style={{ overflowY: 'auto', padding: '0 10px 16px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
             {sheetOrders.map(req => {
               const offerObj = sentOffers[req.id];
               const alreadyOffered = !!offerObj;

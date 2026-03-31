@@ -87,7 +87,7 @@ export default function OfertasPage() {
   useEffect(() => {
     loadOffers();
     // Fallback polling at 60s; realtime is primary
-    const iv = setInterval(loadOffers, 60_000);
+    const iv = setInterval(loadOffers, 20_000);
 
     // Realtime: new pending jobs + offer status changes
     const ch = supabase.channel('tecnico-ofertas-marketplace')
@@ -133,7 +133,7 @@ export default function OfertasPage() {
 
   // Visible (not dismissed) jobs
   const [jobsPage, setJobsPage] = useState(1);
-  const JOBS_PER_PAGE = 10;
+  const JOBS_PER_PAGE = 3;
   const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)).slice(0, jobsPage * JOBS_PER_PAGE), [jobs, dismissed, jobsPage]);
 
   const dismissJob = (jobId: string) => {
@@ -143,7 +143,6 @@ export default function OfertasPage() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a2e', zIndex: 0 }}>
-      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
 
       {/* ── FULL-SCREEN MAP BACKGROUND ── */}
       <div style={{ position: 'absolute', inset: 0 }}>
@@ -187,27 +186,14 @@ export default function OfertasPage() {
         </div>
       )}
 
-      {/* ── BOTTOM SHEET: lista scrollable de solicitudes ── */}
+      {/* ── LISTA DE SOLICITUDES (flotante sobre el mapa) ── */}
       {!loading && visibleJobs.length > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: '80vh', background: '#1a1a2e', borderRadius: '24px 24px 0 0',
-          display: 'flex', flexDirection: 'column',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.55)',
-          animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+          maxHeight: '72vh', display: 'flex', flexDirection: 'column',
         }}>
-          {/* Pull tab */}
-          <div style={{ flexShrink: 0, padding: '10px 0 6px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#444' }} />
-          </div>
-          {/* Header */}
-          <div style={{ flexShrink: 0, paddingInline: 16, paddingBottom: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>
-              {visibleJobs.length} solicitud{visibleJobs.length !== 1 ? 'es' : ''} pendiente{visibleJobs.length !== 1 ? 's' : ''}
-            </span>
-          </div>
           {/* Scrollable list */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 24px', display: 'flex', flexDirection: 'column', gap: 10, WebkitOverflowScrolling: 'touch' as never }}>
+          <div style={{ overflowY: 'auto', padding: '0 10px 16px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
             {visibleJobs.map(job => {
               const alreadySent = !!job.my_offer;
               const isOpen = showInput === job.id;
