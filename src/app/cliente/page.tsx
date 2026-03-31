@@ -30,6 +30,8 @@ interface DriverOffer {
   driver_email: string;
   amount: number;
   status: string;
+  driver_avg_rating: number | null;
+  driver_total_ratings: number | null;
 }
 
 interface TecnicoJobOffer {
@@ -209,6 +211,9 @@ function OfferCard({
             {offer.rating != null && (
               <span style={{ fontSize: '0.65rem', fontWeight: 800, borderRadius: 20, padding: '2px 7px', background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518' }}>★ {Number(offer.rating).toFixed(1)}</span>
             )}
+            {offer.totalJobs != null && offer.totalJobs > 0 && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, borderRadius: 20, padding: '2px 7px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{isDriver ? `${offer.totalJobs} envíos` : `${offer.totalJobs} servicios`}</span>
+            )}
             {eta != null && (
               <span style={{ fontSize: '0.65rem', fontWeight: 700, borderRadius: 20, padding: '2px 7px', background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)', color: '#60a5fa' }}>⏱ {eta}m</span>
             )}
@@ -356,8 +361,10 @@ export default function ClienteHomePage() {
   const allDriverOffers: UnifiedOffer[] = orders.flatMap(o =>
     (driverOffers[o.id] ?? []).map(off => ({
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
-      name: off.driver_name, photo: off.driver_photo, rating: null,
-      price: Number(off.amount), note: null, distanceKm: null, totalJobs: null,
+      name: off.driver_name, photo: off.driver_photo,
+      rating: off.driver_avg_rating ?? null,
+      price: Number(off.amount), note: null, distanceKm: null,
+      totalJobs: off.driver_total_ratings ?? null,
       status: off.status,
     }))
   );

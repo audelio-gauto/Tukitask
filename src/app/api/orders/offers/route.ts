@@ -21,11 +21,30 @@ export async function GET(req: Request) {
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Enrich with driver_profiles (avg_rating, total_ratings)
+    const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
+    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null }> = {};
+    if (driverEmails.length > 0) {
+      const { data: profiles } = await supabaseServer
+        .from('driver_profiles')
+        .select('email, avg_rating, total_ratings')
+        .in('email', driverEmails);
+      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null }) => {
+        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null };
+      });
+    }
+
     // Group by order_id
-    const grouped: Record<string, typeof data> = {};
+    const grouped: Record<string, unknown[]> = {};
     for (const offer of data ?? []) {
+      const enriched = {
+        ...offer,
+        driver_avg_rating:    profileMap[offer.driver_email]?.avg_rating    ?? null,
+        driver_total_ratings: profileMap[offer.driver_email]?.total_ratings ?? null,
+      };
       if (!grouped[offer.order_id]) grouped[offer.order_id] = [];
-      grouped[offer.order_id].push(offer);
+      grouped[offer.order_id].push(enriched);
     }
     return NextResponse.json(grouped);
   }
