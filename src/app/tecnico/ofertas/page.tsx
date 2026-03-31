@@ -133,7 +133,7 @@ export default function OfertasPage() {
 
   // Visible (not dismissed) jobs
   const [jobsPage, setJobsPage] = useState(1);
-  const JOBS_PER_PAGE = 3;
+  const JOBS_PER_PAGE = 10;
   const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)).slice(0, jobsPage * JOBS_PER_PAGE), [jobs, dismissed, jobsPage]);
 
   const dismissJob = (jobId: string) => {
@@ -193,7 +193,7 @@ export default function OfertasPage() {
       {!loading && visibleJobs.length > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         }}>
           {/* Scrollable list */}
           <div style={{ overflowY: 'auto', padding: '0 10px 16px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>

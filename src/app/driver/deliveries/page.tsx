@@ -278,7 +278,7 @@ export default function DeliveriesPage() {
 
   // Pagination for sheetOrders
   const [ordersPage, setOrdersPage] = useState(1);
-  const ORDERS_PER_PAGE = 3;
+  const ORDERS_PER_PAGE = 10;
   const sheetOrders = useMemo(() =>
     filteredOrders.filter(o => !dismissedOrders.has(o.id)).slice(0, ordersPage * ORDERS_PER_PAGE),
   [filteredOrders, dismissedOrders, ordersPage]);
@@ -497,7 +497,7 @@ export default function DeliveriesPage() {
       {!activeJob && sheetOrders.length > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         }}>
           {/* Scrollable list */}
           <div style={{ overflowY: 'auto', padding: '0 10px 16px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
