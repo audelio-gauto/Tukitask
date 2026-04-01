@@ -478,7 +478,7 @@ export default function ClienteHomePage() {
       await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', orderId, email }),
+        body: JSON.stringify({ order_id: orderId, status: 'cancelled' }),
       });
       loadAll();
     } finally { setActionId(null); }
