@@ -77,14 +77,21 @@ export default function DeliveriesPage() {
       .then((data: any[]) => {
         if (!Array.isArray(data)) return; // network/parse error — don't clear
         if (data.length === 0) {
-          // Only clear if not currently transitioning
-          if (!activeJobRef.current || !['accepted','picking_up','in_transit','returning','driver_returning','return_delivered'].includes(activeJobRef.current?.status)) {
+          // Only protect against clearing during brief post-accept transition
+          if (!activeJobRef.current || !['accepted','picking_up','in_transit'].includes(activeJobRef.current?.status)) {
             setActiveJob(null);
             activeJobRef.current = null;
           }
           return;
         }
         const job = data[0];
+        // If the order was cancelled (e.g. client cancelled while driver was returning), clear active job
+        if (job.status === 'cancelled') {
+          setActiveJob(null);
+          activeJobRef.current = null;
+          prevAccepted.current = false;
+          return;
+        }
         if (!prevAccepted.current && job.status === 'accepted') playAccepted();
         prevAccepted.current = true;
         setActiveJob(job);

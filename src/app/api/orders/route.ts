@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   } else if (driverEmail && history === 'true') {
     query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'returned', 'return_rejected']);
   } else if (driverEmail) {
-    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected']);
+    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
   } else {
     // Pedidos disponibles para drivers — verificar saldo de billetera
     const user = await getAuthUser(req);
