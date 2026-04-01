@@ -49,6 +49,7 @@ export default function OfertasPage() {
   const [jobs, setJobs]               = useState<Job[]>([]);
   const [loading, setLoading]         = useState(true);
   const [offerPrices, setOfferPrices] = useState<Record<string, number>>({});
+  const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
   const [sending, setSending]         = useState<string | null>(null);
   const [showInput, setShowInput]     = useState<string | null>(null);
   const [lightbox, setLightbox]       = useState<string | null>(null);
@@ -118,6 +119,7 @@ export default function OfertasPage() {
           tecnicoPhoto: profilePhoto || null,
           tecnicoRating: avgRating > 0 ? avgRating : null,
           proposedPrice: price,
+          note: offerNotes[jobId] || null,
           distanceKm: null,
         }),
       });
@@ -126,6 +128,7 @@ export default function OfertasPage() {
         setJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, my_offer: { status: 'pending', proposed_price: price } } : j));
         setShowInput(null);
+        setOfferNotes(n => ({ ...n, [jobId]: '' }));
       }
     } catch {}
     finally { setSending(null); }
@@ -262,6 +265,7 @@ export default function OfertasPage() {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <textarea value={offerNotes[job.id] || ''} onChange={e => setOfferNotes(n => ({ ...n, [job.id]: e.target.value }))} placeholder="Mensaje opcional para el cliente..." maxLength={300} rows={2} style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
                       <button onClick={() => sendOffer(job.id, clientPrice)} disabled={sending === job.id} style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: sending === job.id ? 0.6 : 1, letterSpacing: '0.01em' }}>Aceptar · ₲{clientPrice.toLocaleString()}</button>
                       <div style={{ display: 'flex', gap: 5 }}>
                         <button onClick={() => sendOffer(job.id, qo_15)} disabled={sending === job.id} style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span>₲{qo_15.toLocaleString()}</span><span style={{ fontSize: '0.58rem', color: '#64748b' }}>+15%</span></button>

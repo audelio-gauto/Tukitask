@@ -32,6 +32,7 @@ interface DriverOffer {
   status: string;
   driver_avg_rating: number | null;
   driver_total_ratings: number | null;
+  note: string | null;
 }
 
 interface TecnicoJobOffer {
@@ -363,7 +364,7 @@ export default function ClienteHomePage() {
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo,
       rating: off.driver_avg_rating ?? null,
-      price: Number(off.amount), note: null, distanceKm: null,
+      price: Number(off.amount), note: off.note ?? null, distanceKm: null,
       totalJobs: off.driver_total_ratings ?? null,
       status: off.status,
     }))

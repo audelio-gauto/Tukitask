@@ -30,6 +30,7 @@ export default function DeliveriesPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
+  const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
   // sentOffers: { [orderId]: { amount: number, status: string } }
   const [sentOffers, setSentOffers] = useState<Record<string, { amount: number, status: string }>>({});
@@ -248,9 +249,9 @@ export default function DeliveriesPage() {
       const res = await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount) }),
+        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount), note: offerNotes[orderId] || null }),
       });
-      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); }
+      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
     } catch { /* */ }
     setSending(s => ({ ...s, [orderId]: false }));
   };
@@ -261,9 +262,9 @@ export default function DeliveriesPage() {
       const res = await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer }),
+        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer, note: offerNotes[orderId] || null }),
       });
-      if (res.ok) setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } }));
+      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
     } catch { /* */ }
     setSending(s => ({ ...s, [orderId]: false }));
   };
@@ -556,6 +557,7 @@ export default function DeliveriesPage() {
                     );
                   })() : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <textarea value={offerNotes[req.id] || ''} onChange={e => setOfferNotes(n => ({ ...n, [req.id]: e.target.value }))} placeholder="Mensaje opcional para el cliente..." maxLength={300} rows={2} style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
                       <button onClick={() => handleAcceptPrice(req.id, clientPrice)} disabled={isSending} style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}>Aceptar · ₲{clientPrice.toLocaleString()}</button>
                       <div style={{ display: 'flex', gap: 5 }}>
                         <button onClick={() => handleSendOffer(req.id, qo_15)} disabled={isSending} style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}><span>₲{qo_15.toLocaleString()}</span><span style={{ fontSize: '0.58rem', color: '#64748b' }}>+15%</span></button>
