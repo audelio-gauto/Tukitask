@@ -59,6 +59,7 @@ interface ActiveJob {
   tecnico_name: string | null;
   tecnico_photo: string | null;
   tecnico_rating: number | null;
+  created_at?: string;
 }
 
 /* unified offer card */
@@ -285,8 +286,10 @@ export default function ClienteHomePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
+  const [noTaskerMsg, setNoTaskerMsg] = useState<string | null>(null);
   const locateRef = useRef<(() => void) | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoExpiredRef = useRef(new Set<string>());
 
   /* ─── Data loading ──────────────────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
@@ -429,7 +432,7 @@ export default function ClienteHomePage() {
       id: j.id, type: 'service' as const, icon: '🛠',
       label: SERVICE_LABELS[j.service_type] ?? j.service_type,
       subtitle: j.address ?? 'Sin dirección',
-      createdAt: new Date().toISOString(),
+      createdAt: j.created_at ?? new Date().toISOString(),
     })),
   ];
 
@@ -591,6 +594,22 @@ export default function ClienteHomePage() {
     } finally { setActionId(null); }
   };
 
+  /* ─── Auto-cancel after 3 minutes without offers ──────────────────────── */
+  const REQUEST_TIMEOUT_SEC = 180;
+  useEffect(() => {
+    activeRequests.forEach(req => {
+      if (autoExpiredRef.current.has(req.id)) return;
+      const secs = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
+      if (secs < REQUEST_TIMEOUT_SEC) return;
+      autoExpiredRef.current.add(req.id);
+      if (req.type === 'delivery') cancelOrder(req.id);
+      else cancelJob(req.id);
+      setNoTaskerMsg(`😔 No hay tasker disponible para "${req.label}"`);
+      setTimeout(() => setNoTaskerMsg(null), 6000);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed2]);
+
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
     <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -601,6 +620,22 @@ export default function ClienteHomePage() {
 
       {/* Top gradient */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
+
+      {/* ── No tasker toast ────────────────────────────────────────────── */}
+      {noTaskerMsg && (
+        <div style={{
+          position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#1e293b', border: '1px solid rgba(239,68,68,0.5)',
+          borderRadius: 16, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          maxWidth: 320, width: 'calc(100% - 32px)', textAlign: 'center',
+          animation: 'fadeInDown 0.3s ease',
+        }}>
+          <style>{`@keyframes fadeInDown { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
+          <div style={{ fontSize: '1.2rem', marginBottom: 6 }}>😔</div>
+          <div style={{ fontWeight: 800, color: '#f87171', fontSize: '0.95rem', marginBottom: 4 }}>No hay tasker disponible</div>
+          <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Ningún tasker respondió. Podés intentarlo de nuevo.</div>
+        </div>
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: '16px 14px 0' }}>
@@ -664,32 +699,51 @@ export default function ClienteHomePage() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>Transcurrido</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#F5C518' }}>
-                    {Math.floor(elapsed2 / 60).toString().padStart(2, '0')}:{(elapsed2 % 60).toString().padStart(2, '0')}
+                  <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 600 }}>Cancela en</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ef4444' }}>
+                    {(() => {
+                      const earliest = activeRequests.reduce((min, r) => {
+                        const s = Math.floor((Date.now() - new Date(r.createdAt).getTime()) / 1000);
+                        return s < min ? s : min;
+                      }, Infinity);
+                      void elapsed2;
+                      const cd = Math.max(0, REQUEST_TIMEOUT_SEC - (earliest === Infinity ? 0 : earliest));
+                      return `${Math.floor(cd/60).toString().padStart(2,'0')}:${(cd%60).toString().padStart(2,'0')}`;
+                    })()}
                   </div>
                 </div>
               </div>
 
               {/* Active requests */}
-              {activeRequests.map(req => (
-                <div key={req.id} style={{ background: '#1e293b', borderRadius: 16, padding: '12px 14px', marginBottom: 10, border: '1px solid #334155' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '1.4rem' }}>{req.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>{req.label}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
+              {activeRequests.map(req => {
+                const secElapsed = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
+                void elapsed2; // re-render trigger
+                const countdown = Math.max(0, REQUEST_TIMEOUT_SEC - secElapsed);
+                const pct = countdown / REQUEST_TIMEOUT_SEC;
+                const barColor = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                return (
+                  <div key={req.id} style={{ background: '#1e293b', borderRadius: 16, padding: '10px 14px 8px', marginBottom: 10, border: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: '1.4rem' }}>{req.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>{req.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
+                      </div>
+                      <button
+                        onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
+                        disabled={busy}
+                        style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#f87171', cursor: busy ? 'default' : 'pointer', flexShrink: 0 }}
+                      >
+                        Cancelar
+                      </button>
                     </div>
-                    <button
-                      onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
-                      disabled={busy}
-                      style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#f87171', cursor: busy ? 'default' : 'pointer', flexShrink: 0 }}
-                    >
-                      Cancelar
-                    </button>
+                    {/* Countdown bar */}
+                    <div style={{ marginTop: 8, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct * 100}%`, background: barColor, borderRadius: 4, transition: 'width 1s linear, background 0.5s' }} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
