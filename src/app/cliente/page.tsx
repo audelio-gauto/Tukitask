@@ -102,7 +102,10 @@ const TRACKING_STATUS_INFO: Record<string, { emoji: string; text: string; color:
   en_camino:           { emoji: '🚗', text: 'Técnico en camino',              color: '#22c55e' },
   llegue:              { emoji: '🔔', text: 'Técnico llegó, listo para comenzar', color: '#f59e0b' },
   en_proceso:          { emoji: '🔧', text: 'Servicio en progreso',           color: '#6366f1' },
-  completion_pending:  { emoji: '⏳', text: 'Esperando confirmación',     color: '#a78bfa' },
+  completion_pending:  { emoji: '⏳', text: 'Esperando confirmación',        color: '#a78bfa' },
+  returning:           { emoji: '↩️', text: 'El conductor solicita devolver el paquete', color: '#f97316' },
+  driver_returning:    { emoji: '🔄', text: 'El conductor va a devolverte el paquete', color: '#f59e0b' },
+  return_delivered:    { emoji: '📦', text: 'El conductor llegó a devolver el paquete', color: '#a78bfa' },
 };
 
 function getGreeting() {
@@ -270,8 +273,8 @@ export default function ClienteHomePage() {
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
 
-      const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress'];
-      const TRACKING_STS_LOAD = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress'];
+      const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
+      const TRACKING_STS_LOAD = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
       const activeOrders: Order[] = Array.isArray(ordersData)
         ? ordersData.filter((o: Order) => ALL_ACTIVE_STS.includes(o.status))
         : [];
@@ -384,7 +387,7 @@ export default function ClienteHomePage() {
   const allOffers = [...allDriverOffers, ...allJobOffers];
   const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
-  const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
+  const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
   const SEARCHING_STS = ['pending', 'negotiating'];
   const trackingOrders = orders.filter(o => TRACKING_STS.includes(o.status));
   const trackingJobs   = jobs.filter(j => TRACKING_STS.includes(j.status));
@@ -518,6 +521,45 @@ export default function ClienteHomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject_completion', jobId, clientEmail: email }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const acceptReturn = async (orderId: string) => {
+    if (busy || !email) return;
+    setActionId('accept_return_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'driver_returning' }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const rejectReturn = async (orderId: string) => {
+    if (busy || !email) return;
+    setActionId('reject_return_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'return_rejected' }),
+      });
+      loadAll();
+    } finally { setActionId(null); }
+  };
+
+  const confirmReturnReceipt = async (orderId: string) => {
+    if (busy || !email) return;
+    setActionId('confirm_return_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'returned' }),
       });
       loadAll();
     } finally { setActionId(null); }
@@ -760,6 +802,26 @@ export default function ClienteHomePage() {
                         disabled={busy}
                         style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer' }}
                       >✕ Cancelar solicitud</button>
+                    )}
+                    {/* Return: client accepts or rejects driver return request */}
+                    {item.type === 'delivery' && item.status === 'returning' && (
+                      <div>
+                        <p style={{ margin: '0 0 10px', fontSize: '0.83rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>¿Autorizas la devolución del paquete?</p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={() => rejectReturn(item.id)} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontWeight: 800, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}>❌ Rechazar</button>
+                          <button onClick={() => acceptReturn(item.id)} disabled={busy} style={{ flex: 2, padding: '13px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(245,158,11,0.5)' : 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}>↩️ Aceptar devolución</button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Return delivered: client confirms or rejects receipt */}
+                    {item.type === 'delivery' && item.status === 'return_delivered' && (
+                      <div>
+                        <p style={{ margin: '0 0 10px', fontSize: '0.83rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>¿Recibiste el paquete devuelto?</p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button onClick={() => rejectReturn(item.id)} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: '#f87171', fontWeight: 800, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}>❌ No recibí</button>
+                          <button onClick={() => confirmReturnReceipt(item.id)} disabled={busy} style={{ flex: 2, padding: '13px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}>✔ Sí, lo recibí</button>
+                        </div>
+                      </div>
                     )}
                     {/* Confirm completion */}
                     {item.type === 'service' && item.status === 'completion_pending' && (
