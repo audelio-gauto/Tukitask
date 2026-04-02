@@ -16,6 +16,25 @@ const VEHICLE_LABELS: Record<string, string> = {
   camion2t: '🚛 Camión Fletes',
 };
 
+const CARD_TIMER = 50;
+function getRemaining(createdAt: string) {
+  return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
+}
+function CountdownRing({ seconds }: { seconds: number }) {
+  const r = 14, circ = 2 * Math.PI * r;
+  const dash = circ * (seconds / CARD_TIMER);
+  const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
+  return (
+    <svg width="36" height="36" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
+      <circle cx="18" cy="18" r={r} fill="none" stroke="#1e293b" strokeWidth="3"/>
+      <circle cx="18" cy="18" r={r} fill="none" stroke={c} strokeWidth="3"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+      <text x="18" y="23" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>{seconds}</text>
+    </svg>
+  );
+}
+
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
 }
@@ -37,6 +56,7 @@ export default function DeliveriesPage() {
   const [activeJob, setActiveJob] = useState<any>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
+  const [tick, setTick] = useState(0);
 
   // Fail delivery modal state
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
@@ -51,6 +71,22 @@ export default function DeliveriesPage() {
 
   // Keep ref in sync with state
   useEffect(() => { activeJobRef.current = activeJob; }, [activeJob]);
+
+  // 1-second tick for countdown rings
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Auto-dismiss cards when timer expires and no offer was sent
+  useEffect(() => {
+    filteredOrders.forEach(o => {
+      if (!dismissedOrders.has(o.id) && !sentOffers[o.id] && getRemaining(o.created_at) === 0) {
+        handleDismiss(o.id);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]);
 
   /* ── Fetch pending/negotiating orders ── */
   const fetchOrders = useCallback(() => {
@@ -517,9 +553,10 @@ export default function DeliveriesPage() {
               const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
               const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;
               const qo_50 = Math.round(clientPrice * 1.50 / 1000) * 1000;
+              const remaining = getRemaining(req.created_at);
               return (
                 <div key={req.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
-                  {/* Row 1: photo + vehicle + client + price + dismiss */}
+                  {/* Row 1: photo + vehicle + client + price + timer + dismiss */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     {req.client_photo
                       ? <img src={req.client_photo} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #c8ff00', flexShrink: 0 }} />
@@ -537,6 +574,7 @@ export default function DeliveriesPage() {
                       <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>{clientPrice.toLocaleString()}</div>
                       <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
                     </div>
+                    {!alreadyOffered && <CountdownRing seconds={remaining} />}
                     <button onClick={() => handleDismiss(req.id)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280', borderRadius: 99, padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                   </div>
                   {/* Row 2: route */}

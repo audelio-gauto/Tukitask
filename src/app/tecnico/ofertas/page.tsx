@@ -43,6 +43,25 @@ const SERVICE_LABELS: Record<string, string> = {
   cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
 };
 
+const CARD_TIMER = 50;
+function getRemaining(createdAt: string) {
+  return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
+}
+function CountdownRing({ seconds }: { seconds: number }) {
+  const r = 14, circ = 2 * Math.PI * r;
+  const dash = circ * (seconds / CARD_TIMER);
+  const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
+  return (
+    <svg width="36" height="36" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
+      <circle cx="18" cy="18" r={r} fill="none" stroke="#1e293b" strokeWidth="3"/>
+      <circle cx="18" cy="18" r={r} fill="none" stroke={c} strokeWidth="3"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+      <text x="18" y="23" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>{seconds}</text>
+    </svg>
+  );
+}
+
 export default function OfertasPage() {
   const router = useRouter();
   const { email, profilePhoto, displayName, avgRating } = useDriverContext();
@@ -55,6 +74,7 @@ export default function OfertasPage() {
   const [lightbox, setLightbox]       = useState<string | null>(null);
   const [myPos, setMyPos]             = useState<{ lat: number; lng: number } | null>(null);
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set());
+  const [tick, setTick]               = useState(0);
 
   // GPS live position
   useEffect(() => {
@@ -147,6 +167,22 @@ export default function OfertasPage() {
     }, 60_000);
   };
 
+  // 1-second tick for countdown rings
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Auto-dismiss cards when timer expires and no offer was sent
+  useEffect(() => {
+    jobs.forEach(j => {
+      if (!dismissed.has(j.id) && !j.my_offer && getRemaining(j.created_at) === 0) {
+        dismissJob(j.id);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]);
+
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a2e', zIndex: 0 }}>
 
@@ -211,9 +247,10 @@ export default function OfertasPage() {
                 ? haversineKm(myPos.lat, myPos.lng, Number(job.lat), Number(job.lng)) : null;
               const gmapsUrl = job.lat && job.lng
                 ? `https://www.google.com/maps/dir/?api=1&destination=${job.lat},${job.lng}` : null;
+              const remaining = getRemaining(job.created_at);
               return (
                 <div key={job.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
-                  {/* Row 1: photo + service + client + price + dismiss */}
+                  {/* Row 1: photo + service + client + price + timer + dismiss */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     {job.client_photo
                       ? <img src={job.client_photo} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #c8ff00', flexShrink: 0 }} />
@@ -231,6 +268,7 @@ export default function OfertasPage() {
                       <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>{clientPrice.toLocaleString()}</div>
                       <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
                     </div>
+                    {!alreadySent && <CountdownRing seconds={remaining} />}
                     <button onClick={() => dismissJob(job.id)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280', borderRadius: 99, padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                   </div>
                   {/* Row 2: address */}

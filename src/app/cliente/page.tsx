@@ -74,6 +74,7 @@ interface UnifiedOffer {
   distanceKm: number | null;
   totalJobs: number | null;
   status: string; // pending, accepted, rejected, cancelled, expired
+  createdAt: string;
 }
 
 /* unified active request (delivery or service) */
@@ -159,7 +160,9 @@ function RadarPulse() {
   );
 }
 
-/* ─── Offer card ─────────────────────────────────────────────────────────── */
+const OFFER_TIMER = 50;
+
+/* ─── Offer card ────────────────────────────────────────────────────────────────────────────────── */
 function OfferCard({
   offer, onAccept, onReject, busy,
 }: {
@@ -168,6 +171,20 @@ function OfferCard({
   onReject: () => void;
   busy: boolean;
 }) {
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, OFFER_TIMER - Math.floor((Date.now() - new Date(offer.createdAt).getTime()) / 1000))
+  );
+  useEffect(() => {
+    if (remaining <= 0) { if (offer.status === 'pending') onReject(); return; }
+    const t = setTimeout(() => setRemaining(r => Math.max(0, r - 1)), 1000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining]);
+
+  const r2 = 14, circ2 = 2 * Math.PI * r2;
+  const timerColor = remaining > 20 ? '#22c55e' : remaining > 10 ? '#f59e0b' : '#ef4444';
+  const timerDash = circ2 * (remaining / OFFER_TIMER);
+
   const eta = offer.distanceKm != null ? Math.max(1, Math.round(offer.distanceKm * 2.5)) : null;
   const isDriver = offer.requestType === 'delivery';
   const accentColor = isDriver ? '#F5C518' : '#6366f1';
@@ -189,10 +206,19 @@ function OfferCard({
       borderRadius: 14, padding: '10px 12px',
       border: `1px solid ${accentBorder}`,
     }}>
-      {/* Row 1: status + price */}
+      {/* Row 1: status + timer ring + price */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '6px 10px', background: bg, borderRadius: 10, border: `1px solid ${color}` }}>
         <span style={{ fontSize: '0.95rem', color, fontWeight: 700 }}>{icon}</span>
         <span style={{ fontSize: '0.78rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
+        {offer.status === 'pending' && (
+          <svg width="34" height="34" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
+            <circle cx="18" cy="18" r={r2} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
+            <circle cx="18" cy="18" r={r2} fill="none" stroke={timerColor} strokeWidth="3"
+              strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
+              transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+            <text x="18" y="23" textAnchor="middle" fontSize="10" fontWeight="800" fill={timerColor}>{remaining}</text>
+          </svg>
+        )}
         <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>₲{Number(offer.price).toLocaleString()}</span>
       </div>
       {/* Row 2: photo + name + badges */}
@@ -363,21 +389,21 @@ export default function ClienteHomePage() {
 
   /* ─── Derived state ─────────────────────────────────────────────────────── */
   const allDriverOffers: UnifiedOffer[] = orders.flatMap(o =>
-    (driverOffers[o.id] ?? []).map(off => ({
+    (driverOffers[o.id] ?? []).map((off: DriverOffer & { created_at?: string }) => ({
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo,
       rating: off.driver_avg_rating ?? null,
       price: Number(off.amount), note: off.note ?? null, distanceKm: null,
       totalJobs: off.driver_total_ratings ?? null,
-      status: off.status,
+      status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
     }))
   );
   const allJobOffers: UnifiedOffer[] = jobs.flatMap(j =>
-    (jobOffers[j.id] ?? []).map(off => ({
+    (jobOffers[j.id] ?? []).map((off: TecnicoJobOffer & { created_at?: string }) => ({
       id: off.id, requestId: j.id, requestType: 'service' as const,
       name: off.tecnico_name, photo: off.tecnico_photo, rating: off.tecnico_rating,
       price: Number(off.proposed_price), note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
-      status: off.status,
+      status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
     }))
   );
 
