@@ -326,7 +326,7 @@ export default function DriverDashboard() {
   // Stats (placeholder — would come from Supabase)
   const stats = [
     { label: 'Envíos Hoy', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
-    { label: 'Tasa de Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—%', href: '#', icon: '📊', onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '#', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
   return (
@@ -650,6 +650,39 @@ export default function DriverDashboard() {
               <span className="tuki-toggle-slider" />
             </label>
           </div>
+
+          {/* Active service types chip strip */}
+          {Object.values(serviceFilters).some(v => v) && (
+            <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
+                  📦 Serv. activos · {deliveryRangeKm} km
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen(true)}
+                  style={{ background: 'none', border: 'none', color: '#C8960A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                >
+                  Editar →
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {([
+                  { key: 'moto_envios',       label: 'Moto Envíos',      icon: '🏍️' },
+                  { key: 'auto_envios',       label: 'Auto Envíos',      icon: '🚗' },
+                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes',icon: '🛵' },
+                  { key: 'camion_fletes',     label: 'Camión Fletes',    icon: '🚛' },
+                ] as { key: string; label: string; icon: string }[]).filter(s => serviceFilters[s.key]).map(s => (
+                  <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
+                    {s.icon} {s.label}
+                  </span>
+                ))}
+                {!Object.values(serviceFilters).some(v => v) && (
+                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ningún servicio activo — abrí el filtro para activar.</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="tuki-stats-grid">
