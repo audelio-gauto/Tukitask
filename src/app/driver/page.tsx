@@ -656,7 +656,7 @@ export default function DriverDashboard() {
             <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
-                  📦 Serv. activos · {deliveryRangeKm} km
+                  📦 Serv. activos · 📍{pickupRangeKm} km recogida · 🚚{deliveryRangeKm} km entrega
                 </span>
                 <button
                   type="button"
