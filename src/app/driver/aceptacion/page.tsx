@@ -25,7 +25,7 @@ export default function DriverAceptacionPage() {
     ['delivered', 'commission_charged', 'client_confirmed'].includes(o.status)
   ).length;
   const cancelled = history.filter(o =>
-    ['cancelled', 'returned', 'return_rejected'].includes(o.status)
+    ['failed', 'cancelled', 'returned', 'return_rejected'].includes(o.status)
   ).length;
   const total = delivered + cancelled;
   const tasa  = total > 0 ? Math.round((delivered / total) * 100) : null;
