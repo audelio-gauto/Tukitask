@@ -640,23 +640,26 @@ export default function ClienteHomePage() {
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: '16px 14px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {profilePhoto ? (
-            <img src={profilePhoto} alt="" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
-          ) : (
-            <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid rgba(245,197,24,0.5)', flexShrink: 0 }}>
-              {displayName?.[0]?.toUpperCase() || '👤'}
-            </div>
-          )}
+          {/* Photo + rating below */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt="" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
+            ) : (
+              <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid rgba(245,197,24,0.5)' }}>
+                {displayName?.[0]?.toUpperCase() || '👤'}
+              </div>
+            )}
+            {avgRating > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 6, padding: '1px 6px' }}>
+                <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
+                <span style={{ color: '#F5C518', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+              </div>
+            )}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{getGreeting()}</div>
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Cliente'}</div>
           </div>
-          {avgRating > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 20, padding: '5px 11px', flexShrink: 0 }}>
-              <span style={{ color: '#F5C518', fontSize: '0.85rem' }}>★</span>
-              <span style={{ color: '#F5C518', fontSize: '0.82rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
-            </div>
-          )}
           <button onClick={openDrawer} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, width: 42, height: 42, color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 16, height: 2, background: '#fff', borderRadius: 2 }} />)}
           </button>
