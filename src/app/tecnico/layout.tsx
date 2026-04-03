@@ -94,14 +94,15 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           ]);
           const profJson = await profRes.json();
           const settingsJson = await settingsRes.json();
-          if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
+          const photo2 = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo;
+          if (photo2) setProfilePhoto(photo2);
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
           if (settingsJson.settings?.avg_rating) setAvgRating(Number(settingsJson.settings.avg_rating));
           if (settingsJson.settings?.total_ratings) setTotalRatings(Number(settingsJson.settings.total_ratings));
-          const fn = profJson.profile?.first_name || '';
-          const ln = profJson.profile?.last_name  || '';
-          const full = [fn, ln].filter(Boolean).join(' ');
-          if (full) setDisplayName(full);
+          const fn2 = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
+          const ln2 = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
+          const full2 = [fn2, ln2].filter(Boolean).join(' ');
+          if (full2) setDisplayName(full2);
         } catch {}
         setChecking(false);
       } catch (err) {
