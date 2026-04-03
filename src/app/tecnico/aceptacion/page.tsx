@@ -21,11 +21,11 @@ export default function AceptacionPage() {
       .catch(() => setLoading(false));
   }, [email]);
 
-  // Last 30 jobs only
-  const last30 = history.slice(0, 30);
-  const completed = last30.filter(j => j.status === 'completed').length;
-  const cancelled  = last30.filter(j => j.status === 'cancelled').length;
-  const total      = completed + cancelled;
+  // Last 30 jobs only — status in DB is 'completado' (Spanish)
+  const last30     = history.slice(0, 30);
+  const completed  = last30.filter(j => j.status === 'completado').length;
+  const cancelled  = last30.filter(j => j.status !== 'completado').length;
+  const total      = last30.length;
   const tasa       = total > 0 ? Math.round((completed / total) * 100) : null;
 
   const ring = tasa ?? 0;
