@@ -60,7 +60,9 @@ export async function GET(req: Request) {
         .from('tecnico_jobs')
         .select('status')
         .eq('tecnico_email', email)
-        .in('status', HISTORY_STATUSES);
+        .in('status', HISTORY_STATUSES)
+        .order('created_at', { ascending: false })
+        .limit(30);
 
       let tasaAceptacion: number | null = null;
       if (history && history.length > 0) {
