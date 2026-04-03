@@ -326,7 +326,7 @@ export default function DriverDashboard() {
   // Stats (placeholder — would come from Supabase)
   const stats = [
     { label: 'Envíos Hoy', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
-    { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '#', icon: '🏆', onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
   return (
