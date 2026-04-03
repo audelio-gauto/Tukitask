@@ -265,7 +265,7 @@ export default function TecnicoDashboard() {
       localStorage.setItem('tecnico_rango_km', String(rangoKm));
     } catch {}
     if (email) {
-      fetch('/api/tecnico/settings', {
+      authFetch('/api/tecnico/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, accepted_services: serviceFilters, pickup_range: rangoKm }),
