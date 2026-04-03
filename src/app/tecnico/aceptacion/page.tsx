@@ -7,46 +7,39 @@ import { useDriverContext } from '../../driver/context';
 export default function AceptacionPage() {
   const router = useRouter();
   const { email } = useDriverContext();
-  const [stats, setStats] = useState<{
-    ofertasActivas: number;
-    citasConfirmadas: number;
-    tasaAceptacion: number | null;
-    gananciasHoy: number;
-  } | null>(null);
   const [history, setHistory] = useState<{ status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!email) return;
-    Promise.all([
-      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&stats=true`).then(r => r.json()),
-      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`).then(r => r.json()),
-    ])
-      .then(([statsRes, histRes]) => {
-        if (statsRes?.stats) setStats(statsRes.stats);
-        if (Array.isArray(histRes)) setHistory(histRes);
+    fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setHistory(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [email]);
 
-  const completed = history.filter(j => j.status === 'completed').length;
-  const cancelled  = history.filter(j => j.status === 'cancelled').length;
+  // Last 30 jobs only
+  const last30 = history.slice(0, 30);
+  const completed = last30.filter(j => j.status === 'completed').length;
+  const cancelled  = last30.filter(j => j.status === 'cancelled').length;
   const total      = completed + cancelled;
   const tasa       = total > 0 ? Math.round((completed / total) * 100) : null;
 
-  const ring = tasa !== null ? tasa : 0;
+  const ring = tasa ?? 0;
   const circumference = 2 * Math.PI * 52;
   const offset = circumference - (ring / 100) * circumference;
 
   return (
     <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: 80 }}>
-      {/* Header */}
-      <div style={{ background: '#f59e0b', color: '#fff', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
+      {/* Header — mismo estilo amarillo que driver */}
+      <div style={{ background: '#F5C518', color: '#111', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#111', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🏆 Tasa de Aceptación</h1>
-          <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85 }}>Tu rendimiento histórico</p>
+          <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.75 }}>Tu rendimiento histórico</p>
         </div>
       </div>
 
@@ -78,7 +71,7 @@ export default function AceptacionPage() {
                 <text x="70" y="84" textAnchor="middle" fontSize="11" fill="#9ca3af">aceptación</text>
               </svg>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
-                Basado en {total} {total === 1 ? 'trabajo' : 'trabajos'}
+                Basado en los últimos {total} {total === 1 ? 'trabajo' : 'trabajos'} (máx. 30)
               </p>
             </div>
 
@@ -93,21 +86,6 @@ export default function AceptacionPage() {
                 <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: 600 }}>✕ Cancelados</div>
               </div>
             </div>
-
-            {/* Activos snapshot */}
-            {stats && (
-              <div style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>
-                <h2 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>Resumen actual</h2>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem', color: '#64748b' }}>
-                  <span>Ofertas disponibles</span>
-                  <strong style={{ color: '#F5C518' }}>{stats.ofertasActivas}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  <span>Citas confirmadas</span>
-                  <strong style={{ color: '#0ea5e9' }}>{stats.citasConfirmadas}</strong>
-                </div>
-              </div>
-            )}
 
             {total === 0 && (
               <div style={{ textAlign: 'center', paddingTop: 32, color: '#9ca3af' }}>
