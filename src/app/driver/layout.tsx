@@ -50,6 +50,9 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
           if (profJson.profile?.avg_rating) setAvgRating(Number(profJson.profile.avg_rating));
           if (profJson.profile?.total_ratings) setTotalRatings(Number(profJson.profile.total_ratings));
+          if (profJson.profile?.service_filters && typeof profJson.profile.service_filters === 'object') {
+            setServiceFilters({ ...DEFAULT_FILTERS, ...profJson.profile.service_filters });
+          }
           const firstName = profJson.profile?.first_name || '';
           const lastName  = profJson.profile?.last_name  || '';
           const fullName  = [firstName, lastName].filter(Boolean).join(' ');

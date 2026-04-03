@@ -460,7 +460,20 @@ export default function DriverDashboard() {
               </div>
             </div>
 
-            <button className="driver-filter-done" onClick={() => setFilterOpen(false)}>
+            <button className="driver-filter-done" onClick={() => {
+              setFilterOpen(false);
+              // Persist to DB so settings survive refresh
+              authFetch('/api/driver-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email,
+                  pickup_range: pickupRangeKm,
+                  delivery_range: deliveryRangeKm,
+                  service_filters: serviceFilters,
+                }),
+              }).catch(() => {});
+            }}>
               Aplicar filtros
             </button>
           </div>
