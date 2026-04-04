@@ -34,7 +34,6 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       try {
         const metaRole = ((user as any)?.user_metadata?.role || (user as any)?.role || '').toString().trim().toLowerCase();
         if (metaRole) {
-          console.log('Tecnico metadata role:', metaRole);
           setRole(metaRole || null);
           if (['servicio', 'tecnico'].includes(metaRole)) {
             setDisplayName(user.email?.split('@')[0] || '');
@@ -59,8 +58,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
             return;
           }
         }
-      } catch (e) {
-        console.log('Error reading user metadata role:', e);
+      } catch {
+        // metadata role not available, fall through to server check
       }
 
       // Fallback to server-side role check
@@ -71,18 +70,11 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           body: JSON.stringify({ email: user.email }),
         });
         const json = await res.json();
-        console.log('Tecnico check-role response:', json);
         // Accept any variant of 'servicio' or 'tecnico' (case/space insensitive)
         const roleVal = (json?.role || '').toString().trim().toLowerCase();
-        console.log('Tecnico role check:', roleVal);
         setRole(roleVal || null);
         if (!['servicio', 'tecnico'].includes(roleVal)) {
-          // In dev, show debug overlay briefly before redirecting to help diagnosis
-          if (process.env.NODE_ENV !== 'production') {
-            setTimeout(() => router.push('/auth'), 1200);
-          } else {
-            router.push('/auth');
-          }
+          router.push('/auth');
           return;
         }
         setDisplayName(user.email?.split('@')[0] || '');

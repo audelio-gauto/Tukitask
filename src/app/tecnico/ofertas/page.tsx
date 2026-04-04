@@ -149,8 +149,10 @@ export default function OfertasPage() {
           ? { ...j, my_offer: { status: 'pending', proposed_price: price } } : j));
         setShowInput(null);
         setOfferNotes(n => ({ ...n, [jobId]: '' }));
+      } else {
+        alert(json.error || 'No se pudo enviar la oferta. Intentá de nuevo.');
       }
-    } catch {}
+    } catch { alert('Error de red al enviar la oferta.'); }
     finally { setSending(null); }
   };
 

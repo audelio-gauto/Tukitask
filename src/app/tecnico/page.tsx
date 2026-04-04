@@ -357,6 +357,7 @@ export default function TecnicoDashboard() {
 
   const sendPopupOffer = async () => {
     if (!pendingPopup || !email || popupSending) return;
+    if (!popupOfferPrice || popupOfferPrice <= 0) return;
     setPopupSending(true);
     try {
       const pos = tecnicoPosRef.current;

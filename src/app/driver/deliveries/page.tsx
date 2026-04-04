@@ -257,8 +257,10 @@ export default function DeliveriesPage() {
         activeJobRef.current = null;
         prevAccepted.current = false;
         prevStatusRef.current = null;
+      } else {
+        alert('Error al reportar falla. Intentá de nuevo.');
       }
-    } catch { /* */ }
+    } catch { alert('Error al reportar falla. Intentá de nuevo.'); }
     setTransitioning(false);
   };
 
@@ -279,8 +281,10 @@ export default function DeliveriesPage() {
         } else {
           setActiveJob((j: any) => j ? { ...j, status: newStatus } : j);
         }
+      } else {
+        alert('Error al actualizar estado. Intentá de nuevo.');
       }
-    } catch { /* */ }
+    } catch { alert('Error al actualizar estado. Intentá de nuevo.'); }
     setTransitioning(false);
   };
 
@@ -295,7 +299,8 @@ export default function DeliveriesPage() {
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount), note: offerNotes[orderId] || null }),
       });
       if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-    } catch { /* */ }
+      else { alert('No se pudo enviar la oferta. Intentá de nuevo.'); }
+    } catch { alert('Error de red al enviar oferta.'); }
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
@@ -308,7 +313,8 @@ export default function DeliveriesPage() {
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer, note: offerNotes[orderId] || null }),
       });
       if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-    } catch { /* */ }
+      else { alert('No se pudo aceptar el precio. Intentá de nuevo.'); }
+    } catch { alert('Error de red al aceptar precio.'); }
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
