@@ -16,6 +16,17 @@ export default function SettingsPage() {
   const [sizeSaving, setSizeSaving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  // ── PWA Icons ─────────────────────────────────────────────────────────────
+  const [pwaIcon192, setPwaIcon192]         = useState<string>('/icons/icon-192x192.png');
+  const [pwaIcon512, setPwaIcon512]         = useState<string>('/icons/icon-512x512.png');
+  const [pwaPreview192, setPwaPreview192]   = useState<string | null>(null);
+  const [pwaPreview512, setPwaPreview512]   = useState<string | null>(null);
+  const [pwaUploading192, setPwaUploading192] = useState(false);
+  const [pwaUploading512, setPwaUploading512] = useState(false);
+  const [pwaMsg, setPwaMsg]                 = useState('');
+  const pwa192Ref = useRef<HTMLInputElement>(null);
+  const pwa512Ref = useRef<HTMLInputElement>(null);
+
   const authHeaders = async (): Promise<Record<string, string>> => {
     const { data: { session } } = await supabase.auth.getSession();
     return {
@@ -28,8 +39,10 @@ export default function SettingsPage() {
     fetch('/api/admin/config')
       .then(r => r.json())
       .then(cfg => {
-        if (cfg.logo_url)  setLogoUrl(cfg.logo_url);
-        if (cfg.logo_size) setLogoSize(Number(cfg.logo_size));
+        if (cfg.logo_url)    setLogoUrl(cfg.logo_url);
+        if (cfg.logo_size)   setLogoSize(Number(cfg.logo_size));
+        if (cfg.pwa_icon_192) setPwaIcon192(cfg.pwa_icon_192);
+        if (cfg.pwa_icon_512) setPwaIcon512(cfg.pwa_icon_512);
       });
   }, []);
 
@@ -83,6 +96,46 @@ export default function SettingsPage() {
     const json = await res.json();
     setLogoMsg(json.ok ? '✅ Tamaño guardado' : `❌ ${json.error}`);
     setSizeSaving(false);
+  };
+
+  const handlePwaIcon = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    size: 192 | 512,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPwaMsg('');
+    size === 192 ? setPwaUploading192(true) : setPwaUploading512(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      // Immediate local preview
+      const previewUrl = URL.createObjectURL(file);
+      size === 192 ? setPwaPreview192(previewUrl) : setPwaPreview512(previewUrl);
+
+      const res = await fetch('/api/admin/upload-pwa-icon', {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ base64, mimeType: file.type, size }),
+      });
+      const json = await res.json();
+      if (json.url) {
+        if (size === 192) { setPwaIcon192(json.url); setPwaPreview192(json.url); }
+        else              { setPwaIcon512(json.url); setPwaPreview512(json.url); }
+        setPwaMsg(`✅ Ícono ${size}×${size} actualizado. El nuevo ícono estará activo al re-instalar la PWA.`);
+      } else {
+        setPwaMsg(`❌ ${json.error || 'Error al subir el ícono'}`);
+      }
+    } catch {
+      setPwaMsg('❌ Error al procesar el archivo');
+    }
+    size === 192 ? setPwaUploading192(false) : setPwaUploading512(false);
+    if (size === 192 && pwa192Ref.current) pwa192Ref.current.value = '';
+    if (size === 512 && pwa512Ref.current) pwa512Ref.current.value = '';
   };
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -290,6 +343,106 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* ── Iconos PWA ── */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#C8960A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Íconos de la app (PWA)
+          </h3>
+          <p className="text-xs text-gray-400 mb-5">
+            Estos íconos aparecen al instalar la app en el teléfono. Sube archivos PNG, JPG o WebP.
+            El sistema los redimensionará automáticamente a los tamaños exactos.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* 192×192 */}
+            {([192, 512] as const).map(size => {
+              const isLoading = size === 192 ? pwaUploading192 : pwaUploading512;
+              const preview   = size === 192 ? pwaPreview192 : pwaPreview512;
+              const current   = size === 192 ? pwaIcon192 : pwaIcon512;
+              const inputRef  = size === 192 ? pwa192Ref : pwa512Ref;
+              const inputId   = `pwa-icon-${size}`;
+              return (
+                <div key={size} className="flex flex-col items-center gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                  {/* Badge */}
+                  <span className="self-start text-xs font-bold text-[#C8960A] bg-[#FEF9E7] px-2 py-0.5 rounded-full">
+                    {size}×{size} px{size === 192 ? ' · Notificaciones' : ' · Splash screen'}
+                  </span>
+
+                  {/* Icon preview */}
+                  <div
+                    className="rounded-2xl border-2 border-dashed border-gray-200 bg-white flex items-center justify-center overflow-hidden shadow-sm"
+                    style={{ width: size === 192 ? 96 : 128, height: size === 192 ? 96 : 128 }}
+                  >
+                    {isLoading ? (
+                      <span className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <img
+                        src={preview || current}
+                        alt={`PWA icon ${size}`}
+                        className="w-full h-full object-contain"
+                        onError={e => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            size === 192 ? '/icons/icon-192x192.png' : '/icons/icon-512x512.png';
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Upload button */}
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    id={inputId}
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={e => handlePwaIcon(e, size)}
+                  />
+                  <label
+                    htmlFor={inputId}
+                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#F5C518] bg-[#FEF9E7] text-[#C8960A] text-sm font-semibold hover:bg-[#FDF3C0] transition-colors"
+                  >
+                    {isLoading ? (
+                      <span className="inline-block w-4 h-4 border-2 border-[#C8960A] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    )}
+                    {isLoading ? 'Procesando...' : 'Subir ícono'}
+                  </label>
+                  <span className="text-xs text-gray-400 text-center">PNG, JPG, WebP · máx 2MB</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Feedback */}
+          {pwaMsg && (
+            <div className={`mt-4 p-3 text-sm rounded-lg border ${pwaMsg.startsWith('✅')
+              ? 'bg-green-50 text-green-700 border-green-200'
+              : 'bg-red-50 text-red-700 border-red-200'}`}>
+              {pwaMsg}
+            </div>
+          )}
+
+          {/* Info note */}
+          <div className="mt-4 flex items-start gap-2 text-xs text-gray-400 bg-blue-50 border border-blue-100 rounded-lg p-3">
+            <svg className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              Los íconos se guardan en Supabase Storage y el manifest.json se sirve de forma dinámica.
+              Los usuarios que ya instalaron la app verán el nuevo ícono al actualizar la PWA.
+            </span>
           </div>
         </div>
 

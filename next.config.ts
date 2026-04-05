@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       { source: '/sw.js', destination: '/api/sw' },
       // Legacy FCM-only SW — kept for any existing registrations
       { source: '/firebase-messaging-sw.js', destination: '/api/firebase-sw' },
+      // Dynamic manifest — reads custom PWA icons from app_config
+      { source: '/manifest.json', destination: '/api/manifest' },
     ];
   },
   async headers() {
