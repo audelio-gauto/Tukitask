@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
+import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './cliente.css';
 import { ClientDrawer } from './components/ClientDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -22,37 +23,47 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/auth'); return; }
-      setEmail(user.email || '');
-      try {
-        const res = await fetch('/api/check-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
-        });
-        const json = await res.json();
-        if (json?.role !== 'cliente') { router.push('/auth'); return; }
-        setDisplayName(user.email?.split('@')[0] || '');
-        setChecking(false);
+      // getSession() reads from localStorage — no network call, very fast
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/auth'); return; }
+      const userEmail = session.user.email || '';
+      setEmail(userEmail);
 
-        // Load client profile (non-blocking)
-        fetch(`/api/client-profile?email=${encodeURIComponent(user.email || '')}`)
-          .then(r => r.json())
-          .then(data => {
-            const p = data?.profile;
-            if (p) {
-              if (p.display_name) setDisplayName(p.display_name);
-              if (p.phone) setPhone(p.phone);
-              if (p.photo_url) setProfilePhoto(p.photo_url);
-              if (p.avg_rating) setAvgRating(Number(p.avg_rating));
-              if (p.total_ratings) setTotalRatings(Number(p.total_ratings));
-            }
-          })
-          .catch(() => {});
-      } catch {
-        router.push('/auth');
+      // Fast path: role verified recently — skip network check
+      const cachedRole = getCachedRole(userEmail);
+      if (cachedRole !== 'cliente') {
+        try {
+          const res = await fetch('/api/check-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail }),
+          });
+          const json = await res.json();
+          if (json?.role !== 'cliente') { router.push('/auth'); return; }
+          setCachedRole(userEmail, json.role);
+        } catch {
+          router.push('/auth');
+          return;
+        }
       }
+
+      setDisplayName(userEmail.split('@')[0] || '');
+      setChecking(false);
+
+      // Load client profile (non-blocking — content already visible)
+      fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
+        .then(r => r.json())
+        .then(data => {
+          const p = data?.profile;
+          if (p) {
+            if (p.display_name) setDisplayName(p.display_name);
+            if (p.phone) setPhone(p.phone);
+            if (p.photo_url) setProfilePhoto(p.photo_url);
+            if (p.avg_rating) setAvgRating(Number(p.avg_rating));
+            if (p.total_ratings) setTotalRatings(Number(p.total_ratings));
+          }
+        })
+        .catch(() => {});
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import '../driver/driver.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
@@ -25,102 +26,64 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
     let mounted = true;
 
     async function checkAccess() {
-      const { data: { user } } = await supabase.auth.getUser();
+      // getSession() reads from localStorage — no network call, very fast
+      const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (!user) { router.push('/auth'); return; }
-      setEmail(user.email || '');
+      if (!session?.user) { router.push('/auth'); return; }
+      const userEmail = session.user.email || '';
+      setEmail(userEmail);
 
-      // First, try to use role stored in user metadata as a fast fallback
-      try {
-        const metaRole = ((user as any)?.user_metadata?.role || (user as any)?.role || '').toString().trim().toLowerCase();
-        if (metaRole) {
-          setRole(metaRole || null);
-          if (['servicio', 'tecnico'].includes(metaRole)) {
-            setDisplayName(user.email?.split('@')[0] || '');
-            try {
-              const [profRes, settingsRes] = await Promise.all([
-                fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`),
-                fetch(`/api/tecnico/settings?email=${encodeURIComponent(user.email || '')}`),
-              ]);
-              const profJson = await profRes.json();
-              const settingsJson = await settingsRes.json();
-              const photo = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo;
-              if (photo) setProfilePhoto(photo);
-              if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
-              if (settingsJson.settings?.avg_rating) setAvgRating(Number(settingsJson.settings.avg_rating));
-              if (settingsJson.settings?.total_ratings) setTotalRatings(Number(settingsJson.settings.total_ratings));
-              const fn = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
-              const ln = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
-              const full = [fn, ln].filter(Boolean).join(' ');
-              if (full) setDisplayName(full);
-            } catch {}
-            setChecking(false);
-            return;
-          }
-        }
-      } catch {
-        // metadata role not available, fall through to server check
-      }
-
-      // Fallback to server-side role check
-      try {
-        const res = await fetch('/api/check-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
-        });
-        const json = await res.json();
-        // Accept any variant of 'servicio' or 'tecnico' (case/space insensitive)
-        const roleVal = (json?.role || '').toString().trim().toLowerCase();
-        setRole(roleVal || null);
-        if (!['servicio', 'tecnico'].includes(roleVal)) {
+      // Fast path: role verified recently — skip network check
+      const cachedRole = getCachedRole(userEmail);
+      if (!['servicio', 'tecnico'].includes(cachedRole ?? '')) {
+        try {
+          const res = await fetch('/api/check-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail }),
+          });
+          const json = await res.json();
+          const roleVal = (json?.role || '').toString().trim().toLowerCase();
+          setRole(roleVal || null);
+          if (!['servicio', 'tecnico'].includes(roleVal)) { router.push('/auth'); return; }
+          setCachedRole(userEmail, roleVal);
+        } catch (err) {
+          console.error('Tecnico role check failed:', err);
           router.push('/auth');
           return;
         }
-        setDisplayName(user.email?.split('@')[0] || '');
-        // Try load profile photo like driver
-        try {
-          const [profRes, settingsRes] = await Promise.all([
-            fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`),
-            fetch(`/api/tecnico/settings?email=${encodeURIComponent(user.email || '')}`),
-          ]);
-          const profJson = await profRes.json();
-          const settingsJson = await settingsRes.json();
-          const photo2 = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo;
-          if (photo2) setProfilePhoto(photo2);
-          if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
-          if (settingsJson.settings?.avg_rating) setAvgRating(Number(settingsJson.settings.avg_rating));
-          if (settingsJson.settings?.total_ratings) setTotalRatings(Number(settingsJson.settings.total_ratings));
-          const fn2 = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
-          const ln2 = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
-          const full2 = [fn2, ln2].filter(Boolean).join(' ');
-          if (full2) setDisplayName(full2);
-        } catch {}
-        setChecking(false);
-      } catch (err) {
-        console.error('Tecnico role check failed:', err);
-        router.push('/auth');
+      } else {
+        setRole(cachedRole);
       }
+
+      setDisplayName(userEmail.split('@')[0] || '');
+      setChecking(false); // show content BEFORE profile load
+
+      // Load profile (non-blocking — content already visible)
+      Promise.all([
+        fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+        fetch(`/api/tecnico/settings?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      ]).then(([profJson, settingsJson]) => {
+        if (!mounted) return;
+        const photo = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo;
+        if (photo) setProfilePhoto(photo);
+        if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+        if (settingsJson.settings?.avg_rating) setAvgRating(Number(settingsJson.settings.avg_rating));
+        if (settingsJson.settings?.total_ratings) setTotalRatings(Number(settingsJson.settings.total_ratings));
+        const fn = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
+        const ln = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
+        const full = [fn, ln].filter(Boolean).join(' ');
+        if (full) setDisplayName(full);
+      }).catch(() => {});
     }
 
-    // Run initial check
     checkAccess();
 
-    // Listen for auth state changes (helps when HMR or other reloads occur)
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      try {
-        if (event === 'SIGNED_OUT') {
-          router.push('/auth');
-        } else if (event === 'SIGNED_IN') {
-          // Re-run access check when a sign-in occurs
-          checkAccess();
-        }
-      } catch (e) {
-        // ignore
-      }
+    // Only react to SIGNED_OUT — token refresh fires SIGNED_IN and caused re-auth flash
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') router.push('/auth');
     });
 
-    // Cleanup
     return () => { mounted = false; listener?.subscription?.unsubscribe?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

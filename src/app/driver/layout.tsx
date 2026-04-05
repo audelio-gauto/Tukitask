@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { DriverContext, DEFAULT_FILTERS } from './context';
 import type { ServiceFilters } from './context';
 import { supabase } from '@/lib/supabaseClient';
+import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './driver.css';
 import { DriverDrawer } from './components/DriverDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -27,23 +28,37 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/auth'); return; }
-      setEmail(user.email || '');
-      // Use API route to check role (bypasses RLS and handles case-insensitive email)
-      try {
-        const res = await fetch('/api/check-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
-        });
-        const json = await res.json();
-        if (json?.role !== 'driver') { router.push('/auth'); return; }
-        setDisplayName(user.email?.split('@')[0] || '');
-        // Load profile photo
+      // getSession() reads from localStorage — no network call, very fast
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/auth'); return; }
+      const userEmail = session.user.email || '';
+      setEmail(userEmail);
+
+      // Fast path: role verified recently — skip network check
+      const cachedRole = getCachedRole(userEmail);
+      if (cachedRole !== 'driver') {
         try {
-          const profRes = await fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
-          const profJson = await profRes.json();
+          const res = await fetch('/api/check-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail }),
+          });
+          const json = await res.json();
+          if (json?.role !== 'driver') { router.push('/auth'); return; }
+          setCachedRole(userEmail, json.role);
+        } catch {
+          router.push('/auth');
+          return;
+        }
+      }
+
+      setDisplayName(userEmail.split('@')[0] || '');
+      setChecking(false); // show content BEFORE profile load
+
+      // Load profile (non-blocking — content already visible)
+      fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
+        .then(r => r.json())
+        .then(profJson => {
           if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
           if (profJson.profile?.pickup_range) setPickupRangeKm(Number(profJson.profile.pickup_range));
@@ -57,11 +72,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           const lastName  = profJson.profile?.last_name  || '';
           const fullName  = [firstName, lastName].filter(Boolean).join(' ');
           if (fullName) setDisplayName(fullName);
-        } catch {}
-        setChecking(false);
-      } catch {
-        router.push('/auth');
-      }
+        })
+        .catch(() => {});
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
