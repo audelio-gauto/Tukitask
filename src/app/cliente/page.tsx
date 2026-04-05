@@ -280,7 +280,7 @@ export default function ClienteHomePage() {
   const [jobs,      setJobs]      = useState<ActiveJob[]>([]);
   const [driverOffers, setDriverOffers] = useState<Record<string, DriverOffer[]>>({});
   const [jobOffers,    setJobOffers]    = useState<Record<string, TecnicoJobOffer[]>>({});
-  const [acceptedDriverInfo, setAcceptedDriverInfo] = useState<Record<string, { name: string|null; photo: string|null }>>({});
+  const [acceptedDriverInfo, setAcceptedDriverInfo] = useState<Record<string, { name: string|null; photo: string|null; vehicle_label: string|null; vehicle_brand: string|null; vehicle_plate: string|null; driver_email: string|null }>>({});
   const [loading,   setLoading]   = useState(true);
   const [actionId,  setActionId]  = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -319,18 +319,37 @@ export default function ClienteHomePage() {
         const offersData = await offersRes.json();
         if (offersData && typeof offersData === 'object') {
           const pendingMap: Record<string, DriverOffer[]> = {};
-          const driverInfoMap: Record<string, { name: string|null; photo: string|null }> = {};
+          const driverInfoMap: Record<string, { name: string|null; photo: string|null; vehicle_label: string|null; vehicle_brand: string|null; vehicle_plate: string|null; driver_email: string|null }> = {};
+          const profileFetches: Promise<void>[] = [];
           for (const order of activeOrders) {
             const allOffs: DriverOffer[] = offersData[order.id] ?? [];
             pendingMap[order.id] = allOffs.filter((o: DriverOffer) => o.status === 'pending');
-            // For tracking orders, grab driver info from the accepted offer
+            // For tracking orders, grab driver info from the accepted offer + profile
             if (TRACKING_STS_LOAD.includes(order.status)) {
               const accepted = allOffs.find((o: DriverOffer) => o.status === 'accepted');
-              if (accepted) driverInfoMap[order.id] = { name: accepted.driver_name, photo: accepted.driver_photo };
+              if (accepted) {
+                driverInfoMap[order.id] = { name: accepted.driver_name, photo: accepted.driver_photo, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, driver_email: accepted.driver_email };
+                // Fetch driver profile for vehicle details
+                profileFetches.push(
+                  fetch(`/api/driver-profile?email=${encodeURIComponent(accepted.driver_email)}`)
+                    .then(r => r.json())
+                    .then(json => {
+                      const p = json?.profile;
+                      if (!p) return;
+                      const VEHICLE_LABELS_MAP: Record<string,string> = { moto: '🏍️ Moto', auto: '🚗 Auto', moto_carro: '🛵 Moto Carro', camion: '🚛 Camión' };
+                      const vmode = p.transport_mode || '';
+                      let vbrand = '';
+                      try { const vd = JSON.parse(p.vehicle_type || '{}'); vbrand = vd[vmode]?.marca || ''; } catch { vbrand = p.vehicle_type || ''; }
+                      driverInfoMap[order.id] = { ...driverInfoMap[order.id], vehicle_label: VEHICLE_LABELS_MAP[vmode] || vmode, vehicle_brand: vbrand || null, vehicle_plate: p.license_plate || null };
+                    })
+                    .catch(() => {})
+                );
+              }
             }
           }
+          await Promise.all(profileFetches);
           setDriverOffers(pendingMap);
-          setAcceptedDriverInfo(driverInfoMap);
+          setAcceptedDriverInfo({ ...driverInfoMap });
         }
       } else {
         setDriverOffers({});
@@ -829,8 +848,12 @@ export default function ClienteHomePage() {
                 ...trackingOrders.map(o => ({ type: 'delivery' as const, id: o.id, status: o.status,
                   name: acceptedDriverInfo[o.id]?.name ?? o.driver_name,
                   photo: acceptedDriverInfo[o.id]?.photo ?? o.driver_photo,
-                  rating: o.driver_rating, price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
-                ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, price: null, origin: null, dest: null, svcType: j.service_type })),
+                  rating: o.driver_rating,
+                  vehicle_label: acceptedDriverInfo[o.id]?.vehicle_label ?? null,
+                  vehicle_brand: acceptedDriverInfo[o.id]?.vehicle_brand ?? null,
+                  vehicle_plate: acceptedDriverInfo[o.id]?.vehicle_plate ?? null,
+                  price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
+                ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
                 const canCancel = ['accepted', 'assigned'].includes(item.status);
@@ -846,28 +869,63 @@ export default function ClienteHomePage() {
                         </div>
                       </div>
                     </div>
-                    {/* Provider card */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: 14, marginBottom: 12 }}>
-                      {item.photo ? (
-                        <img src={item.photo} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${info.color}` }} />
-                      ) : (
-                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: `linear-gradient(135deg,${info.color},#1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                          {item.type === 'delivery' ? '🚗' : '👷'}
+                    {/* Provider card — estilo Uber/Bolt */}
+                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, marginBottom: 12, overflow: 'hidden' }}>
+                      {/* Fila superior: foto + nombre + rating + precio */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 14px 10px' }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          {item.photo ? (
+                            <img src={item.photo} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${info.color}` }} />
+                          ) : (
+                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg,${info.color},#1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: `3px solid ${info.color}40` }}>
+                              {item.type === 'delivery' ? '🚗' : '👷'}
+                            </div>
+                          )}
+                          {/* Badge de tipo */}
+                          {item.vehicle_label && (
+                            <div style={{ position: 'absolute', bottom: -4, right: -4, background: '#0f172a', borderRadius: 99, padding: '2px 5px', fontSize: '0.7rem', border: `1px solid ${info.color}50`, whiteSpace: 'nowrap' }}>
+                              {item.vehicle_label.split(' ')[0]}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{item.name || (item.type === 'delivery' ? 'Conductor' : 'Técnico')}</div>
-                        {item.rating != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <span style={{ color: '#F5C518' }}>★</span>
-                            <span style={{ color: '#F5C518', fontWeight: 700, fontSize: '0.85rem' }}>{Number(item.rating).toFixed(1)}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 900, color: '#fff', fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {item.name || (item.type === 'delivery' ? 'Conductor' : 'Técnico')}
+                          </div>
+                          {item.rating != null && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                              {'★★★★★'.split('').map((_, i) => (
+                                <span key={i} style={{ color: i < Math.round(Number(item.rating)) ? '#F5C518' : 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>★</span>
+                              ))}
+                              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginLeft: 2 }}>{Number(item.rating).toFixed(1)}</span>
+                            </div>
+                          )}
+                        </div>
+                        {item.price != null && (
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.3rem', lineHeight: 1 }}>{Number(item.price).toLocaleString('es-PY')}</div>
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Guaraníes</div>
                           </div>
                         )}
                       </div>
-                      {item.price != null && (
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.25rem' }}>{Number(item.price).toLocaleString('es-PY')}</div>
-                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)' }}>Gs</div>
+                      {/* Fila inferior: vehículo / marca / placa */}
+                      {item.type === 'delivery' && (item.vehicle_label || item.vehicle_brand || item.vehicle_plate) && (
+                        <div style={{ display: 'flex', gap: 8, padding: '8px 14px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap' }}>
+                          {item.vehicle_label && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                              {item.vehicle_label}
+                            </span>
+                          )}
+                          {item.vehicle_brand && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                              🏷️ {item.vehicle_brand}
+                            </span>
+                          )}
+                          {item.vehicle_plate && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.78rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.05em' }}>
+                              🪪 {item.vehicle_plate}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
