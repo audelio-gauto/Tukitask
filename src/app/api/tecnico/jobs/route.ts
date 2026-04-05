@@ -70,14 +70,21 @@ export async function GET(req: Request) {
         tasaAceptacion = Math.round((completed / history.length) * 100);
       }
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      // Paraguay is UTC-4. Compute Paraguay's midnight expressed as UTC.
+      // e.g. 2026-04-05 00:00 PY = 2026-04-05 04:00 UTC
+      const PY_OFFSET_MS = 4 * 60 * 60 * 1000; // UTC-4
+      const nowInPY = new Date(Date.now() - PY_OFFSET_MS);
+      const todayStart = new Date(Date.UTC(
+        nowInPY.getUTCFullYear(), nowInPY.getUTCMonth(), nowInPY.getUTCDate(),
+        4, 0, 0, 0, // +4h to convert PY midnight → UTC
+      ));
 
       const { data: todayJobs } = await sb
         .from('tecnico_jobs')
         .select('total_price')
         .eq('tecnico_email', email)
         .eq('status', 'completado')
+        .not('completed_at', 'is', null)
         .gte('completed_at', todayStart.toISOString());
 
       const gananciasHoy = (todayJobs ?? []).reduce((sum, j) => sum + Number(j.total_price ?? 0), 0);
