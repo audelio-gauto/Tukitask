@@ -737,13 +737,13 @@ export default function DeliveriesPage() {
         myEmail={email ?? ''}
         myName={displayName}
         otherName={activeJob?.client_name ?? null}
-        otherPhoto={null}
+        otherPhoto={activeJob?.client_photo ?? null}
       />
 
       {/* ── Toast: nuevo mensaje del cliente ─────────────────────────── */}
       {chatToast && activeJob && (
         <div
-          onClick={() => { setChatToast(null); chatOpenRef.current = true; setChatUnread(0); setChatOpen(true); }}
+          onClick={() => { setChatToast(null); chatOpenRef.current = true; setChatUnread(0); setChatOpen(true); /* photo already in activeJob */ }}
           style={{
             position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
             zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,

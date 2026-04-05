@@ -78,9 +78,10 @@ export default function OfertasPage() {
   const [tick, setTick]               = useState(0);
 
   // Chat state
-  const [chatOpen, setChatOpen]     = useState(false);
-  const [chatJobId, setChatJobId]   = useState<string | undefined>(undefined);
-  const [chatOtherName, setChatOtherName] = useState<string | null>(null);
+  const [chatOpen, setChatOpen]         = useState(false);
+  const [chatJobId, setChatJobId]       = useState<string | undefined>(undefined);
+  const [chatOtherName, setChatOtherName]   = useState<string | null>(null);
+  const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
   const [chatUnread, setChatUnread] = useState<Record<string, number>>({});
   const [chatToast, setChatToast] = useState<{ jobId: string; from: string | null; text: string } | null>(null);
   const chatOpenJobRef = useRef<string | null>(null);
@@ -349,7 +350,7 @@ export default function OfertasPage() {
                             onClick={() => {
                               chatOpenJobRef.current = job.id;
                               setChatUnread(prev => ({ ...prev, [job.id]: 0 }));
-                              setChatJobId(job.id); setChatOtherName(job.client_name); setChatOpen(true);
+                              setChatJobId(job.id); setChatOtherName(job.client_name); setChatOtherPhoto(job.client_photo); setChatOpen(true);
                             }}
                             style={{
                               padding: '3px 10px', borderRadius: 8,
@@ -420,7 +421,7 @@ export default function OfertasPage() {
         myEmail={email ?? ''}
         myName={displayName}
         otherName={chatOtherName}
-        otherPhoto={null}
+        otherPhoto={chatOtherPhoto}
       />
 
       {/* ── Toast: nuevo mensaje del cliente ──────────────────────── */}
@@ -433,6 +434,7 @@ export default function OfertasPage() {
             const j = jobs.find(x => x.id === chatToast.jobId);
             setChatJobId(chatToast.jobId);
             setChatOtherName(j?.client_name ?? chatToast.from);
+            setChatOtherPhoto(j?.client_photo ?? null);
             setChatOpen(true);
           }}
           style={{
