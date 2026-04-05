@@ -392,10 +392,10 @@ export default function TecnicoDashboard() {
 
   const stats = [
     {
-      label: 'Ofertas Activas',
-      value: statsLoading ? '…' : statsData.ofertasActivas,
+      label: 'Pedidos',
+      value: statsLoading ? '…' : statsData.ofertasActivas + statsData.citasConfirmadas,
       href: '/tecnico/ofertas',
-      icon: '🎁',
+      icon: '📋',
     },
     {
       label: 'Citas Confirmadas',

@@ -75,6 +75,7 @@ export default function DriverDashboard() {
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalShipments, setTotalShipments] = useState(0);
+  const [activeOrderCount, setActiveOrderCount] = useState(0);
   const [showEarnings, setShowEarnings] = useState(false);
   const [earningsPeriod, setEarningsPeriod] = useState<'dia' | 'semana' | 'mes' | 'año'>('dia');
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
@@ -152,9 +153,12 @@ export default function DriverDashboard() {
 
           // For earnings: include delivered + commission_charged + client_confirmed + returned
           const earnable = data.filter(o => [...DELIVERED_STATUSES, 'returned'].includes(o.status));
+          const ACTIVE_DRIVER_STATUSES = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+          const activeOrders = data.filter(o => ACTIVE_DRIVER_STATUSES.includes(o.status));
           setDeliveredCount(deliveredToday.length);
           setFailedCount(failedToday.length);
           setTotalShipments(totalToday.length);
+          setActiveOrderCount(activeOrders.length);
           const total = delivered.length + failed.length;
           setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
 
@@ -326,7 +330,7 @@ export default function DriverDashboard() {
 
   // Stats (placeholder — would come from Supabase)
   const stats = [
-    { label: 'Envíos Hoy', value: totalShipments, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
+    { label: 'Pedidos', value: pendingCount + activeOrderCount, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
     { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
