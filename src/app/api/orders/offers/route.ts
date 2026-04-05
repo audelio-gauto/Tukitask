@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       .from('driver_offers')
       .select('*')
       .in('order_id', ids)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'accepted'])   // accepted needed for tracking card
       .order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
