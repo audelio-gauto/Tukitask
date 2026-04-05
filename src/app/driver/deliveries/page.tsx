@@ -66,6 +66,10 @@ export default function DeliveriesPage() {
 
   // Chat state
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  const [chatToast, setChatToast] = useState<{ from: string | null; text: string } | null>(null);
+  const chatOpenRef = useRef(false);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prevOrderIds = useRef<Set<string>>(new Set());
   const prevAccepted = useRef(false);
@@ -207,6 +211,37 @@ export default function DeliveriesPage() {
       supabase.removeChannel(ch);
     };
   }, [email, fetchOrders, fetchActiveJob, fetchMyOffers]);
+
+  /* ── Chat: conteo de no leídos + Realtime para el badge ── */
+  useEffect(() => {
+    if (!email || !activeJob?.id) { setChatUnread(0); return; }
+    const orderId = activeJob.id;
+
+    // Carga inicial
+    authFetch(`/api/chat?order_id=${orderId}&count=1`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.unread > 0) setChatUnread(d.unread); })
+      .catch(() => {});
+
+    // Realtime
+    const ch = supabase
+      .channel(`chat-badge-driver-${orderId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `order_id=eq.${orderId}`,
+      } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+        const msg = payload.new;
+        if (msg.sender_email === email) return;
+        if (chatOpenRef.current) return;
+        setChatUnread(u => u + 1);
+        if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+        setChatToast({ from: msg.sender_name, text: msg.content.slice(0, 70) });
+        chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
+  }, [email, activeJob?.id]);
 
   const filteredOrders = useMemo(() =>
     orders.filter(o => { const fk = VEHICLE_TO_FILTER[o.vehicle_type]; return !fk || serviceFilters[fk]; }),
@@ -485,17 +520,24 @@ export default function DeliveriesPage() {
 
           {/* ── Chat button ── */}
           <button
-            onClick={() => setChatOpen(true)}
+            onClick={() => { chatOpenRef.current = true; setChatUnread(0); setChatOpen(true); }}
             style={{
               width: '100%', padding: '11px 0', borderRadius: 14, marginBottom: 10,
-              border: '1px solid rgba(34,197,94,0.4)',
-              background: 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
+              border: `1px solid ${chatUnread > 0 ? 'rgba(34,197,94,0.7)' : 'rgba(34,197,94,0.4)'}`,
+              background: chatUnread > 0
+                ? 'linear-gradient(135deg,rgba(34,197,94,0.25),rgba(22,163,74,0.15))'
+                : 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
               color: '#4ade80', fontWeight: 800, fontSize: '0.9rem',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
             <span style={{ fontSize: '1.1rem' }}>💬</span>
             Chatear con el cliente
+            {chatUnread > 0 && (
+              <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 800, lineHeight: 1.5 }}>
+                {chatUnread}
+              </span>
+            )}
           </button>
 
           {/* Action button */}
@@ -690,13 +732,42 @@ export default function DeliveriesPage() {
       {/* ── Chat Modal ─────────────────────────────────────────────────── */}
       <ChatModal
         open={chatOpen}
-        onClose={() => setChatOpen(false)}
+        onClose={() => { chatOpenRef.current = false; setChatOpen(false); }}
         orderId={activeJob?.id}
         myEmail={email ?? ''}
         myName={displayName}
         otherName={activeJob?.client_name ?? null}
         otherPhoto={null}
       />
+
+      {/* ── Toast: nuevo mensaje del cliente ─────────────────────────── */}
+      {chatToast && activeJob && (
+        <div
+          onClick={() => { setChatToast(null); chatOpenRef.current = true; setChatUnread(0); setChatOpen(true); }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+            animation: 'slideUp 0.3s ease',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · CLIENTE</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
     </div>
   );
 }

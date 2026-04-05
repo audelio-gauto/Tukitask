@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useDriverContext } from '../../driver/context';
@@ -81,6 +81,10 @@ export default function OfertasPage() {
   const [chatOpen, setChatOpen]     = useState(false);
   const [chatJobId, setChatJobId]   = useState<string | undefined>(undefined);
   const [chatOtherName, setChatOtherName] = useState<string | null>(null);
+  const [chatUnread, setChatUnread] = useState<Record<string, number>>({});
+  const [chatToast, setChatToast] = useState<{ jobId: string; from: string | null; text: string } | null>(null);
+  const chatOpenJobRef = useRef<string | null>(null);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // GPS live position
   useEffect(() => {
@@ -128,6 +132,45 @@ export default function OfertasPage() {
       supabase.removeChannel(ch);
     };
   }, [loadOffers]);
+
+  /* ── Chat: badge de no leídos por trabajo aceptado ── */
+  useEffect(() => {
+    if (!email) return;
+    const acceptedJobs = jobs.filter(j => j.my_offer?.status === 'accepted');
+    if (acceptedJobs.length === 0) return;
+
+    // Carga inicial de conteos
+    acceptedJobs.forEach(async j => {
+      try {
+        const r = await authFetch(`/api/chat?job_id=${j.id}&count=1`);
+        if (r.ok) { const { unread } = await r.json(); if (unread > 0) setChatUnread(prev => ({ ...prev, [j.id]: unread })); }
+      } catch { /* ignorar */ }
+    });
+
+    // Suscripciones Realtime
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    acceptedJobs.forEach(j => {
+      const ch = supabase
+        .channel(`chat-badge-tecnico-${j.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'chat_messages',
+          filter: `job_id=eq.${j.id}`,
+        } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+          const msg = payload.new;
+          if (msg.sender_email === email) return;
+          if (chatOpenJobRef.current === j.id) return;
+          setChatUnread(prev => ({ ...prev, [j.id]: (prev[j.id] ?? 0) + 1 }));
+          if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+          setChatToast({ jobId: j.id, from: msg.sender_name, text: msg.content.slice(0, 70) });
+          chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+        })
+        .subscribe();
+      channels.push(ch);
+    });
+
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, email]);
 
   const sendOffer = async (jobId: string, directPrice?: number) => {
     if (!email || sending) return;
@@ -303,9 +346,26 @@ export default function OfertasPage() {
                         {status === 'accepted' && gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '3px 8px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '0.72rem', textDecoration: 'none', flexShrink: 0 }}>🧭 Ir</a>}
                         {status === 'accepted' && (
                           <button
-                            onClick={() => { setChatJobId(job.id); setChatOtherName(job.client_name); setChatOpen(true); }}
-                            style={{ padding: '3px 8px', borderRadius: 8, background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
-                          >💬 Chat</button>
+                            onClick={() => {
+                              chatOpenJobRef.current = job.id;
+                              setChatUnread(prev => ({ ...prev, [job.id]: 0 }));
+                              setChatJobId(job.id); setChatOtherName(job.client_name); setChatOpen(true);
+                            }}
+                            style={{
+                              padding: '3px 10px', borderRadius: 8,
+                              background: (chatUnread[job.id] ?? 0) > 0 ? 'rgba(34,197,94,0.35)' : 'rgba(34,197,94,0.2)',
+                              border: `1px solid ${(chatUnread[job.id] ?? 0) > 0 ? 'rgba(34,197,94,0.7)' : 'rgba(34,197,94,0.4)'}`,
+                              color: '#4ade80', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0,
+                              display: 'flex', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            💬 Chat
+                            {(chatUnread[job.id] ?? 0) > 0 && (
+                              <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 800 }}>
+                                {chatUnread[job.id]}
+                              </span>
+                            )}
+                          </button>
                         )}
                       </div>
                     );
@@ -355,13 +415,49 @@ export default function OfertasPage() {
       {/* ── Chat Modal ─────────────────────────────────────────────── */}
       <ChatModal
         open={chatOpen}
-        onClose={() => setChatOpen(false)}
+        onClose={() => { chatOpenJobRef.current = null; setChatOpen(false); }}
         jobId={chatJobId}
         myEmail={email ?? ''}
         myName={displayName}
         otherName={chatOtherName}
         otherPhoto={null}
       />
+
+      {/* ── Toast: nuevo mensaje del cliente ──────────────────────── */}
+      {chatToast && (
+        <div
+          onClick={() => {
+            setChatToast(null);
+            chatOpenJobRef.current = chatToast.jobId;
+            setChatUnread(prev => ({ ...prev, [chatToast.jobId]: 0 }));
+            const j = jobs.find(x => x.id === chatToast.jobId);
+            setChatJobId(chatToast.jobId);
+            setChatOtherName(j?.client_name ?? chatToast.from);
+            setChatOpen(true);
+          }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · CLIENTE</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightbox && (

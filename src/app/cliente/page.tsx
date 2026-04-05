@@ -298,13 +298,26 @@ export default function ClienteHomePage() {
   const [chatJobId,      setChatJobId]      = useState<string | undefined>(undefined);
   const [chatOtherName,  setChatOtherName]  = useState<string | null>(null);
   const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
+  const [unreadChats,    setUnreadChats]    = useState<Record<string, number>>({});
+  const [chatToast, setChatToast] = useState<{ id: string; isJob: boolean; from: string | null; text: string } | null>(null);
+  const currentChatIdRef = useRef<string | null>(null);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openChat = useCallback((params: { orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null }) => {
+    const id = params.orderId || params.jobId || null;
+    currentChatIdRef.current = id;
+    if (id) setUnreadChats(prev => ({ ...prev, [id]: 0 }));
+    setChatToast(prev => prev && prev.id === id ? null : prev);
     setChatOrderId(params.orderId);
     setChatJobId(params.jobId);
     setChatOtherName(params.otherName);
     setChatOtherPhoto(params.otherPhoto);
     setChatOpen(true);
+  }, []);
+
+  const closeChat = useCallback(() => {
+    currentChatIdRef.current = null;
+    setChatOpen(false);
   }, []);
 
   /* ─── Data loading ──────────────────────────────────────────────────────── */
@@ -413,6 +426,64 @@ export default function ClienteHomePage() {
       if (ch) supabase.removeChannel(ch);
     };
   }, [loadAll]);
+
+  /* ─── Chat: carga contadores iniciales + suscripción Realtime ───────────── */
+  useEffect(() => {
+    if (!email) return;
+    const TRACKING_ST = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress',
+      'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
+    const tOrders = orders.filter(o => TRACKING_ST.includes(o.status));
+    const tJobs   = jobs.filter(j => TRACKING_ST.includes(j.status));
+    if (tOrders.length === 0 && tJobs.length === 0) return;
+
+    // Carga inicial de mensajes no leídos para mostrar el badge
+    const loadCounts = async () => {
+      await Promise.all([
+        ...tOrders.map(async o => {
+          try {
+            const r = await authFetch(`/api/chat?order_id=${o.id}&count=1`);
+            if (r.ok) { const { unread } = await r.json(); if (unread > 0) setUnreadChats(prev => ({ ...prev, [o.id]: unread })); }
+          } catch { /* ignorar */ }
+        }),
+        ...tJobs.map(async j => {
+          try {
+            const r = await authFetch(`/api/chat?job_id=${j.id}&count=1`);
+            if (r.ok) { const { unread } = await r.json(); if (unread > 0) setUnreadChats(prev => ({ ...prev, [j.id]: unread })); }
+          } catch { /* ignorar */ }
+        }),
+      ]);
+    };
+    loadCounts();
+
+    // Suscripción Realtime: una por order/job activo
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    const allItems = [
+      ...tOrders.map(o => ({ id: o.id, isJob: false })),
+      ...tJobs.map(j => ({ id: j.id, isJob: true })),
+    ];
+    allItems.forEach(({ id, isJob }) => {
+      const filter = isJob ? `job_id=eq.${id}` : `order_id=eq.${id}`;
+      const ch = supabase
+        .channel(`chat-badge-${id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'chat_messages', filter,
+        } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+          const msg = payload.new;
+          if (msg.sender_email === email) return;
+          if (currentChatIdRef.current === id) return; // ya está abierto
+          setUnreadChats(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+          // Toast de notificación
+          if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+          setChatToast({ id, isJob, from: msg.sender_name, text: msg.content.slice(0, 70) });
+          chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+        })
+        .subscribe();
+      channels.push(ch);
+    });
+
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, jobs, email]);
 
   /* ─── Elapsed timer for searching state ────────────────────────────────── */
   useEffect(() => {
@@ -962,14 +1033,21 @@ export default function ClienteHomePage() {
                       })}
                       style={{
                         width: '100%', padding: '12px 0', borderRadius: 14, marginBottom: 10,
-                        border: '1px solid rgba(34,197,94,0.4)',
-                        background: 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
+                        border: `1px solid ${(unreadChats[item.id] ?? 0) > 0 ? 'rgba(34,197,94,0.7)' : 'rgba(34,197,94,0.4)'}`,
+                        background: (unreadChats[item.id] ?? 0) > 0
+                          ? 'linear-gradient(135deg,rgba(34,197,94,0.25),rgba(22,163,74,0.15))'
+                          : 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
                         color: '#4ade80', fontWeight: 800, fontSize: '0.9rem',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       }}
                     >
                       <span style={{ fontSize: '1.1rem' }}>💬</span>
                       Chatear con {item.type === 'delivery' ? 'el conductor' : 'el técnico'}
+                      {(unreadChats[item.id] ?? 0) > 0 && (
+                        <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 800, lineHeight: 1.5 }}>
+                          {unreadChats[item.id]}
+                        </span>
+                      )}
                     </button>
                     {/* Cancel */}
                     {canCancel && (
@@ -1147,7 +1225,7 @@ export default function ClienteHomePage() {
       {/* ── Chat Modal ───────────────────────────────────────────────────── */}
       <ChatModal
         open={chatOpen}
-        onClose={() => setChatOpen(false)}
+        onClose={closeChat}
         orderId={chatOrderId}
         jobId={chatJobId}
         myEmail={email ?? ''}
@@ -1155,6 +1233,45 @@ export default function ClienteHomePage() {
         otherName={chatOtherName}
         otherPhoto={chatOtherPhoto}
       />
+
+      {/* ── Toast: nuevo mensaje recibido ────────────────────────────────── */}
+      {chatToast && (
+        <div
+          onClick={() => {
+            setChatToast(null);
+            openChat({
+              orderId:    chatToast.isJob ? undefined : chatToast.id,
+              jobId:      chatToast.isJob ? chatToast.id : undefined,
+              otherName:  chatToast.from,
+              otherPhoto: null,
+            });
+          }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+            animation: 'fadeInDown 0.3s ease',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>
+              NUEVO MENSAJE · {chatToast.isJob ? 'TÉCNICO' : 'CONDUCTOR'}
+            </div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
     </div>
   );
 }

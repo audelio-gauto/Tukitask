@@ -29,6 +29,17 @@ export async function GET(req: Request) {
     const isParticipant = order.client_email === user.email || order.accepted_by === user.email;
     if (!isParticipant) return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
 
+    // ?count=1 → solo devuelve el nro de mensajes no leídos (para el badge)
+    if (searchParams.get('count') === '1') {
+      const { count } = await db()
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('order_id', orderId)
+        .neq('sender_email', user.email)
+        .is('read_at', null);
+      return NextResponse.json({ unread: count ?? 0 });
+    }
+
     const { data, error } = await db()
       .from('chat_messages')
       .select('id, created_at, sender_email, sender_name, sender_role, content, read_at')
@@ -48,6 +59,16 @@ export async function GET(req: Request) {
     if (!job) return NextResponse.json({ error: 'Trabajo no encontrado' }, { status: 404 });
     const isParticipant = job.client_email === user.email || job.tecnico_email === user.email;
     if (!isParticipant) return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
+
+    if (searchParams.get('count') === '1') {
+      const { count } = await db()
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('job_id', jobId)
+        .neq('sender_email', user.email)
+        .is('read_at', null);
+      return NextResponse.json({ unread: count ?? 0 });
+    }
 
     const { data, error } = await db()
       .from('chat_messages')
