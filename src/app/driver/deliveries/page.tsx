@@ -159,7 +159,7 @@ export default function DeliveriesPage() {
   // Initial load + lazy fallback polling (realtime is primary)
   useEffect(() => {
     fetchOrders(); fetchMyOffers(); fetchActiveJob();
-    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 20_000);
+    const iv = setInterval(() => { fetchOrders(); fetchMyOffers(); fetchActiveJob(); }, 8_000);
     return () => clearInterval(iv);
   }, [fetchOrders, fetchMyOffers, fetchActiveJob]);
 

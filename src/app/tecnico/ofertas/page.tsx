@@ -107,8 +107,8 @@ export default function OfertasPage() {
 
   useEffect(() => {
     loadOffers();
-    // Fallback polling at 60s; realtime is primary
-    const iv = setInterval(loadOffers, 20_000);
+    // Fallback polling at 8s — primary signal is realtime INSERT on tecnico_jobs
+    const iv = setInterval(loadOffers, 8_000);
 
     // Realtime: new pending jobs + offer status changes
     const ch = supabase.channel('tecnico-ofertas-marketplace')

@@ -305,7 +305,7 @@ export default function TecnicoDashboard() {
     if (!available || !email) return;
     const check = async () => {
       try {
-        const res  = await fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`);
+        const res  = await authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`);
         const jobs = await res.json();
         if (!Array.isArray(jobs)) return;
         // Only show jobs not yet seen and where no offer was sent
@@ -329,8 +329,8 @@ export default function TecnicoDashboard() {
       } catch { /* ignore */ }
     };
     check();
-    // Fallback polling at 60s; realtime INSERT on tecnico_jobs is primary
-    const iv = setInterval(check, 60_000);
+    // Fallback polling at 8s — primary signal is realtime INSERT on tecnico_jobs
+    const iv = setInterval(check, 8_000);
 
     // Re-check immediately when tecnico returns to app (notification tap)
     const onVisible = () => { if (document.visibilityState === 'visible') check(); };
