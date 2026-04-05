@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import ChatModal from '@/components/ChatModal';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
@@ -290,6 +291,21 @@ export default function ClienteHomePage() {
   const locateRef = useRef<(() => void) | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoExpiredRef = useRef(new Set<string>());
+
+  // Chat state
+  const [chatOpen,       setChatOpen]       = useState(false);
+  const [chatOrderId,    setChatOrderId]    = useState<string | undefined>(undefined);
+  const [chatJobId,      setChatJobId]      = useState<string | undefined>(undefined);
+  const [chatOtherName,  setChatOtherName]  = useState<string | null>(null);
+  const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
+
+  const openChat = useCallback((params: { orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null }) => {
+    setChatOrderId(params.orderId);
+    setChatJobId(params.jobId);
+    setChatOtherName(params.otherName);
+    setChatOtherPhoto(params.otherPhoto);
+    setChatOpen(true);
+  }, []);
 
   /* ─── Data loading ──────────────────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
@@ -936,6 +952,25 @@ export default function ClienteHomePage() {
                         {item.dest   && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>🏁 {item.dest}</div>}
                       </div>
                     )}
+                    {/* ── Chat button ── */}
+                    <button
+                      onClick={() => openChat({
+                        orderId:    item.type === 'delivery' ? item.id : undefined,
+                        jobId:      item.type === 'service'  ? item.id : undefined,
+                        otherName:  item.name,
+                        otherPhoto: item.photo,
+                      })}
+                      style={{
+                        width: '100%', padding: '12px 0', borderRadius: 14, marginBottom: 10,
+                        border: '1px solid rgba(34,197,94,0.4)',
+                        background: 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
+                        color: '#4ade80', fontWeight: 800, fontSize: '0.9rem',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>💬</span>
+                      Chatear con {item.type === 'delivery' ? 'el conductor' : 'el técnico'}
+                    </button>
                     {/* Cancel */}
                     {canCancel && (
                       <button
@@ -1108,6 +1143,18 @@ export default function ClienteHomePage() {
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600 }}>Cargando…</span>
         </div>
       )}
+
+      {/* ── Chat Modal ───────────────────────────────────────────────────── */}
+      <ChatModal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        orderId={chatOrderId}
+        jobId={chatJobId}
+        myEmail={email ?? ''}
+        myName={displayName}
+        otherName={chatOtherName}
+        otherPhoto={chatOtherPhoto}
+      />
     </div>
   );
 }

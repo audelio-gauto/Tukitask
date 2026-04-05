@@ -6,6 +6,7 @@ import { useDriverContext, VEHICLE_TO_FILTER } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { playNewOrderAlert, playAccepted } from '@/lib/audio';
+import ChatModal from '@/components/ChatModal';
 
 const DriverMap = dynamic(() => import('../components/DriverMap'), { ssr: false });
 
@@ -62,6 +63,9 @@ export default function DeliveriesPage() {
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
   const [showFailReason, setShowFailReason] = useState(false);
   const [failReason, setFailReason] = useState('');
+
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
 
   const prevOrderIds = useRef<Set<string>>(new Set());
   const prevAccepted = useRef(false);
@@ -479,6 +483,21 @@ export default function DeliveriesPage() {
             </div>
           )}
 
+          {/* ── Chat button ── */}
+          <button
+            onClick={() => setChatOpen(true)}
+            style={{
+              width: '100%', padding: '11px 0', borderRadius: 14, marginBottom: 10,
+              border: '1px solid rgba(34,197,94,0.4)',
+              background: 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
+              color: '#4ade80', fontWeight: 800, fontSize: '0.9rem',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>💬</span>
+            Chatear con el cliente
+          </button>
+
           {/* Action button */}
           {activeJob.status === 'accepted' && (
             <button onClick={() => handleTransition(activeJob.id, 'picking_up')} disabled={transitioning}
@@ -667,6 +686,17 @@ export default function DeliveriesPage() {
           <div style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 6 }}>Las nuevas solicitudes aparecerán aquí automáticamente</div>
         </div>
       )}
+
+      {/* ── Chat Modal ─────────────────────────────────────────────────── */}
+      <ChatModal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        orderId={activeJob?.id}
+        myEmail={email ?? ''}
+        myName={displayName}
+        otherName={activeJob?.client_name ?? null}
+        otherPhoto={null}
+      />
     </div>
   );
 }

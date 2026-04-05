@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useDriverContext } from '../../driver/context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import ChatModal from '@/components/ChatModal';
 
 const DriverMap = dynamic(() => import('../../driver/components/DriverMap'), { ssr: false });
 
@@ -75,6 +76,11 @@ export default function OfertasPage() {
   const [myPos, setMyPos]             = useState<{ lat: number; lng: number } | null>(null);
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set());
   const [tick, setTick]               = useState(0);
+
+  // Chat state
+  const [chatOpen, setChatOpen]     = useState(false);
+  const [chatJobId, setChatJobId]   = useState<string | undefined>(undefined);
+  const [chatOtherName, setChatOtherName] = useState<string | null>(null);
 
   // GPS live position
   useEffect(() => {
@@ -295,6 +301,12 @@ export default function OfertasPage() {
                         <span style={{ fontSize: '0.8rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
                         <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '0.95rem' }}>₲{Number(job.my_offer!.proposed_price).toLocaleString()}</span>
                         {status === 'accepted' && gmapsUrl && <a href={gmapsUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '3px 8px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, fontSize: '0.72rem', textDecoration: 'none', flexShrink: 0 }}>🧭 Ir</a>}
+                        {status === 'accepted' && (
+                          <button
+                            onClick={() => { setChatJobId(job.id); setChatOtherName(job.client_name); setChatOpen(true); }}
+                            style={{ padding: '3px 8px', borderRadius: 8, background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
+                          >💬 Chat</button>
+                        )}
                       </div>
                     );
                   })() : isOpen ? (
@@ -339,6 +351,17 @@ export default function OfertasPage() {
           <div style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 6 }}>Las solicitudes que coincidan con tu perfil aparecerán acá</div>
         </div>
       )}
+
+      {/* ── Chat Modal ─────────────────────────────────────────────── */}
+      <ChatModal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        jobId={chatJobId}
+        myEmail={email ?? ''}
+        myName={displayName}
+        otherName={chatOtherName}
+        otherPhoto={null}
+      />
 
       {/* Lightbox */}
       {lightbox && (
