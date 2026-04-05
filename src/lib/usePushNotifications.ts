@@ -13,7 +13,7 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { getFirebaseMessaging, VAPID_KEY } from '@/lib/firebase';
 import { authFetch } from '@/lib/authFetch';
 
-const SW_PATH = '/firebase-messaging-sw.js';
+const SW_PATH = '/sw.js'; // combined PWA + FCM service worker
 
 export function usePushNotifications(userEmail: string | undefined) {
   const registeredRef = useRef(false);

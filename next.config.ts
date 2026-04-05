@@ -14,7 +14,9 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      // Serve the FCM service worker from a dynamic route so env vars can be injected
+      // Combined service worker (PWA caching + FCM notifications)
+      { source: '/sw.js', destination: '/api/sw' },
+      // Legacy FCM-only SW — kept for any existing registrations
       { source: '/firebase-messaging-sw.js', destination: '/api/firebase-sw' },
     ];
   },
@@ -25,12 +27,29 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        // Allow SW to control the full origin scope
+        // Combined service worker — controls full origin scope
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+          { key: 'Cache-Control', value: 'no-store, no-cache' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        // Legacy FCM SW
         source: '/firebase-messaging-sw.js',
         headers: [
           { key: 'Content-Type', value: 'application/javascript' },
           { key: 'Service-Worker-Allowed', value: '/' },
           { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
+        // Icons are immutable — aggressive caching
+        source: '/icons/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
     ];

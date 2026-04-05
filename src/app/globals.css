@@ -6,6 +6,11 @@
   --brand-primary: #F5C518;
   --brand-accent: #F58A07;
   --brand-dark: #E6A800;
+  /* Safe-area insets (for iOS notch / home indicator) */
+  --sat: env(safe-area-inset-top,    0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left,   0px);
+  --sar: env(safe-area-inset-right,  0px);
 }
 
 @theme inline {
@@ -22,8 +27,65 @@
   }
 }
 
+/* ── Prevent overscroll / rubber-band on iOS (native-like) ─────────────── */
+html {
+  height: 100%;
+  /* Prevent iOS elastic scroll bounce on the root */
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Prevent pull-to-refresh and overscroll glow */
+  overscroll-behavior: none;
+  /* Smooth text on mobile */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent text size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Safe area padding bottom so content is not hidden by home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ── Remove highlight tap flicker ──────────────────────────────────────── */
+a, button, [role="button"], input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Scrollable containers: smooth momentum scroll on iOS ──────────────── */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Prevent accidental text selection during swipe gestures ───────────── */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── PWA Install Prompt slide-up animation ─────────────────────────────── */
+@keyframes tuki-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Hide scrollbar visually but keep scroll functionality ─────────────── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Input focus: prevent iOS zoom on font-size < 16px ─────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+select,
+textarea {
+  font-size: max(16px, 1em);
+}
+
