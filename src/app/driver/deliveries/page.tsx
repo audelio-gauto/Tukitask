@@ -299,8 +299,12 @@ export default function DeliveriesPage() {
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount), note: offerNotes[orderId] || null }),
       });
       if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-      else { alert('No se pudo enviar la oferta. Intentá de nuevo.'); }
-    } catch { alert('Error de red al enviar oferta.'); }
+      else {
+        let msg = 'No se pudo enviar la oferta.';
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
+        alert(msg);
+      }
+    } catch { alert('Error de red al enviar oferta. Verificá tu conexión.'); }
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
@@ -313,8 +317,12 @@ export default function DeliveriesPage() {
         body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer, note: offerNotes[orderId] || null }),
       });
       if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-      else { alert('No se pudo aceptar el precio. Intentá de nuevo.'); }
-    } catch { alert('Error de red al aceptar precio.'); }
+      else {
+        let msg = 'No se pudo aceptar el precio.';
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
+        alert(msg);
+      }
+    } catch { alert('Error de red al aceptar precio. Verificá tu conexión.'); }
     setSending(s => ({ ...s, [orderId]: false }));
   };
 

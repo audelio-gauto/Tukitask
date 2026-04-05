@@ -78,10 +78,10 @@ export async function GET(req: Request) {
 import { emitNotification } from '@/lib/notificationEmitter';
 export async function POST(req: Request) {
 
-  // Rate limit por IP+endpoint
+  // Rate limit por IP+endpoint — 30 ofertas por minuto por IP (negociación activa puede enviar varias)
   const ip = req.headers.get('x-forwarded-for') || 'local';
-  const allowed = await allowRequest(`rl:offers:post:${ip}`, 10, 60);
-  if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  const allowed = await allowRequest(`rl:offers:post:${ip}`, 30, 60);
+  if (!allowed) return NextResponse.json({ error: 'Demasiadas ofertas en poco tiempo. Esperá un momento.' }, { status: 429 });
 
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
