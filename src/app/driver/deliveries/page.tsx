@@ -288,21 +288,45 @@ export default function DeliveriesPage() {
     setTransitioning(false);
   };
 
+  // Helper: POST oferta y manejar todos los casos de error con mensajes claros
+  const postOffer = async (orderId: string, amount: number, note: string | null): Promise<boolean> => {
+    const res = await authFetch('/api/orders/offers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount, note }),
+    });
+    if (res.ok) return true;
+
+    // Leer el error del servidor
+    let serverMsg = '';
+    try { const j = await res.json(); serverMsg = j?.error || ''; } catch { /* ignore */ }
+
+    if (res.status === 401) {
+      alert('Tu sesión expiró. Cerrá sesión y volvé a entrar para enviar ofertas.');
+    } else if (res.status === 409) {
+      // Pedido ya tomado — sacarlo de la lista automáticamente
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      alert('Este pedido ya fue tomado por otro conductor.');
+    } else if (res.status === 429) {
+      alert('Enviaste demasiadas ofertas seguidas. Esperá unos segundos.');
+    } else if (res.status === 402) {
+      alert('Saldo insuficiente en tu billetera para enviar ofertas. Recargá para continuar.');
+    } else {
+      alert(serverMsg || 'No se pudo enviar la oferta. Verificá tu conexión e intentá de nuevo.');
+    }
+    return false;
+  };
+
   const handleSendOffer = async (orderId: string, directAmount?: number) => {
     const amount = directAmount ? String(directAmount) : offerAmounts[orderId];
     if (!amount || Number(amount) <= 0) return;
     setSending(s => ({ ...s, [orderId]: true }));
     try {
-      const res = await authFetch('/api/orders/offers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: Number(amount), note: offerNotes[orderId] || null }),
-      });
-      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } })); setOfferAmounts(o => ({ ...o, [orderId]: '' })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-      else {
-        let msg = 'No se pudo enviar la oferta.';
-        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
-        alert(msg);
+      const ok = await postOffer(orderId, Number(amount), offerNotes[orderId] || null);
+      if (ok) {
+        setSentOffers(s => ({ ...s, [orderId]: { amount: Number(amount), status: 'pending' } }));
+        setOfferAmounts(o => ({ ...o, [orderId]: '' }));
+        setOfferNotes(n => ({ ...n, [orderId]: '' }));
       }
     } catch { alert('Error de red al enviar oferta. Verificá tu conexión.'); }
     setSending(s => ({ ...s, [orderId]: false }));
@@ -311,16 +335,10 @@ export default function DeliveriesPage() {
   const handleAcceptPrice = async (orderId: string, clientOffer: number) => {
     setSending(s => ({ ...s, [orderId]: true }));
     try {
-      const res = await authFetch('/api/orders/offers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, driver_name: displayName, driver_photo: profilePhoto, amount: clientOffer, note: offerNotes[orderId] || null }),
-      });
-      if (res.ok) { setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } })); setOfferNotes(n => ({ ...n, [orderId]: '' })); }
-      else {
-        let msg = 'No se pudo aceptar el precio.';
-        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
-        alert(msg);
+      const ok = await postOffer(orderId, clientOffer, offerNotes[orderId] || null);
+      if (ok) {
+        setSentOffers(s => ({ ...s, [orderId]: { amount: clientOffer, status: 'pending' } }));
+        setOfferNotes(n => ({ ...n, [orderId]: '' }));
       }
     } catch { alert('Error de red al aceptar precio. Verificá tu conexión.'); }
     setSending(s => ({ ...s, [orderId]: false }));
