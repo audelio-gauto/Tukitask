@@ -357,6 +357,24 @@ export default function EnviarPaquetePage() {
     };
   }, [getTranslateY, isDesktop, setSheet]);
 
+  // Auto-expand sheet and scroll to focused input/textarea
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    function onFocusIn(e: FocusEvent) {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (!['input', 'textarea', 'select'].includes(tag || '')) return;
+      if (isDesktop()) return;
+      setSheet('full');
+      // Wait for sheet transition then scroll element into view
+      setTimeout(() => {
+        (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 380);
+    }
+    sheet.addEventListener('focusin', onFocusIn);
+    return () => sheet.removeEventListener('focusin', onFocusIn);
+  }, [isDesktop, setSheet]);
+
 
   // When pickup + first stop coordinates change, request a routed path via backend proxy
   // For multi-stop we compute per-segment then concatenate into one polyline

@@ -834,6 +834,7 @@
   padding: 0 1.15rem 2rem;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
 
 /* Address section */

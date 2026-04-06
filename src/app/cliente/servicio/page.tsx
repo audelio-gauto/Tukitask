@@ -226,6 +226,23 @@ export default function SolicitarServicioPage() {
     };
   }, [getTranslateY, isDesktop, setSheet]);
 
+  // Auto-expand sheet and scroll to focused input/textarea
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    function onFocusIn(e: FocusEvent) {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (!['input', 'textarea', 'select'].includes(tag || '')) return;
+      if (isDesktop()) return;
+      setSheet('full');
+      setTimeout(() => {
+        (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 380);
+    }
+    sheet.addEventListener('focusin', onFocusIn);
+    return () => sheet.removeEventListener('focusin', onFocusIn);
+  }, [isDesktop, setSheet]);
+
   const handlePhoto = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     setPhotosUploading(true);
