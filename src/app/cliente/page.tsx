@@ -1162,7 +1162,7 @@ export default function ClienteHomePage() {
               >
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>📦</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Enviar un paquete</div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Mandaditos/Envíos/Fletes</div>
                   <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Delivery rápido a domicilio</div>
                 </div>
               </Link>
@@ -1173,7 +1173,7 @@ export default function ClienteHomePage() {
               >
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>🛠️</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Contratar un técnico</div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Contratar un Tasker</div>
                   <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Servicios en tu hogar</div>
                 </div>
               </Link>
