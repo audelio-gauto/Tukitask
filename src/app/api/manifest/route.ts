@@ -37,9 +37,9 @@ export async function GET() {
 
   const manifest = {
     id: '/',
-    name: 'TukiTask - Delivery y Servicios',
+    name: 'TukiTask',
     short_name: 'TukiTask',
-    description: 'Plataforma de envíos y servicios técnicos en tiempo real',
+    description: 'Plataforma de envíos y servicios técnicos',
     start_url: '/',
     scope: '/',
     display: 'standalone',
