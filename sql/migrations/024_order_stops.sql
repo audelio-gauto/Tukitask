@@ -31,7 +31,7 @@ ALTER TABLE order_stops ENABLE ROW LEVEL SECURITY;
 
 -- Using service_role (used by sbAdmin) bypasses RLS automatically.
 -- These permissive policies cover authenticated users via client SDK if needed.
-CREATE POLICY IF NOT EXISTS "order_stops_select"
+CREATE POLICY "order_stops_select"
   ON order_stops FOR SELECT
   USING (
     EXISTS (
@@ -42,7 +42,7 @@ CREATE POLICY IF NOT EXISTS "order_stops_select"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "order_stops_update"
+CREATE POLICY "order_stops_update"
   ON order_stops FOR UPDATE
   USING (
     EXISTS (

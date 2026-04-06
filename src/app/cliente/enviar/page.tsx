@@ -48,7 +48,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 export default function EnviarPaquetePage() {
-  const { openDrawer, email, displayName, profilePhoto, avgRating } = useClientContext();
+  const { openDrawer, email, displayName, profilePhoto, avgRating, phone } = useClientContext();
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -72,6 +72,17 @@ export default function EnviarPaquetePage() {
     pickupLat: '',
     pickupLng: '',
   });
+
+  // Auto-fill sender info from profile
+  useEffect(() => {
+    if (displayName || phone) {
+      setForm(f => ({
+        ...f,
+        senderContact: f.senderContact || displayName || '',
+        senderPhone:   f.senderPhone   || phone       || '',
+      }));
+    }
+  }, [displayName, phone]);
 
   // ── Multi-stop state ──────────────────────────────────────────────────────
   // stops[0] is always the first (and possibly only) delivery destination
@@ -487,7 +498,7 @@ export default function EnviarPaquetePage() {
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); setStops([emptyStop()]); }}>
+          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm(f => ({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: f.senderContact, senderPhone: f.senderPhone, instructions: '', paymentMethod: 'efectivo', offer: '' })); setStops([emptyStop()]); }}>
             Nuevo Envío
           </button>
         </div>
@@ -660,26 +671,7 @@ export default function EnviarPaquetePage() {
                             )}
                           </div>
 
-                          {/* Mini contact fields — shown if address is filled */}
-                          {stop.address.trim() && (
-                            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                              <input
-                                className="enviar-field-input"
-                                placeholder="Nombre destinatario"
-                                value={stop.receiverContact}
-                                onChange={e => updateStop(idx, 'receiverContact', e.target.value)}
-                                style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px' }}
-                              />
-                              <input
-                                className="enviar-field-input"
-                                placeholder="Teléfono"
-                                type="tel"
-                                value={stop.receiverPhone}
-                                onChange={e => updateStop(idx, 'receiverPhone', e.target.value)}
-                                style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px' }}
-                              />
-                            </div>
-                          )}
+  
                         </div>
                       </div>
                     </div>
@@ -888,8 +880,8 @@ export default function EnviarPaquetePage() {
                 <div className="enviar-step-title">
                   <span className="enviar-step-title-icon">👤</span>
                   <div>
-                    <div className="enviar-step-title-main">¿Quién envía y quién recibe?</div>
-                    <div className="enviar-step-title-sub">Solo nombre y teléfono de cada parte</div>
+                    <div className="enviar-step-title-main">Confirmar datos del remitente</div>
+                    <div className="enviar-step-title-sub">Revisá tu nombre y teléfono</div>
                   </div>
                 </div>
 
@@ -964,7 +956,7 @@ export default function EnviarPaquetePage() {
                     type="submit"
                     form="enviar-form"
                     className="enviar-submit-final"
-                    disabled={sending || offerPrice <= 0 || !form.senderContact.trim() || !form.senderPhone.trim()}
+                    disabled={sending || offerPrice <= 0}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
