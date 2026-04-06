@@ -34,7 +34,7 @@ export interface Order {
   // Multi-stop
   is_multi_stop: boolean;
   stop_count: number;
-  stops?: OrderStop[];              // populated when joined
+  order_stops?: OrderStop[];        // populated when joined
   // Return flow
   fail_reason: string | null;
   return_reason: string | null;

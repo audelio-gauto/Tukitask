@@ -515,8 +515,8 @@ export default function DeliveriesPage() {
             )}
             {(activeJob.status === 'picking_up' || activeJob.status === 'in_transit') && (() => {
               // For multi-stop: navigate to first pending stop
-              if (activeJob.is_multi_stop && activeJob.stops?.length > 0) {
-                const pendingStop = [...(activeJob.stops as any[])]
+              if (activeJob.is_multi_stop && activeJob.order_stops?.length > 0) {
+                const pendingStop = [...(activeJob.order_stops as any[])]
                   .sort((a: any, b: any) => a.sequence - b.sequence)
                   .find((s: any) => s.status === 'pending');
                 if (pendingStop?.lat && pendingStop?.lng) {
@@ -574,10 +574,10 @@ export default function DeliveriesPage() {
                   {activeJob.sender_phone && <> · <a href={`tel:${activeJob.sender_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.sender_phone}</a></>}
                 </div>
               )}
-              {activeJob.is_multi_stop && activeJob.stops ? (
+              {activeJob.is_multi_stop && activeJob.order_stops ? (
                 /* Multi-stop: show each stop */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                  {[...(activeJob.stops as any[])]
+                  {[...(activeJob.order_stops as any[])]
                     .sort((a: any, b: any) => a.sequence - b.sequence)
                     .map((stop: any) => (
                       <div key={stop.id} style={{
@@ -676,8 +676,8 @@ export default function DeliveriesPage() {
             </button>
           )}
           {/* ── Confirm delivery: multi-stop per-stop OR single ── */}
-          {activeJob.status === 'in_transit' && activeJob.is_multi_stop && activeJob.stops && (() => {
-            const pendingStops = [...(activeJob.stops as any[])]
+          {activeJob.status === 'in_transit' && activeJob.is_multi_stop && activeJob.order_stops && (() => {
+            const pendingStops = [...(activeJob.order_stops as any[])]
               .sort((a: any, b: any) => a.sequence - b.sequence)
               .filter((s: any) => s.status === 'pending');
             if (pendingStops.length === 0) return null;
@@ -855,9 +855,9 @@ export default function DeliveriesPage() {
                           <span>{expandedStops.has(req.id) ? '▲' : '▼'}</span>
                           {req.stop_count} paradas
                         </button>
-                        {expandedStops.has(req.id) && Array.isArray(req.stops) && (
+                        {expandedStops.has(req.id) && Array.isArray(req.order_stops) && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 4 }}>
-                            {[...(req.stops as any[])]
+                            {[...(req.order_stops as any[])]
                               .sort((a: any, b: any) => a.sequence - b.sequence)
                               .map((stop: any) => (
                                 <div key={stop.id} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
