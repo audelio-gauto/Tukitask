@@ -50,6 +50,9 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 export default function EnviarPaquetePage() {
   const { openDrawer, email, displayName, profilePhoto, avgRating, phone } = useClientContext();
   const router = useRouter();
+  const [orderType, setOrderType] = useState<'envio' | 'mandadito'>('envio');
+  const [shoppingList, setShoppingList] = useState('');
+  const [maxBudget, setMaxBudget] = useState('');
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -419,6 +422,9 @@ export default function EnviarPaquetePage() {
           receiver_contact: firstStop.receiverContact,
           receiver_phone: firstStop.receiverPhone,
           description: firstStop.description || null,
+          order_type: orderType,
+          shopping_list: orderType === 'mandadito' ? (shoppingList || null) : null,
+          max_budget: orderType === 'mandadito' && maxBudget ? parseInt(maxBudget.replace(/\D/g, '')) || null : null,
           vehicle_type: form.vehicleType,
           sender_contact: form.senderContact,
           sender_phone: form.senderPhone,
@@ -582,6 +588,32 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
+          {/* Order type toggle */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: '#f1f5f9', borderRadius: 12, padding: 4 }}>
+            <button
+              type="button"
+              onClick={() => setOrderType('envio')}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+                background: orderType === 'envio' ? '#fff' : 'transparent',
+                color: orderType === 'envio' ? '#1C1C2E' : '#9ca3af',
+                boxShadow: orderType === 'envio' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >📦 Envío</button>
+            <button
+              type="button"
+              onClick={() => setOrderType('mandadito')}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+                background: orderType === 'mandadito' ? '#fff' : 'transparent',
+                color: orderType === 'mandadito' ? '#1C1C2E' : '#9ca3af',
+                boxShadow: orderType === 'mandadito' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >🛒 Mandaditos</button>
+          </div>
+
           {/* Step indicator */}
           <div className="enviar-step-indicator">
             {[1, 2, 3].map((s) => (
@@ -602,11 +634,15 @@ export default function EnviarPaquetePage() {
             {step === 1 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">📍</span>
+                  <span className="enviar-step-title-icon">{orderType === 'mandadito' ? '🛒' : '📍'}</span>
                   <div>
-                    <div className="enviar-step-title-main">¿Dónde recogemos y entregamos?</div>
+                    <div className="enviar-step-title-main">
+                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : '¿Dónde recogemos y entregamos?'}
+                    </div>
                     <div className="enviar-step-title-sub">
-                      {stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
+                      {orderType === 'mandadito'
+                        ? 'Almacén (Punto A) → Tu dirección (Punto B)'
+                        : stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
                     </div>
                   </div>
                 </div>
@@ -617,7 +653,7 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-dot green" />
                     <input
                       className="enviar-address-input"
-                      placeholder={pickupLoading ? 'Detectando ubicación…' : 'Punto de recogida'}
+                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? '🏪 Almacén / Tienda donde comprar' : 'Punto de recogida'}
                       value={form.pickupAddress}
                       onChange={e => update('pickupAddress', e.target.value)}
                       onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
@@ -735,10 +771,46 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
 
+                {/* Mandadito extra fields */}
+                {orderType === 'mandadito' && (
+                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 4, display: 'block' }}>
+                        Lista de lo que necesitás <span style={{ fontWeight: 400, color: '#9ca3af' }}>(describí cada producto)</span>
+                      </label>
+                      <textarea
+                        className="enviar-field-textarea"
+                        placeholder={'Ej:\n- 1 kg arroz Ceres\n- 2 lt leche La Láctea\n- 6 huevos'}
+                        value={shoppingList}
+                        onChange={e => setShoppingList(e.target.value)}
+                        rows={4}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', resize: 'vertical', background: '#fafafa', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 4, display: 'block' }}>
+                        Monto máximo a gastar <span style={{ fontWeight: 400, color: '#9ca3af' }}>(Gs.)</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="enviar-field-input"
+                        placeholder="Ej: 50.000"
+                        value={maxBudget}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setMaxBudget(raw ? parseInt(raw).toLocaleString('es-PY') : '');
+                        }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', background: '#fafafa', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   className="enviar-next-btn"
-                  disabled={!form.pickupLat || !firstStop.lat}
+                  disabled={!form.pickupLat || !firstStop.lat || (orderType === 'mandadito' && !shoppingList.trim())}
                   onClick={() => { setStep(2); setSheet('full'); }}
                 >
                   Continuar

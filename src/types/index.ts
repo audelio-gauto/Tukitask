@@ -35,6 +35,10 @@ export interface Order {
   is_multi_stop: boolean;
   stop_count: number;
   order_stops?: OrderStop[];        // populated when joined
+  // Mandaditos
+  order_type: string;               // 'envio' | 'mandadito'
+  shopping_list: string | null;
+  max_budget: number | null;
   // Return flow
   fail_reason: string | null;
   return_reason: string | null;

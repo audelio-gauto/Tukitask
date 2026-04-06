@@ -877,6 +877,19 @@ export default function DeliveriesPage() {
                   {req.instructions && (
                     <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {req.instructions}</div>
                   )}
+                  {(req as any).order_type === 'mandadito' && (
+                    <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(16,185,129,0.08)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.25)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ background: '#10b981', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 800 }}>🛒 Mandadito</span>
+                        {(req as any).max_budget && (
+                          <span style={{ fontSize: '0.7rem', color: '#6ee7b7', fontWeight: 700 }}>Máx: ₲{Number((req as any).max_budget).toLocaleString()}</span>
+                        )}
+                      </div>
+                      {(req as any).shopping_list && (
+                        <div style={{ fontSize: '0.72rem', color: '#a7f3d0', whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{(req as any).shopping_list}</div>
+                      )}
+                    </div>
+                  )}
                   {/* Offer status or action buttons */}
                   {alreadyOffered ? (() => {
                     const status = offerObj.status;
