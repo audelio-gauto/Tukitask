@@ -26,28 +26,25 @@ export const metadata: Metadata = {
     title: "TukiTask",
     startupImage: [
       // iPhone 15 Pro Max
-      { url: "/icons/icon-512x512.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" },
+      { url: "/api/pwa-icon/512", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" },
       // Generic fallback
-      { url: "/icons/icon-512x512.png" },
+      { url: "/api/pwa-icon/512" },
     ],
   },
   icons: {
     icon: [
-      { url: "/icons/icon-32x32.png",  sizes: "32x32",  type: "image/png" },
-      { url: "/icons/icon-96x96.png",  sizes: "96x96",  type: "image/png" },
-      { url: "/icons/icon-192x192.png",sizes: "192x192",type: "image/png" },
+      { url: "/api/pwa-icon/192", sizes: "192x192", type: "image/png" },
+      { url: "/api/pwa-icon/512", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/icon-180x180.png", sizes: "180x180", type: "image/png" },
-      { url: "/icons/icon-152x152.png", sizes: "152x152", type: "image/png" },
-      { url: "/icons/icon-144x144.png", sizes: "144x144", type: "image/png" },
+      { url: "/api/pwa-icon/192", sizes: "192x192", type: "image/png" },
     ],
-    shortcut: "/icons/icon-192x192.png",
+    shortcut: "/api/pwa-icon/192",
   },
   other: {
     "mobile-web-app-capable": "yes",
     "msapplication-TileColor": "#0f0f1a",
-    "msapplication-TileImage": "/icons/icon-144x144.png",
+    "msapplication-TileImage": "/api/pwa-icon/192",
     "msapplication-config": "none",
   },
 };
