@@ -87,7 +87,7 @@ export default function EnviarPaquetePage() {
   // ── Multi-stop state ──────────────────────────────────────────────────────
   // stops[0] is always the first (and possibly only) delivery destination
   const [stops, setStops] = useState<DeliveryStop[]>([emptyStop()]);
-  const MAX_STOPS = 10;
+  const MAX_STOPS = 20;
 
   const updateStop = (idx: number, field: keyof DeliveryStop, value: string) => {
     setStops(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
