@@ -17,6 +17,7 @@ const CATEGORIES_MUJER = [
   { key: 'eventos',          label: 'Eventos',            icon: '🎉' },
   { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
   { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'gestor',           label: 'Gestor',             icon: '📋' },
   { key: 'otros',            label: 'Otros',              icon: '✨' },
 ];
 
@@ -25,8 +26,10 @@ const CATEGORIES_HOMBRE = [
   { key: 'electrico',        label: 'Servicio Eléctrico', icon: '⚡' },
   { key: 'plomeria',         label: 'Servicio Plomería',  icon: '🔧' },
   { key: 'cerrajeria',       label: 'Servicio Cerrajería',icon: '🔑' },
+  { key: 'limpieza',         label: 'Limpieza',           icon: '🧹' },
   { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
   { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'gestor',           label: 'Gestor',             icon: '📋' },
   { key: 'otros',            label: 'Otros',              icon: '✨' },
 ];
 

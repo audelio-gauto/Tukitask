@@ -25,6 +25,7 @@ const SERVICE_LABELS: Record<string, string> = {
   electrico: '⚡ Eléctrico',
   plomeria: '🔧 Plomería',
   cerrajeria: '🔑 Cerrajería',
+  gestor: '🗂️ Gestor',
   otros: '✨ Otros',
 };
 

@@ -36,13 +36,13 @@ const SERVICE_LABELS: Record<string, string> = {
   limpieza: 'Limpieza', niera: 'Niera', cocina: 'Cocina',
   eventos: 'Eventos', cuidado_mascotas: 'Mascotas', cuidado_adultos: 'Adultos',
   aire_split: 'Aire Split', electrico: 'Electrico', plomeria: 'Plomeria',
-  cerrajeria: 'Cerrajeria', otros: 'Otros',
+  cerrajeria: 'Cerrajeria', gestor: 'Gestor', otros: 'Otros',
 };
 
 const SERVICE_ICONS: Record<string, string> = {
   limpieza: '🧹', niera: '👶', cocina: '🍳', eventos: '🎉',
   cuidado_mascotas: '🐾', cuidado_adultos: '👴', aire_split: '❄️',
-  electrico: '⚡', plomeria: '🔧', cerrajeria: '🔑', otros: '✨',
+  electrico: '⚡', plomeria: '🔧', cerrajeria: '🔑', gestor: '🗂️', otros: '✨',
 };
 
 function StarRating({ rating }: { rating: number }) {

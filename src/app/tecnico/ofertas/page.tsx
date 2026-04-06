@@ -41,7 +41,7 @@ const SERVICE_LABELS: Record<string, string> = {
   limpieza: '🧹 Limpieza', niera: '👶 Niñera', cocina: '🍳 Cocina',
   eventos: '🎉 Eventos', cuidado_mascotas: '🐾 Mascotas', cuidado_adultos: '👴 Adultos',
   aire_split: '❄️ Aire Split', electrico: '⚡ Eléctrico', plomeria: '🔧 Plomería',
-  cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
+  cerrajeria: '🔑 Cerrajería', gestor: '🗂️ Gestor', otros: '✨ Otros',
 };
 
 const CARD_TIMER = 100;

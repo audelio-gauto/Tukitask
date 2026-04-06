@@ -28,6 +28,7 @@ const SERVICES_MUJER = [
   { key: 'eventos',          label: 'Eventos',           icon: '🎉' },
   { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
   { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
   { key: 'otros',            label: 'Otros',             icon: '✨' },
 ];
 const SERVICES_HOMBRE = [
@@ -35,8 +36,10 @@ const SERVICES_HOMBRE = [
   { key: 'electrico',        label: 'Serv. Eléctrico',   icon: '⚡' },
   { key: 'plomeria',         label: 'Serv. Plomería',    icon: '🔧' },
   { key: 'cerrajeria',       label: 'Serv. Cerrajería',  icon: '🔑' },
+  { key: 'limpieza',         label: 'Limpieza',          icon: '🧹' },
   { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
   { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
   { key: 'otros',            label: 'Otros',             icon: '✨' },
 ];
 

@@ -74,7 +74,7 @@ const SERVICE_ICONS: Record<string, string> = {
   limpieza: '🧹', niera: '👶', cocina: '🍳', eventos: '🎉',
   cuidado_mascotas: '🐾', cuidado_adultos: '👴',
   aire_split: '❄️', electrico: '⚡', plomeria: '🔧',
-  cerrajeria: '🔑', otros: '✨',
+  cerrajeria: '🔑', gestor: '🗂️', otros: '✨',
 };
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
