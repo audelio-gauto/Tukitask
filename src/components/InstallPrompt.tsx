@@ -18,7 +18,15 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const DISMISSED_KEY = 'tuki_pwa_dismissed_v1';
+const DISMISSED_KEY = 'tuki_pwa_dismissed_until';
+const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function wasDismissedRecently() {
+  try {
+    const until = Number(localStorage.getItem(DISMISSED_KEY) || '0');
+    return Date.now() < until;
+  } catch { return false; }
+}
 
 function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -38,10 +46,10 @@ export function InstallPrompt() {
   const [iosStep, setIosStep] = useState(false);
 
   useEffect(() => {
-    // Already installed or user dismissed
+    // Already installed or user dismissed recently
     if (typeof window === 'undefined') return;
     if (isInStandalone()) return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (wasDismissedRecently()) return;
 
     if (isIOS()) {
       setMode('ios');
@@ -61,7 +69,8 @@ export function InstallPrompt() {
 
   const dismiss = useCallback(() => {
     setVisible(false);
-    localStorage.setItem(DISMISSED_KEY, '1');
+    // Snooze for 7 days — after that (or after uninstalling) the banner reappears
+    try { localStorage.setItem(DISMISSED_KEY, String(Date.now() + DISMISS_TTL_MS)); } catch {}
   }, []);
 
   const install = useCallback(async () => {
@@ -70,7 +79,8 @@ export function InstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setVisible(false);
-      localStorage.setItem(DISMISSED_KEY, '1');
+      // Clear snooze — isInStandalone() will suppress banner after install
+      try { localStorage.removeItem(DISMISSED_KEY); } catch {}
     }
     setDeferredPrompt(null);
   }, [deferredPrompt]);
