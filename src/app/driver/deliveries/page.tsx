@@ -64,6 +64,11 @@ export default function DeliveriesPage() {
   const [showFailReason, setShowFailReason] = useState(false);
   const [failReason, setFailReason] = useState('');
 
+  // Multi-stop state
+  const [stopBeingDelivered, setStopBeingDelivered] = useState<string | null>(null); // stop id
+  const [stopFailReason, setStopFailReason] = useState('');
+  const [showStopFail, setShowStopFail] = useState<string | null>(null); // stop id
+
   // Chat state
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
@@ -282,6 +287,59 @@ export default function DeliveriesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJob?.status]);
 
+  /* ── Mark a single stop as delivered or failed ── */
+  const handleStopTransition = async (stopId: string, stopStatus: 'delivered' | 'failed', reason?: string) => {
+    if (!activeJob) return;
+    setTransitioning(true);
+    try {
+      const res = await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: activeJob.id,
+          stop_id: stopId,
+          stop_status: stopStatus,
+          driver_email: email,
+          ...(reason ? { fail_reason: reason } : {}),
+        }),
+      });
+      if (res.ok) {
+        // Refresh active job to get updated stops
+        await new Promise<void>(resolve => {
+          fetch(`/api/orders?driver_email=${encodeURIComponent(email ?? '')}`)
+            .then(r => r.json())
+            .then((data: any[]) => {
+              if (Array.isArray(data) && data.length > 0) {
+                setActiveJob(data[0]);
+                activeJobRef.current = data[0];
+                // If all stops done, the order will be delivered — clear it
+                if (data[0].status === 'delivered') {
+                  playAccepted();
+                  setActiveJob(null);
+                  activeJobRef.current = null;
+                  prevAccepted.current = false;
+                }
+              } else if (data.length === 0) {
+                // All stops done, order auto-delivered
+                playAccepted();
+                setActiveJob(null);
+                activeJobRef.current = null;
+                prevAccepted.current = false;
+              }
+              resolve();
+            })
+            .catch(() => resolve());
+        });
+        setStopBeingDelivered(null);
+        setShowStopFail(null);
+        setStopFailReason('');
+      } else {
+        alert('Error al actualizar parada. Intentá de nuevo.');
+      }
+    } catch { alert('Error al actualizar parada. Intentá de nuevo.'); }
+    setTransitioning(false);
+  };
+
   const handleFailed = async (reason: string) => {
     if (!activeJob) return;
     setTransitioning(true);
@@ -450,12 +508,32 @@ export default function DeliveriesPage() {
                 📍 Ir a recoger
               </a>
             )}
-            {(activeJob.status === 'picking_up' || activeJob.status === 'in_transit') && activeJob.delivery_lat && (
-              <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
-                style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
-                🚛 Ir a entregar
-              </a>
-            )}
+            {(activeJob.status === 'picking_up' || activeJob.status === 'in_transit') && (() => {
+              // For multi-stop: navigate to first pending stop
+              if (activeJob.is_multi_stop && activeJob.stops?.length > 0) {
+                const pendingStop = [...(activeJob.stops as any[])]
+                  .sort((a: any, b: any) => a.sequence - b.sequence)
+                  .find((s: any) => s.status === 'pending');
+                if (pendingStop?.lat && pendingStop?.lng) {
+                  return (
+                    <a href={getNavUrl(pendingStop.lat, pendingStop.lng, navApp)} target="_blank" rel="noopener noreferrer"
+                      style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
+                      🚛 Parada {pendingStop.sequence}
+                    </a>
+                  );
+                }
+              }
+              // Single-stop
+              if (activeJob.delivery_lat) {
+                return (
+                  <a href={getNavUrl(activeJob.delivery_lat, activeJob.delivery_lng, navApp)} target="_blank" rel="noopener noreferrer"
+                    style={{ background: '#10b981', color: '#fff', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
+                    🚛 Ir a entregar
+                  </a>
+                );
+              }
+              return null;
+            })()}
             {activeJob.status === 'driver_returning' && activeJob.pickup_lat && (
               <a href={getNavUrl(activeJob.pickup_lat, activeJob.pickup_lng, navApp)} target="_blank" rel="noopener noreferrer"
                 style={{ background: '#f59e0b', color: '#111', padding: '5px 14px', borderRadius: 99, fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none' }}>
@@ -474,12 +552,14 @@ export default function DeliveriesPage() {
             )}
           </div>
 
-          {/* Route A → B */}
+          {/* Route A → B (or multi-stop) */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>A</div>
               <div style={{ width: 2, flex: 1, minHeight: 20, background: '#444', margin: '3px 0' }} />
-              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>B</div>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
+                {activeJob.is_multi_stop ? activeJob.stop_count : 'B'}
+              </div>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: 1.35, marginBottom: 4 }}>{activeJob.pickup_address}</div>
@@ -489,13 +569,50 @@ export default function DeliveriesPage() {
                   {activeJob.sender_phone && <> · <a href={`tel:${activeJob.sender_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.sender_phone}</a></>}
                 </div>
               )}
-              <div style={{ height: 6 }} />
-              <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: 1.35, marginBottom: 4 }}>{activeJob.delivery_address}</div>
-              {activeJob.receiver_contact && (
-                <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                  {activeJob.receiver_contact}
-                  {activeJob.receiver_phone && <> · <a href={`tel:${activeJob.receiver_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.receiver_phone}</a></>}
+              {activeJob.is_multi_stop && activeJob.stops ? (
+                /* Multi-stop: show each stop */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  {[...(activeJob.stops as any[])]
+                    .sort((a: any, b: any) => a.sequence - b.sequence)
+                    .map((stop: any) => (
+                      <div key={stop.id} style={{
+                        padding: '7px 10px', borderRadius: 10,
+                        background: stop.status === 'delivered' ? 'rgba(16,185,129,0.1)'
+                          : stop.status === 'failed' ? 'rgba(239,68,68,0.1)'
+                          : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${stop.status === 'delivered' ? 'rgba(16,185,129,0.35)' : stop.status === 'failed' ? 'rgba(239,68,68,0.35)' : '#1e293b'}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <span style={{
+                            minWidth: 18, height: 18, borderRadius: '50%', fontSize: '0.65rem', fontWeight: 800,
+                            background: stop.status === 'delivered' ? '#10b981' : stop.status === 'failed' ? '#ef4444' : '#ef4444',
+                            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>{stop.sequence}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#d1d5db', flex: 1 }}>{stop.address}</span>
+                          {stop.status === 'delivered' && <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: 700 }}>✓ Entregado</span>}
+                          {stop.status === 'failed' && <span style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 700 }}>✗ Fallido</span>}
+                        </div>
+                        {stop.receiver_contact && (
+                          <div style={{ fontSize: '0.72rem', color: '#6b7280', paddingLeft: 24 }}>
+                            {stop.receiver_contact}
+                            {stop.receiver_phone && <> · <a href={`tel:${stop.receiver_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{stop.receiver_phone}</a></>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                 </div>
+              ) : (
+                /* Single-stop */
+                <>
+                  <div style={{ height: 6 }} />
+                  <div style={{ fontSize: '0.88rem', color: '#d1d5db', lineHeight: 1.35, marginBottom: 4 }}>{activeJob.delivery_address}</div>
+                  {activeJob.receiver_contact && (
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                      {activeJob.receiver_contact}
+                      {activeJob.receiver_phone && <> · <a href={`tel:${activeJob.receiver_phone}`} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>{activeJob.receiver_phone}</a></>}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -553,14 +670,63 @@ export default function DeliveriesPage() {
               📦 Confirmar Retiro — Ir a Entregar
             </button>
           )}
-          {/* ── Confirm delivery: Entregado / Fallido ── */}
-          {activeJob.status === 'in_transit' && !showDeliveryConfirm && !showFailReason && (
+          {/* ── Confirm delivery: multi-stop per-stop OR single ── */}
+          {activeJob.status === 'in_transit' && activeJob.is_multi_stop && activeJob.stops && (() => {
+            const pendingStops = [...(activeJob.stops as any[])]
+              .sort((a: any, b: any) => a.sequence - b.sequence)
+              .filter((s: any) => s.status === 'pending');
+            if (pendingStops.length === 0) return null;
+            const currentStop = pendingStops[0];
+            return (
+              <div style={{ marginTop: 4 }}>
+                {showStopFail === currentStop.id ? (
+                  <div>
+                    <p style={{ color: '#fca5a5', fontSize: '0.85rem', textAlign: 'center', marginBottom: 8, fontWeight: 600 }}>¿Por qué no se pudo entregar en parada {currentStop.sequence}?</p>
+                    <textarea
+                      value={stopFailReason}
+                      onChange={e => setStopFailReason(e.target.value)}
+                      placeholder="Ej: Nadie en casa, dirección incorrecta..."
+                      style={{ width: '100%', padding: '0.7rem', borderRadius: 12, border: '1.5px solid #374151', background: '#0f172a', color: '#fff', fontSize: '0.85rem', resize: 'none', minHeight: 70, boxSizing: 'border-box', marginBottom: 8, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { setShowStopFail(null); setStopFailReason(''); }}
+                        style={{ flex: 1, padding: '0.75rem', border: '1px solid #374151', borderRadius: 12, background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600 }}>← Atrás</button>
+                      <button onClick={() => handleStopTransition(currentStop.id, 'failed', stopFailReason)}
+                        disabled={!stopFailReason.trim() || transitioning}
+                        style={{ flex: 2, padding: '0.75rem', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.9rem', opacity: (!stopFailReason.trim() || transitioning) ? 0.5 : 1 }}>
+                        Confirmar Fallido
+                      </button>
+                    </div>
+                  </div>
+                ) : stopBeingDelivered === currentStop.id ? (
+                  <div>
+                    <p style={{ color: '#d1d5db', fontSize: '0.85rem', textAlign: 'center', marginBottom: 10, fontWeight: 600 }}>¿Entregaste en parada {currentStop.sequence}?</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { setStopBeingDelivered(null); }}
+                        style={{ flex: 1, padding: '0.8rem', border: '1px solid #374151', borderRadius: 12, background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600 }}>← Atrás</button>
+                      <button onClick={() => handleStopTransition(currentStop.id, 'delivered')} disabled={transitioning}
+                        style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '0.9rem', opacity: transitioning ? 0.6 : 1 }}>✅ Sí, entregado</button>
+                      <button onClick={() => { setStopBeingDelivered(null); setShowStopFail(currentStop.id); }} disabled={transitioning}
+                        style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>❌ Fallido</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setStopBeingDelivered(currentStop.id)} disabled={transitioning}
+                    style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
+                    📦 Confirmar parada {currentStop.sequence} de {activeJob.stop_count}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+          {/* ── Single-stop confirm delivery ── */}
+          {activeJob.status === 'in_transit' && !activeJob.is_multi_stop && !showDeliveryConfirm && !showFailReason && (
             <button onClick={() => setShowDeliveryConfirm(true)} disabled={transitioning}
               style={{ width: '100%', padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '1rem', opacity: transitioning ? 0.6 : 1 }}>
               ✅ Confirmar Entrega
             </button>
           )}
-          {activeJob.status === 'in_transit' && showDeliveryConfirm && !showFailReason && (
+          {activeJob.status === 'in_transit' && !activeJob.is_multi_stop && showDeliveryConfirm && !showFailReason && (
             <div>
               <p style={{ color: '#d1d5db', fontSize: '0.88rem', textAlign: 'center', marginBottom: 10, fontWeight: 600 }}>¿Cómo resultó la entrega?</p>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -579,7 +745,7 @@ export default function DeliveriesPage() {
               </div>
             </div>
           )}
-          {activeJob.status === 'in_transit' && showFailReason && (
+          {activeJob.status === 'in_transit' && !activeJob.is_multi_stop && showFailReason && (
             <div>
               <p style={{ color: '#fca5a5', fontSize: '0.88rem', textAlign: 'center', marginBottom: 8, fontWeight: 600 }}>¿Por qué no se pudo entregar?</p>
               <textarea
@@ -674,6 +840,11 @@ export default function DeliveriesPage() {
                   <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#10b981', flexShrink: 0 }}>🟢</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.pickup_address}</span></div>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#ef4444', flexShrink: 0 }}>🟥</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.delivery_address}</span></div>
+                    {req.is_multi_stop && req.stop_count > 1 && (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
+                        <span style={{ background: '#8b5cf6', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 800 }}>+{req.stop_count} paradas</span>
+                      </div>
+                    )}
                   </div>
                   {req.instructions && (
                     <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {req.instructions}</div>

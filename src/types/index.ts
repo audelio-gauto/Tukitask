@@ -31,6 +31,10 @@ export interface Order {
   instructions: string | null;
   payment_method: string | null;
   package_type: string | null;
+  // Multi-stop
+  is_multi_stop: boolean;
+  stop_count: number;
+  stops?: OrderStop[];              // populated when joined
   // Return flow
   fail_reason: string | null;
   return_reason: string | null;
@@ -48,6 +52,23 @@ export interface Order {
   rate_score: number | null;
   rate_note: string | null;
   rated_at: string | null;
+}
+
+/** A single delivery stop within a multi-stop order */
+export interface OrderStop {
+  id: string;
+  order_id: string;
+  sequence: number;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  receiver_contact: string | null;
+  receiver_phone: string | null;
+  description: string | null;
+  status: string;                   // pending | delivered | failed
+  delivered_at: string | null;
+  fail_reason: string | null;
+  created_at: string;
 }
 
 /** A driver's price offer on a delivery order */

@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   let query = db
     .from('orders')
-    .select('*')
+    .select('*, order_stops(*)')
     .order('created_at', { ascending: false })
     .limit(200);
 
@@ -82,16 +82,60 @@ export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
-  // Forzar client_email desde el token — nunca confiar en el body
-  const safeBody = { ...body, client_email: user.email };
   const db = sbAdmin();
-  const { data, error } = await db
+
+  // Extract stops array before inserting — they go to order_stops table
+  const { stops, ...orderBody } = body as {
+    stops?: Array<{
+      address: string;
+      lat?: string | number;
+      lng?: string | number;
+      receiver_contact?: string;
+      receiver_phone?: string;
+      description?: string;
+    }>;
+    [key: string]: unknown;
+  };
+
+  const isMultiStop = Array.isArray(stops) && stops.length > 1;
+
+  // Forzar client_email desde el token — nunca confiar en el body
+  const safeBody = {
+    ...orderBody,
+    client_email: user.email,
+    is_multi_stop: isMultiStop,
+    stop_count: isMultiStop ? stops!.length : 1,
+  };
+
+  const { data: order, error } = await db
     .from('orders')
     .insert([safeBody])
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { status: 201 });
+
+  // Insert stops for multi-stop orders
+  if (isMultiStop && stops && order) {
+    const stopRows = stops.map((s, i) => ({
+      order_id: order.id,
+      sequence: i + 1,
+      address: s.address,
+      lat: s.lat ? Number(s.lat) : null,
+      lng: s.lng ? Number(s.lng) : null,
+      receiver_contact: s.receiver_contact || null,
+      receiver_phone: s.receiver_phone || null,
+      description: s.description || null,
+      status: 'pending',
+    }));
+    const { error: stopsErr } = await db.from('order_stops').insert(stopRows);
+    if (stopsErr) {
+      // Roll back the order if stops failed (best effort)
+      await db.from('orders').delete().eq('id', order.id);
+      return NextResponse.json({ error: stopsErr.message }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json(order, { status: 201 });
 }
 
 // PATCH: Transición de estado — requiere auth; ownership verificado via token
@@ -99,7 +143,62 @@ export async function PATCH(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
-  const { order_id, status, fail_reason, return_reason, return_rejected_reason } = body;
+  const { order_id, status, fail_reason, return_reason, return_rejected_reason, stop_id, stop_status } = body;
+
+  // ── Stop-level update (multi-stop orders) ──────────────────────────────────
+  if (stop_id && stop_status) {
+    if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 });
+    const db = sbAdmin();
+    // Verify driver owns this order
+    const { data: orderCheck } = await db
+      .from('orders')
+      .select('accepted_by, is_multi_stop, status')
+      .eq('id', order_id)
+      .single();
+    if (!orderCheck) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (orderCheck.accepted_by?.toLowerCase() !== user.email) return forbidden('Not your order');
+    if (!['in_transit', 'picking_up'].includes(orderCheck.status)) {
+      return NextResponse.json({ error: 'Order must be in_transit to update stops' }, { status: 409 });
+    }
+
+    const stopUpdate: Record<string, unknown> = { status: stop_status };
+    if (stop_status === 'delivered') stopUpdate.delivered_at = new Date().toISOString();
+    if (stop_status === 'failed' && fail_reason) stopUpdate.fail_reason = fail_reason;
+
+    const { error: stopErr } = await db
+      .from('order_stops')
+      .update(stopUpdate)
+      .eq('id', stop_id)
+      .eq('order_id', order_id); // extra safety check
+    if (stopErr) return NextResponse.json({ error: stopErr.message }, { status: 500 });
+
+    // Check if all stops are done (delivered or failed) → auto-transition order to 'delivered'
+    const { data: remaining } = await db
+      .from('order_stops')
+      .select('id')
+      .eq('order_id', order_id)
+      .eq('status', 'pending');
+
+    if (!remaining || remaining.length === 0) {
+      // All stops resolved — mark order as delivered
+      await db.from('orders').update({ status: 'in_transit' }).eq('id', order_id); // ensure correct base
+      const { error: doneErr } = await db.from('orders').update({
+        status: 'delivered',
+        completed_at: new Date().toISOString(),
+      }).eq('id', order_id);
+      if (!doneErr) {
+        await db.rpc('deduct_commission', { p_order_id: order_id }).catch(() => {});
+        // Notify client
+        const { data: ord } = await db.from('orders').select('client_email').eq('id', order_id).single();
+        if (ord?.client_email) {
+          emitNotification(ord.client_email, 'status_change', 'Todos los envíos entregados', '¡Todos tus paquetes fueron entregados!', { order_id, status: 'delivered' }, { priority: 'urgent' });
+        }
+      }
+      return NextResponse.json({ success: true, order_status: 'delivered', all_stops_done: true });
+    }
+
+    return NextResponse.json({ success: true, stop_status, pending_stops: remaining.length });
+  }
 
   if (!order_id || !status) {
     return NextResponse.json({ error: 'order_id and status required' }, { status: 400 });

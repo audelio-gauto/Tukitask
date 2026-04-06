@@ -22,6 +22,31 @@ const paymentMethods = [
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
+// ── Multi-stop types ──────────────────────────────────────────────────────────
+interface DeliveryStop {
+  id: string;            // local React key
+  address: string;
+  lat: string;
+  lng: string;
+  receiverContact: string;
+  receiverPhone: string;
+  description: string;
+}
+
+function emptyStop(): DeliveryStop {
+  return { id: crypto.randomUUID(), address: '', lat: '', lng: '', receiverContact: '', receiverPhone: '', description: '' };
+}
+
+// Haversine distance between two coords in km
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 export default function EnviarPaquetePage() {
   const { openDrawer, email, displayName, profilePhoto, avgRating } = useClientContext();
   const router = useRouter();
@@ -31,27 +56,46 @@ export default function EnviarPaquetePage() {
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Address search overlay state
-  const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery'>(null);
+  // Address search overlay state — now also handles stop index
+  const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
   // Location picker (map pin) state
-  const [pickerMode, setPickerMode] = useState<null | 'pickup' | 'delivery'>(null);
+  const [pickerMode, setPickerMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
 
   const [form, setForm] = useState({
     pickupAddress: '',
-    deliveryAddress: '',
     vehicleType: 'moto',
     senderContact: '',
     senderPhone: '',
-    receiverContact: '',
-    receiverPhone: '',
     instructions: '',
     paymentMethod: 'efectivo',
     offer: '',
     pickupLat: '',
     pickupLng: '',
-    deliveryLat: '',
-    deliveryLng: '',
   });
+
+  // ── Multi-stop state ──────────────────────────────────────────────────────
+  // stops[0] is always the first (and possibly only) delivery destination
+  const [stops, setStops] = useState<DeliveryStop[]>([emptyStop()]);
+  const MAX_STOPS = 10;
+
+  const updateStop = (idx: number, field: keyof DeliveryStop, value: string) => {
+    setStops(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  };
+
+  const addStop = () => {
+    if (stops.length >= MAX_STOPS) return;
+    setStops(prev => [...prev, emptyStop()]);
+  };
+
+  const removeStop = (idx: number) => {
+    if (stops.length <= 1) return;
+    setStops(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // First stop conveniently maps to legacy delivery fields for backward compat
+  const firstStop = stops[0];
+  const deliveryLat  = firstStop.lat;
+  const deliveryLng  = firstStop.lng;
 
 
 
@@ -135,21 +179,24 @@ export default function EnviarPaquetePage() {
   }, []);
 
   // Calcular precio sugerido automáticamente
-  // Haversine distance in km
+  // Haversine total distance across all segments: pickup→stop1→stop2→...
   const distanceKm = useMemo(() => {
-    const lat1 = parseFloat(form.pickupLat);
-    const lon1 = parseFloat(form.pickupLng);
-    const lat2 = parseFloat(form.deliveryLat);
-    const lon2 = parseFloat(form.deliveryLng);
-    if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) return 0;
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const R = 6371; // km
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return Math.max(0, R * c);
-  }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
+    const pts: Array<{ lat: number; lng: number }> = [];
+    const pLat = parseFloat(form.pickupLat);
+    const pLng = parseFloat(form.pickupLng);
+    if (isFinite(pLat) && isFinite(pLng)) pts.push({ lat: pLat, lng: pLng });
+    for (const s of stops) {
+      const lat = parseFloat(s.lat);
+      const lng = parseFloat(s.lng);
+      if (isFinite(lat) && isFinite(lng)) pts.push({ lat, lng });
+    }
+    if (pts.length < 2) return 0;
+    let total = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      total += haversineKm(pts[i].lat, pts[i].lng, pts[i+1].lat, pts[i+1].lng);
+    }
+    return Math.max(0, total);
+  }, [form.pickupLat, form.pickupLng, stops]);
 
   // Route/state for routed polyline using provider (Mapbox)
   const [routeCoords, setRouteCoords] = useState<Array<{ lat: number; lng: number }>>([]);
@@ -294,12 +341,13 @@ export default function EnviarPaquetePage() {
   }, [getTranslateY, isDesktop, setSheet]);
 
 
-  // When coordinates change, request a routed path via backend proxy
+  // When pickup + first stop coordinates change, request a routed path via backend proxy
+  // For multi-stop we compute per-segment then concatenate into one polyline
   useEffect(() => {
     const lat1 = parseFloat(form.pickupLat);
     const lon1 = parseFloat(form.pickupLng);
-    const lat2 = parseFloat(form.deliveryLat);
-    const lon2 = parseFloat(form.deliveryLng);
+    const lat2 = parseFloat(deliveryLat);
+    const lon2 = parseFloat(deliveryLng);
     if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) {
       setRouteCoords([]);
       setRouteDistanceMeters(null);
@@ -307,29 +355,45 @@ export default function EnviarPaquetePage() {
       return;
     }
 
-    fetchProxyDirections(lat1, lon1, lat2, lon2)
-      .then((data) => {
-        if (data && data.coords && data.coords.length > 0) {
-          setRouteCoords(data.coords);
-          setRouteDistanceMeters(data.distance_meters || null);
-          setRouteDurationSec(data.duration_seconds || null);
-        } else {
-          setRouteCoords([]);
-          setRouteDistanceMeters(null);
-          setRouteDurationSec(null);
+    // Build all waypoint pairs: pickup→stop1, stop1→stop2, ...
+    const waypoints: Array<[number, number]> = [[lat1, lon1]];
+    for (const s of stops) {
+      const la = parseFloat(s.lat), lo = parseFloat(s.lng);
+      if (isFinite(la) && isFinite(lo)) waypoints.push([la, lo]);
+    }
+
+    // Fetch all segments in parallel
+    const pairs: Array<[number, number, number, number]> = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      pairs.push([waypoints[i][0], waypoints[i][1], waypoints[i+1][0], waypoints[i+1][1]]);
+    }
+
+    Promise.all(pairs.map(([a, b, c, d]) => fetchProxyDirections(a, b, c, d)))
+      .then(results => {
+        let allCoords: Array<{ lat: number; lng: number }> = [];
+        let totalDist = 0, totalDur = 0;
+        for (const data of results) {
+          if (data?.coords?.length > 0) allCoords = allCoords.concat(data.coords);
+          if (data?.distance_meters) totalDist += data.distance_meters;
+          if (data?.duration_seconds) totalDur += data.duration_seconds;
         }
+        setRouteCoords(allCoords);
+        setRouteDistanceMeters(totalDist || null);
+        setRouteDurationSec(totalDur || null);
       })
       .catch(() => {
         setRouteCoords([]);
         setRouteDistanceMeters(null);
         setRouteDurationSec(null);
       });
-  }, [form.pickupLat, form.pickupLng, form.deliveryLat, form.deliveryLng]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.pickupLat, form.pickupLng, deliveryLat, deliveryLng, stops]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
     try {
+      const isMulti = stops.length > 1;
       const res = await authFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -339,48 +403,58 @@ export default function EnviarPaquetePage() {
           client_photo: profilePhoto || '',
           client_avg_rating: avgRating > 0 ? avgRating : null,
           pickup_address: form.pickupAddress,
-          delivery_address: form.deliveryAddress,
+          // First stop backward-compat fields
+          delivery_address: firstStop.address,
+          receiver_contact: firstStop.receiverContact,
+          receiver_phone: firstStop.receiverPhone,
+          description: firstStop.description || null,
           vehicle_type: form.vehicleType,
           sender_contact: form.senderContact,
           sender_phone: form.senderPhone,
-          receiver_contact: form.receiverContact,
-          receiver_phone: form.receiverPhone,
           instructions: form.instructions,
           payment_method: form.paymentMethod,
           suggested_price: suggestedPrice,
           offer: offerPrice > 0 ? String(offerPrice) : form.offer,
           pickup_lat: form.pickupLat,
           pickup_lng: form.pickupLng,
-          delivery_lat: form.deliveryLat,
-          delivery_lng: form.deliveryLng,
+          delivery_lat: firstStop.lat,
+          delivery_lng: firstStop.lng,
+          // Multi-stop
+          stops: isMulti ? stops.map(s => ({
+            address: s.address,
+            lat: s.lat,
+            lng: s.lng,
+            receiver_contact: s.receiverContact || null,
+            receiver_phone: s.receiverPhone || null,
+            description: s.description || null,
+          })) : undefined,
         }),
       });
       if (res.status === 401) { router.push('/auth'); return; }
       if (!res.ok) throw new Error('Error al crear el pedido');
-      // Redirect to home to see offers
       router.push('/cliente');
-    } catch (err) {
+    } catch {
       alert('Error al crear el pedido');
     } finally {
       setSending(false);
     }
   };
 
-  const handleUseGPS = (field: 'pickup' | 'delivery') => {
+  const handleUseGPS = (field: 'pickup' | 'delivery' | `stop_${number}`) => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude.toFixed(6);
         const lon = pos.coords.longitude.toFixed(6);
-        const coords = `${lat}, ${lon}`;
         if (field === 'pickup') {
-          update('pickupAddress', coords);
+          update('pickupAddress', `${lat}, ${lon}`);
           update('pickupLat', lat);
           update('pickupLng', lon);
-        } else {
-          update('deliveryAddress', coords);
-          update('deliveryLat', lat);
-          update('deliveryLng', lon);
+        } else if (field.startsWith('stop_')) {
+          const idx = parseInt(field.split('_')[1]);
+          updateStop(idx, 'lat', lat);
+          updateStop(idx, 'lng', lon);
+          updateStop(idx, 'address', `${lat}, ${lon}`);
         }
         setSearchMode(null);
       },
@@ -388,7 +462,22 @@ export default function EnviarPaquetePage() {
     );
   };
 
-  const openSearch = (mode: 'pickup' | 'delivery') => setSearchMode(mode);
+  const openSearch = (mode: 'pickup' | 'delivery' | `stop_${number}`) => setSearchMode(mode);
+
+  // Resolve address/coords from search or picker into state
+  const resolveLocation = (mode: typeof searchMode, address: string, lat: number, lng: number) => {
+    if (!mode) return;
+    if (mode === 'pickup') {
+      update('pickupAddress', address);
+      update('pickupLat', String(lat));
+      update('pickupLng', String(lng));
+    } else if (mode.startsWith('stop_')) {
+      const idx = parseInt((mode as string).split('_')[1]);
+      updateStop(idx, 'address', address);
+      updateStop(idx, 'lat', String(lat));
+      updateStop(idx, 'lng', String(lng));
+    }
+  };
 
   if (success) {
     return (
@@ -398,7 +487,7 @@ export default function EnviarPaquetePage() {
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
-          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', deliveryAddress: '', deliveryLat: '', deliveryLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', receiverContact: '', receiverPhone: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); }}>
+          <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: '', senderPhone: '', instructions: '', paymentMethod: 'efectivo', offer: '' }); setStops([emptyStop()]); }}>
             Nuevo Envío
           </button>
         </div>
@@ -412,7 +501,7 @@ export default function EnviarPaquetePage() {
       <div className="enviar-map">
         <ClientMap
           pickup={form.pickupLat && form.pickupLng ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) } : undefined}
-          delivery={form.deliveryLat && form.deliveryLng ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) } : undefined}
+          delivery={deliveryLat && deliveryLng ? { lat: Number(deliveryLat), lng: Number(deliveryLng) } : undefined}
           routeCoords={routeCoords && routeCoords.length > 0 ? routeCoords : undefined}
           showMyLocationButton
         />
@@ -434,35 +523,24 @@ export default function EnviarPaquetePage() {
             </button>
             <span className={`enviar-dot ${searchMode === 'pickup' ? 'green' : 'red'}`} style={{ marginLeft: 8 }} />
             <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#374151', marginLeft: 8 }}>
-              {searchMode === 'pickup' ? 'Punto de recogida' : 'Destino de entrega'}
+              {searchMode === 'pickup' ? 'Punto de recogida' : searchMode.startsWith('stop_') ? `Parada ${parseInt((searchMode as string).split('_')[1]) + 1}` : 'Destino'}
             </span>
           </div>
-          {/* Mapbox SearchBox autocomplete */}
           <div style={{ padding: '12px 16px 0' }}>
             <MapboxSearch
               placeholder={searchMode === 'pickup' ? 'Buscar punto de recogida...' : 'Buscar destino...'}
-              value={searchMode === 'pickup' ? form.pickupAddress : form.deliveryAddress}
+              value={searchMode === 'pickup' ? form.pickupAddress : searchMode.startsWith('stop_') ? stops[parseInt((searchMode as string).split('_')[1])]?.address || '' : ''}
               onSelect={(name: string, lat: number, lng: number) => {
-                if (searchMode === 'pickup') {
-                  update('pickupAddress', name);
-                  update('pickupLat', String(lat));
-                  update('pickupLng', String(lng));
-                } else {
-                  update('deliveryAddress', name);
-                  update('deliveryLat', String(lat));
-                  update('deliveryLng', String(lng));
-                }
+                resolveLocation(searchMode, name, lat, lng);
                 setSearchMode(null);
               }}
             />
           </div>
-          {/* GPS option */}
-          <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode)}>
+          <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode as 'pickup' | `stop_${number}`)}>
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
             <span>Usar mi ubicación actual</span>
           </button>
-          {/* Open map picker */}
-          <button type="button" className="enviar-search-gps" onClick={() => { setSearchMode(null); setPickerMode(searchMode); }}>
+          <button type="button" className="enviar-search-gps" onClick={() => { setPickerMode(searchMode as typeof pickerMode); setSearchMode(null); }}>
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
             <span>Seleccionar en el mapa</span>
           </button>
@@ -472,24 +550,16 @@ export default function EnviarPaquetePage() {
       {/* Location Picker (Uber/Bolt style) */}
       {pickerMode && (
         <LocationPicker
-          mode={pickerMode}
+          mode={pickerMode.startsWith('stop_') ? 'delivery' : pickerMode as 'pickup' | 'delivery'}
           initialCenter={
             pickerMode === 'pickup' && form.pickupLat && form.pickupLng
               ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) }
-              : pickerMode === 'delivery' && form.deliveryLat && form.deliveryLng
-              ? { lat: Number(form.deliveryLat), lng: Number(form.deliveryLng) }
+              : pickerMode.startsWith('stop_') && stops[parseInt((pickerMode as string).split('_')[1])]?.lat
+              ? { lat: Number(stops[parseInt((pickerMode as string).split('_')[1])].lat), lng: Number(stops[parseInt((pickerMode as string).split('_')[1])].lng) }
               : null
           }
           onConfirm={(address, lat, lng) => {
-            if (pickerMode === 'pickup') {
-              update('pickupAddress', address);
-              update('pickupLat', String(lat));
-              update('pickupLng', String(lng));
-            } else {
-              update('deliveryAddress', address);
-              update('deliveryLat', String(lat));
-              update('deliveryLng', String(lng));
-            }
+            resolveLocation(pickerMode, address, lat, lng);
             setPickerMode(null);
           }}
           onClose={() => setPickerMode(null)}
@@ -524,18 +594,21 @@ export default function EnviarPaquetePage() {
                   <span className="enviar-step-title-icon">📍</span>
                   <div>
                     <div className="enviar-step-title-main">¿Dónde recogemos y entregamos?</div>
-                    <div className="enviar-step-title-sub">Ingresá el origen y destino del paquete</div>
+                    <div className="enviar-step-title-sub">
+                      {stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
+                    </div>
                   </div>
                 </div>
 
                 <div className="enviar-address-section">
+                  {/* Pickup */}
                   <div className="enviar-address-row">
                     <span className="enviar-dot green" />
                     <input
                       className="enviar-address-input"
                       placeholder={pickupLoading ? 'Detectando ubicación…' : 'Punto de recogida'}
                       value={form.pickupAddress}
-                      onChange={e => { update('pickupAddress', e.target.value); }}
+                      onChange={e => update('pickupAddress', e.target.value)}
                       onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
                       readOnly={pickupLoading}
                     />
@@ -543,20 +616,92 @@ export default function EnviarPaquetePage() {
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
                     </button>
                   </div>
-                  <div className="enviar-address-divider" />
-                  <div className="enviar-address-row">
-                    <span className="enviar-dot red" />
-                    <input
-                      className="enviar-address-input"
-                      placeholder="¿A dónde va el paquete?"
-                      value={form.deliveryAddress}
-                      onChange={e => { update('deliveryAddress', e.target.value); }}
-                      onFocus={() => openSearch('delivery')}
-                    />
-                    <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('delivery'); }} aria-label="Seleccionar en mapa">
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+
+                  {/* Delivery stops — dynamic list */}
+                  {stops.map((stop, idx) => (
+                    <div key={stop.id}>
+                      <div className="enviar-address-divider" />
+                      <div className="enviar-address-row" style={{ alignItems: 'flex-start', gap: 8 }}>
+                        {/* Numbered badge */}
+                        <span style={{
+                          minWidth: 20, height: 20, borderRadius: '50%',
+                          background: '#ef4444', color: '#fff',
+                          fontSize: '0.7rem', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, marginTop: 2,
+                        }}>
+                          {stops.length > 1 ? idx + 1 : ''}
+                          {stops.length === 1 && (
+                            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                          )}
+                        </span>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Address */}
+                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                            <input
+                              className="enviar-address-input"
+                              placeholder={`Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
+                              value={stop.address}
+                              onChange={e => updateStop(idx, 'address', e.target.value)}
+                              onFocus={() => openSearch(`stop_${idx}`)}
+                              style={{ flex: 1 }}
+                            />
+                            <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(`stop_${idx}`); }} aria-label="Seleccionar en mapa">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+                            </button>
+                            {stops.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeStop(idx)}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}
+                                aria-label="Eliminar parada"
+                              >✕</button>
+                            )}
+                          </div>
+
+                          {/* Mini contact fields — shown if address is filled */}
+                          {stop.address.trim() && (
+                            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                              <input
+                                className="enviar-field-input"
+                                placeholder="Nombre destinatario"
+                                value={stop.receiverContact}
+                                onChange={e => updateStop(idx, 'receiverContact', e.target.value)}
+                                style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px' }}
+                              />
+                              <input
+                                className="enviar-field-input"
+                                placeholder="Teléfono"
+                                type="tel"
+                                value={stop.receiverPhone}
+                                onChange={e => updateStop(idx, 'receiverPhone', e.target.value)}
+                                style={{ flex: 1, fontSize: '0.8rem', padding: '6px 10px' }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add stop button */}
+                  {stops.length < MAX_STOPS && (
+                    <button
+                      type="button"
+                      onClick={addStop}
+                      style={{
+                        marginTop: 10, width: '100%', padding: '9px 0',
+                        border: '1.5px dashed #F5C518', borderRadius: 10,
+                        background: '#FFFBEB', color: '#B45309',
+                        fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                      Agregar parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : ''}
                     </button>
-                  </div>
+                  )}
                 </div>
 
                 {/* Route info pill */}
@@ -568,6 +713,15 @@ export default function EnviarPaquetePage() {
                       </span>
                       <span><strong>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)}</strong> km</span>
                     </div>
+                    {stops.length > 1 && (
+                      <>
+                        <div className="enviar-route-divider" />
+                        <div className="enviar-route-stat">
+                          <span className="enviar-route-icon" style={{ background: '#8b5cf6' }}>📍</span>
+                          <span><strong>{stops.length}</strong> paradas</span>
+                        </div>
+                      </>
+                    )}
                     <div className="enviar-route-divider" />
                     <div className="enviar-route-stat">
                       <span className="enviar-route-icon" style={{ background: '#22c55e' }}>
@@ -592,8 +746,8 @@ export default function EnviarPaquetePage() {
                 <button
                   type="button"
                   className="enviar-next-btn"
-                  disabled={!form.pickupLat || !form.deliveryLat}
-                  onClick={() => { setStep(2); setSheet('full'); /* vehicle step needs scroll */ }}
+                  disabled={!form.pickupLat || !firstStop.lat}
+                  onClick={() => { setStep(2); setSheet('full'); }}
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -770,36 +924,6 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
-                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
-                  <div className="enviar-contact-header">
-                    <span className="enviar-dot red" style={{ width: 10, height: 10 }} /> Destinatario
-                  </div>
-                  <div className="enviar-field-row">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Nombre</label>
-                      <input
-                        className="enviar-field-input"
-                        placeholder="Nombre completo"
-                        value={form.receiverContact}
-                        onChange={e => update('receiverContact', e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Teléfono</label>
-                      <input
-                        className="enviar-field-input"
-                        type="tel"
-                        placeholder="0981 000 000"
-                        value={form.receiverPhone}
-                        onChange={e => update('receiverPhone', e.target.value)}
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
-                </div>
 
                 <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: '#fafafa' }}>
                   <div className="enviar-field">
@@ -823,7 +947,11 @@ export default function EnviarPaquetePage() {
                   <svg width="14" height="14" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   <div className="enviar-summary-item">
                     <span className="enviar-summary-dot red" />
-                    <span className="enviar-summary-addr">{form.deliveryAddress.split(',')[0]}</span>
+                    <span className="enviar-summary-addr">
+                      {stops.length === 1
+                        ? (firstStop.address || '').split(',')[0]
+                        : `${stops.length} paradas`}
+                    </span>
                   </div>
                 </div>
 
@@ -836,7 +964,7 @@ export default function EnviarPaquetePage() {
                     type="submit"
                     form="enviar-form"
                     className="enviar-submit-final"
-                    disabled={sending || offerPrice <= 0 || !form.senderContact.trim() || !form.senderPhone.trim() || !form.receiverContact.trim() || !form.receiverPhone.trim()}
+                    disabled={sending || offerPrice <= 0 || !form.senderContact.trim() || !form.senderPhone.trim()}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
