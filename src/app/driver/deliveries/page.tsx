@@ -448,6 +448,11 @@ export default function DeliveriesPage() {
     }, 60_000);
   }, []);
 
+  // Expand stops list in offer cards
+  const [expandedStops, setExpandedStops] = useState<Set<string>>(new Set());
+  const toggleStops = (orderId: string) =>
+    setExpandedStops(prev => { const next = new Set(prev); next.has(orderId) ? next.delete(orderId) : next.add(orderId); return next; });
+
 
   // Pagination for sheetOrders
   const [ordersPage, setOrdersPage] = useState(1);
@@ -841,8 +846,27 @@ export default function DeliveriesPage() {
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#10b981', flexShrink: 0 }}>🟢</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.pickup_address}</span></div>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}><span style={{ color: '#ef4444', flexShrink: 0 }}>🟥</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{req.delivery_address}</span></div>
                     {req.is_multi_stop && req.stop_count > 1 && (
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
-                        <span style={{ background: '#8b5cf6', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 800 }}>+{req.stop_count} paradas</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleStops(req.id)}
+                          style={{ background: '#8b5cf6', color: '#fff', borderRadius: 99, padding: '3px 10px', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <span>{expandedStops.has(req.id) ? '▲' : '▼'}</span>
+                          {req.stop_count} paradas
+                        </button>
+                        {expandedStops.has(req.id) && Array.isArray(req.stops) && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingLeft: 4 }}>
+                            {[...(req.stops as any[])]
+                              .sort((a: any, b: any) => a.sequence - b.sequence)
+                              .map((stop: any) => (
+                                <div key={stop.id} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                                  <span style={{ minWidth: 16, height: 16, borderRadius: '50%', background: '#8b5cf6', color: '#fff', fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{stop.sequence}</span>
+                                  <span style={{ color: '#cbd5e1', fontSize: '0.72rem', lineHeight: 1.35 }}>{stop.address}</span>
+                                </div>
+                              ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
