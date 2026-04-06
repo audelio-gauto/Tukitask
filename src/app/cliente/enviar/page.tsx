@@ -113,7 +113,7 @@ export default function EnviarPaquetePage() {
 
 
 
-  // User location for proximity bias + auto-fill pickup address
+  // User location for proximity bias + auto-fill pickup address (envio only)
   const userLocation = useRef<{ lat: number; lng: number } | null>(null);
   const [pickupLoading, setPickupLoading] = useState(false);
   useEffect(() => {
@@ -124,6 +124,9 @@ export default function EnviarPaquetePage() {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         userLocation.current = { lat, lng };
+        // In mandadito mode keep coords for search bias only — don't fill the pickup field
+        // (Point A is the store, not the client's location)
+        if (orderType === 'mandadito') { setPickupLoading(false); return; }
         update('pickupLat', lat.toFixed(6));
         update('pickupLng', lng.toFixed(6));
         try {
@@ -142,8 +145,8 @@ export default function EnviarPaquetePage() {
       () => setPickupLoading(false),
       { enableHighAccuracy: true, timeout: 10000 },
     );
-  }, []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderType]);
 
   /** Fetch route via backend proxy (API key stays server-side) */
   function fetchProxyDirections(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -606,7 +609,7 @@ export default function EnviarPaquetePage() {
             >📦 Envío</button>
             <button
               type="button"
-              onClick={() => { setOrderType('mandadito'); if (!['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto'); }}
+              onClick={() => { setOrderType('mandadito'); if (!['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto'); update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
                 background: orderType === 'mandadito' ? '#fff' : 'transparent',
