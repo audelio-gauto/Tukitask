@@ -44,7 +44,7 @@ const SERVICE_LABELS: Record<string, string> = {
   cerrajeria: '🔑 Cerrajería', otros: '✨ Otros',
 };
 
-const CARD_TIMER = 50;
+const CARD_TIMER = 100;
 function getRemaining(createdAt: string) {
   return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
 }
@@ -211,12 +211,14 @@ export default function OfertasPage() {
   const JOBS_PER_PAGE = 10;
   const visibleJobs = useMemo(() => jobs.filter(j => !dismissed.has(j.id)).slice(0, jobsPage * JOBS_PER_PAGE), [jobs, dismissed, jobsPage]);
 
-  const dismissJob = (jobId: string) => {
+  const dismissJob = (jobId: string, permanent = false) => {
     setDismissed(prev => new Set([...prev, jobId]));
     setShowInput(null);
-    setTimeout(() => {
-      setDismissed(prev => { const next = new Set(prev); next.delete(jobId); return next; });
-    }, 60_000);
+    if (!permanent) {
+      setTimeout(() => {
+        setDismissed(prev => { const next = new Set(prev); next.delete(jobId); return next; });
+      }, 120_000);
+    }
   };
 
   // 1-second tick for countdown rings
@@ -229,7 +231,7 @@ export default function OfertasPage() {
   useEffect(() => {
     jobs.forEach(j => {
       if (!dismissed.has(j.id) && !j.my_offer && getRemaining(j.created_at) === 0) {
-        dismissJob(j.id);
+        dismissJob(j.id, true);
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps

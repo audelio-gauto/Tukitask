@@ -17,7 +17,7 @@ const VEHICLE_LABELS: Record<string, string> = {
   camion2t: '🚛 Camión Fletes',
 };
 
-const CARD_TIMER = 50;
+const CARD_TIMER = 100;
 function getRemaining(createdAt: string) {
   return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
 }
@@ -95,7 +95,7 @@ export default function DeliveriesPage() {
   useEffect(() => {
     filteredOrders.forEach(o => {
       if (!dismissedOrders.has(o.id) && !sentOffers[o.id] && getRemaining(o.created_at) === 0) {
-        handleDismiss(o.id);
+        handleDismiss(o.id, true);
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -441,11 +441,15 @@ export default function DeliveriesPage() {
     setSending(s => ({ ...s, [orderId]: false }));
   };
 
-  const handleDismiss = useCallback((orderId: string) => {
+  const handleDismiss = useCallback((orderId: string, permanent = false) => {
     setDismissedOrders(prev => new Set([...prev, orderId]));
-    setTimeout(() => {
-      setDismissedOrders(prev => { const next = new Set(prev); next.delete(orderId); return next; });
-    }, 60_000);
+    if (!permanent) {
+      // Manual ✕ dismiss: allow reappear after 2 min
+      setTimeout(() => {
+        setDismissedOrders(prev => { const next = new Set(prev); next.delete(orderId); return next; });
+      }, 120_000);
+    }
+    // permanent = true (timer expired): stays hidden until next fetchOrders refresh removes it from the list
   }, []);
 
   // Expand stops list in offer cards

@@ -316,13 +316,13 @@ export default function TecnicoDashboard() {
         setPendingPopup(newest);
         setPopupOfferPrice(Number(newest.client_initial_price ?? 0));
         setPopupShowInput(false);
-        setPopupCountdown(60);
+        setPopupCountdown(100);
         playNewJobAlert();
         // Countdown timer
         if (countdownRef.current) clearInterval(countdownRef.current);
         countdownRef.current = setInterval(() => {
           setPopupCountdown(prev => {
-            if (prev <= 1) { dismissPopup(); return 60; }
+            if (prev <= 1) { dismissPopup(); return 100; }
             return prev - 1;
           });
         }, 1000);
