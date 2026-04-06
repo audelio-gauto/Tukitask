@@ -56,24 +56,36 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         setRole(cachedRole);
       }
 
-      setDisplayName(userEmail.split('@')[0] || '');
+      // Read profile from cache immediately — avoids showing email prefix on load
+      try {
+        const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
+        if (cached?.displayName) setDisplayName(cached.displayName);
+        else setDisplayName(userEmail.split('@')[0] || '');
+        if (cached?.profilePhoto) setProfilePhoto(cached.profilePhoto);
+      } catch {
+        setDisplayName(userEmail.split('@')[0] || '');
+      }
       setChecking(false); // show content BEFORE profile load
 
-      // Load profile (non-blocking — content already visible)
+      // Load profile in background — updates state and refreshes cache
       Promise.all([
         fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
         fetch(`/api/tecnico/settings?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       ]).then(([profJson, settingsJson]) => {
         if (!mounted) return;
-        const photo = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo;
+        const photo = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo || '';
+        const fn    = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
+        const ln    = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
+        const full  = [fn, ln].filter(Boolean).join(' ');
         if (photo) setProfilePhoto(photo);
+        if (full)  setDisplayName(full);
         if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
-        if (settingsJson.settings?.avg_rating) setAvgRating(Number(settingsJson.settings.avg_rating));
+        if (settingsJson.settings?.avg_rating)    setAvgRating(Number(settingsJson.settings.avg_rating));
         if (settingsJson.settings?.total_ratings) setTotalRatings(Number(settingsJson.settings.total_ratings));
-        const fn = profJson.profile?.first_name || settingsJson.settings?.first_name || '';
-        const ln = profJson.profile?.last_name  || settingsJson.settings?.last_name  || '';
-        const full = [fn, ln].filter(Boolean).join(' ');
-        if (full) setDisplayName(full);
+        // Save to cache so next load shows correct name+photo instantly
+        try {
+          localStorage.setItem(`tuki_profile_${userEmail}`, JSON.stringify({ displayName: full, profilePhoto: photo }));
+        } catch {}
       }).catch(() => {});
     }
 

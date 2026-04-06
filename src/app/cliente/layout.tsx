@@ -47,20 +47,34 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         }
       }
 
-      setDisplayName(userEmail.split('@')[0] || '');
+      // Read profile from cache immediately — avoids showing email prefix on load
+      try {
+        const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
+        if (cached?.displayName) setDisplayName(cached.displayName);
+        else setDisplayName(userEmail.split('@')[0] || '');
+        if (cached?.profilePhoto) setProfilePhoto(cached.profilePhoto);
+      } catch {
+        setDisplayName(userEmail.split('@')[0] || '');
+      }
       setChecking(false);
 
-      // Load client profile (non-blocking — content already visible)
+      // Load client profile in background — updates state and refreshes cache
       fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(data => {
           const p = data?.profile;
           if (p) {
-            if (p.display_name) setDisplayName(p.display_name);
+            const name  = p.display_name || '';
+            const photo = p.photo_url    || '';
+            if (name)  setDisplayName(name);
+            if (photo) setProfilePhoto(photo);
             if (p.phone) setPhone(p.phone);
-            if (p.photo_url) setProfilePhoto(p.photo_url);
-            if (p.avg_rating) setAvgRating(Number(p.avg_rating));
+            if (p.avg_rating)    setAvgRating(Number(p.avg_rating));
             if (p.total_ratings) setTotalRatings(Number(p.total_ratings));
+            // Save to cache so next load shows correct name+photo instantly
+            try {
+              localStorage.setItem(`tuki_profile_${userEmail}`, JSON.stringify({ displayName: name, profilePhoto: photo }));
+            } catch {}
           }
         })
         .catch(() => {});

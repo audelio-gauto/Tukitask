@@ -52,26 +52,39 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         }
       }
 
-      setDisplayName(userEmail.split('@')[0] || '');
+      // Read profile from cache immediately — avoids showing email prefix on load
+      try {
+        const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
+        if (cached?.displayName) setDisplayName(cached.displayName);
+        else setDisplayName(userEmail.split('@')[0] || '');
+        if (cached?.profilePhoto) setProfilePhoto(cached.profilePhoto);
+      } catch {
+        setDisplayName(userEmail.split('@')[0] || '');
+      }
       setChecking(false); // show content BEFORE profile load
 
-      // Load profile (non-blocking — content already visible)
+      // Load profile in background — updates state and refreshes cache
       fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(profJson => {
-          if (profJson.profile?.profile_photo) setProfilePhoto(profJson.profile.profile_photo);
-          if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
-          if (profJson.profile?.pickup_range) setPickupRangeKm(Number(profJson.profile.pickup_range));
-          if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
-          if (profJson.profile?.avg_rating) setAvgRating(Number(profJson.profile.avg_rating));
-          if (profJson.profile?.total_ratings) setTotalRatings(Number(profJson.profile.total_ratings));
-          if (profJson.profile?.service_filters && typeof profJson.profile.service_filters === 'object') {
-            setServiceFilters({ ...DEFAULT_FILTERS, ...profJson.profile.service_filters });
-          }
+          const photo    = profJson.profile?.profile_photo || '';
           const firstName = profJson.profile?.first_name || '';
           const lastName  = profJson.profile?.last_name  || '';
           const fullName  = [firstName, lastName].filter(Boolean).join(' ');
+          if (photo)    setProfilePhoto(photo);
           if (fullName) setDisplayName(fullName);
+          if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
+          if (profJson.profile?.pickup_range)   setPickupRangeKm(Number(profJson.profile.pickup_range));
+          if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
+          if (profJson.profile?.avg_rating)     setAvgRating(Number(profJson.profile.avg_rating));
+          if (profJson.profile?.total_ratings)  setTotalRatings(Number(profJson.profile.total_ratings));
+          if (profJson.profile?.service_filters && typeof profJson.profile.service_filters === 'object') {
+            setServiceFilters({ ...DEFAULT_FILTERS, ...profJson.profile.service_filters });
+          }
+          // Save to cache so next load shows correct name+photo instantly
+          try {
+            localStorage.setItem(`tuki_profile_${userEmail}`, JSON.stringify({ displayName: fullName, profilePhoto: photo }));
+          } catch {}
         })
         .catch(() => {});
     })();
