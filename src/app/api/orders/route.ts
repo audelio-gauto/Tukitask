@@ -85,7 +85,8 @@ export async function POST(req: Request) {
   const db = sbAdmin();
 
   // Extract stops array before inserting — they go to order_stops table
-  const { stops, ...orderBody } = body as {
+  // Extract mandadito fields — only sent to DB if columns exist (require migration 025)
+  const { stops, order_type, shopping_list, max_budget, ...orderBody } = body as {
     stops?: Array<{
       address: string;
       lat?: string | number;
@@ -94,17 +95,23 @@ export async function POST(req: Request) {
       receiver_phone?: string;
       description?: string;
     }>;
+    order_type?: string;
+    shopping_list?: string | null;
+    max_budget?: number | null;
     [key: string]: unknown;
   };
 
   const isMultiStop = Array.isArray(stops) && stops.length > 1;
 
   // Forzar client_email desde el token — nunca confiar en el body
-  const safeBody = {
+  const safeBody: Record<string, unknown> = {
     ...orderBody,
     client_email: user.email,
     is_multi_stop: isMultiStop,
     stop_count: isMultiStop ? stops!.length : 1,
+    order_type: order_type || 'envio',
+    shopping_list: shopping_list || null,
+    max_budget: max_budget || null,
   };
 
   const { data: order, error } = await db
@@ -112,7 +119,10 @@ export async function POST(req: Request) {
     .insert([safeBody])
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[orders POST]', error.message, '— if column missing, run migration 025_mandaditos.sql');
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   // Insert stops for multi-stop orders
   if (isMultiStop && stops && order) {

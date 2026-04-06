@@ -448,7 +448,10 @@ export default function EnviarPaquetePage() {
         }),
       });
       if (res.status === 401) { router.push('/auth'); return; }
-      if (!res.ok) throw new Error('Error al crear el pedido');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al crear el pedido');
+      }
       router.push('/cliente');
     } catch {
       alert('Error al crear el pedido');
