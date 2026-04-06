@@ -606,7 +606,7 @@ export default function EnviarPaquetePage() {
             >📦 Envío</button>
             <button
               type="button"
-              onClick={() => setOrderType('mandadito')}
+              onClick={() => { setOrderType('mandadito'); if (!['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto'); }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
                 background: orderType === 'mandadito' ? '#fff' : 'transparent',
@@ -835,7 +835,7 @@ export default function EnviarPaquetePage() {
 
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
-                  {vehicleTypes.map(v => {
+                  {vehicleTypes.filter(v => orderType === 'mandadito' ? ['moto', 'auto'].includes(v.value) : true).map(v => {
                     const vp = pricing[v.value];
                     const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
                     let estPrice = 0;
