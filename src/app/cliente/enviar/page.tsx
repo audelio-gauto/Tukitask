@@ -13,7 +13,7 @@ const LocationPicker = dynamic(() => import('../components/LocationPicker'), { s
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: '🏍️', priceHint: 'Más económico' },
   { value: 'auto', label: 'Auto', sub: 'Mayor capacidad', icon: '🚗', priceHint: 'Cómodo y seguro' },
-  { value: 'motocarro', label: 'Moto Carro', sub: 'Carga mediana, pesada, mudanza', icon: '🛵', priceHint: 'Carga mediana' },
+  { value: 'motocarro', label: 'Moto Carro', sub: 'Carga mediana, mudanza', icon: '🛵', priceHint: 'Carga mediana' },
   { value: 'camion2t', label: 'Camión flete', sub: 'Carga mediana, pesada, mudanza', icon: '🚛', priceHint: 'Mudanzas y fletes' },
 ];
 
