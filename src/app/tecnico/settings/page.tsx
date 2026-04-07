@@ -4,11 +4,11 @@ import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 
-const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: string }[] = [
+const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: string; requiresExpiry?: boolean }[] = [
   { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cédula', icon: '🤳', hint: 'Cara y cédula visibles' },
-  { key: 'cedula_frente', label: 'Cédula — frente',               icon: '🪪' },
+  { key: 'cedula_frente', label: 'Cédula — frente',               icon: '🪪', requiresExpiry: true },
   { key: 'cedula_dorso',  label: 'Cédula — dorso',                icon: '🪪' },
-  { key: 'antecedentes',  label: 'Antecedentes policiales',       icon: '📋', hint: 'Vigente' },
+  { key: 'antecedentes',  label: 'Antecedentes policiales',       icon: '📋', hint: 'Vigente', requiresExpiry: true },
   { key: 'domicilio',     label: 'Comprobante de domicilio',      icon: '🏠', hint: 'ANDE, agua o internet' },
 ];
 
@@ -39,8 +39,9 @@ export default function TecnicoSettings() {
   const [acceptsPackages, setAcceptsPackages] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(ctxPhoto || '');
   const [uploading, setUploading] = useState(false);
-  const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string }>>({});
+  const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
   const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
+  const [docExpiries, setDocExpiries] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -108,12 +109,29 @@ export default function TecnicoSettings() {
     authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then(j => {
-        const sm: Record<string, { status: string; rejection_reason?: string }> = {};
-        for (const d of (j.docs || [])) sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason };
+        const sm: Record<string, { status: string; rejection_reason?: string; expires_at?: string }> = {};
+        const ex: Record<string, string> = {};
+        for (const d of (j.docs || [])) {
+          sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason, expires_at: d.expires_at };
+          if (d.expires_at) ex[d.doc_type] = d.expires_at.slice(0, 10);
+        }
         setDocStatus(sm);
+        setDocExpiries(ex);
       })
       .catch(() => {});
   }, [email]);
+
+  const updateExpiry = async (docKey: string, dateValue: string) => {
+    if (!email) return;
+    setDocExpiries(prev => ({ ...prev, [docKey]: dateValue }));
+    try {
+      await authFetch('/api/upload-driver-doc', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, doc_type: docKey, expires_at: dateValue || null, role: 'tecnico' }),
+      });
+    } catch { /* silent */ }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,7 +340,8 @@ export default function TecnicoSettings() {
               const ds = docStatus[doc.key];
               const isUploading = docUploading[doc.key];
               return (
-                <div key={doc.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                <div key={doc.key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
@@ -377,6 +396,18 @@ export default function TecnicoSettings() {
                         }}
                       />
                     </label>
+                  )}
+                  </div>
+                  {doc.requiresExpiry && (
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <label style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap' }}>📅 Vence:</label>
+                      <input
+                        type="date"
+                        value={docExpiries[doc.key] || ''}
+                        onChange={e => updateExpiry(doc.key, e.target.value)}
+                        style={{ fontSize: '0.75rem', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 6px', color: '#374151', background: '#fff', outline: 'none', flex: 1 }}
+                      />
+                    </div>
                   )}
                 </div>
               );
