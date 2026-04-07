@@ -78,7 +78,7 @@ export default function TecnicoDashboard() {
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // ── Document expiry alerts ────────────────────────────────────────────────
-  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[] }>({ expired: [], soon: [] });
+  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   useEffect(() => {
     if (!email) return;
     const criticalKeys = ['cedula_frente', 'antecedentes'];
@@ -87,16 +87,18 @@ export default function TecnicoDashboard() {
       .then(j => {
         const expired: string[] = [];
         const soon: string[] = [];
+        const notApproved: string[] = [];
         const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
         for (const d of (j.docs || [])) {
+          if (d.status !== 'approved') notApproved.push(d.doc_type);
           if (!criticalKeys.includes(d.doc_type)) continue;
           if (!d.expires_at) continue;
           const ms = new Date(d.expires_at).getTime() - Date.now();
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= TEN_DAYS) soon.push(d.doc_type);
         }
-        setDocAlerts({ expired, soon });
-        if (expired.length > 0) {
+        setDocAlerts({ expired, soon, notApproved });
+        if (expired.length > 0 || notApproved.length > 0) {
           setAvailable(false);
           try { localStorage.setItem('tecnico_available', 'false'); } catch {}
         }
@@ -598,7 +600,7 @@ export default function TecnicoDashboard() {
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
-                if (!available && docAlerts.expired.length > 0) return;
+                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
                 const next = !available;
                 setAvailable(next);
                 try { localStorage.setItem('tecnico_available', String(next)); } catch {}
@@ -613,7 +615,12 @@ export default function TecnicoDashboard() {
               🚫 Documentos vencidos — actualizá tus fechas de vencimiento en Configuración para poder conectarte.
             </div>
           )}
-          {docAlerts.expired.length === 0 && docAlerts.soon.length > 0 && (
+          {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
+            <div style={{ margin: '0 0 0.75rem', padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600 }}>
+              📋 No podés conectarte aún — tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.
+            </div>
+          )}
+          {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.8rem', fontWeight: 600 }}>
               ⚠️ Tenés documentos por vencer en menos de 10 días. Renovalos pronto.
             </div>

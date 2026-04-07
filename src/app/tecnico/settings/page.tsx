@@ -339,6 +339,8 @@ export default function TecnicoSettings() {
             {TECNICO_DOC_TYPES.map(doc => {
               const ds = docStatus[doc.key];
               const isUploading = docUploading[doc.key];
+              const _expAtT = docExpiries[doc.key] || ds?.expires_at;
+              const isLocked = ds?.status === 'approved' && !(_expAtT && new Date(_expAtT).getTime() <= Date.now());
               return (
                 <div key={doc.key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -359,16 +361,18 @@ export default function TecnicoSettings() {
                   )}
                   {isUploading ? (
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                  ) : isLocked ? (
+                    <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
                   ) : (
                     <label style={{
                       flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                      background: ds?.status === 'approved' ? '#f0fdf4' : '#fefce8',
-                      color: ds?.status === 'approved' ? '#059669' : '#92400e',
+                      background: ds?.status === 'approved' ? '#fffbeb' : '#fefce8',
+                      color: ds?.status === 'approved' ? '#b45309' : '#92400e',
                       fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                      borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#fde68a',
+                      borderColor: ds?.status === 'approved' ? '#fcd34d' : '#fde68a',
                       display: 'inline-flex', alignItems: 'center', gap: 3,
                     }}>
-                      {ds ? '↑ Re-subir' : '↑ Subir'}
+                      {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -401,12 +405,18 @@ export default function TecnicoSettings() {
                   {doc.requiresExpiry && (
                     <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <label style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap' }}>📅 Vence:</label>
-                      <input
-                        type="date"
-                        value={docExpiries[doc.key] || ''}
-                        onChange={e => updateExpiry(doc.key, e.target.value)}
-                        style={{ fontSize: '0.75rem', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 6px', color: '#374151', background: '#fff', outline: 'none', flex: 1 }}
-                      />
+                      {isLocked ? (
+                        <span style={{ fontSize: '0.75rem', color: '#374151', fontWeight: 600 }}>
+                          {docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}
+                        </span>
+                      ) : (
+                        <input
+                          type="date"
+                          value={docExpiries[doc.key] || ''}
+                          onChange={e => updateExpiry(doc.key, e.target.value)}
+                          style={{ fontSize: '0.75rem', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 6px', color: '#374151', background: '#fff', outline: 'none', flex: 1 }}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

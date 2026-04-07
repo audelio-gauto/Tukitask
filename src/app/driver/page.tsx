@@ -68,7 +68,7 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
-  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[] }>({ expired: [], soon: [] });
+  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
 
   // Stats state
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
@@ -108,15 +108,17 @@ export default function DriverDashboard() {
         const tenDays = 10 * 24 * 60 * 60 * 1000;
         const expired: string[] = [];
         const soon: string[] = [];
+        const notApproved: string[] = [];
         for (const d of (j.docs || [])) {
+          if (d.status !== 'approved') notApproved.push(d.doc_type);
           if (!criticalKeys.has(d.doc_type) || !d.expires_at) continue;
           const ms = new Date(d.expires_at).getTime() - now;
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= tenDays) soon.push(d.doc_type);
         }
-        setDocAlerts({ expired, soon });
-        // Si hay docs vencidos, forzar offline
-        if (expired.length > 0) {
+        setDocAlerts({ expired, soon, notApproved });
+        // Si hay docs vencidos o no aprobados, forzar offline
+        if (expired.length > 0 || notApproved.length > 0) {
           setAvailable(false);
           try { localStorage.setItem('driver_available', 'false'); } catch {}
         }
@@ -690,7 +692,7 @@ export default function DriverDashboard() {
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
-                if (!available && docAlerts.expired.length > 0) return; // bloquear si docs vencidos
+                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return; // bloquear si docs no aprobados o vencidos
                 const next = !available;
                 setAvailable(next);
                 try { localStorage.setItem('driver_available', String(next)); } catch {}
@@ -709,7 +711,16 @@ export default function DriverDashboard() {
               </div>
             </div>
           )}
-          {docAlerts.expired.length === 0 && docAlerts.soon.length > 0 && (
+          {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📋</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>No podés ponerte En Línea aún</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.</p>
+              </div>
+            </div>
+          )}
+          {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fffbeb', border: '1.5px solid #fcd34d', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
               <div>

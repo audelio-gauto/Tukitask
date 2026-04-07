@@ -375,6 +375,8 @@ export default function DriverSettingsPage() {
                 const docKey = `${vehicleType}_${doc.key}`;
                 const ds = docStatus[docKey];
                 const isUploading = docUploading[docKey];
+                const _expAtV = docExpiries[docKey] || ds?.expires_at;
+                const isLocked = ds?.status === 'approved' && !(_expAtV && new Date(_expAtV).getTime() <= Date.now());
                 return (
                   <div key={docKey}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
@@ -395,16 +397,18 @@ export default function DriverSettingsPage() {
                       )}
                       {isUploading ? (
                         <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                      ) : isLocked ? (
+                        <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
                       ) : (
                         <label style={{
                           flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                          background: ds?.status === 'approved' ? '#f0fdf4' : '#f0f9ff',
-                          color: ds?.status === 'approved' ? '#059669' : '#0284c7',
+                          background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff',
+                          color: ds?.status === 'approved' ? '#b45309' : '#0284c7',
                           fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                          borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#bae6fd',
+                          borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd',
                           display: 'inline-flex', alignItems: 'center', gap: 3,
                         }}>
-                          {ds ? '↑ Re-subir' : '↑ Subir'}
+                          {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
                           <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
                             onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(docKey, f); e.target.value = ''; }} />
                         </label>
@@ -413,8 +417,14 @@ export default function DriverSettingsPage() {
                     {doc.requiresExpiry && (
                       <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
-                        <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)}
-                          style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                        {isLocked ? (
+                          <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>
+                            {docExpiries[docKey] ? new Date(docExpiries[docKey]).toLocaleDateString('es-PY') : '—'}
+                          </span>
+                        ) : (
+                          <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)}
+                            style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                        )}
                       </div>
                     )}
                   </div>
@@ -437,6 +447,8 @@ export default function DriverSettingsPage() {
             {PERSONAL_DOCS.map(doc => {
               const ds = docStatus[doc.key];
               const isUploading = docUploading[doc.key];
+              const _expAtP = docExpiries[doc.key] || ds?.expires_at;
+              const isLocked = ds?.status === 'approved' && !(_expAtP && new Date(_expAtP).getTime() <= Date.now());
               return (
                 <div key={doc.key}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
@@ -457,16 +469,18 @@ export default function DriverSettingsPage() {
                     )}
                     {isUploading ? (
                       <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                    ) : isLocked ? (
+                      <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
                     ) : (
                       <label style={{
                         flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                        background: ds?.status === 'approved' ? '#f0fdf4' : '#f0f9ff',
-                        color: ds?.status === 'approved' ? '#059669' : '#0284c7',
+                        background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff',
+                        color: ds?.status === 'approved' ? '#b45309' : '#0284c7',
                         fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                        borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#bae6fd',
+                        borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd',
                         display: 'inline-flex', alignItems: 'center', gap: 3,
                       }}>
-                        {ds ? '↑ Re-subir' : '↑ Subir'}
+                        {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
                         <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
                           onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); e.target.value = ''; }} />
                       </label>
@@ -475,8 +489,14 @@ export default function DriverSettingsPage() {
                   {doc.requiresExpiry && (
                     <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
-                      <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)}
-                        style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                      {isLocked ? (
+                        <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>
+                          {docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}
+                        </span>
+                      ) : (
+                        <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)}
+                          style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                      )}
                     </div>
                   )}
                 </div>
