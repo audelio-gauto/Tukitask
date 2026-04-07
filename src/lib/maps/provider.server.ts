@@ -3,7 +3,7 @@ import { redis } from '../redis'
 import { mapboxProvider } from './providers/mapbox'
 import { mapboxGeoSearch, mapboxReverseGeocode } from './providers/mapbox'
 import { nominatimGeoSearch } from './providers/nominatim'
-import { googleProvider } from './providers/google'
+import { googleProvider, googlePlacesSearch } from './providers/google'
 import type { GeocodeResult, DirectionsResult } from './providers/types'
 import { incrementMetric } from '../metrics'
 import { supabaseServer } from '../supabaseServer'
@@ -132,8 +132,8 @@ export async function geocodeSearch(
 
   const keys = await getApiKeys()
 
-  // Run both providers in parallel
-  const [mapboxResults, nominatimResults] = await Promise.all([
+  // Run all three providers in parallel — Google Places added for superior business/POI data
+  const [mapboxResults, nominatimResults, googleResults] = await Promise.all([
     keys.mapbox
       ? mapboxGeoSearch(query, keys.mapbox, limit, proximity).catch((err) => {
           console.warn('[geocodeSearch] mapboxGeoSearch failed:', err)
@@ -144,10 +144,16 @@ export async function geocodeSearch(
       console.warn('[geocodeSearch] nominatimGeoSearch failed:', err)
       return [] as GeocodeResult[]
     }),
+    keys.google
+      ? googlePlacesSearch(query, keys.google, Math.min(limit, 5), proximity).catch((err) => {
+          console.warn('[geocodeSearch] googlePlacesSearch failed:', err)
+          return [] as GeocodeResult[]
+        })
+      : Promise.resolve([] as GeocodeResult[]),
   ])
 
-  // Merge: Nominatim first (has POIs), then Mapbox, deduplicate by proximity
-  const merged = deduplicateResults([...nominatimResults, ...mapboxResults], limit)
+  // Merge: Google Places first (best commercial data), then Nominatim, then Mapbox (streets)
+  const merged = deduplicateResults([...googleResults, ...nominatimResults, ...mapboxResults], limit)
 
   if (merged.length > 0) {
     await cacheSet(key, merged, geocodeTTL)
