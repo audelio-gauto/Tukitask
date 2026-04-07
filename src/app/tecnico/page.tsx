@@ -611,19 +611,28 @@ export default function TecnicoDashboard() {
 
           {/* Doc expiry banners */}
           {docAlerts.expired.length > 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600 }}>
-              🚫 Documentos vencidos — actualizá tus fechas de vencimiento en Configuración para poder conectarte.
-            </div>
+            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
+              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🚫 Documentos vencidos — actualizá en Configuración para conectarte.</span>
+                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
+              </div>
+            </Link>
           )}
           {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600 }}>
-              📋 No podés conectarte aún — tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.
-            </div>
+            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
+              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📋 No podés conectarte aún — tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación.</span>
+                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
+              </div>
+            </Link>
           )}
           {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.8rem', fontWeight: 600 }}>
-              ⚠️ Tenés documentos por vencer en menos de 10 días. Renovalos pronto.
-            </div>
+            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
+              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>⚠️ Tenés documentos por vencer en menos de 10 días. Renovalos pronto.</span>
+                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
+              </div>
+            </Link>
           )}
 
           {/* Active services summary chip strip */}
