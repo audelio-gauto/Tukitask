@@ -17,17 +17,22 @@ const NAV_APPS = [
   { value: 'waze',        label: 'Waze',        logo: '📍' },
 ];
 
-const DRIVER_DOC_TYPES: { key: string; label: string; icon: string; group: string; hint?: string }[] = [
-  { key: 'cedula_frente',       label: 'Cédula — frente',               icon: '🪪', group: 'personal' },
-  { key: 'cedula_dorso',        label: 'Cédula — dorso',                icon: '🪪', group: 'personal' },
-  { key: 'antecedentes',        label: 'Antecedentes policiales',        icon: '📋', group: 'personal', hint: 'Vigente' },
-  { key: 'domicilio',           label: 'Comprobante de domicilio',       icon: '🏠', group: 'personal', hint: 'ANDE, agua o internet' },
-  { key: 'registro_frente',     label: 'Registro de conducir — frente',  icon: '🚗', group: 'vehiculo' },
-  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',   icon: '🚗', group: 'vehiculo' },
-  { key: 'cedula_verde_frente', label: 'Cédula Verde — frente',          icon: '📄', group: 'vehiculo' },
-  { key: 'cedula_verde_dorso',  label: 'Cédula Verde — dorso',           icon: '📄', group: 'vehiculo' },
-  { key: 'foto_vehiculo_1',     label: 'Foto del vehículo 1',            icon: '📸', group: 'vehiculo', hint: 'Chapa visible' },
-  { key: 'foto_vehiculo_2',     label: 'Foto del vehículo 2',            icon: '📸', group: 'vehiculo', hint: 'Chapa visible' },
+type DocEntry = { key: string; label: string; icon: string; hint?: string; requiresExpiry?: boolean };
+
+const PERSONAL_DOCS: DocEntry[] = [
+  { key: 'cedula_frente', label: 'Cédula — frente',          icon: '🪪', requiresExpiry: true },
+  { key: 'cedula_dorso',  label: 'Cédula — dorso',           icon: '🪪' },
+  { key: 'antecedentes',  label: 'Antecedentes policiales',  icon: '📋', hint: 'Vigente', requiresExpiry: true },
+  { key: 'domicilio',     label: 'Comprobante de domicilio', icon: '🏠', hint: 'ANDE, agua o internet' },
+];
+
+const VEHICLE_DOCS: DocEntry[] = [
+  { key: 'registro_frente',     label: 'Registro de conducir — frente', icon: '🚗', requiresExpiry: true },
+  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',  icon: '🚗' },
+  { key: 'cedula_verde_frente', label: 'Cédula Verde — frente',         icon: '📄' },
+  { key: 'cedula_verde_dorso',  label: 'Cédula Verde — dorso',          icon: '📄' },
+  { key: 'foto_1',              label: 'Foto del vehículo 1',            icon: '📸', hint: 'Chapa visible' },
+  { key: 'foto_2',              label: 'Foto del vehículo 2',            icon: '📸', hint: 'Chapa visible' },
 ];
 
 export default function DriverSettingsPage() {
@@ -47,7 +52,8 @@ export default function DriverSettingsPage() {
   const [phone, setPhone] = useState('');
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
-  const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string }>>({});
+  const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
+  const [docExpiries, setDocExpiries] = useState<Record<string, string>>({});
   const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -119,12 +125,29 @@ export default function DriverSettingsPage() {
     authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then(j => {
-        const sm: Record<string, { status: string; rejection_reason?: string }> = {};
-        for (const d of (j.docs || [])) sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason };
+        const sm: Record<string, { status: string; rejection_reason?: string; expires_at?: string }> = {};
+        const ex: Record<string, string> = {};
+        for (const d of (j.docs || [])) {
+          sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason, expires_at: d.expires_at };
+          if (d.expires_at) ex[d.doc_type] = d.expires_at.substring(0, 10);
+        }
         setDocStatus(sm);
+        setDocExpiries(ex);
       })
       .catch(() => {});
   }, [email]);
+
+  async function updateExpiry(docType: string, expiresAt: string) {
+    if (!email) return;
+    setDocExpiries(prev => ({ ...prev, [docType]: expiresAt }));
+    try {
+      await authFetch('/api/upload-driver-doc', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, doc_type: docType, expires_at: expiresAt || null }),
+      });
+    } catch {}
+  }
 
   async function uploadDoc(docType: string, file: File) {
     if (!email || !file) return;
@@ -341,29 +364,20 @@ export default function DriverSettingsPage() {
               />
             </div>
           </div>
-        </div>
 
-        {/* ── SECCIÓN: DOCUMENTOS ── */}
-        <div style={{ background: '#fff', borderRadius: 18, padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fefce8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>📄</div>
-            <div>
-              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Documentos del conductor</h3>
-              <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>Requeridos para verificar tu cuenta</p>
-            </div>
-          </div>
-          {[
-            { group: 'Identificación personal', docs: DRIVER_DOC_TYPES.filter(d => d.group === 'personal') },
-            { group: 'Documentos del vehículo', docs: DRIVER_DOC_TYPES.filter(d => d.group === 'vehiculo') },
-          ].map(section => (
-            <div key={section.group} style={{ marginBottom: '0.75rem' }}>
-              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 6px' }}>{section.group}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {section.docs.map(doc => {
-                  const ds = docStatus[doc.key];
-                  const isUploading = docUploading[doc.key];
-                  return (
-                    <div key={doc.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+          {/* Documentos del vehículo seleccionado */}
+          <div style={{ marginTop: '1rem', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
+              Documentos — {selectedVehicle?.label}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {VEHICLE_DOCS.map(doc => {
+                const docKey = `${vehicleType}_${doc.key}`;
+                const ds = docStatus[docKey];
+                const isUploading = docUploading[docKey];
+                return (
+                  <div key={docKey}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
@@ -391,20 +405,84 @@ export default function DriverSettingsPage() {
                           display: 'inline-flex', alignItems: 'center', gap: 3,
                         }}>
                           {ds ? '↑ Re-subir' : '↑ Subir'}
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                            style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); e.target.value = ''; }}
-                          />
+                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(docKey, f); e.target.value = ''; }} />
                         </label>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                    {doc.requiresExpiry && (
+                      <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                        <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)}
+                          style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* ── SECCIÓN: IDENTIFICACIÓN PERSONAL ── */}
+        <div style={{ background: '#fff', borderRadius: 18, padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fefce8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🪪</div>
+            <div>
+              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Identificación personal</h3>
+              <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>Cédula, antecedentes y domicilio</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {PERSONAL_DOCS.map(doc => {
+              const ds = docStatus[doc.key];
+              const isUploading = docUploading[doc.key];
+              return (
+                <div key={doc.key}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                      {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                      {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                    </div>
+                    {ds && (
+                      <span style={{
+                        flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
+                        background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
+                        color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
+                      }}>
+                        {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                      </span>
+                    )}
+                    {isUploading ? (
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                    ) : (
+                      <label style={{
+                        flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
+                        background: ds?.status === 'approved' ? '#f0fdf4' : '#f0f9ff',
+                        color: ds?.status === 'approved' ? '#059669' : '#0284c7',
+                        fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
+                        borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#bae6fd',
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                      }}>
+                        {ds ? '↑ Re-subir' : '↑ Subir'}
+                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); e.target.value = ''; }} />
+                      </label>
+                    )}
+                  </div>
+                  {doc.requiresExpiry && (
+                    <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                      <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)}
+                        style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── SECCIÓN: NAVEGACIÓN ── */}

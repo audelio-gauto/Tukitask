@@ -3,19 +3,21 @@ import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 
 const BUCKET = 'driver-documents';
 
-const VALID_DRIVER_DOCS = [
-  'cedula_frente', 'cedula_dorso',
-  'antecedentes', 'domicilio',
-  'registro_frente', 'registro_dorso',
-  'cedula_verde_frente', 'cedula_verde_dorso',
-  'foto_vehiculo_1', 'foto_vehiculo_2',
-];
+const VALID_PERSONAL_DOCS = ['cedula_frente', 'cedula_dorso', 'antecedentes', 'domicilio'];
+const VEHICLE_PREFIXES    = ['moto', 'auto', 'moto_carro', 'camion'];
+const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso', 'foto_1', 'foto_2'];
+const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'cedula_dorso', 'antecedentes', 'domicilio'];
 
-const VALID_TECNICO_DOCS = [
-  'selfie_cedula',
-  'cedula_frente', 'cedula_dorso',
-  'antecedentes', 'domicilio',
-];
+function isValidDriverDoc(doc_type: string): boolean {
+  if (VALID_PERSONAL_DOCS.includes(doc_type)) return true;
+  for (const prefix of VEHICLE_PREFIXES) {
+    if (doc_type.startsWith(prefix + '_')) {
+      const key = doc_type.slice(prefix.length + 1);
+      if (VEHICLE_DOC_KEYS.includes(key)) return true;
+    }
+  }
+  return false;
+}
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
@@ -44,7 +46,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await sbAdmin()
     .from('driver_documents')
-    .select('id, doc_type, role, status, rejection_reason, created_at, updated_at')
+    .select('id, doc_type, role, status, rejection_reason, expires_at, created_at, updated_at')
     .eq('driver_email', email)
     .order('updated_at', { ascending: false });
 
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { email, doc_type, base64, mimeType, role = 'driver' } = body;
+    const { email, doc_type, base64, mimeType, role = 'driver', expires_at } = body;
 
     // Prevenir IDOR: el email debe coincidir con el JWT
     if (!email || email !== user.email) {
@@ -72,8 +74,8 @@ export async function POST(req: Request) {
     }
 
     // Validar tipo de documento según el rol
-    const validDocs = role === 'tecnico' ? VALID_TECNICO_DOCS : VALID_DRIVER_DOCS;
-    if (!validDocs.includes(doc_type)) {
+    const isValid = role === 'tecnico' ? VALID_TECNICO_DOCS.includes(doc_type) : isValidDriverDoc(doc_type);
+    if (!isValid) {
       return NextResponse.json({ error: 'Tipo de documento inválido' }, { status: 400 });
     }
 
@@ -116,6 +118,7 @@ export async function POST(req: Request) {
         rejection_reason: null,
         reviewed_by: null,
         reviewed_at: null,
+        expires_at: expires_at || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'driver_email,doc_type' });
 
@@ -124,6 +127,32 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, status: 'pending' });
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  }
+}
+
+/** PATCH: actualiza solo expires_at de un documento (sin re-subir el archivo) */
+export async function PATCH(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
+  try {
+    const body = await req.json();
+    const { email, doc_type, expires_at } = body;
+
+    if (!email || email !== user.email) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { error } = await sbAdmin()
+      .from('driver_documents')
+      .update({ expires_at: expires_at || null, updated_at: new Date().toISOString() })
+      .eq('driver_email', email)
+      .eq('doc_type', doc_type);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }

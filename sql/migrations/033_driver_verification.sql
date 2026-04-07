@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS driver_documents (
   UNIQUE (driver_email, doc_type)  -- upsert: latest upload por tipo de doc
 );
 
+-- Columna de vencimiento para documentos que expiran
+ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+
 -- RLS: cada conductor/técnico solo ve sus propios documentos
 ALTER TABLE driver_documents ENABLE ROW LEVEL SECURITY;
 

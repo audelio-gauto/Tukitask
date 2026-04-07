@@ -68,6 +68,7 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
+  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[] }>({ expired: [], soon: [] });
 
   // Stats state
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
@@ -92,6 +93,34 @@ export default function DriverDashboard() {
     authFetch('/api/wallet')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.balance !== undefined) setWalletBalance(Number(d.balance)); })
+      .catch(() => {});
+  }, [email]);
+
+  // Verificar vencimiento de documentos críticos
+  useEffect(() => {
+    if (!email) return;
+    authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
+      .then(r => r.json())
+      .then(j => {
+        const criticalKeys = new Set(['cedula_frente', 'antecedentes',
+          'moto_registro_frente', 'auto_registro_frente', 'moto_carro_registro_frente', 'camion_registro_frente']);
+        const now = Date.now();
+        const tenDays = 10 * 24 * 60 * 60 * 1000;
+        const expired: string[] = [];
+        const soon: string[] = [];
+        for (const d of (j.docs || [])) {
+          if (!criticalKeys.has(d.doc_type) || !d.expires_at) continue;
+          const ms = new Date(d.expires_at).getTime() - now;
+          if (ms <= 0) expired.push(d.doc_type);
+          else if (ms <= tenDays) soon.push(d.doc_type);
+        }
+        setDocAlerts({ expired, soon });
+        // Si hay docs vencidos, forzar offline
+        if (expired.length > 0) {
+          setAvailable(false);
+          try { localStorage.setItem('driver_available', 'false'); } catch {}
+        }
+      })
       .catch(() => {});
   }, [email]);
 
@@ -661,6 +690,7 @@ export default function DriverDashboard() {
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
+                if (!available && docAlerts.expired.length > 0) return; // bloquear si docs vencidos
                 const next = !available;
                 setAvailable(next);
                 try { localStorage.setItem('driver_available', String(next)); } catch {}
@@ -668,6 +698,26 @@ export default function DriverDashboard() {
               <span className="tuki-toggle-slider" />
             </label>
           </div>
+
+          {/* Alertas de documentos */}
+          {docAlerts.expired.length > 0 && (
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🚫</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>Documentos vencidos — no podés ponerte En Línea</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Actualizá tus documentos en Perfil → Configuración</p>
+              </div>
+            </div>
+          )}
+          {docAlerts.expired.length === 0 && docAlerts.soon.length > 0 && (
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fffbeb', border: '1.5px solid #fcd34d', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#92400e' }}>Documentos próximos a vencer</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b45309' }}>Actualizá antes de que venzan para seguir operando</p>
+              </div>
+            </div>
+          )}
 
           {/* Active service types chip strip */}
           {Object.values(serviceFilters).some(v => v) && (
