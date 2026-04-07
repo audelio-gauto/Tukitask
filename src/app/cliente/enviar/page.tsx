@@ -878,9 +878,8 @@ export default function EnviarPaquetePage() {
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
-                    orderType === 'mandadito' ? ['moto', 'auto'].includes(v.value) :
-                    orderType === 'flete'     ? ['motocarro', 'camion2t'].includes(v.value) :
-                    true
+                    orderType === 'flete' ? ['motocarro', 'camion2t'].includes(v.value) :
+                    ['moto', 'auto'].includes(v.value)
                   ).map(v => {
                     const vp = pricing[v.value];
                     const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
