@@ -88,8 +88,8 @@ export default function PricingConfigPage() {
         const a = (data.app_settings || []).find((x: any) => x.key === k)
         return a ? String(a.value || '') : ''
       }
-      setMapboxKey(getApp('mapbox_api_key'))
-      setGoogleKey(getApp('google_maps_api_key'))
+      setMapboxKey('')
+      setGoogleKey('')
     } catch (err) {
       console.error('fetchData error:', err);
       setError(String(err));
@@ -132,6 +132,15 @@ export default function PricingConfigPage() {
       }
       setApp('mapbox_api_key', mapboxKey)
       setApp('google_maps_api_key', googleKey)
+      // If key field is blank, remove it from the payload so the existing DB value is preserved
+      if (!mapboxKey) {
+        const idx = mergedApp.findIndex(s => s.key === 'mapbox_api_key')
+        if (idx >= 0) mergedApp.splice(idx, 1)
+      }
+      if (!googleKey) {
+        const idx = mergedApp.findIndex(s => s.key === 'google_maps_api_key')
+        if (idx >= 0) mergedApp.splice(idx, 1)
+      }
 
       const { data: { session: saveSession } } = await supabase.auth.getSession();
       const saveToken = saveSession?.access_token || '';
@@ -239,14 +248,30 @@ export default function PricingConfigPage() {
           })()}
 
 
-          {/* Map API keys inputs (always shown) */}
+          {/* Map API keys inputs - password type to avoid key exposure in devtools/screenshots */}
           <div className="mb-3">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Mapbox API Key</label>
-            <input type="text" value={mapboxKey} onChange={e => setMapboxKey(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={mapboxKey}
+              onChange={e => setMapboxKey(e.target.value)}
+              placeholder={appSettings.some((s: any) => s.key === 'mapbox_api_key' && s.value) ? '••••••••••••••• (configurada)' : 'Pegar nueva key...'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">Dejá en blanco para mantener la key existente</p>
           </div>
           <div className="mb-3">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Google Maps API Key</label>
-            <input type="text" value={googleKey} onChange={e => setGoogleKey(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={googleKey}
+              onChange={e => setGoogleKey(e.target.value)}
+              placeholder={appSettings.some((s: any) => s.key === 'google_maps_api_key' && s.value) ? '••••••••••••••• (configurada)' : 'Pegar nueva key...'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">Dejá en blanco para mantener la key existente</p>
           </div>
 
           {/* Generic settings list */}
