@@ -612,33 +612,50 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
-          {/* Order type toggle — scrollable horizontal pills */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: '#f1f5f9', borderRadius: 12, padding: 4, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-            {([
-              { key: 'envio',     label: '📦 Envío' },
-              { key: 'mandadito', label: '🛒 Mandaditos' },
-              { key: 'flete',     label: '🚛 Fletes' },
-            ] as const).map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => {
-                  setOrderType(tab.key);
-                  if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
-                  if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
-                  if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
-                }}
-                style={{
-                  flexShrink: 0, padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap',
-                  background: orderType === tab.key ? '#fff' : 'transparent',
-                  color: orderType === tab.key ? '#1C1C2E' : '#9ca3af',
-                  boxShadow: orderType === tab.key ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                  transition: 'all 0.15s',
-                }}
-              >{tab.label}</button>
-            ))}
-          </div>
+          {/* Order type toggle — solo visible en paso 1 */}
+          {step === 1 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 18, background: '#f1f5f9', borderRadius: 14, padding: 5 }}>
+              {([
+                { key: 'envio',     label: '📦', sublabel: 'Envío' },
+                { key: 'mandadito', label: '🛒', sublabel: 'Mandaditos' },
+                { key: 'flete',     label: '🚛', sublabel: 'Fletes' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    setOrderType(tab.key);
+                    if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
+                    if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
+                    if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
+                  }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    padding: '10px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', gap: 2,
+                    background: orderType === tab.key ? '#fff' : 'transparent',
+                    color: orderType === tab.key ? '#1C1C2E' : '#9ca3af',
+                    boxShadow: orderType === tab.key ? '0 2px 6px rgba(0,0,0,0.10)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{tab.label}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: 0.2 }}>{tab.sublabel}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: orderType === 'mandadito' ? '#d1fae5' : orderType === 'flete' ? '#fef3c7' : '#fef9ec',
+                color: orderType === 'mandadito' ? '#065f46' : orderType === 'flete' ? '#92400e' : '#92400e',
+                borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem', fontWeight: 800,
+              }}>
+                {orderType === 'mandadito' ? '🛒 Mandaditos' : orderType === 'flete' ? '🚛 Fletes' : '📦 Envío'}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Paso {step} de 3</span>
+            </div>
+          )}
 
           {/* Step indicator */}
           <div className="enviar-step-indicator">
