@@ -4,6 +4,14 @@ import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 
+const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: string }[] = [
+  { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cédula', icon: '🤳', hint: 'Cara y cédula visibles' },
+  { key: 'cedula_frente', label: 'Cédula — frente',               icon: '🪪' },
+  { key: 'cedula_dorso',  label: 'Cédula — dorso',                icon: '🪪' },
+  { key: 'antecedentes',  label: 'Antecedentes policiales',       icon: '📋', hint: 'Vigente' },
+  { key: 'domicilio',     label: 'Comprobante de domicilio',      icon: '🏠', hint: 'ANDE, agua o internet' },
+];
+
 export default function TecnicoSettings() {
   const { email, displayName, profilePhoto: ctxPhoto, setProfilePhoto: setCtxPhoto } = useDriverContext();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -31,6 +39,8 @@ export default function TecnicoSettings() {
   const [acceptsPackages, setAcceptsPackages] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(ctxPhoto || '');
   const [uploading, setUploading] = useState(false);
+  const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string }>>({});
+  const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     (async () => {
@@ -91,6 +101,19 @@ export default function TecnicoSettings() {
       }
     })();
   }, []);
+
+  // Cargar estado de documentos cuando hay email disponible
+  useEffect(() => {
+    if (!email) return;
+    authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
+      .then(r => r.json())
+      .then(j => {
+        const sm: Record<string, { status: string; rejection_reason?: string }> = {};
+        for (const d of (j.docs || [])) sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason };
+        setDocStatus(sm);
+      })
+      .catch(() => {});
+  }, [email]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +310,150 @@ export default function TecnicoSettings() {
               <option value="waze">Waze</option>
             </select>
           </Field>
+        </Section>
+
+        {/* ── SECCIÓN: Verificar tu identidad ── */}
+        <Section icon="📎" title="Verificar tu identidad">
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+            Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {TECNICO_DOC_TYPES.map(doc => {
+              const ds = docStatus[doc.key];
+              const isUploading = docUploading[doc.key];
+              return (
+                <div key={doc.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                    {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                    {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                  </div>
+                  {ds && (
+                    <span style={{
+                      flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
+                      background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
+                      color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
+                    }}>
+                      {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                    </span>
+                  )}
+                  {isUploading ? (
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                  ) : (
+                    <label style={{
+                      flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
+                      background: ds?.status === 'approved' ? '#f0fdf4' : '#fefce8',
+                      color: ds?.status === 'approved' ? '#059669' : '#92400e',
+                      fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
+                      borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#fde68a',
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}>
+                      {ds ? '↑ Re-subir' : '↑ Subir'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        style={{ display: 'none' }}
+                        onChange={async e => {
+                          const file = e.target.files?.[0];
+                          if (!file || !email) return;
+                          e.target.value = '';
+                          setDocUploading(prev => ({ ...prev, [doc.key]: true }));
+                          try {
+                            const buf = await file.arrayBuffer();
+                            const bytes = new Uint8Array(buf);
+                            let bin = '';
+                            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+                            const res = await authFetch('/api/upload-driver-doc', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email, doc_type: doc.key, base64: btoa(bin), mimeType: file.type, role: 'tecnico' }),
+                            });
+                            const json = await res.json();
+                            if (json.error) setError(json.error);
+                            else { setDocStatus(prev => ({ ...prev, [doc.key]: { status: 'pending' } })); setSuccess('Documento enviado — en revisión.'); }
+                          } catch { setError('Error al subir el documento'); }
+                          setDocUploading(prev => ({ ...prev, [doc.key]: false }));
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ── SECCIÓN: Verificar tu identidad ── */}
+        <Section icon="📎" title="Verificar tu identidad">
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+            Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {TECNICO_DOC_TYPES.map(doc => {
+              const ds = docStatus[doc.key];
+              const isUploading = docUploading[doc.key];
+              return (
+                <div key={doc.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                    {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                    {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                  </div>
+                  {ds && (
+                    <span style={{
+                      flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
+                      background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
+                      color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
+                    }}>
+                      {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                    </span>
+                  )}
+                  {isUploading ? (
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                  ) : (
+                    <label style={{
+                      flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
+                      background: ds?.status === 'approved' ? '#f0fdf4' : '#fefce8',
+                      color: ds?.status === 'approved' ? '#059669' : '#92400e',
+                      fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
+                      borderColor: ds?.status === 'approved' ? '#bbf7d0' : '#fde68a',
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}>
+                      {ds ? '↑ Re-subir' : '↑ Subir'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        style={{ display: 'none' }}
+                        onChange={async e => {
+                          const file = e.target.files?.[0];
+                          if (!file || !email) return;
+                          e.target.value = '';
+                          setDocUploading(prev => ({ ...prev, [doc.key]: true }));
+                          try {
+                            const buf = await file.arrayBuffer();
+                            const bytes = new Uint8Array(buf);
+                            let bin = '';
+                            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+                            const res = await authFetch('/api/upload-driver-doc', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email, doc_type: doc.key, base64: btoa(bin), mimeType: file.type, role: 'tecnico' }),
+                            });
+                            const json = await res.json();
+                            if (json.error) setError(json.error);
+                            else { setDocStatus(prev => ({ ...prev, [doc.key]: { status: 'pending' } })); setSuccess('Documento enviado — en revisión.'); }
+                          } catch { setError('Error al subir el documento'); }
+                          setDocUploading(prev => ({ ...prev, [doc.key]: false }));
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </Section>
 
         {/* ── Mensajes ── */}
