@@ -877,6 +877,13 @@ export default function DeliveriesPage() {
                   {req.instructions && (
                     <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {req.instructions}</div>
                   )}
+                  {(req as any).order_type === 'flete' && (
+                    <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(234,179,8,0.08)', borderRadius: 10, border: '1px solid rgba(234,179,8,0.25)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ background: '#ca8a04', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 800 }}>🚛 Flete</span>
+                      </div>
+                    </div>
+                  )}
                   {(req as any).order_type === 'mandadito' && (
                     <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(16,185,129,0.08)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.25)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>

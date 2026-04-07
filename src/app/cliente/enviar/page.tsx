@@ -50,7 +50,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 export default function EnviarPaquetePage() {
   const { openDrawer, email, displayName, profilePhoto, avgRating, phone } = useClientContext();
   const router = useRouter();
-  const [orderType, setOrderType] = useState<'envio' | 'mandadito'>('envio');
+  const [orderType, setOrderType] = useState<'envio' | 'mandadito' | 'flete'>('envio');
   const [shoppingList, setShoppingList] = useState('');
   const [maxBudget, setMaxBudget] = useState('');
   const [sending, setSending] = useState(false);
@@ -612,30 +612,32 @@ export default function EnviarPaquetePage() {
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
         <div className="enviar-sheet-content">
-          {/* Order type toggle */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: '#f1f5f9', borderRadius: 12, padding: 4 }}>
-            <button
-              type="button"
-              onClick={() => setOrderType('envio')}
-              style={{
-                flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
-                background: orderType === 'envio' ? '#fff' : 'transparent',
-                color: orderType === 'envio' ? '#1C1C2E' : '#9ca3af',
-                boxShadow: orderType === 'envio' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >📦 Envío</button>
-            <button
-              type="button"
-              onClick={() => { setOrderType('mandadito'); if (!['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto'); update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }}
-              style={{
-                flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
-                background: orderType === 'mandadito' ? '#fff' : 'transparent',
-                color: orderType === 'mandadito' ? '#1C1C2E' : '#9ca3af',
-                boxShadow: orderType === 'mandadito' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >🛒 Mandaditos</button>
+          {/* Order type toggle — scrollable horizontal pills */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: '#f1f5f9', borderRadius: 12, padding: 4, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+            {([
+              { key: 'envio',     label: '📦 Envío' },
+              { key: 'mandadito', label: '🛒 Mandaditos' },
+              { key: 'flete',     label: '🚛 Fletes' },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setOrderType(tab.key);
+                  if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
+                  if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
+                  if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
+                }}
+                style={{
+                  flexShrink: 0, padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap',
+                  background: orderType === tab.key ? '#fff' : 'transparent',
+                  color: orderType === tab.key ? '#1C1C2E' : '#9ca3af',
+                  boxShadow: orderType === tab.key ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >{tab.label}</button>
+            ))}
           </div>
 
           {/* Step indicator */}
@@ -658,14 +660,16 @@ export default function EnviarPaquetePage() {
             {step === 1 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">{orderType === 'mandadito' ? '🛒' : '📍'}</span>
+                  <span className="enviar-step-title-icon">{orderType === 'mandadito' ? '🛒' : orderType === 'flete' ? '🚛' : '📍'}</span>
                   <div>
                     <div className="enviar-step-title-main">
-                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : '¿Dónde recogemos y entregamos?'}
+                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : orderType === 'flete' ? '¿Dónde recogemos y entregamos el flete?' : '¿Dónde recogemos y entregamos?'}
                     </div>
                     <div className="enviar-step-title-sub">
                       {orderType === 'mandadito'
                         ? 'Almacén (Punto A) → Tu dirección (Punto B)'
+                        : orderType === 'flete'
+                        ? 'Moto Carro o Camión para cargas grandes'
                         : stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
                     </div>
                   </div>
@@ -856,7 +860,11 @@ export default function EnviarPaquetePage() {
 
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
-                  {vehicleTypes.filter(v => orderType === 'mandadito' ? ['moto', 'auto'].includes(v.value) : true).map(v => {
+                  {vehicleTypes.filter(v =>
+                    orderType === 'mandadito' ? ['moto', 'auto'].includes(v.value) :
+                    orderType === 'flete'     ? ['motocarro', 'camion2t'].includes(v.value) :
+                    true
+                  ).map(v => {
                     const vp = pricing[v.value];
                     const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
                     let estPrice = 0;
