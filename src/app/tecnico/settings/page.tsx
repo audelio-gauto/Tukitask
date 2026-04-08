@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -345,7 +345,7 @@ export default function TecnicoSettings() {
 
         {/* ── SECCIÓN: Mis documentos ── */}
         <div ref={docsRef} style={{ scrollMarginTop: 80 }}>
-        <Section icon="📎" title="Mis documentos">
+        <Section icon="📎" title="Mis documentos" collapsible>
           <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
           </p>
@@ -481,17 +481,24 @@ export default function TecnicoSettings() {
 }
 
 /* ── Helpers de layout ── */
-function Section({ icon, title, required, children }: { icon: string; title: string; required?: boolean; children: React.ReactNode }) {
+function Section({ icon, title, required, collapsible, children }: { icon: string; title: string; required?: boolean; collapsible?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(!collapsible);
   return (
     <div style={{ marginBottom: '1rem', background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div
+        onClick={collapsible ? () => setOpen(o => !o) : undefined}
+        style={{ padding: '0.75rem 1rem', borderBottom: open ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: collapsible ? 'pointer' : 'default' }}
+      >
         <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151' }}>{title}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151', flex: 1 }}>{title}</span>
         {required && <span style={{ color: '#ef4444', marginLeft: 2, fontSize: '0.85rem' }}>*</span>}
+        {collapsible && <span style={{ fontSize: '0.85rem', color: '#9ca3af', transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>}
       </div>
-      <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-        {children}
-      </div>
+      {open && (
+        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
