@@ -70,7 +70,7 @@ export default function DriverDashboard() {
   });
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
-  const DRIVER_TOTAL_DOCS = 9; // cedula_frente, antecedentes, domicilio + 6 vehicle docs
+  const DRIVER_TOTAL_DOCS = 7; // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
 
   // Stats state
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
@@ -125,8 +125,9 @@ export default function DriverDashboard() {
         }
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, DRIVER_TOTAL_DOCS - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
-        // Si hay docs vencidos o no aprobados, forzar offline
-        if (expired.length > 0 || notApproved.length > 0) {
+        // Si hay docs vencidos, no aprobados o faltantes, forzar offline
+        const missing = Math.max(0, DRIVER_TOTAL_DOCS - docs.length);
+        if (expired.length > 0 || notApproved.length > 0 || missing > 0) {
           setAvailable(false);
           try { localStorage.setItem('driver_available', 'false'); } catch {}
         }
@@ -700,7 +701,7 @@ export default function DriverDashboard() {
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
-                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return; // bloquear si docs no aprobados o vencidos
+                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return; // bloquear si docs no aprobados, vencidos o faltantes
                 const next = !available;
                 setAvailable(next);
                 try { localStorage.setItem('driver_available', String(next)); } catch {}

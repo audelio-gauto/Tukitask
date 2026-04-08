@@ -27,11 +27,9 @@ const PERSONAL_DOCS: DocEntry[] = [
 
 const VEHICLE_DOCS: DocEntry[] = [
   { key: 'registro_frente',     label: 'Registro de conducir — frente', icon: '🚗', requiresExpiry: true },
-  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',  icon: '🚗' },
+  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',  icon: '🚗', requiresExpiry: true },
   { key: 'cedula_verde_frente', label: 'Cédula Verde — frente',         icon: '📄' },
   { key: 'cedula_verde_dorso',  label: 'Cédula Verde — dorso',          icon: '📄' },
-  { key: 'foto_1',              label: 'Foto del vehículo 1',            icon: '📸', hint: 'Chapa visible' },
-  { key: 'foto_2',              label: 'Foto del vehículo 2',            icon: '📸', hint: 'Chapa visible' },
 ];
 
 export default function DriverSettingsPage() {

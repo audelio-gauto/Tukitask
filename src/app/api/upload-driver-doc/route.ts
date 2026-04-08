@@ -6,7 +6,7 @@ const BUCKET = 'driver-documents';
 
 const VALID_PERSONAL_DOCS = ['cedula_frente', 'antecedentes', 'domicilio'];
 const VEHICLE_PREFIXES    = ['moto', 'auto', 'moto_carro', 'camion'];
-const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso', 'foto_1', 'foto_2'];
+const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
 const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
 
 // Total expected docs per role (for dashboard count)
