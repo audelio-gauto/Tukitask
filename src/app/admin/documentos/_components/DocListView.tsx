@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 interface DocRecord {
   id: string;
   driver_email: string;
-  role: 'driver' | 'tecnico';
+  role: 'driver' | 'tecnico' | 'client';
   doc_type: string;
   file_path: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -27,7 +27,7 @@ interface AuditEntry {
 
 interface DriverGroup {
   email: string;
-  role: 'driver' | 'tecnico';
+  role: 'driver' | 'tecnico' | 'client';
   docs: DocRecord[];
   profile: { name: string; photo: string | null; vehicle: string | null };
 }
@@ -35,6 +35,7 @@ interface DriverGroup {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DRIVER_REQUIRED  = 7;
 const TECNICO_REQUIRED = 4;
+const CLIENT_REQUIRED  = 2;
 const EXPIRY_WARN_DAYS = 30;
 
 const DOC_LABELS: Record<string, string> = {
@@ -81,7 +82,7 @@ function oldestPendingDate(docs: DocRecord[]): Date | null {
 function exportCSV(groups: DriverGroup[]): void {
   const headers = ['Email', 'Nombre', 'Rol', 'Vehículo', 'Total docs', 'Aprobados', 'Pendientes', 'Rechazados', 'Faltantes', 'Estado'];
   const rows = groups.map(g => {
-    const req      = g.role === 'driver' ? DRIVER_REQUIRED : TECNICO_REQUIRED;
+    const req      = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
     const approved = g.docs.filter(d => d.status === 'approved').length;
     const pending  = g.docs.filter(d => d.status === 'pending').length;
     const rejected = g.docs.filter(d => d.status === 'rejected').length;
@@ -106,7 +107,7 @@ function exportCSV(groups: DriverGroup[]): void {
 type DriverTab = 'listos' | 'incompletos' | 'rechazados' | 'aprobados';
 
 function classifyDriver(g: DriverGroup): DriverTab {
-  const required    = g.role === 'driver' ? DRIVER_REQUIRED : TECNICO_REQUIRED;
+  const required    = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
   const hasRejected = g.docs.some(d => d.status === 'rejected');
   const hasPending  = g.docs.some(d => d.status === 'pending');
   const allApproved = g.docs.length >= required && g.docs.every(d => d.status === 'approved');
@@ -337,7 +338,7 @@ function DriverCard({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [localDocs,   setLocalDocs]  = useState<DocRecord[]>(group.docs);
 
-  const required     = group.role === 'driver' ? DRIVER_REQUIRED : TECNICO_REQUIRED;
+  const required     = group.role === 'driver' ? DRIVER_REQUIRED : group.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
   const approved     = localDocs.filter(d => d.status === 'approved').length;
   const pending      = localDocs.filter(d => d.status === 'pending').length;
   const rejected     = localDocs.filter(d => d.status === 'rejected').length;
@@ -397,7 +398,7 @@ function DriverCard({
           <img src={group.profile.photo} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2.5px solid ${tabColor}` }} />
         ) : (
           <div style={{ width: 50, height: 50, borderRadius: '50%', background: tabColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0, border: `2.5px solid ${tabColor}` }}>
-            {group.role === 'tecnico' ? '🔧' : '🚗'}
+            {group.role === 'tecnico' ? '🔧' : group.role === 'client' ? '🧑' : '🚗'}
           </div>
         )}
 
@@ -407,8 +408,8 @@ function DriverCard({
             <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1f2937' }}>
               {group.profile.name !== group.email ? group.profile.name : '(sin nombre)'}
             </span>
-            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: group.role === 'tecnico' ? '#f3e8ff' : '#e0f2fe', color: group.role === 'tecnico' ? '#7c3aed' : '#0369a1' }}>
-              {group.role === 'tecnico' ? '🔧 Técnico' : '🚗 Driver'}
+            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: group.role === 'tecnico' ? '#f3e8ff' : group.role === 'client' ? '#fef9c3' : '#e0f2fe', color: group.role === 'tecnico' ? '#7c3aed' : group.role === 'client' ? '#854d0e' : '#0369a1' }}>
+              {group.role === 'tecnico' ? '🔧 Técnico' : group.role === 'client' ? '🧑 Cliente' : '🚗 Driver'}
             </span>
           </div>
           <p style={{ margin: '1px 0 0', fontSize: '0.74rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.email}</p>
@@ -490,7 +491,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
   const [loading,     setLoading]     = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [token,       setToken]       = useState<string | null>(null);
-  const [roleFilter,  setRoleFilter]  = useState<'all' | 'driver' | 'tecnico'>('all');
+  const [roleFilter,  setRoleFilter]  = useState<'all' | 'driver' | 'tecnico' | 'client'>('all');
   const [search,      setSearch]      = useState('');
   const [activeTab,   setActiveTab]   = useState<DriverTab | 'todos'>('listos');
   const [total,       setTotal]       = useState(0);
@@ -651,13 +652,13 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
           className="flex-1 min-w-[220px] px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#F5C518] shadow-sm"
         />
         <div className="flex bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          {(['all', 'driver', 'tecnico'] as const).map(r => (
+          {(['all', 'driver', 'tecnico', 'client'] as const).map(r => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
               className={`px-3 py-2 text-sm font-bold transition-colors whitespace-nowrap ${roleFilter === r ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
             >
-              {r === 'all' ? 'Todos' : r === 'driver' ? '🚗 Driver' : '🔧 Técnico'}
+              {r === 'all' ? 'Todos' : r === 'driver' ? '🚗 Driver' : r === 'tecnico' ? '🔧 Técnico' : '🧑 Cliente'}
             </button>
           ))}
         </div>

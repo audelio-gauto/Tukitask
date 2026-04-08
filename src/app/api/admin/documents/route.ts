@@ -110,6 +110,7 @@ export async function GET(req: Request) {
 
     const driverEmails  = [...new Set(pagePairs.filter(p => p.drole === 'driver').map(p => p.driver_email))];
     const tecnicoEmails = [...new Set(pagePairs.filter(p => p.drole === 'tecnico').map(p => p.driver_email))];
+    const clientEmails  = [...new Set(pagePairs.filter(p => p.drole === 'client').map(p => p.driver_email))];
 
     const profiles: Record<string, { name: string; photo: string | null; vehicle: string | null }> = {};
 
@@ -135,6 +136,16 @@ export async function GET(req: Request) {
       for (const p of tSettings || []) {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email;
         profiles[`${p.email}__tecnico`] = { name, photo: p.profile_photo || null, vehicle: null };
+      }
+    }
+
+    if (clientEmails.length > 0) {
+      const { data: cProfiles } = await sbAdmin()
+        .from('client_profiles')
+        .select('email, display_name, photo_url')
+        .in('email', clientEmails);
+      for (const p of cProfiles || []) {
+        profiles[`${p.email}__client`] = { name: p.display_name || p.email, photo: p.photo_url || null, vehicle: null };
       }
     }
 
