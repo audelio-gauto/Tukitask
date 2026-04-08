@@ -21,7 +21,6 @@ type DocEntry = { key: string; label: string; icon: string; hint?: string; requi
 
 const PERSONAL_DOCS: DocEntry[] = [
   { key: 'cedula_frente', label: 'Cédula — frente',          icon: '🪪', requiresExpiry: true },
-  { key: 'cedula_dorso',  label: 'Cédula — dorso',           icon: '🪪' },
   { key: 'antecedentes',  label: 'Antecedentes policiales',  icon: '📋', hint: 'Vigente', requiresExpiry: true },
   { key: 'domicilio',     label: 'Comprobante de domicilio', icon: '🏠', hint: 'ANDE, agua o internet' },
 ];

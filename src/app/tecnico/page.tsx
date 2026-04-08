@@ -103,7 +103,7 @@ export default function TecnicoDashboard() {
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= TEN_DAYS) soon.push(d.doc_type);
         }
-        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: 5 - docs.length });
+        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: 4 - docs.length });
         setDocAlerts({ expired, soon, notApproved });
         if (expired.length > 0 || notApproved.length > 0) {
           setAvailable(false);
@@ -617,7 +617,7 @@ export default function TecnicoDashboard() {
           </div>
 
           {/* Mis documentos status card */}
-          {(docCounts.approved < 5 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0) && (
+          {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0) && (
             <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
               <div style={{
                 padding: '0.85rem 1rem', borderRadius: 14,
@@ -636,7 +636,7 @@ export default function TecnicoDashboard() {
                     <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
                       {docAlerts.expired.length > 0
                         ? 'Documentos vencidos — no podés conectarte'
-                        : `${docCounts.approved}/5 aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
+                        : `${docCounts.approved}/4 aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
                       }
                     </p>
                   </div>

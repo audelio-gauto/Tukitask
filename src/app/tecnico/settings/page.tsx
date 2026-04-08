@@ -8,7 +8,6 @@ import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: string; requiresExpiry?: boolean }[] = [
   { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cédula', icon: '🤳', hint: 'Cara y cédula visibles' },
   { key: 'cedula_frente', label: 'Cédula — frente',               icon: '🪪', requiresExpiry: true },
-  { key: 'cedula_dorso',  label: 'Cédula — dorso',                icon: '🪪' },
   { key: 'antecedentes',  label: 'Antecedentes policiales',       icon: '📋', hint: 'Vigente', requiresExpiry: true },
   { key: 'domicilio',     label: 'Comprobante de domicilio',      icon: '🏠', hint: 'ANDE, agua o internet' },
 ];
