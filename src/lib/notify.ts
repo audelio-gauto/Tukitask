@@ -68,3 +68,29 @@ export async function sendEmail(subject: string, text: string, html?: string) {
     console.warn('sendEmail error', err)
   }
 }
+
+/** Send an email to any recipient (e.g. driver/tecnico) via SendGrid */
+export async function sendEmailToDriver(to: string, subject: string, text: string, html?: string) {
+  const apiKey = process.env.SENDGRID_API_KEY || '';
+  const from   = process.env.SENDGRID_FROM || '';
+  if (!apiKey || !from) return; // SendGrid not configured — silent no-op
+  try {
+    const content: { type: string; value: string }[] = [{ type: 'text/plain', value: text }];
+    if (html) content.push({ type: 'text/html', value: html });
+    await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: from },
+        subject,
+        content,
+      }),
+    });
+  } catch (err) {
+    console.warn('sendEmailToDriver error', err);
+  }
+}

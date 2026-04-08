@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthAdmin, sbAdmin, unauthorized } from '@/lib/apiAuth';
+import { sendEmailToDriver } from '@/lib/notify';
 
 const PAGE_SIZE = 30;
 
@@ -29,13 +30,26 @@ export async function GET(req: Request) {
     return NextResponse.json({ signedUrl: signed?.signedUrl ?? null });
   }
 
+  // ── Audit history for a doc ───────────────────────────────────────────────
+  const auditId = url.searchParams.get('audit');
+  if (auditId) {
+    const { data: history, error: auditError } = await sbAdmin()
+      .from('driver_document_audit')
+      .select('id, action, admin_email, rejection_reason, created_at')
+      .eq('doc_id', auditId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (auditError) return NextResponse.json({ error: auditError.message }, { status: 500 });
+    return NextResponse.json({ history: history || [] });
+  }
+
   // ── Grouped by driver view ─────────────────────────────────────────────────
   if (view === 'drivers') {
     const roleParam = url.searchParams.get('role') || 'all';
 
     let docsQuery = sbAdmin()
       .from('driver_documents')
-      .select('id, driver_email, role, doc_type, file_path, status, rejection_reason, expires_at, created_at, updated_at')
+      .select('id, driver_email, role, doc_type, file_path, status, rejection_reason, expires_at, reviewed_at, created_at, updated_at')
       .order('driver_email')
       .limit(1000);
     if (roleParam !== 'all') docsQuery = docsQuery.eq('role', roleParam);
@@ -87,6 +101,16 @@ export async function GET(req: Request) {
       ...g,
       profile: profiles[`${g.email}__${g.role}`] || { name: g.email, photo: null, vehicle: null },
     }));
+
+    // Sort: drivers with oldest pending doc first so they get reviewed first
+    drivers.sort((a, b) => {
+      type D = { status: string; created_at: string };
+      const oldestPending = (g: { docs: unknown[] }) => {
+        const pending = (g.docs as D[]).filter(d => d.status === 'pending').sort((x, y) => x.created_at.localeCompare(y.created_at));
+        return pending[0]?.created_at ?? '9999';
+      };
+      return oldestPending(a).localeCompare(oldestPending(b));
+    });
 
     return NextResponse.json({ drivers, total: drivers.length });
   }
@@ -163,7 +187,24 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // H6: Notify driver/tecnico of the decision (fire-and-forget, non-blocking)
+  // Log to audit table (fire-and-forget, non-blocking)
+  if (updated) {
+    sbAdmin()
+      .from('driver_document_audit')
+      .insert({
+        doc_id: id,
+        driver_email: updated.driver_email,
+        doc_type: updated.doc_type,
+        action: status,
+        admin_email: admin.email,
+        rejection_reason: status === 'rejected' ? (rejection_reason || '').trim().slice(0, 500) : null,
+        created_at: new Date().toISOString(),
+      })
+      .then(() => {})
+      .catch(() => {}); // non-fatal — table may not exist yet
+  }
+
+  // Notify driver/tecnico of the decision (fire-and-forget, non-blocking)
   if (updated && (status === 'approved' || status === 'rejected')) {
     notifyDocDecision(updated.driver_email, updated.doc_type, status, rejection_reason).catch(() => {});
   }
@@ -190,5 +231,14 @@ async function notifyDocDecision(email: string, docType: string, status: 'approv
     })
     .single()
     .catch(() => {}); // table may not exist yet — non-fatal
+
+  // Send email to the driver/tecnico
+  const subject = status === 'approved'
+    ? `Tu documento "${docLabel}" fue aprobado — Tukitask`
+    : `Tu documento "${docLabel}" fue rechazado — Tukitask`;
+  const html = status === 'approved'
+    ? `<p>¡Hola! Tu documento <strong>${docLabel}</strong> fue <strong>aprobado ✅</strong>.</p><p>Ya podés continuar con el proceso de registro en Tukitask.</p>`
+    : `<p>Tu documento <strong>${docLabel}</strong> fue <strong>rechazado ❌</strong>.</p>${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ''}<p>Por favor revisá y volvé a subir el documento desde la configuración de tu cuenta.</p>`;
+  await sendEmailToDriver(email, subject, message, html).catch(() => {});
 }
 
