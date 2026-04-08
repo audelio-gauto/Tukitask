@@ -155,7 +155,7 @@ export default function TecnicoDashboard() {
   }, [email]);
 
   // ── New-job popup ──────────────────────────────────────────────────────────
-  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; description?: string | null; address?: string | null; lat?: number | null; lng?: number | null; }
+  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; client_is_verified?: boolean; description?: string | null; address?: string | null; lat?: number | null; lng?: number | null; }
   const [pendingPopup, setPendingPopup] = useState<PendingJob | null>(null);
   const [popupOfferPrice, setPopupOfferPrice] = useState(0);
   const [popupShowInput, setPopupShowInput]   = useState(false);
@@ -746,6 +746,9 @@ export default function TecnicoDashboard() {
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,197,24,0.15)', display: pendingPopup.client_photo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
               <div>
                 <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{pendingPopup.client_name ?? 'Cliente'}</div>
+                {pendingPopup.client_is_verified && (
+                  <span style={{ display: 'inline-block', background: '#10b981', color: '#fff', borderRadius: 99, fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', marginBottom: 2 }}>✅ Identidad verificada</span>
+                )}
                 {pendingPopup.client_rating != null && (
                   <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{'★'.repeat(Math.round(pendingPopup.client_rating))} {pendingPopup.client_rating.toFixed(1)}</div>
                 )}

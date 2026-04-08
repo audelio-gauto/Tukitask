@@ -26,6 +26,7 @@ interface Job {
   client_name: string | null;
   client_photo: string | null;
   client_rating: number | null;
+  client_is_verified?: boolean;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -314,6 +315,7 @@ export default function OfertasPage() {
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[job.service_type] ?? job.service_type}</div>
                       <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>{job.client_name ?? 'Cliente'}</span>
+                        {(job as Job & { client_is_verified?: boolean }).client_is_verified && <span style={{ background: '#10b981', color: '#fff', borderRadius: 99, fontSize: '0.6rem', fontWeight: 800, padding: '1px 5px' }}>✅ Verificado</span>}
                         {job.client_rating != null && <span style={{ color: '#f59e0b', fontWeight: 700 }}>⭐{job.client_rating.toFixed(1)}</span>}
                         {cardDistKm != null && <span>📐{cardDistKm.toFixed(1)}km</span>}
                       </div>

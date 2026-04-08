@@ -55,20 +55,21 @@ export async function GET(req: Request) {
   // For the driver marketplace — enrich with live client_profiles (photo + avg_rating)
   if (!clientEmail && !driverEmail && data) {
     const emails = [...new Set(data.map((o: Record<string,unknown>) => o.client_email as string).filter(Boolean))];
-    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null }> = {};
+    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
     if (emails.length > 0) {
       const { data: profiles } = await db
         .from('client_profiles')
-        .select('email, photo_url, avg_rating')
+        .select('email, photo_url, avg_rating, is_verified')
         .in('email', emails);
-      (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
-        profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null };
+      (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified?: boolean }) => {
+        profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
       });
     }
     const enriched = data.map((o: Record<string,unknown>) => ({
       ...o,
       client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
       client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
+      client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
     }));
     await cacheSet('orders:available', enriched, 5);
     return NextResponse.json(enriched);

@@ -834,6 +834,7 @@ export default function DeliveriesPage() {
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{VEHICLE_LABELS[req.vehicle_type] || req.vehicle_type}</div>
                       <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>{req.client_name || req.client_email?.split('@')[0] || 'Cliente'}</span>
+                        {(req as Record<string, unknown>).client_is_verified && <span style={{ background: '#10b981', color: '#fff', borderRadius: 99, fontSize: '0.6rem', fontWeight: 800, padding: '1px 5px' }}>✅ Verificado</span>}
                         {req.client_avg_rating != null && req.client_avg_rating > 0 && <span style={{ color: '#f59e0b', fontWeight: 700 }}>⭐{Number(req.client_avg_rating).toFixed(1)}</span>}
                         <span>· {new Date(req.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>

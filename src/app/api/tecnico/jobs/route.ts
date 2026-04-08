@@ -146,13 +146,13 @@ export async function GET(req: Request) {
 
       // Enrich with live client profile (photo + avg_rating) — works for old and new jobs
       const clientEmails = [...new Set((jobs ?? []).map(j => j.client_email).filter(Boolean))];
-      const clientProfileMap: Record<string, { photo_url: string | null; avg_rating: number | null }> = {};
+      const clientProfileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
       if (clientEmails.length > 0) {
         const { data: profiles } = await sb
           .from('client_profiles')
-          .select('email, photo_url, avg_rating')
-          .in('email', clientEmails);
-        (profiles ?? []).forEach(p => { clientProfileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null }; });
+        .select('email, photo_url, avg_rating, is_verified')
+        .in('email', clientEmails);
+        (profiles ?? []).forEach(p => { clientProfileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true }; });
       }
 
       // Attach whether this tecnico already sent an offer for each job
@@ -169,8 +169,9 @@ export async function GET(req: Request) {
           (jobs ?? [])
             .map(j => ({
               ...j,
-              client_photo:  clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
-              client_rating: clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+              client_photo:       clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
+              client_rating:      clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+              client_is_verified: clientProfileMap[j.client_email]?.is_verified ?? false,
               my_offer: offerMap[j.id] ?? null,
             }))
             .filter(j => j.my_offer?.status !== 'rejected')
@@ -179,8 +180,9 @@ export async function GET(req: Request) {
       return NextResponse.json(
         (jobs ?? []).map(j => ({
           ...j,
-          client_photo:  clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
-          client_rating: clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+          client_photo:       clientProfileMap[j.client_email]?.photo_url  ?? j.client_photo  ?? null,
+          client_rating:      clientProfileMap[j.client_email]?.avg_rating ?? j.client_rating ?? null,
+          client_is_verified: clientProfileMap[j.client_email]?.is_verified ?? false,
         }))
       );
     }
