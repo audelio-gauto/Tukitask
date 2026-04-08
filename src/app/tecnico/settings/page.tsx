@@ -294,55 +294,6 @@ export default function TecnicoSettings() {
 
 
 
-        {/* ── SECCIÓN: Datos personales ── */}
-        <Section icon="👤" title="Datos personales">
-          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
-            <Field label="Nombre" required>
-              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" style={inputStyle} required />
-            </Field>
-            <Field label="Apellido" required>
-              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" style={inputStyle} required />
-            </Field>
-          </div>
-          <Field label="Empresa" hint="Opcional">
-            <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
-          </Field>
-        </Section>
-
-        {/* ── SECCIÓN: Contacto ── */}
-        <Section icon="📞" title="Contacto">
-          <Field label="Teléfono / WhatsApp">
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+595 9XX XXX XXX" style={inputStyle} />
-          </Field>
-          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
-            <Field label="Dirección">
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Calle y número" style={inputStyle} />
-            </Field>
-            <Field label="Ciudad">
-              <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Asunción" style={inputStyle} />
-            </Field>
-          </div>
-        </Section>
-
-        {/* ── SECCIÓN: Cuenta ── */}
-        <Section icon="🔒" title="Cuenta">
-          <Field label="Correo electrónico">
-            <input type="email" value={email || ''} readOnly style={{ ...inputStyle, background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }} />
-          </Field>
-          <Field label="Tema de la app">
-            <select value={themeMode} onChange={e => setThemeMode(e.target.value)} style={inputStyle}>
-              <option value="light">☀️ Claro</option>
-              <option value="dark">🌙 Oscuro</option>
-            </select>
-          </Field>
-          <Field label="APP de navegación">
-            <select value={navApp} onChange={e => setNavApp(e.target.value)} style={inputStyle}>
-              <option value="google_maps">Google Maps</option>
-              <option value="waze">Waze</option>
-            </select>
-          </Field>
-        </Section>
-
         {/* ── SECCIÓN: Mis documentos ── */}
         <div ref={docsRef} style={{ scrollMarginTop: 80 }}>
         <Section icon="📎" title="Mis documentos" collapsible>
@@ -439,6 +390,55 @@ export default function TecnicoSettings() {
           </div>
         </Section>
         </div>
+
+        {/* ── SECCIÓN: Datos personales ── */}
+        <Section icon="👤" title="Datos personales">
+          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Nombre" required>
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" style={inputStyle} required />
+            </Field>
+            <Field label="Apellido" required>
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" style={inputStyle} required />
+            </Field>
+          </div>
+          <Field label="Empresa" hint="Opcional">
+            <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
+          </Field>
+        </Section>
+
+        {/* ── SECCIÓN: Contacto ── */}
+        <Section icon="📞" title="Contacto">
+          <Field label="Teléfono / WhatsApp">
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+595 9XX XXX XXX" style={inputStyle} />
+          </Field>
+          <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Dirección">
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Calle y número" style={inputStyle} />
+            </Field>
+            <Field label="Ciudad">
+              <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Asunción" style={inputStyle} />
+            </Field>
+          </div>
+        </Section>
+
+        {/* ── SECCIÓN: Cuenta ── */}
+        <Section icon="🔒" title="Cuenta">
+          <Field label="Correo electrónico">
+            <input type="email" value={email || ''} readOnly style={{ ...inputStyle, background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }} />
+          </Field>
+          <Field label="Tema de la app">
+            <select value={themeMode} onChange={e => setThemeMode(e.target.value)} style={inputStyle}>
+              <option value="light">☀️ Claro</option>
+              <option value="dark">🌙 Oscuro</option>
+            </select>
+          </Field>
+          <Field label="APP de navegación">
+            <select value={navApp} onChange={e => setNavApp(e.target.value)} style={inputStyle}>
+              <option value="google_maps">Google Maps</option>
+              <option value="waze">Waze</option>
+            </select>
+          </Field>
+        </Section>
 
         {/* ── Mensajes ── */}
         {success && (
