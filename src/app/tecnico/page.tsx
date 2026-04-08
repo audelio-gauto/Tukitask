@@ -747,7 +747,7 @@ export default function TecnicoDashboard() {
               <div>
                 <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{pendingPopup.client_name ?? 'Cliente'}</div>
                 {pendingPopup.client_is_verified && (
-                  <span style={{ display: 'inline-block', background: '#10b981', color: '#fff', borderRadius: 99, fontSize: '0.65rem', fontWeight: 800, padding: '1px 7px', marginBottom: 2 }}>✅ Identidad verificada</span>
+                  <span title="Identidad verificada" style={{ fontSize: '1.1rem' }}>🛡️</span>
                 )}
                 {pendingPopup.client_rating != null && (
                   <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{'★'.repeat(Math.round(pendingPopup.client_rating))} {pendingPopup.client_rating.toFixed(1)}</div>
