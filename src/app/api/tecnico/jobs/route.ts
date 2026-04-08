@@ -148,11 +148,23 @@ export async function GET(req: Request) {
       const clientEmails = [...new Set((jobs ?? []).map(j => j.client_email).filter(Boolean))];
       const clientProfileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
       if (clientEmails.length > 0) {
+        // Main profile data
         const { data: profiles } = await sb
           .from('client_profiles')
-        .select('email, photo_url, avg_rating, is_verified')
-        .in('email', clientEmails);
-        (profiles ?? []).forEach(p => { clientProfileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true }; });
+          .select('email, photo_url, avg_rating')
+          .in('email', clientEmails);
+        (profiles ?? []).forEach(p => { clientProfileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false }; });
+        // is_verified — safe separate query (column may not exist if migration 039 not run yet)
+        try {
+          const { data: verRows } = await sb
+            .from('client_profiles')
+            .select('email, is_verified')
+            .in('email', clientEmails)
+            .eq('is_verified', true);
+          (verRows ?? []).forEach(r => {
+            if (clientProfileMap[r.email]) clientProfileMap[r.email].is_verified = true;
+          });
+        } catch { /* column not yet available — non-fatal */ }
       }
 
       // Attach whether this tecnico already sent an offer for each job

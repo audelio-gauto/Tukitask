@@ -57,13 +57,25 @@ export async function GET(req: Request) {
     const emails = [...new Set(data.map((o: Record<string,unknown>) => o.client_email as string).filter(Boolean))];
     let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
     if (emails.length > 0) {
+      // Main profile data
       const { data: profiles } = await db
         .from('client_profiles')
-        .select('email, photo_url, avg_rating, is_verified')
+        .select('email, photo_url, avg_rating')
         .in('email', emails);
-      (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified?: boolean }) => {
-        profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
+      (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
+        profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
       });
+      // is_verified — safe separate query (column may not exist if migration 039 not run yet)
+      try {
+        const { data: verRows } = await db
+          .from('client_profiles')
+          .select('email, is_verified')
+          .in('email', emails)
+          .eq('is_verified', true);
+        (verRows ?? []).forEach((r: { email: string; is_verified: boolean }) => {
+          if (profileMap[r.email]) profileMap[r.email].is_verified = true;
+        });
+      } catch { /* column not yet available — non-fatal */ }
     }
     const enriched = data.map((o: Record<string,unknown>) => ({
       ...o,
