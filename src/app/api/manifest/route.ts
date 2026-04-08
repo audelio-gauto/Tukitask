@@ -80,15 +80,6 @@ export async function GET() {
         icons: [{ src: icon192, sizes: '192x192', type: 'image/png' }],
       },
     ],
-    screenshots: [
-      {
-        src: icon512,
-        sizes: '512x512',
-        type: 'image/png',
-        form_factor: 'narrow',
-        label: 'Panel principal',
-      },
-    ],
   };
 
   return new NextResponse(JSON.stringify(manifest, null, 2), {

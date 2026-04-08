@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('');
 
   // ── Logo / Branding ──────────────────────────────────────────────────────
-  const [logoUrl, setLogoUrl]       = useState('/logo.svg');
+  const [logoUrl, setLogoUrl]       = useState('/icons/icon-192x192.png');
   const [logoSize, setLogoSize]     = useState(90);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -257,7 +257,7 @@ export default function SettingsPage() {
                   src={logoPreview || logoUrl}
                   alt="Logo preview"
                   style={{ height: logoSize, width: 'auto', objectFit: 'contain' }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).src = '/logo.svg'; }}
+                  onError={e => { (e.currentTarget as HTMLImageElement).src = '/icons/icon-192x192.png'; }}
                 />
               </div>
               <span className="text-xs text-gray-400">Vista previa login</span>
