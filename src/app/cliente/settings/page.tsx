@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
@@ -36,6 +36,71 @@ export default function ClientSettingsPage() {
   const [toast, setToast] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Identity verification ────────────────────────────────────────────────
+  const [idOpen,      setIdOpen]      = useState(false);
+  const [isVerified,  setIsVerified]  = useState(false);
+  const [idDocs,      setIdDocs]      = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
+  const [idExpiries,  setIdExpiries]  = useState<Record<string, string>>({});
+  const [idUploading, setIdUploading] = useState<Record<string, boolean>>({});
+
+  const ID_DOCS = [
+    { key: 'selfie_cedula', icon: '🤳', label: 'Selfie sosteniendo tu cédula', hint: 'Cara y cédula visibles', requiresExpiry: false },
+    { key: 'cedula_frente', icon: '🪪', label: 'Cédula — frente', hint: 'Con fecha de vencimiento visible', requiresExpiry: true },
+  ];
+
+  const loadIdDocs = useCallback(async () => {
+    if (!email) return;
+    try {
+      const res  = await authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`);
+      const json = await res.json();
+      const clientDocs = (json.docs || []).filter((d: { role: string }) => d.role === 'client');
+      const sm: Record<string, { status: string; rejection_reason?: string; expires_at?: string }> = {};
+      const ex: Record<string, string> = {};
+      for (const d of clientDocs) {
+        sm[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason, expires_at: d.expires_at };
+        if (d.expires_at) ex[d.doc_type] = d.expires_at.substring(0, 10);
+      }
+      setIdDocs(sm);
+      setIdExpiries(ex);
+    } catch { /* non-fatal */ }
+  }, [email]);
+
+  const loadVerified = useCallback(async () => {
+    if (!email) return;
+    try {
+      const res  = await fetch(`/api/client-profile?email=${encodeURIComponent(email)}`);
+      const json = await res.json();
+      setIsVerified(json.profile?.is_verified === true);
+    } catch { /* non-fatal */ }
+  }, [email]);
+
+  useEffect(() => { loadIdDocs(); loadVerified(); }, [loadIdDocs, loadVerified]);
+
+  const uploadIdDoc = async (docType: string, file: File) => {
+    if (!email) return;
+    setIdUploading(p => ({ ...p, [docType]: true }));
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const base64   = btoa(binary);
+      const expiresAt = idExpiries[docType] || null;
+      const res = await authFetch('/api/upload-driver-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, doc_type: docType, base64, mimeType: file.type, role: 'client', expires_at: expiresAt }),
+      });
+      const json = await res.json();
+      if (json.error) { showToast('Error: ' + json.error); }
+      else {
+        setIdDocs(p => ({ ...p, [docType]: { ...p[docType], status: 'pending', rejection_reason: undefined } }));
+        showToast('Documento enviado ✓ — pendiente de revisión');
+      }
+    } catch { showToast('Error al subir documento'); }
+    setIdUploading(p => ({ ...p, [docType]: false }));
+  };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
@@ -124,6 +189,11 @@ export default function ClientSettingsPage() {
               {displayName || email?.split('@')[0]}
             </div>
             <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: 2 }}>{email}</div>
+            {isVerified && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, padding: '2px 10px', borderRadius: 99, background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700 }}>
+                ✅ Identidad verificada
+              </span>
+            )}
             <StarDisplay rating={avgRating} total={totalRatings} />
           </div>
         </div>
@@ -147,9 +217,97 @@ export default function ClientSettingsPage() {
         </button>
       </form>
 
+      {/* ── Verificar identidad ── */}
+      {(() => {
+        const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
+        const hasRejected   = ID_DOCS.some(d => idDocs[d.key]?.status === 'rejected');
+        const allApproved   = approvedCount === ID_DOCS.length;
+        const bgCol    = isVerified ? '#f0fdf4' : hasRejected ? '#fef2f2' : approvedCount > 0 ? '#fefce8' : '#f8fafc';
+        const bdCol    = isVerified ? '#bbf7d0' : hasRejected ? '#fca5a5' : approvedCount > 0 ? '#fcd34d' : '#e2e8f0';
+        const headerIcon = isVerified ? '✅' : hasRejected ? '❌' : approvedCount > 0 ? '⏳' : '🪪';
+        return (
+          <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => setIdOpen(p => !p)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '1rem 1.25rem', border: 'none', background: bgCol, cursor: 'pointer', outline: 'none',
+                borderBottom: idOpen ? `1.5px solid ${bdCol}` : 'none',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '1.4rem' }}>{headerIcon}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Verificar tu identidad</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                    {isVerified ? 'Identidad verificada — badge ✅ activo en tu perfil'
+                      : allApproved ? 'Documentos enviados — en revisión'
+                      : hasRejected ? `${approvedCount}/${ID_DOCS.length} aprobados · documentos rechazados`
+                      : approvedCount > 0 ? `${approvedCount}/${ID_DOCS.length} aprobados · opcional`
+                      : 'Opcional · obtené el badge Verificado'}
+                  </p>
+                </div>
+              </div>
+              <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{idOpen ? '∧' : '∨'}</span>
+            </button>
+
+            {idOpen && (
+              <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+                  Subí los dos documentos para obtener el <strong>badge ✅ Verificado</strong> en tu perfil.
+                  Es completamente opcional — el admin lo revisará y te avisará por email.
+                </p>
+
+                {ID_DOCS.map(doc => {
+                  const ds        = idDocs[doc.key];
+                  const isUp      = idUploading[doc.key];
+                  const isLocked  = ds?.status === 'approved';
+                  const needsDate = doc.requiresExpiry && !idExpiries[doc.key];
+                  return (
+                    <div key={doc.key}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                        <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                          <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>
+                          {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                        </div>
+                        {ds && (
+                          <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>
+                            {ds.status === 'approved' ? '✅ Aprobado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                          </span>
+                        )}
+                        {isUp ? (
+                          <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                        ) : isLocked ? (
+                          <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Ok</span>
+                        ) : needsDate ? (
+                          <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                        ) : (
+                          <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'rejected' ? '#fff7f7' : '#f0f9ff', color: ds?.status === 'rejected' ? '#dc2626' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'rejected' ? '#fca5a5' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            {ds ? '↑ Re-subir' : '↑ Subir'}
+                            <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadIdDoc(doc.key, f); e.target.value = ''; }} />
+                          </label>
+                        )}
+                      </div>
+                      {doc.requiresExpiry && !isLocked && (
+                        <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento cédula:</span>
+                          <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div className="client-form-card">
-        <h3 className="client-form-title">👤 Información de Cuenta</h3>
-        <div className="client-form-grid">
+        <h3 className="client-form-title">👤 Información de Cuenta</h3>        <div className="client-form-grid">
           <div>
             <label className="client-form-label">Email</label>
             <input className="client-form-input" value={email} readOnly style={{ background: '#f9fafb' }} />

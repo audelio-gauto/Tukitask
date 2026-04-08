@@ -87,9 +87,11 @@ export async function GET(req: Request) {
     const VALID_VEHICLE_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
     const VEHICLE_PFXS          = ['moto', 'auto', 'moto_carro', 'camion'];
     const VALID_TECNICO         = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
+    const VALID_CLIENT          = ['selfie_cedula', 'cedula_frente'];
 
     function isValidDocType(docType: string, role: string): boolean {
       if (role === 'tecnico') return VALID_TECNICO.includes(docType);
+      if (role === 'client')  return VALID_CLIENT.includes(docType);
       if (VALID_DRIVER_PERSONAL.includes(docType)) return true;
       for (const pfx of VEHICLE_PFXS) {
         if (docType.startsWith(pfx + '_') && VALID_VEHICLE_KEYS.includes(docType.slice(pfx.length + 1))) return true;
@@ -251,6 +253,21 @@ export async function PATCH(req: Request) {
     notifyDocDecision(updated.driver_email, updated.doc_type, status, rejection_reason).catch(() => {});
   }
 
+  // Auto-verify client identity when both required docs are approved
+  if (updated) {
+    const docRole = await sbAdmin()
+      .from('driver_documents')
+      .select('role')
+      .eq('id', id)
+      .single()
+      .then((r: { data: { role: string } | null }) => r.data?.role ?? null)
+      .catch(() => null);
+
+    if (docRole === 'client') {
+      autoVerifyClient(updated.driver_email).catch(() => {});
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -282,5 +299,29 @@ async function notifyDocDecision(email: string, docType: string, status: 'approv
     ? `<p>¡Hola! Tu documento <strong>${docLabel}</strong> fue <strong>aprobado ✅</strong>.</p><p>Ya podés continuar con el proceso de registro en Tukitask.</p>`
     : `<p>Tu documento <strong>${docLabel}</strong> fue <strong>rechazado ❌</strong>.</p>${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ''}<p>Por favor revisá y volvé a subir el documento desde la configuración de tu cuenta.</p>`;
   await sendEmailToDriver(email, subject, message, html).catch(() => {});
+}
+
+/** When all client identity docs are approved → flip is_verified on client_profiles */
+async function autoVerifyClient(email: string) {
+  const CLIENT_REQUIRED = ['selfie_cedula', 'cedula_frente'];
+
+  const { data: docs } = await sbAdmin()
+    .from('driver_documents')
+    .select('doc_type, status')
+    .eq('driver_email', email)
+    .eq('role', 'client');
+
+  const allApproved = CLIENT_REQUIRED.every(dt =>
+    (docs || []).some((d: { doc_type: string; status: string }) => d.doc_type === dt && d.status === 'approved'),
+  );
+
+  await sbAdmin()
+    .from('client_profiles')
+    .upsert({
+      email,
+      is_verified: allApproved,
+      verified_at: allApproved ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'email' });
 }
 
