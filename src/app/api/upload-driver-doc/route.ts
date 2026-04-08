@@ -9,6 +9,12 @@ const VEHICLE_PREFIXES    = ['moto', 'auto', 'moto_carro', 'camion'];
 const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
 const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
 
+/** Returns true for any doc_type that is still valid (not deprecated) */
+function isCurrentDocType(doc_type: string, role: string): boolean {
+  if (role === 'tecnico') return VALID_TECNICO_DOCS.includes(doc_type);
+  return isValidDriverDoc(doc_type);
+}
+
 // Total expected docs per role (for dashboard count)
 export const TECNICO_DOC_COUNT = VALID_TECNICO_DOCS.length;  // 4
 export const DRIVER_PERSONAL_COUNT = VALID_PERSONAL_DOCS.length + VEHICLE_DOC_KEYS.length * VEHICLE_PREFIXES.length;
@@ -56,7 +62,11 @@ export async function GET(req: Request) {
     .order('updated_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ docs: data || [] });
+  // Filter out deprecated doc types so old DB records don’t appear on the frontend
+  type DocRow = { doc_type: string; role: string };
+  const docs = (data || []) as DocRow[];
+  const filtered = docs.filter(d => isCurrentDocType(d.doc_type, d.role));
+  return NextResponse.json({ docs: filtered });
 }
 
 /** POST: sube un documento al bucket privado vía servidor (nunca cliente directo) */

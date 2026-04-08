@@ -57,9 +57,25 @@ export async function GET(req: Request) {
     const { data: docs, error } = await docsQuery;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Group by email+role
+    // Group by email+role  — skip deprecated doc types
+    const VALID_DRIVER_PERSONAL = ['cedula_frente', 'antecedentes', 'domicilio'];
+    const VALID_VEHICLE_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
+    const VEHICLE_PFXS          = ['moto', 'auto', 'moto_carro', 'camion'];
+    const VALID_TECNICO         = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
+
+    function isValidDocType(docType: string, role: string): boolean {
+      if (role === 'tecnico') return VALID_TECNICO.includes(docType);
+      if (VALID_DRIVER_PERSONAL.includes(docType)) return true;
+      for (const pfx of VEHICLE_PFXS) {
+        if (docType.startsWith(pfx + '_') && VALID_VEHICLE_KEYS.includes(docType.slice(pfx.length + 1))) return true;
+      }
+      return false;
+    }
+
     const grouped = new Map<string, { email: string; role: string; docs: unknown[] }>();
     for (const doc of docs || []) {
+      // Skip deprecated / unknown doc types to prevent UI pollution
+      if (!isValidDocType(String(doc.doc_type), String(doc.role))) continue;
       const key = `${doc.driver_email}__${doc.role}`;
       if (!grouped.has(key)) grouped.set(key, { email: doc.driver_email, role: doc.role, docs: [] });
       grouped.get(key)!.docs.push(doc);
