@@ -45,19 +45,44 @@ export async function GET(req: Request) {
 
   // ── Grouped by driver view ─────────────────────────────────────────────────
   if (view === 'drivers') {
-    const roleParam = url.searchParams.get('role') || 'all';
+    const roleParam    = url.searchParams.get('role')        || 'all';
+    const cursorEmail  = url.searchParams.get('cursor')      || '';
+    const cursorRole   = url.searchParams.get('cursorRole')  || '';
+    const pageLimit    = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '30', 10)));
 
+    // ── Step 1: Get paginated unique (email, role) pairs via RPC ──────────────
+    // Fetches PAGE_SIZE+1 to detect hasMore without a COUNT query.
+    type PairRow = { driver_email: string; drole: string };
+    const { data: pairs, error: pairError } = await sbAdmin()
+      .rpc('get_driver_doc_groups', {
+        p_role:         roleParam,
+        p_cursor_email: cursorEmail,
+        p_cursor_role:  cursorRole,
+        p_limit:        pageLimit + 1,
+      });
+    if (pairError) return NextResponse.json({ error: pairError.message }, { status: 500 });
+
+    const hasMore   = (pairs?.length ?? 0) > pageLimit;
+    const pagePairs = ((pairs as PairRow[]) || []).slice(0, pageLimit);
+
+    if (pagePairs.length === 0) {
+      return NextResponse.json({ drivers: [], total: 0, nextCursor: null, hasMore: false });
+    }
+
+    const emails     = [...new Set(pagePairs.map(p => p.driver_email))];
+    const validKeys  = new Set(pagePairs.map(p => `${p.driver_email}__${p.drole}`));
+
+    // ── Step 2: Fetch docs only for the page's emails ────────────────────────
     let docsQuery = sbAdmin()
       .from('driver_documents')
       .select('id, driver_email, role, doc_type, file_path, status, rejection_reason, expires_at, reviewed_at, created_at, updated_at')
-      .order('driver_email')
-      .limit(1000);
+      .in('driver_email', emails);
     if (roleParam !== 'all') docsQuery = docsQuery.eq('role', roleParam);
 
     const { data: docs, error } = await docsQuery;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Group by email+role  — skip deprecated doc types
+    // Group by email+role — skip deprecated doc types
     const VALID_DRIVER_PERSONAL = ['cedula_frente', 'antecedentes', 'domicilio'];
     const VALID_VEHICLE_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
     const VEHICLE_PFXS          = ['moto', 'auto', 'moto_carro', 'camion'];
@@ -74,17 +99,15 @@ export async function GET(req: Request) {
 
     const grouped = new Map<string, { email: string; role: string; docs: unknown[] }>();
     for (const doc of docs || []) {
-      // Skip deprecated / unknown doc types to prevent UI pollution
       if (!isValidDocType(String(doc.doc_type), String(doc.role))) continue;
       const key = `${doc.driver_email}__${doc.role}`;
+      if (!validKeys.has(key)) continue; // don't include docs that leaked from adjacent emails
       if (!grouped.has(key)) grouped.set(key, { email: doc.driver_email, role: doc.role, docs: [] });
       grouped.get(key)!.docs.push(doc);
     }
 
-    // Unique emails per role
-    const allDocs = (docs ?? []) as Array<{ driver_email: string; role: string }>;
-    const driverEmails  = [...new Set(allDocs.filter((d: { driver_email: string; role: string }) => d.role === 'driver').map((d: { driver_email: string; role: string }) => d.driver_email))];
-    const tecnicoEmails = [...new Set(allDocs.filter((d: { driver_email: string; role: string }) => d.role === 'tecnico').map((d: { driver_email: string; role: string }) => d.driver_email))];
+    const driverEmails  = [...new Set(pagePairs.filter(p => p.drole === 'driver').map(p => p.driver_email))];
+    const tecnicoEmails = [...new Set(pagePairs.filter(p => p.drole === 'tecnico').map(p => p.driver_email))];
 
     const profiles: Record<string, { name: string; photo: string | null; vehicle: string | null }> = {};
 
@@ -118,7 +141,7 @@ export async function GET(req: Request) {
       profile: profiles[`${g.email}__${g.role}`] || { name: g.email, photo: null, vehicle: null },
     }));
 
-    // Sort: drivers with oldest pending doc first so they get reviewed first
+    // Sort within the page: oldest pending doc first
     drivers.sort((a, b) => {
       type D = { status: string; created_at: string };
       const oldestPending = (g: { docs: unknown[] }) => {
@@ -128,7 +151,10 @@ export async function GET(req: Request) {
       return oldestPending(a).localeCompare(oldestPending(b));
     });
 
-    return NextResponse.json({ drivers, total: drivers.length });
+    const lastPair  = pagePairs[pagePairs.length - 1];
+    const nextCursor = hasMore ? { email: lastPair.driver_email, role: lastPair.drole } : null;
+
+    return NextResponse.json({ drivers, total: drivers.length, nextCursor, hasMore });
   }
 
   // ── Paginated flat list (legacy) ───────────────────────────────────────────

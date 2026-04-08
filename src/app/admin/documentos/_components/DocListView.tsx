@@ -486,36 +486,57 @@ interface DocListViewProps {
 }
 
 export default function DocListView({ pageTitle, pageDescription }: DocListViewProps) {
-  const [groups,     setGroups]     = useState<DriverGroup[]>([]);
-  const [loading,    setLoading]    = useState(false);
-  const [token,      setToken]      = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<'all' | 'driver' | 'tecnico'>('all');
-  const [search,     setSearch]     = useState('');
-  const [activeTab,  setActiveTab]  = useState<DriverTab | 'todos'>('listos');
-  const [total,      setTotal]      = useState(0);
-  const [dateFrom,   setDateFrom]   = useState('');
-  const [dateTo,     setDateTo]     = useState('');
+  const [groups,      setGroups]      = useState<DriverGroup[]>([]);
+  const [loading,     setLoading]     = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [token,       setToken]       = useState<string | null>(null);
+  const [roleFilter,  setRoleFilter]  = useState<'all' | 'driver' | 'tecnico'>('all');
+  const [search,      setSearch]      = useState('');
+  const [activeTab,   setActiveTab]   = useState<DriverTab | 'todos'>('listos');
+  const [total,       setTotal]       = useState(0);
+  const [dateFrom,    setDateFrom]    = useState('');
+  const [dateTo,      setDateTo]      = useState('');
+  const [nextCursor,  setNextCursor]  = useState<{ email: string; role: string } | null>(null);
+  const [hasMore,     setHasMore]     = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
   }, []);
 
-  const fetchGroups = useCallback(async () => {
+  const fetchGroups = useCallback(async (append = false, cur?: { email: string; role: string } | null) => {
     if (!token) return;
-    setLoading(true);
+    if (append) setLoadingMore(true); else setLoading(true);
     try {
-      const role = roleFilter !== 'all' ? `&role=${roleFilter}` : '';
-      const res  = await fetch(`/api/admin/documents?view=drivers${role}`, {
+      const role        = roleFilter !== 'all' ? `&role=${roleFilter}` : '';
+      const cursorParam = cur
+        ? `&cursor=${encodeURIComponent(cur.email)}&cursorRole=${encodeURIComponent(cur.role)}`
+        : '';
+      const res  = await fetch(`/api/admin/documents?view=drivers${role}${cursorParam}&limit=30`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
-      setGroups(json.drivers || []);
-      setTotal(json.total ?? 0);
+      if (append) {
+        setGroups(prev => [...prev, ...(json.drivers || [])]);
+        setTotal(prev  => prev + (json.total ?? 0));
+      } else {
+        setGroups(json.drivers || []);
+        setTotal(json.total ?? 0);
+      }
+      setNextCursor(json.nextCursor ?? null);
+      setHasMore(json.hasMore ?? false);
     } catch { /* non-fatal */ }
-    setLoading(false);
+    if (append) setLoadingMore(false); else setLoading(false);
   }, [token, roleFilter]);
 
-  useEffect(() => { if (token) fetchGroups(); }, [token, fetchGroups]);
+  // Reset and reload from scratch whenever role filter changes
+  useEffect(() => {
+    if (!token) return;
+    setGroups([]);
+    setNextCursor(null);
+    setHasMore(false);
+    fetchGroups(false, null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, roleFilter]);
 
   const handleDocUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string): Promise<{ conflict?: boolean }> => {
     if (!token) return {};
@@ -588,7 +609,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{pageTitle}</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {pageDescription} · <span className="font-semibold">{total} conductores</span>
+            {pageDescription} · <span className="font-semibold">{total} conductores cargados{hasMore ? ' · hay más' : ''}</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -599,7 +620,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
             📥 Exportar CSV
           </button>
           <button
-            onClick={fetchGroups}
+            onClick={() => { setGroups([]); setNextCursor(null); setHasMore(false); fetchGroups(false, null); }}
             disabled={loading}
             className="px-4 py-2 rounded-xl bg-[#F5C518] text-[#1C1C2E] text-sm font-bold hover:bg-[#e6b800] transition-colors disabled:opacity-60"
           >
@@ -717,6 +738,23 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
               onDocUpdate={handleDocUpdate}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Cargar más ── */}
+      {hasMore && !loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+          <button
+            onClick={() => fetchGroups(true, nextCursor)}
+            disabled={loadingMore}
+            style={{
+              padding: '10px 28px', borderRadius: 12, border: 'none', cursor: loadingMore ? 'default' : 'pointer',
+              background: '#F5C518', color: '#1C1C2E', fontWeight: 700, fontSize: '0.9rem',
+              opacity: loadingMore ? 0.6 : 1, transition: 'opacity 0.15s',
+            }}
+          >
+            {loadingMore ? '⟳ Cargando…' : '⬇ Cargar más conductores'}
+          </button>
         </div>
       )}
     </div>
