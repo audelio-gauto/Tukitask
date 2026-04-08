@@ -292,51 +292,25 @@ export default function TecnicoSettings() {
           {!gender && <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: 6 }}>Selección obligatoria</p>}
         </Section>
 
-        {/* ── TARJETA: Mis documentos ── */}
-        {(() => {
-          const total = TECNICO_DOC_TYPES.length;
-          const approved = TECNICO_DOC_TYPES.filter(d => docStatus[d.key]?.status === 'approved').length;
-          const pending  = TECNICO_DOC_TYPES.filter(d => docStatus[d.key]?.status === 'pending').length;
-          const rejected = TECNICO_DOC_TYPES.filter(d => docStatus[d.key]?.status === 'rejected').length;
-          const missing  = TECNICO_DOC_TYPES.filter(d => !docStatus[d.key]).length;
-          const allOk    = approved === total;
-          const hasExpired = TECNICO_DOC_TYPES.some(d => {
-            const ex = docExpiries[d.key] || docStatus[d.key]?.expires_at;
-            return docStatus[d.key]?.status === 'approved' && ex && new Date(ex).getTime() <= Date.now();
-          });
-          return (
-            <button
-              type="button"
-              onClick={() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              style={{
-                width: '100%', textAlign: 'left', background: allOk && !hasExpired
-                  ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
-                  : rejected > 0 ? 'linear-gradient(135deg,#fee2e2,#fecaca)'
-                  : 'linear-gradient(135deg,#fefce8,#fef3c7)',
-                border: `1.5px solid ${allOk && !hasExpired ? '#6ee7b7' : rejected > 0 ? '#fca5a5' : '#fcd34d'}`,
-                borderRadius: 16, padding: '0.95rem 1.1rem',
-                cursor: 'pointer', marginBottom: '1rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: '1.6rem' }}>{allOk && !hasExpired ? '✅' : rejected > 0 ? '❌' : '📎'}</span>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem', color: '#1f2937' }}>Mis documentos</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#4b5563' }}>
-                    {allOk && !hasExpired
-                      ? 'Todos verificados ✓'
-                      : hasExpired
-                      ? 'Hay documentos vencidos'
-                      : `${approved}/${total} aprobados${pending > 0 ? ` · ${pending} pendiente${pending > 1 ? 's' : ''}` : ''}${rejected > 0 ? ` · ${rejected} rechazado${rejected > 1 ? 's' : ''}` : ''}${missing > 0 ? ` · ${missing} sin subir` : ''}`
-                    }
-                  </p>
-                </div>
-              </div>
-              <span style={{ fontSize: '1.1rem', color: '#6b7280' }}>›</span>
-            </button>
-          );
-        })()}
+        {/* ── FILA: Mis documentos → ── */}
+        <button
+          type="button"
+          onClick={() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          style={{
+            width: '100%', textAlign: 'left',
+            background: '#fff', border: '1px solid #e5e7eb',
+            borderRadius: 16, padding: '0.9rem 1rem',
+            cursor: 'pointer', marginBottom: '1rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '1.2rem' }}>📎</span>
+            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151' }}>Mis documentos</span>
+          </div>
+          <span style={{ fontSize: '1rem', color: '#9ca3af' }}>›</span>
+        </button>
 
         {/* ── SECCIÓN: Datos personales ── */}
         <Section icon="👤" title="Datos personales">

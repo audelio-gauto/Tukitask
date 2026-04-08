@@ -79,6 +79,7 @@ export default function TecnicoDashboard() {
 
   // ── Document expiry alerts ────────────────────────────────────────────────
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
+  const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
   useEffect(() => {
     if (!email) return;
     const criticalKeys = ['cedula_frente', 'antecedentes'];
@@ -89,7 +90,12 @@ export default function TecnicoDashboard() {
         const soon: string[] = [];
         const notApproved: string[] = [];
         const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
-        for (const d of (j.docs || [])) {
+        const docs = j.docs || [];
+        let cApproved = 0, cPending = 0, cRejected = 0;
+        for (const d of docs) {
+          if (d.status === 'approved') cApproved++;
+          else if (d.status === 'pending') cPending++;
+          else if (d.status === 'rejected') cRejected++;
           if (d.status !== 'approved') notApproved.push(d.doc_type);
           if (!criticalKeys.includes(d.doc_type)) continue;
           if (!d.expires_at) continue;
@@ -97,6 +103,7 @@ export default function TecnicoDashboard() {
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= TEN_DAYS) soon.push(d.doc_type);
         }
+        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: 5 - docs.length });
         setDocAlerts({ expired, soon, notApproved });
         if (expired.length > 0 || notApproved.length > 0) {
           setAvailable(false);
@@ -609,28 +616,32 @@ export default function TecnicoDashboard() {
             </label>
           </div>
 
-          {/* Doc expiry banners */}
-          {docAlerts.expired.length > 0 && (
-            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
-              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>🚫 Documentos vencidos — actualizá en Configuración para conectarte.</span>
-                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
-              </div>
-            </Link>
-          )}
-          {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
-            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
-              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📋 No podés conectarte aún — tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación.</span>
-                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
-              </div>
-            </Link>
-          )}
-          {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
-            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', margin: '0 0 0.75rem' }}>
-              <div style={{ padding: '0.65rem 0.85rem', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: '0.8rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>⚠️ Tenés documentos por vencer en menos de 10 días. Renovalos pronto.</span>
-                <span style={{ fontSize: '1rem', marginLeft: 6 }}>›</span>
+          {/* Mis documentos status card */}
+          {(docCounts.approved < 5 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0) && (
+            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
+              <div style={{
+                padding: '0.85rem 1rem', borderRadius: 14,
+                background: (docAlerts.expired.length > 0 || docCounts.rejected > 0)
+                  ? 'linear-gradient(135deg,#fee2e2,#fecaca)'
+                  : 'linear-gradient(135deg,#fefce8,#fef3c7)',
+                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? '#fca5a5' : '#fcd34d'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.5rem' }}>
+                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
+                  </span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                      {docAlerts.expired.length > 0
+                        ? 'Documentos vencidos — no podés conectarte'
+                        : `${docCounts.approved}/5 aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>›</span>
               </div>
             </Link>
           )}
