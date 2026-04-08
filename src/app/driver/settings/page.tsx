@@ -52,6 +52,7 @@ export default function DriverSettingsPage() {
   const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
   const [docExpiries, setDocExpiries] = useState<Record<string, string>>({});
   const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
+  const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -371,158 +372,144 @@ export default function DriverSettingsPage() {
             </div>
           </div>
 
-          {/* Documentos del vehículo seleccionado */}
-          <div style={{ marginTop: '1rem', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
-              Documentos — {selectedVehicle?.label}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {VEHICLE_DOCS.map(doc => {
-                const docKey = `${vehicleType}_${doc.key}`;
-                const ds = docStatus[docKey];
-                const isUploading = docUploading[docKey];
-                const _expAtV = docExpiries[docKey] || ds?.expires_at;
-                const isLocked = ds?.status === 'approved' && !(_expAtV && new Date(_expAtV).getTime() <= Date.now());
-                const needsExpiry = doc.requiresExpiry && !docExpiries[docKey];
-                return (
-                  <div key={docKey}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                        {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
-                        {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
-                      </div>
-                      {ds && (
-                        <span style={{
-                          flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
-                          background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                          color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
-                        }}>
-                          {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
-                        </span>
-                      )}
-                      {isUploading ? (
-                        <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
-                      ) : isLocked ? (
-                        <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
-                      ) : needsExpiry ? (
-                        <span title="Ingresá la fecha de vencimiento primero" style={{
-                          flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8,
-                          background: '#f3f4f6', color: '#9ca3af',
-                          fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb',
-                        }}>📅 Fecha primero</span>
-                      ) : (
-                        <label style={{
-                          flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                          background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff',
-                          color: ds?.status === 'approved' ? '#b45309' : '#0284c7',
-                          fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                          borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd',
-                          display: 'inline-flex', alignItems: 'center', gap: 3,
-                        }}>
-                          {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
-                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(docKey, f); e.target.value = ''; }} />
-                        </label>
-                      )}
+          {/* Mis documentos — colapsable */}
+          {(() => {
+            const allDocs = [
+              ...PERSONAL_DOCS.map(d => ({ ...d, docKey: d.key, section: 'personal' as const })),
+              ...VEHICLE_DOCS.map(d => ({ ...d, docKey: `${vehicleType}_${d.key}`, section: 'vehicle' as const })),
+            ];
+            const approvedCount = allDocs.filter(d => docStatus[d.docKey]?.status === 'approved').length;
+            const hasRejected = allDocs.some(d => docStatus[d.docKey]?.status === 'rejected');
+            const hasExpired = allDocs.some(d => {
+              const ds = docStatus[d.docKey]; const ex = docExpiries[d.docKey] || ds?.expires_at;
+              return ds?.status === 'approved' && ex && new Date(ex).getTime() <= Date.now();
+            });
+            const bgColor = hasRejected || hasExpired ? '#fef2f2' : approvedCount === allDocs.length ? '#f0fdf4' : '#fefce8';
+            const borderColor = hasRejected || hasExpired ? '#fca5a5' : approvedCount === allDocs.length ? '#bbf7d0' : '#fcd34d';
+            const icon = hasExpired ? '🚫' : hasRejected ? '❌' : approvedCount === allDocs.length ? '✅' : '📎';
+            return (
+              <div style={{ marginTop: '1rem', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDocsOpen(p => !p)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.85rem 1rem', borderRadius: 14, border: `1.5px solid ${borderColor}`,
+                    background: bgColor, cursor: 'pointer', outline: 'none', gap: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.4rem' }}>{icon}</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                        {approvedCount}/{allDocs.length} aprobados
+                        {allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length > 0 && ` · ${allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length} pendiente${allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length > 1 ? 's' : ''}`}
+                        {hasRejected && ` · ${allDocs.filter(d => docStatus[d.docKey]?.status === 'rejected').length} rechazado${allDocs.filter(d => docStatus[d.docKey]?.status === 'rejected').length > 1 ? 's' : ''}`}
+                        {allDocs.filter(d => !docStatus[d.docKey]).length > 0 && ` · ${allDocs.filter(d => !docStatus[d.docKey]).length} sin subir`}
+                      </p>
                     </div>
-                    {doc.requiresExpiry && (
-                      <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
-                        {isLocked ? (
-                          <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>
-                            {docExpiries[docKey] ? new Date(docExpiries[docKey]).toLocaleDateString('es-PY') : '—'}
-                          </span>
-                        ) : (
-                          <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)}
-                            style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
-                        )}
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+                  <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{docsOpen ? '∧' : '∨'}</span>
+                </button>
 
-        {/* ── SECCIÓN: IDENTIFICACIÓN PERSONAL ── */}
-        <div style={{ background: '#fff', borderRadius: 18, padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fefce8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🪪</div>
-            <div>
-              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Identificación personal</h3>
-              <p style={{ fontSize: '0.72rem', color: '#6b7280', margin: 0 }}>Cédula, antecedentes y domicilio</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {PERSONAL_DOCS.map(doc => {
-              const ds = docStatus[doc.key];
-              const isUploading = docUploading[doc.key];
-              const _expAtP = docExpiries[doc.key] || ds?.expires_at;
-              const isLocked = ds?.status === 'approved' && !(_expAtP && new Date(_expAtP).getTime() <= Date.now());
-              const needsExpiry = doc.requiresExpiry && !docExpiries[doc.key];
-              return (
-                <div key={doc.key}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-                    <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                      {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
-                      {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
-                    </div>
-                    {ds && (
-                      <span style={{
-                        flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
-                        background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                        color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
-                      }}>
-                        {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
-                      </span>
-                    )}
-                    {isUploading ? (
-                      <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
-                    ) : isLocked ? (
-                      <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
-                    ) : needsExpiry ? (
-                      <span title="Ingresá la fecha de vencimiento primero" style={{
-                        flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8,
-                        background: '#f3f4f6', color: '#9ca3af',
-                        fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb',
-                      }}>📅 Fecha primero</span>
-                    ) : (
-                      <label style={{
-                        flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                        background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff',
-                        color: ds?.status === 'approved' ? '#b45309' : '#0284c7',
-                        fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                        borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd',
-                        display: 'inline-flex', alignItems: 'center', gap: 3,
-                      }}>
-                        {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
-                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); e.target.value = ''; }} />
-                      </label>
-                    )}
+                {docsOpen && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                    {/* Personal docs */}
+                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 2px' }}>Identificación personal</p>
+                    {PERSONAL_DOCS.map(doc => {
+                      const ds = docStatus[doc.key];
+                      const isUploading = docUploading[doc.key];
+                      const _expAt = docExpiries[doc.key] || ds?.expires_at;
+                      const isLocked = ds?.status === 'approved' && !(_expAt && new Date(_expAt).getTime() <= Date.now());
+                      const needsExpiry = doc.requiresExpiry && !docExpiries[doc.key];
+                      return (
+                        <div key={doc.key}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                              {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                            </div>
+                            {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
+                            {isUploading ? (
+                              <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                            ) : isLocked ? (
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                            ) : needsExpiry ? (
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                            ) : (
+                              <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
+                                <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(doc.key, f); e.target.value = ''; }} />
+                              </label>
+                            )}
+                          </div>
+                          {doc.requiresExpiry && (
+                            <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                              {isLocked ? (
+                                <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}</span>
+                              ) : (
+                                <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Vehicle docs */}
+                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '8px 0 2px' }}>Documentos — {selectedVehicle?.label}</p>
+                    {VEHICLE_DOCS.map(doc => {
+                      const docKey = `${vehicleType}_${doc.key}`;
+                      const ds = docStatus[docKey];
+                      const isUploading = docUploading[docKey];
+                      const _expAt = docExpiries[docKey] || ds?.expires_at;
+                      const isLocked = ds?.status === 'approved' && !(_expAt && new Date(_expAt).getTime() <= Date.now());
+                      const needsExpiry = doc.requiresExpiry && !docExpiries[docKey];
+                      return (
+                        <div key={docKey}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                              {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                            </div>
+                            {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
+                            {isUploading ? (
+                              <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                            ) : isLocked ? (
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                            ) : needsExpiry ? (
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                            ) : (
+                              <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
+                                <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadDoc(docKey, f); e.target.value = ''; }} />
+                              </label>
+                            )}
+                          </div>
+                          {doc.requiresExpiry && (
+                            <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                              {isLocked ? (
+                                <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{docExpiries[docKey] ? new Date(docExpiries[docKey]).toLocaleDateString('es-PY') : '—'}</span>
+                              ) : (
+                                <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {doc.requiresExpiry && (
-                    <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
-                      {isLocked ? (
-                        <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>
-                          {docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}
-                        </span>
-                      ) : (
-                        <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)}
-                          style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── SECCIÓN: NAVEGACIÓN ── */}
