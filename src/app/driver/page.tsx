@@ -69,6 +69,8 @@ export default function DriverDashboard() {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
+  const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
+  const DRIVER_TOTAL_DOCS = 9; // cedula_frente, antecedentes, domicilio + 6 vehicle docs
 
   // Stats state
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
@@ -109,13 +111,19 @@ export default function DriverDashboard() {
         const expired: string[] = [];
         const soon: string[] = [];
         const notApproved: string[] = [];
-        for (const d of (j.docs || [])) {
+        let cApproved = 0, cPending = 0, cRejected = 0;
+        const docs = j.docs || [];
+        for (const d of docs) {
+          if (d.status === 'approved') cApproved++;
+          else if (d.status === 'pending') cPending++;
+          else if (d.status === 'rejected') cRejected++;
           if (d.status !== 'approved') notApproved.push(d.doc_type);
           if (!criticalKeys.has(d.doc_type) || !d.expires_at) continue;
           const ms = new Date(d.expires_at).getTime() - now;
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= tenDays) soon.push(d.doc_type);
         }
+        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, DRIVER_TOTAL_DOCS - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
         // Si hay docs vencidos o no aprobados, forzar offline
         if (expired.length > 0 || notApproved.length > 0) {
@@ -700,6 +708,36 @@ export default function DriverDashboard() {
               <span className="tuki-toggle-slider" />
             </label>
           </div>
+
+          {/* Tarjeta de estado de documentos */}
+          {(docCounts.approved < DRIVER_TOTAL_DOCS || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
+            <Link href="/driver/settings" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
+              <div style={{
+                padding: '0.85rem 1rem', borderRadius: 14,
+                background: (docAlerts.expired.length > 0 || docCounts.rejected > 0)
+                  ? 'linear-gradient(135deg,#fee2e2,#fecaca)'
+                  : 'linear-gradient(135deg,#fefce8,#fef3c7)',
+                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? '#fca5a5' : '#fcd34d'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.5rem' }}>
+                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
+                  </span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                      {docAlerts.expired.length > 0
+                        ? 'Documentos vencidos — no podés conectarte'
+                        : `${docCounts.approved}/${DRIVER_TOTAL_DOCS} aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>›</span>
+              </div>
+            </Link>
+          )}
 
           {/* Alertas de documentos */}
           {docAlerts.expired.length > 0 && (
