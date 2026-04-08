@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 const BUCKET = 'driver-documents';
 
-const VALID_PERSONAL_DOCS = ['cedula_frente', 'cedula_dorso', 'antecedentes', 'domicilio'];
+const VALID_PERSONAL_DOCS = ['cedula_frente', 'antecedentes', 'domicilio'];
 const VEHICLE_PREFIXES    = ['moto', 'auto', 'moto_carro', 'camion'];
 const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso', 'foto_1', 'foto_2'];
-const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'cedula_dorso', 'antecedentes', 'domicilio'];
+const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
+
+// Total expected docs per role (for dashboard count)
+export const TECNICO_DOC_COUNT = VALID_TECNICO_DOCS.length;  // 4
+export const DRIVER_PERSONAL_COUNT = VALID_PERSONAL_DOCS.length + VEHICLE_DOC_KEYS.length * VEHICLE_PREFIXES.length;
 
 function isValidDriverDoc(doc_type: string): boolean {
   if (VALID_PERSONAL_DOCS.includes(doc_type)) return true;
@@ -63,6 +68,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { email, doc_type, base64, mimeType, role = 'driver', expires_at } = body;
 
+    // Rate limit: max 20 uploads per user per hour
+    const allowed = await allowRequest(`rl:doc-upload:${user.id}`, 20, 3600);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Demasiadas subidas. Intentá en unos minutos.' }, { status: 429 });
+    }
+
     // Prevenir IDOR: el email debe coincidir con el JWT
     if (!email || email !== user.email) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -106,7 +117,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // Guardar metadata en BD (upsert: un doc por tipo por conductor)
+    // Guardar metadata en BD (upsert: un doc por tipo por conductor+rol)
     const { error: dbError } = await sbAdmin()
       .from('driver_documents')
       .upsert({
@@ -120,7 +131,7 @@ export async function POST(req: Request) {
         reviewed_at: null,
         expires_at: expires_at || null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'driver_email,doc_type' });
+      }, { onConflict: 'driver_email,role,doc_type' });
 
     if (dbError) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
@@ -132,7 +143,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** PATCH: actualiza solo expires_at de un documento (sin re-subir el archivo) */
+/** PATCH: actualiza expires_at. Si el doc estaba aprobado, vuelve a pending para re-revisión. */
 export async function PATCH(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
@@ -145,14 +156,46 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Validate expires_at: must be a valid date in the future, not >10 years out
+    if (expires_at) {
+      const ts = new Date(expires_at).getTime();
+      const now = Date.now();
+      const tenYears = now + 10 * 365 * 24 * 60 * 60 * 1000;
+      if (isNaN(ts) || ts < now || ts > tenYears) {
+        return NextResponse.json({ error: 'Fecha de vencimiento inválida' }, { status: 400 });
+      }
+    }
+
+    // Fetch current status to decide if we need to reset to pending
+    const { data: current } = await sbAdmin()
+      .from('driver_documents')
+      .select('status')
+      .eq('driver_email', email)
+      .eq('doc_type', doc_type)
+      .single();
+
+    // If doc was approved, changing expires_at triggers re-review
+    const needsReview = current?.status === 'approved';
+
+    const updatePayload: Record<string, unknown> = {
+      expires_at: expires_at || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (needsReview) {
+      updatePayload.status = 'pending';
+      updatePayload.reviewed_by = null;
+      updatePayload.reviewed_at = null;
+      updatePayload.rejection_reason = null;
+    }
+
     const { error } = await sbAdmin()
       .from('driver_documents')
-      .update({ expires_at: expires_at || null, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('driver_email', email)
       .eq('doc_type', doc_type);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, resetToPending: needsReview });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }

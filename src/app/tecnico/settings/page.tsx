@@ -131,16 +131,24 @@ export default function TecnicoSettings() {
       .catch(() => {});
   }, [email]);
 
-  const updateExpiry = async (docKey: string, dateValue: string) => {
+  const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const updateExpiry = (docKey: string, dateValue: string) => {
     if (!email) return;
     setDocExpiries(prev => ({ ...prev, [docKey]: dateValue }));
-    try {
-      await authFetch('/api/upload-driver-doc', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, doc_type: docKey, expires_at: dateValue || null, role: 'tecnico' }),
-      });
-    } catch { /* silent */ }
+    if (expiryTimer.current) clearTimeout(expiryTimer.current);
+    expiryTimer.current = setTimeout(async () => {
+      try {
+        const res = await authFetch('/api/upload-driver-doc', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, doc_type: docKey, expires_at: dateValue || null, role: 'tecnico' }),
+        });
+        const json = await res.json();
+        if (json.resetToPending) {
+          setDocStatus(prev => ({ ...prev, [docKey]: { ...prev[docKey], status: 'pending', rejection_reason: undefined } }));
+        }
+      } catch {}
+    }, 800);
   };
 
   const handleSave = async (e: React.FormEvent) => {

@@ -136,16 +136,25 @@ export default function DriverSettingsPage() {
       .catch(() => {});
   }, [email]);
 
-  async function updateExpiry(docType: string, expiresAt: string) {
+  const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function updateExpiry(docType: string, expiresAt: string) {
     if (!email) return;
     setDocExpiries(prev => ({ ...prev, [docType]: expiresAt }));
-    try {
-      await authFetch('/api/upload-driver-doc', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, doc_type: docType, expires_at: expiresAt || null }),
-      });
-    } catch {}
+    if (expiryTimer.current) clearTimeout(expiryTimer.current);
+    expiryTimer.current = setTimeout(async () => {
+      try {
+        const res = await authFetch('/api/upload-driver-doc', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, doc_type: docType, expires_at: expiresAt || null }),
+        });
+        const json = await res.json();
+        // If date change reset doc to pending, update local state
+        if (json.resetToPending) {
+          setDocStatus(prev => ({ ...prev, [docType]: { ...prev[docType], status: 'pending', rejection_reason: undefined } }));
+        }
+      } catch {}
+    }, 800);
   }
 
   async function uploadDoc(docType: string, file: File) {

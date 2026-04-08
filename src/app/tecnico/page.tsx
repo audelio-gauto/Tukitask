@@ -83,7 +83,7 @@ export default function TecnicoDashboard() {
   useEffect(() => {
     if (!email) return;
     const criticalKeys = ['cedula_frente', 'antecedentes'];
-    fetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
+    authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then(j => {
         const expired: string[] = [];
@@ -103,7 +103,7 @@ export default function TecnicoDashboard() {
           if (ms <= 0) expired.push(d.doc_type);
           else if (ms <= TEN_DAYS) soon.push(d.doc_type);
         }
-        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: 4 - docs.length });
+        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, 4 - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
         if (expired.length > 0 || notApproved.length > 0) {
           setAvailable(false);
@@ -617,7 +617,7 @@ export default function TecnicoDashboard() {
           </div>
 
           {/* Mis documentos status card */}
-          {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0) && (
+          {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
             <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
               <div style={{
                 padding: '0.85rem 1rem', borderRadius: 14,
