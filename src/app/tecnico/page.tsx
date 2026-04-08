@@ -106,8 +106,22 @@ export default function TecnicoDashboard() {
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, 4 - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
         if (expired.length > 0 || notApproved.length > 0) {
+          // Force offline while docs are not fully approved
           setAvailable(false);
-          try { localStorage.setItem('tecnico_available', 'false'); } catch {}
+          try {
+            localStorage.setItem('tecnico_available', 'false');
+            localStorage.setItem('tecnico_doc_blocked', 'true');
+          } catch {}
+        } else {
+          // All docs approved — if the system previously forced them offline, auto-restore connection
+          try {
+            const wasDocBlocked = localStorage.getItem('tecnico_doc_blocked') === 'true';
+            if (wasDocBlocked) {
+              setAvailable(true);
+              localStorage.setItem('tecnico_available', 'true');
+              localStorage.removeItem('tecnico_doc_blocked');
+            }
+          } catch {}
         }
       })
       .catch(() => {});
