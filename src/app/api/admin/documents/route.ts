@@ -3,19 +3,19 @@ import { getAuthAdmin, sbAdmin, unauthorized } from '@/lib/apiAuth';
 
 const PAGE_SIZE = 30;
 
-// GET /api/admin/documents?status=pending|all&page=0&id=<uuid>
-// - If `id` is provided: return a single doc with a fresh signed URL (lazy preview)
-// - Otherwise: paginated list WITHOUT signed URLs
+// GET /api/admin/documents
+// - ?id=<uuid>            → fresh signed URL for single doc (lazy preview)
+// - ?view=drivers         → all docs grouped by driver, with profile info
+// - ?status=pending|all&page=N → legacy paginated flat list
 export async function GET(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
   const url = new URL(req.url);
-  const statusFilter = url.searchParams.get('status');
-  const page = Math.max(0, parseInt(url.searchParams.get('page') || '0', 10));
   const docId = url.searchParams.get('id');
+  const view  = url.searchParams.get('view');
 
-  // Lazy signed URL — requested when admin clicks "Ver"
+  // ── Lazy signed URL ────────────────────────────────────────────────────────
   if (docId) {
     const { data: doc, error } = await sbAdmin()
       .from('driver_documents')
@@ -29,7 +29,72 @@ export async function GET(req: Request) {
     return NextResponse.json({ signedUrl: signed?.signedUrl ?? null });
   }
 
-  // Paginated list — no signed URLs generated here
+  // ── Grouped by driver view ─────────────────────────────────────────────────
+  if (view === 'drivers') {
+    const roleParam = url.searchParams.get('role') || 'all';
+
+    let docsQuery = sbAdmin()
+      .from('driver_documents')
+      .select('id, driver_email, role, doc_type, file_path, status, rejection_reason, expires_at, created_at, updated_at')
+      .order('driver_email')
+      .limit(1000);
+    if (roleParam !== 'all') docsQuery = docsQuery.eq('role', roleParam);
+
+    const { data: docs, error } = await docsQuery;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Group by email+role
+    const grouped = new Map<string, { email: string; role: string; docs: unknown[] }>();
+    for (const doc of docs || []) {
+      const key = `${doc.driver_email}__${doc.role}`;
+      if (!grouped.has(key)) grouped.set(key, { email: doc.driver_email, role: doc.role, docs: [] });
+      grouped.get(key)!.docs.push(doc);
+    }
+
+    // Unique emails per role
+    const allDocs = (docs ?? []) as Array<{ driver_email: string; role: string }>;
+    const driverEmails  = [...new Set(allDocs.filter((d: { driver_email: string; role: string }) => d.role === 'driver').map((d: { driver_email: string; role: string }) => d.driver_email))];
+    const tecnicoEmails = [...new Set(allDocs.filter((d: { driver_email: string; role: string }) => d.role === 'tecnico').map((d: { driver_email: string; role: string }) => d.driver_email))];
+
+    const profiles: Record<string, { name: string; photo: string | null; vehicle: string | null }> = {};
+
+    if (driverEmails.length > 0) {
+      const { data: dProfiles } = await sbAdmin()
+        .from('driver_profiles')
+        .select('email, first_name, last_name, profile_photo, transport_mode, license_plate')
+        .in('email', driverEmails);
+      for (const p of dProfiles || []) {
+        const name    = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email;
+        const vehicle = p.transport_mode
+          ? `${p.transport_mode}${p.license_plate ? ' · ' + String(p.license_plate).toUpperCase() : ''}`
+          : null;
+        profiles[`${p.email}__driver`] = { name, photo: p.profile_photo || null, vehicle };
+      }
+    }
+
+    if (tecnicoEmails.length > 0) {
+      const { data: tSettings } = await sbAdmin()
+        .from('tecnico_settings')
+        .select('email, first_name, last_name, profile_photo')
+        .in('email', tecnicoEmails);
+      for (const p of tSettings || []) {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email;
+        profiles[`${p.email}__tecnico`] = { name, photo: p.profile_photo || null, vehicle: null };
+      }
+    }
+
+    const drivers = [...grouped.values()].map(g => ({
+      ...g,
+      profile: profiles[`${g.email}__${g.role}`] || { name: g.email, photo: null, vehicle: null },
+    }));
+
+    return NextResponse.json({ drivers, total: drivers.length });
+  }
+
+  // ── Paginated flat list (legacy) ───────────────────────────────────────────
+  const statusFilter = url.searchParams.get('status');
+  const page = Math.max(0, parseInt(url.searchParams.get('page') || '0', 10));
+
   let query = sbAdmin()
     .from('driver_documents')
     .select('id, driver_email, role, doc_type, file_path, status, rejection_reason, expires_at, created_at, updated_at', { count: 'exact' })
