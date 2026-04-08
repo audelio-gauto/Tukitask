@@ -313,6 +313,7 @@ export default function TecnicoSettings() {
               const isUploading = docUploading[doc.key];
               const _expAtT = docExpiries[doc.key] || ds?.expires_at;
               const isLocked = ds?.status === 'approved' && !(_expAtT && new Date(_expAtT).getTime() <= Date.now());
+              const needsExpiry = doc.requiresExpiry && !docExpiries[doc.key];
               return (
                 <div key={doc.key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -335,6 +336,12 @@ export default function TecnicoSettings() {
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
                   ) : isLocked ? (
                     <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                  ) : needsExpiry ? (
+                    <span title="Ingresá la fecha de vencimiento primero" style={{
+                      flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8,
+                      background: '#f3f4f6', color: '#9ca3af',
+                      fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb',
+                    }}>📅 Fecha primero</span>
                   ) : (
                     <label style={{
                       flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
