@@ -292,25 +292,7 @@ export default function TecnicoSettings() {
           {!gender && <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: 6 }}>Selección obligatoria</p>}
         </Section>
 
-        {/* ── FILA: Mis documentos → ── */}
-        <button
-          type="button"
-          onClick={() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          style={{
-            width: '100%', textAlign: 'left',
-            background: '#fff', border: '1px solid #e5e7eb',
-            borderRadius: 16, padding: '0.9rem 1rem',
-            cursor: 'pointer', marginBottom: '1rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: '1.2rem' }}>📎</span>
-            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151' }}>Mis documentos</span>
-          </div>
-          <span style={{ fontSize: '1rem', color: '#9ca3af' }}>›</span>
-        </button>
+
 
         {/* ── SECCIÓN: Datos personales ── */}
         <Section icon="👤" title="Datos personales">
@@ -361,9 +343,9 @@ export default function TecnicoSettings() {
           </Field>
         </Section>
 
-        {/* ── SECCIÓN: Verificar tu identidad ── */}
+        {/* ── SECCIÓN: Mis documentos ── */}
         <div ref={docsRef} style={{ scrollMarginTop: 80 }}>
-        <Section icon="📎" title="Verificar tu identidad">
+        <Section icon="📎" title="Mis documentos">
           <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
           </p>
