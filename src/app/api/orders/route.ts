@@ -43,7 +43,8 @@ export async function GET(req: Request) {
       }
     }
     // Cache available orders for 5s (all drivers see the same list)
-    const cachedOrders = await cacheGet<unknown[]>('orders:available');
+    // v2 key: ensures old cache without client_is_verified is not served
+    const cachedOrders = await cacheGet<unknown[]>('orders:v2:available');
     if (cachedOrders) return NextResponse.json(cachedOrders);
 
     query = query.in('status', ['pending', 'negotiating']).limit(100);
@@ -83,7 +84,7 @@ export async function GET(req: Request) {
       client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
       client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
     }));
-    await cacheSet('orders:available', enriched, 5);
+    await cacheSet('orders:v2:available', enriched, 5);
     return NextResponse.json(enriched);
   }
 
