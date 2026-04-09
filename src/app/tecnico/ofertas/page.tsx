@@ -88,6 +88,10 @@ export default function OfertasPage() {
   const chatOpenJobRef = useRef<string | null>(null);
   const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Toast: oferta aceptada
+  const [acceptedToast, setAcceptedToast] = useState<{ jobId: string; clientName: string | null } | null>(null);
+  const acceptedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // GPS live position
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -126,7 +130,21 @@ export default function OfertasPage() {
     const ch = supabase.channel('tecnico-ofertas-marketplace')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_jobs' } as never, () => loadOffers())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tecnico_jobs' } as never, () => loadOffers())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tecnico_job_offers' } as never, () => loadOffers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tecnico_job_offers' } as never,
+        (payload: { new?: { tecnico_email?: string; status?: string; job_id?: string } }) => {
+          loadOffers();
+          // Show toast when THIS tecnico's offer gets accepted
+          if (payload?.new?.status === 'accepted' && payload?.new?.tecnico_email === email) {
+            const jobId = payload.new.job_id ?? '';
+            setJobs(prev => {
+              const job = prev.find(j => j.id === jobId);
+              if (acceptedToastTimerRef.current) clearTimeout(acceptedToastTimerRef.current);
+              setAcceptedToast({ jobId, clientName: job?.client_name ?? null });
+              acceptedToastTimerRef.current = setTimeout(() => setAcceptedToast(null), 8000);
+              return prev;
+            });
+          }
+        })
       .subscribe();
 
     return () => {
@@ -427,6 +445,32 @@ export default function OfertasPage() {
         otherName={chatOtherName}
         otherPhoto={chatOtherPhoto}
       />
+
+      {/* ── Toast: oferta aceptada ──────────────────────── */}
+      {acceptedToast && (
+        <div
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10001, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0a2218', border: '2px solid rgba(200,255,0,0.7)',
+            borderRadius: 18, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.85)',
+          }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(200,255,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🎉</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '0.8rem', marginBottom: 2, letterSpacing: '0.04em' }}>¡OFERTA ACEPTADA!</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>
+              {acceptedToast.clientName ? `${acceptedToast.clientName} aceptó tu oferta` : 'El cliente aceptó tu oferta'}
+            </div>
+          </div>
+          <button
+            onClick={() => { if (acceptedToastTimerRef.current) clearTimeout(acceptedToastTimerRef.current); setAcceptedToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
 
       {/* ── Toast: nuevo mensaje del cliente ──────────────────────── */}
       {chatToast && (
