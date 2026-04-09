@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { allowRequest } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
+  // Rate limit: 20 check-role calls per minute per IP (covers rapid login retries + brute force)
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const allowed = await allowRequest(`rl:check-role:${ip}`, 20, 60);
+  if (!allowed) {
+    return NextResponse.json({ role: null, error: 'Demasiados intentos. Esperá un momento.' }, { status: 429 });
+  }
+
   try {
     const bodyText = await req.text();
     let parsed: any;

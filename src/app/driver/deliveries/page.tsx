@@ -49,6 +49,7 @@ export default function DeliveriesPage() {
   const { serviceFilters, email, displayName, profilePhoto, navApp } = useDriverContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
@@ -107,6 +108,7 @@ export default function DeliveriesPage() {
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) return;
+        setFetchError(false);
         setOrders(data);
         const ids = new Set(data.map((o: any) => o.id as string));
         if (prevOrderIds.current.size > 0) {
@@ -115,7 +117,7 @@ export default function DeliveriesPage() {
         prevOrderIds.current = ids;
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setFetchError(true); });
   }, []);
 
   /* ── Fetch my active job (accepted/picking_up/in_transit) ── */
@@ -931,6 +933,25 @@ export default function DeliveriesPage() {
               <button onClick={() => setOrdersPage(p => p + 1)} style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}>Cargar más</button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ════════════ OFFLINE BANNER ════════════ */}
+      {fetchError && !loading && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9990,
+          background: '#ef4444', color: '#fff',
+          padding: '8px 16px', textAlign: 'center',
+          fontSize: '0.82rem', fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          ⚠️ Sin conexión — Los datos pueden estar desactualizados
+          <button
+            onClick={fetchOrders}
+            style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: '#fff', borderRadius: 6, padding: '2px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Reintentar
+          </button>
         </div>
       )}
 

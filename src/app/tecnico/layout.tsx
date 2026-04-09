@@ -7,6 +7,7 @@ import '../driver/driver.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
@@ -124,6 +125,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         role={role}
       />
       <NotificationBell userEmail={email} className="" />
+      <ChatBadge email={email} href="/tecnico/citas" scope="job" />
       <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}

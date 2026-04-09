@@ -91,10 +91,12 @@ export default function Auth() {
     setSuccess(null);
     const { error } = await supabase.auth.signUp({ email, password });
     if (!error) {
-      const emailNormalized = email.toLowerCase();
-      const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').toLowerCase();
-      const role = adminEmail && emailNormalized === adminEmail ? 'admin' : 'cliente';
-      await supabase.from('users').upsert({ email: emailNormalized, role }, { onConflict: 'email' });
+      // Role assignment happens server-side: ADMIN_EMAIL is a private env var never exposed to the client
+      await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase() }),
+      });
     }
     setLoading(false);
     if (error) setError(error.message);

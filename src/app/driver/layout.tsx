@@ -8,6 +8,7 @@ import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './driver.css';
 import { DriverDrawer } from './components/DriverDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
@@ -112,6 +113,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         profilePhoto={profilePhoto}
       />
       <NotificationBell userEmail={email} className="" />
+      <ChatBadge email={email} href="/driver/deliveries" scope="order" />
       <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
       </DriverContext.Provider>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
-import { ALLOWED_IMAGE_TYPES } from '@/lib/constants';
+import { ALLOWED_IMAGE_TYPES, validateImageMagicBytes } from '@/lib/constants';
 
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
@@ -13,13 +13,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    if (!ALLOWED_IMAGE_TYPES.includes(mimeType as any)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType as never)) {
       return NextResponse.json({ error: 'Formato no soportado. Usa JPG, PNG o WebP' }, { status: 400 });
     }
 
     const buffer = Buffer.from(base64, 'base64');
     if (buffer.length > 5 * 1024 * 1024) {
       return NextResponse.json({ error: 'Imagen demasiado grande (máx 5MB)' }, { status: 400 });
+    }
+    if (!validateImageMagicBytes(buffer, mimeType)) {
+      return NextResponse.json({ error: 'El archivo no es una imagen válida' }, { status: 400 });
     }
 
     const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';

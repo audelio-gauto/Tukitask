@@ -196,6 +196,12 @@ export default function CitasPage() {
     finally { setActionId(null); }
   };
 
+  /** Wrap doAction with a native confirm dialog for destructive actions */
+  const doActionConfirmed = (jobId: string, action: string, message: string) => {
+    if (!window.confirm(message)) return;
+    doAction(jobId, action);
+  };
+
   const submitExtra = async () => {
     if (!extraModal || !email || extraSending || extraAmount <= 0) return;
     setExtraSending(true);
@@ -343,7 +349,7 @@ export default function CitasPage() {
 
                   {job.status === 'en_proceso' && (
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => doAction(job.id, 'completion_pending')} disabled={busy}
+                      <button onClick={() => doActionConfirmed(job.id, 'completion_pending', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')} disabled={busy}
                         style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
                         ✅ Marcar completado
                       </button>
@@ -368,7 +374,7 @@ export default function CitasPage() {
 
                   {/* Cancel option for early statuses */}
                   {['accepted', 'en_camino'].includes(job.status) && (
-                    <button onClick={() => doAction(job.id, 'cancel')} disabled={busy}
+                    <button onClick={() => doActionConfirmed(job.id, 'cancel', '¿Cancelar este trabajo? Esta acción no se puede deshacer.')} disabled={busy}
                       style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontWeight: 600, fontSize: '0.8rem', cursor: busy ? 'default' : 'pointer' }}>
                       Cancelar trabajo
                     </button>

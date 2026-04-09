@@ -3,8 +3,10 @@ import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 
-// Comision mínima para poder ver pedidos disponibles (en la moneda base de la app)
-const MIN_WALLET_BALANCE = 0; // 0 = solo bloquear si saldo negativo; sube este valor para forzar saldo mínimo
+// Saldo mínimo para poder ver pedidos disponibles.
+// 0 = solo bloquear si saldo negativo. Sube este valor para exigir depósito previo.
+// Configurable via env var DRIVER_MIN_WALLET_BALANCE (en Gs.)
+const MIN_WALLET_BALANCE = Number(process.env.DRIVER_MIN_WALLET_BALANCE ?? 0);
 
 // GET: Listar pedidos — abierto (scoped por email de query param)
 export async function GET(req: Request) {
@@ -96,6 +98,17 @@ export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
+
+  // Validate suggested_price bounds (en Gs.) — configurable via env vars
+  const MIN_PRICE = Number(process.env.ORDER_MIN_PRICE ?? 1000);      // default 1.000 Gs.
+  const MAX_PRICE = Number(process.env.ORDER_MAX_PRICE ?? 50_000_000); // default 50.000.000 Gs.
+  const price = Number(body.suggested_price ?? body.client_initial_price ?? 0);
+  if (price > 0 && (price < MIN_PRICE || price > MAX_PRICE)) {
+    return NextResponse.json(
+      { error: `El precio debe estar entre ${MIN_PRICE.toLocaleString()} y ${MAX_PRICE.toLocaleString()} Gs.` },
+      { status: 400 }
+    );
+  }
   const db = sbAdmin();
 
   // Extract stops array before inserting — they go to order_stops table

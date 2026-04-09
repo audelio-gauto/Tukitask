@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
-import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO } from '@/lib/constants';
+import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
 
 // GET — saldo actual + últimas transacciones del trabajador autenticado
 export async function GET(req: Request) {
@@ -43,12 +43,15 @@ export async function POST(req: Request) {
 
   // Subir comprobante si viene en base64
   if (body.receipt_base64 && body.receipt_mime) {
-    if (!ALLOWED_IMAGE_TYPES.includes(body.receipt_mime as any)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(body.receipt_mime as never)) {
       return NextResponse.json({ error: 'Formato de imagen no soportado' }, { status: 400 });
     }
     const buffer = Buffer.from(body.receipt_base64, 'base64');
     if (buffer.length > MAX_FILE_SIZE_PHOTO) {
       return NextResponse.json({ error: 'Imagen demasiado grande (máx 2MB)' }, { status: 400 });
+    }
+    if (!validateImageMagicBytes(buffer, body.receipt_mime)) {
+      return NextResponse.json({ error: 'El archivo no es una imagen válida' }, { status: 400 });
     }
     const ext = body.receipt_mime === 'image/png' ? 'png' : body.receipt_mime === 'image/webp' ? 'webp' : 'jpg';
     const emailSafe = user.email!.replace(/[^a-z0-9]/g, '_');
