@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import ChatModal from '@/components/ChatModal';
 
 interface Job {
   id: string;
@@ -14,6 +15,7 @@ interface Job {
   client_name: string | null;
   client_email: string;
   client_rating?: number | null;
+  client_photo?: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -54,10 +56,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function CitasPage() {
   const router = useRouter();
-  const { email } = useDriverContext();
+  const { email, displayName } = useDriverContext();
   const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
+
+  // Chat
+  const [chatOpen, setChatOpen]             = useState(false);
+  const [chatJobId, setChatJobId]           = useState<string | undefined>(undefined);
+  const [chatOtherName, setChatOtherName]   = useState<string | null>(null);
+  const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
 
   // Extra charge modal
   const [extraModal, setExtraModal]       = useState<{ jobId: string } | null>(null);
@@ -247,13 +255,19 @@ export default function CitasPage() {
               return (
                 <div key={job.id} style={{ background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 6px rgba(0,0,0,0.07)', border: '1px solid #e2e8f0' }}>
                   {/* Title row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                     <span style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
                       {SERVICE_LABELS[job.service_type] ?? job.service_type}
                     </span>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: '3px 10px' }}>
                       {st.label}
                     </span>
+                    <button
+                      onClick={() => { setChatJobId(job.id); setChatOtherName(job.client_name); setChatOtherPhoto(job.client_photo ?? null); setChatOpen(true); }}
+                      style={{ padding: '3px 10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#16a34a', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      💬 Chat
+                    </button>
                   </div>
 
                   {/* Info */}
@@ -359,6 +373,17 @@ export default function CitasPage() {
           </div>
         )}
       </div>
+
+      {/* Chat Modal */}
+      <ChatModal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        jobId={chatJobId}
+        myEmail={email ?? ''}
+        myName={displayName ?? ''}
+        otherName={chatOtherName}
+        otherPhoto={chatOtherPhoto}
+      />
 
       {/* Extra charge modal */}
       {extraModal && (
