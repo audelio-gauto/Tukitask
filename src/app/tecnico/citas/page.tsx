@@ -270,11 +270,17 @@ export default function CitasPage() {
                     </button>
                   </div>
 
-                  {/* Info */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10, fontSize: '0.8rem', color: '#64748b' }}>
-                    {job.client_name && <span>👤 {job.client_name}</span>}
-                    {job.address && <span>📍 {job.address}</span>}
-                    {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
+                  {/* Client info row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    {job.client_photo
+                      ? <img src={job.client_photo} alt={job.client_name ?? 'Cliente'} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
+                      : <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👤</div>
+                    }
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: '#64748b' }}>
+                      {job.client_name && <span style={{ fontWeight: 600, color: '#1e293b' }}>{job.client_name}</span>}
+                      {job.address && <span>📍 {job.address}</span>}
+                      {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
+                    </div>
                   </div>
 
                   {/* Audio del cliente */}
