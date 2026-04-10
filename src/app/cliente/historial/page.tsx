@@ -65,6 +65,8 @@ export default function ClienteHistorialPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingModal, setRatingModal] = useState<{ jobId: string; tecnicoName: string | null; tecnicoPhoto: string | null } | null>(null);
+  const [driverRatingModal, setDriverRatingModal] = useState<{ orderId: string; driverName: string | null; driverPhoto: string | null } | null>(null);
+  const [localDriverRatings, setLocalDriverRatings] = useState<Record<string, number>>({});
   const [reportModal, setReportModal] = useState<{
     reportedEmail: string; reportedRole: 'driver' | 'tecnico';
     reportedName: string | null; referenceType: 'order' | 'job'; referenceId: string;
@@ -74,9 +76,9 @@ export default function ClienteHistorialPage() {
     if (!email) return;
     try {
       const [ordersRes, histJobsRes, activeJobsRes] = await Promise.all([
-        fetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
-        fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_history=true`),
-        fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
+        authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
+        authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_history=true`),
+        authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
       ]);
       const ordersData = await ordersRes.json();
       const histJobsData = await histJobsRes.json();
@@ -106,6 +108,17 @@ export default function ClienteHistorialPage() {
     });
     setJobs(prev => prev.map(j => j.id === ratingModal!.jobId ? { ...j, tecnico_rating: rating } : j));
     setRatingModal(null);
+  };
+
+  const handleDriverRating = async (rating: number, note: string) => {
+    if (!driverRatingModal) return;
+    await authFetch('/api/orders/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: driverRatingModal.orderId, rated_by: 'client', rating, note }),
+    });
+    setLocalDriverRatings(prev => ({ ...prev, [driverRatingModal.orderId]: rating }));
+    setDriverRatingModal(null);
   };
 
   const fmtGs = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '';
@@ -299,6 +312,21 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
+                      {/* Driver rating */}
+                      {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_name && (
+                        localDriverRatings[item.data.id] != null || (item.data as Order).driver_rating != null ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
+                            Tu calificación al driver: <StarRating rating={localDriverRatings[item.data.id] ?? (item.data as Order).driver_rating!} />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDriverRatingModal({ orderId: item.data.id, driverName: (item.data as Order).driver_name, driverPhoto: (item.data as Order).driver_photo })}
+                            style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6 }}
+                          >
+                            ⭐ Calificar driver
+                          </button>
+                        )
+                      )}
                       {(item.data as Order).driver_name && (
                         <button
                           onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
@@ -355,6 +383,17 @@ export default function ClienteHistorialPage() {
           avatarName={ratingModal.tecnicoName ?? undefined}
           onSubmit={handleRating}
           onClose={() => setRatingModal(null)}
+        />
+      )}
+
+      {driverRatingModal && (
+        <RatingModal
+          title="Calificar driver"
+          subtitle={driverRatingModal.driverName ?? undefined}
+          avatarUrl={driverRatingModal.driverPhoto ?? undefined}
+          avatarName={driverRatingModal.driverName ?? undefined}
+          onSubmit={handleDriverRating}
+          onClose={() => setDriverRatingModal(null)}
         />
       )}
 
