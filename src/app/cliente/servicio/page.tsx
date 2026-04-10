@@ -482,50 +482,6 @@ export default function SolicitarServicioPage() {
                   </div>
                 </div>
 
-                {/* ── Cuándo lo necesitás (obligatorio) ── */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    ¿Cuándo lo necesitás?
-                  </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(['ahora', 'agendar'] as const).map(mode => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setServiceMode(mode)}
-                        style={{
-                          flex: 1, padding: '12px 0', borderRadius: 12,
-                          border: `2px solid ${serviceMode === mode ? '#0ea5e9' : '#e2e8f0'}`,
-                          background: serviceMode === mode ? '#e0f2fe' : '#f8fafc',
-                          color: serviceMode === mode ? '#0369a1' : '#64748b',
-                          fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {mode === 'ahora' ? '⚡ Ahora' : '📅 Agendar'}
-                      </button>
-                    ))}
-                  </div>
-                  {serviceMode === 'agendar' && (
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
-                      onChange={e => setScheduledAt(e.target.value)}
-                      style={{
-                        marginTop: 8, width: '100%', padding: '10px 12px', borderRadius: 10,
-                        border: '1.5px solid #0ea5e9', fontSize: '0.9rem',
-                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
-                      }}
-                    />
-                  )}
-                  {serviceMode === null && (
-                    <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>
-                      Seleccioná cuándo lo necesitás para continuar
-                    </p>
-                  )}
-                </div>
-
                 <div className="enviar-address-section">
                   <div className="enviar-address-row">
                     <span className="enviar-dot green" />
@@ -554,12 +510,64 @@ export default function SolicitarServicioPage() {
                   </div>
                 )}
 
+                {/* ── Cuándo lo necesitás (obligatorio) ── */}
+                <div style={{ margin: '12px 0' }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    ¿Cuándo lo necesitás?
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setServiceMode('ahora')}
+                      style={{
+                        flex: 1, padding: '12px 0', borderRadius: 12,
+                        border: serviceMode === 'ahora' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
+                        background: serviceMode === 'ahora' ? '#e0f2fe' : '#f8fafc',
+                        color: serviceMode === 'ahora' ? '#0369a1' : '#64748b',
+                        fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                      }}
+                    >
+                      ⚡ Ahora
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServiceMode('agendar')}
+                      style={{
+                        flex: 1, padding: '12px 0', borderRadius: 12,
+                        border: serviceMode === 'agendar' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
+                        background: serviceMode === 'agendar' ? '#e0f2fe' : '#f8fafc',
+                        color: serviceMode === 'agendar' ? '#0369a1' : '#64748b',
+                        fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                      }}
+                    >
+                      📅 Agendar
+                    </button>
+                  </div>
+                  {serviceMode === 'agendar' && (
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                      onChange={e => setScheduledAt(e.target.value)}
+                      style={{
+                        marginTop: 8, width: '100%', padding: '10px 12px', borderRadius: 10,
+                        border: '1.5px solid #0ea5e9', fontSize: '0.9rem',
+                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
+                      }}
+                    />
+                  )}
+                  {serviceMode === null && (
+                    <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>
+                      ⚠️ Seleccioná cuándo lo necesitás para continuar
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   className="enviar-next-btn"
-                  disabled={!locationLat}
-                  onClick={() => { setStep(2); setSheet('full'); }}
                   disabled={!locationLat || serviceMode === null || (serviceMode === 'agendar' && !scheduledAt)}
+                  onClick={() => { setStep(2); setSheet('full'); }}
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
