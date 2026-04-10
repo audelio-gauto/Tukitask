@@ -33,7 +33,7 @@ export default function DeliveredPage() {
 
   const fetchDelivered = useCallback(() => {
     if (!email) return;
-    fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+    authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setOrders(data.filter((o: any) => ['delivered', 'commission_charged', 'client_confirmed'].includes(o.status)));
