@@ -115,6 +115,11 @@ export default function SolicitarServicioPage() {
   const [photosUploading, setPhotosUploading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
 
+  // When / verified state
+  const [serviceMode, setServiceMode]     = useState<'ahora' | 'agendar'>('ahora');
+  const [scheduledAt, setScheduledAt]     = useState('');  // ISO datetime string
+  const [requireVerified, setRequireVerified] = useState(false);
+
   // Pricing state — driven by admin-configured suggested_price (null = client sets own)
   const suggestedPrice = category != null
     ? (servicePrices[category] ?? null)
@@ -302,20 +307,22 @@ export default function SolicitarServicioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action:         'create',
-          service_type:   category,
-          service_gender: genderPreference,
-          client_name:    displayName || email.split('@')[0] || null,
-          client_photo:   profilePhoto || null,
-          client_rating:  avgRating > 0 ? avgRating : null,
-          address:        locationAddress || null,
-          lat:            locationLat   ? Number(locationLat)  : null,
-          lng:            locationLng   ? Number(locationLng)  : null,
-          description:    details       || null,
-          price:          offerPrice,
-          payment_method: paymentMethod,
-          photos:         photos.length > 0 ? photos : undefined,
-          audio_url:      audioUrl || undefined,
+          action:                   'create',
+          service_type:             category,
+          service_gender:           genderPreference,
+          client_name:              displayName || email.split('@')[0] || null,
+          client_photo:             profilePhoto || null,
+          client_rating:            avgRating > 0 ? avgRating : null,
+          address:                  locationAddress || null,
+          lat:                      locationLat   ? Number(locationLat)  : null,
+          lng:                      locationLng   ? Number(locationLng)  : null,
+          description:              details       || null,
+          price:                    offerPrice,
+          payment_method:           paymentMethod,
+          scheduled_at:             serviceMode === 'agendar' && scheduledAt ? scheduledAt : null,
+          require_verified_tecnico: requireVerified,
+          photos:                   photos.length > 0 ? photos : undefined,
+          audio_url:                audioUrl || undefined,
         }),
       });
       const json = await res.json();
@@ -603,6 +610,82 @@ export default function SolicitarServicioPage() {
                     <div className="enviar-step-title-sub">Contanos qué necesitás y cuánto pagás</div>
                   </div>
                 </div>
+
+                {/* ── Cuándo necesitás el servicio ── */}
+                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem' }}>
+                  <div className="enviar-contact-header" style={{ marginBottom: '0.6rem' }}>¿Cuándo lo necesitás?</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: serviceMode === 'agendar' ? '0.75rem' : 0 }}>
+                    {(['ahora', 'agendar'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setServiceMode(mode)}
+                        style={{
+                          flex: 1, padding: '10px 0', borderRadius: 12, border: '2px solid',
+                          borderColor: serviceMode === mode ? '#0ea5e9' : '#e2e8f0',
+                          background:  serviceMode === mode ? '#e0f2fe' : '#f8fafc',
+                          color:       serviceMode === mode ? '#0369a1' : '#64748b',
+                          fontWeight:  700, fontSize: '0.9rem', cursor: 'pointer',
+                          transition:  'all 0.15s',
+                        }}
+                      >
+                        {mode === 'ahora' ? '⚡ Ahora' : '📅 Agendar'}
+                      </button>
+                    ))}
+                  </div>
+                  {serviceMode === 'agendar' && (
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                      onChange={e => setScheduledAt(e.target.value)}
+                      style={{
+                        width: '100%', padding: '10px 12px', borderRadius: 10,
+                        border: '1.5px solid #e2e8f0', fontSize: '0.9rem',
+                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* ── Profesional Seguro ── */}
+                <button
+                  type="button"
+                  onClick={() => setRequireVerified(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', padding: '12px 14px', marginBottom: '0.75rem',
+                    borderRadius: 14, cursor: 'pointer',
+                    border: `2px solid ${requireVerified ? '#16a34a' : '#e2e8f0'}`,
+                    background: requireVerified ? '#f0fdf4' : '#f8fafc',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.4rem' }}>🛡️</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: requireVerified ? '#15803d' : '#374151' }}>
+                        Profesional Seguro
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
+                        Solo técnicos con identidad verificada
+                      </div>
+                    </div>
+                  </div>
+                  {/* Toggle pill */}
+                  <div style={{
+                    width: 44, height: 24, borderRadius: 12, padding: 2,
+                    background: requireVerified ? '#16a34a' : '#d1d5db',
+                    transition: 'background 0.2s', position: 'relative', flexShrink: 0,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                      transform: requireVerified ? 'translateX(20px)' : 'translateX(0)',
+                      transition: 'transform 0.2s',
+                    }} />
+                  </div>
+                </button>
 
                 {/* Summary row */}
                 <div className="servicio-summary-row">

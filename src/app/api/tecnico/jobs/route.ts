@@ -137,17 +137,20 @@ export async function GET(req: Request) {
 
       const { data: settings } = await sb
         .from('tecnico_settings')
-        .select('gender, accepted_services')
+        .select('gender, accepted_services, is_verified')
         .eq('email', email)
         .maybeSingle();
 
       const gender: string = settings?.gender ?? '';
       const accepted: Record<string, boolean> = settings?.accepted_services ?? {};
       const enabled = Object.entries(accepted).filter(([, v]) => v).map(([k]) => k);
+      const tecnicoIsVerified: boolean = settings?.is_verified === true;
 
       let q = sb.from('tecnico_jobs').select('*').eq('status', 'pending');
       if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
       if (enabled.length > 0) q = q.in('service_type', enabled);
+      // If tecnico is not verified, exclude jobs that require verified professionals
+      if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
       q = q.order('created_at', { ascending: false });
 
       const { data: jobs, error } = await q;
@@ -287,29 +290,31 @@ export async function POST(req: Request) {
     // ── create (client submits service request) ───────────────────────────────
     if (action === 'create') {
       const { service_type, service_gender, client_name, client_photo, client_rating,
-              address, lat, lng, description, price, payment_method, scheduled_at } = body;
+              address, lat, lng, description, price, payment_method, scheduled_at,
+              require_verified_tecnico } = body;
       if (!service_type) {
         return NextResponse.json({ error: 'Missing service_type' }, { status: 400 });
       }
       const { data, error } = await sb
         .from('tecnico_jobs')
         .insert({
-          status:               'pending',
+          status:                   'pending',
           service_type,
-          service_gender:       service_gender || 'indiferente',
-          client_email:         user.email, // derived from token — prevents impersonation
-          client_name:          client_name || null,
-          client_photo:         client_photo || null,
-          client_rating:        client_rating || null,
-          address:              address || null,
-          lat:                  lat ? Number(lat) : null,
-          lng:                  lng ? Number(lng) : null,
-          description:          description || null,
-          client_initial_price: price ? Number(price) : null,
-          payment_method:       payment_method || 'efectivo',
-          scheduled_at:         scheduled_at || null,
-          photos:               body.photos || null,
-          audio_url:            body.audio_url || null,
+          service_gender:           service_gender || 'indiferente',
+          client_email:             user.email, // derived from token — prevents impersonation
+          client_name:              client_name || null,
+          client_photo:             client_photo || null,
+          client_rating:            client_rating || null,
+          address:                  address || null,
+          lat:                      lat ? Number(lat) : null,
+          lng:                      lng ? Number(lng) : null,
+          description:              description || null,
+          client_initial_price:     price ? Number(price) : null,
+          payment_method:           payment_method || 'efectivo',
+          scheduled_at:             scheduled_at || null,
+          require_verified_tecnico: require_verified_tecnico === true,
+          photos:                   body.photos || null,
+          audio_url:                body.audio_url || null,
         })
         .select()
         .maybeSingle();
