@@ -270,7 +270,7 @@ export default function SolicitarServicioPage() {
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-        const res = await fetch('/api/upload-service-photo', {
+        const res = await authFetch('/api/upload-service-photo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, mimeType: file.type }),
@@ -302,7 +302,7 @@ export default function SolicitarServicioPage() {
         });
         const ext = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
         const safeName = `${Date.now()}_${(email || 'anon').replace(/[^a-z0-9]/gi, '_')}.${ext}`;
-        const upRes = await fetch('/api/upload-audio', {
+        const upRes = await authFetch('/api/upload-audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, mimeType: audioBlob.type, fileName: safeName }),
