@@ -38,6 +38,8 @@ export default function Auth() {
   const [logoFailed, setLogoFailed] = useState(false);
   const [logoUrl, setLogoUrl]   = useState<string | null>(null);
   const [logoSize, setLogoSize] = useState(90);
+  const [isForgot, setIsForgot] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     fetch('/api/admin/config')
@@ -79,7 +81,7 @@ export default function Auth() {
         else setError('No se encontró tu cuenta en el sistema.');
       } catch { setError('Error al verificar permisos.'); }
     } else {
-      setError(error.message);
+      setError(translateAuthError(error.message));
     }
     setLoading(false);
   };
@@ -89,6 +91,11 @@ export default function Auth() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
+      setLoading(false);
+      return;
+    }
     const { error } = await supabase.auth.signUp({ email, password });
     if (!error) {
       // Role assignment happens server-side: ADMIN_EMAIL is a private env var never exposed to the client
@@ -99,15 +106,36 @@ export default function Auth() {
       });
     }
     setLoading(false);
-    if (error) setError(error.message);
+    if (error) setError(translateAuthError(error.message));
     else setSuccess('¡Registro exitoso! Revisá tu email para confirmar tu cuenta.');
   };
 
-  const switchMode = () => {
-    setIsRegister(v => !v);
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) { setError('Ingresá tu correo electrónico primero.'); return; }
+    setLoading(true);
     setError(null);
-    setSuccess(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    setLoading(false);
+    if (error) setError(translateAuthError(error.message));
+    else setForgotSent(true);
   };
+
+  /** Translate common Supabase auth errors to Spanish */
+  function translateAuthError(msg: string): string {
+    if (!msg) return 'Error desconocido.';
+    const m = msg.toLowerCase();
+    if (m.includes('invalid login credentials') || m.includes('invalid_credentials')) return 'Email o contraseña incorrectos.';
+    if (m.includes('email not confirmed'))  return 'Debes confirmar tu email antes de ingresar. Revisá tu casilla.';
+    if (m.includes('user already registered') || m.includes('already been registered')) return 'Este email ya está registrado. Intentá iniciar sesión.';
+    if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (m.includes('rate limit') || m.includes('too many requests') || m.includes('429')) return 'Demasiados intentos. Esperá unos minutos.';
+    if (m.includes('network') || m.includes('fetch')) return 'Error de conexión. Verificá tu internet.';
+    if (m.includes('email')) return 'El correo ingresado no es válido.';
+    return msg;
+  }
 
   return (
     <div style={{
@@ -167,14 +195,15 @@ export default function Auth() {
             )}
           </div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#F5C518', letterSpacing: '-0.02em' }}>
-            {isRegister ? 'Crear cuenta' : 'Bienvenido'}
+            {isForgot ? 'Recuperar contraseña' : isRegister ? 'Crear cuenta' : 'Bienvenido'}
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.87rem', color: 'rgba(255,255,255,0.45)' }}>
-            {isRegister ? 'Completá tus datos para registrarte' : 'Ingresá a tu cuenta TukiTask'}
+            {isForgot ? 'Te enviaremos un link para resetear tu contraseña' : isRegister ? 'Completá tus datos para registrarte' : 'Ingresá a tu cuenta TukiTask'}
           </p>
         </div>
 
-        {/* Tab switcher */}
+        {/* Tab switcher — hidden on forgot password screen */}
+        {!isForgot && (
         <div style={{
           display: 'flex', borderRadius: 12, background: 'rgba(255,255,255,0.06)',
           padding: 3, marginBottom: 24, gap: 3,
@@ -184,7 +213,7 @@ export default function Auth() {
             return (
               <button
                 key={label}
-                onClick={switchMode}
+                onClick={() => { setIsRegister(i === 1); setIsForgot(false); setForgotSent(false); setError(null); setSuccess(null); }}
                 type="button"
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -199,8 +228,40 @@ export default function Auth() {
             );
           })}
         </div>
+        )}
 
-        {/* Form */}
+        {/* ── FORGOT PASSWORD SCREEN ── */}
+        {isForgot && (
+          <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {forgotSent ? (
+              <div style={{ padding: '14px', borderRadius: 12, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', fontSize: '0.88rem', textAlign: 'center' }}>
+                ✅ Te enviamos un link a <strong>{email}</strong>.<br />Revisá tu bandeja de entrada (y spam).
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Correo electrónico</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none', fontSize: '1rem' }}>✉️</span>
+                    <input type="email" placeholder="nombre@email.com" value={email} onChange={e => setEmail(e.target.value)} required
+                      style={{ width: '100%', padding: '12px 14px 12px 40px', borderRadius: 12, border: '1.5px solid rgba(245,197,24,0.2)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+                {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5', fontSize: '0.84rem' }}>⚠️ {error}</div>}
+                <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: loading ? 'default' : 'pointer', background: loading ? 'rgba(245,197,24,0.3)' : 'linear-gradient(135deg, #F5C518 0%, #F58A07 100%)', color: loading ? 'rgba(255,255,255,0.5)' : '#1C1C2E', fontWeight: 800, fontSize: '1rem' }}>
+                  {loading ? 'Enviando…' : '📧 Enviar link de recuperación'}
+                </button>
+              </>
+            )}
+            <button type="button" onClick={() => { setIsForgot(false); setForgotSent(false); setError(null); }}
+              style={{ background: 'none', border: 'none', color: 'rgba(245,197,24,0.7)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center', marginTop: 4 }}>
+              ← Volver al inicio de sesión
+            </button>
+          </form>
+        )}
+
+        {/* ── MAIN FORM (login + register) ── */}
+        {!isForgot && (
         <form onSubmit={isRegister ? handleSignUp : handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Email */}
           <div>
@@ -240,7 +301,7 @@ export default function Auth() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={isRegister ? 8 : 6}
                 style={{
                   width: '100%', padding: '12px 44px 12px 40px', borderRadius: 12,
                   border: '1.5px solid rgba(245,197,24,0.2)',
@@ -260,6 +321,14 @@ export default function Auth() {
               </button>
             </div>
           </div>
+
+          {/* Forgot password link — only shown on login tab */}
+          {!isRegister && (
+            <button type="button" onClick={() => { setIsForgot(true); setError(null); setSuccess(null); }}
+              style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', textAlign: 'right', padding: 0, marginTop: -6, width: '100%', opacity: 0.75 }}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          )}
 
           {/* Error / Success */}
           {error && (
@@ -294,8 +363,7 @@ export default function Auth() {
               : (isRegister ? '🚀 Crear cuenta' : '⚡ Ingresar')
             }
           </button>
-        </form>
-
+        </form>        )}
         {/* Footer text */}
         <p style={{ marginTop: 20, textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.28)' }}>
           Al continuar aceptás nuestros{' '}
