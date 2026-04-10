@@ -737,6 +737,23 @@ export default function TecnicoDashboard() {
               </div>
             </div>
 
+            {/* No me interesa — dismiss permanently */}
+            <button
+              onClick={dismissPopup}
+              style={{
+                display: 'block', width: '100%',
+                padding: '0.85rem',
+                marginBottom: 14,
+                background: '#fef2f2',
+                border: '1.5px solid #fecaca',
+                borderRadius: 12,
+                color: '#ef4444', fontWeight: 800, fontSize: '1rem',
+                cursor: 'pointer', letterSpacing: 0.2,
+              }}
+            >
+              🚫 No me interesa
+            </button>
+
             {/* Client info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               {pendingPopup.client_photo ? (

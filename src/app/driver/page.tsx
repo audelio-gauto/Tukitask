@@ -571,6 +571,27 @@ export default function DriverDashboard() {
                 aria-label="Cerrar">✕</button>
             </div>
 
+            {/* No me interesa — dismiss permanently */}
+            <button
+              onClick={() => {
+                if (newestOrder?.id) {
+                  dismissedRef.current.add(newestOrder.id);
+                  try { localStorage.setItem('driver_dismissed_orders', JSON.stringify([...dismissedRef.current])); } catch {}
+                }
+                setShowPopup(false);
+              }}
+              style={{
+                display: 'block', width: '100%',
+                padding: '0.9rem 1rem',
+                background: 'rgba(239,68,68,0.12)',
+                border: 'none', borderBottom: '1px solid rgba(239,68,68,0.25)',
+                color: '#f87171', fontWeight: 800, fontSize: '1rem',
+                cursor: 'pointer', letterSpacing: 0.2,
+              }}
+            >
+              🚫 No me interesa
+            </button>
+
             {/* Client info */}
             <div style={{ padding: '1rem 1rem 0', display: 'flex', alignItems: 'center', gap: 12 }}>
               {clientPhoto ? (
