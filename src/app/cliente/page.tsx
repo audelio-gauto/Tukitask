@@ -325,8 +325,8 @@ export default function ClienteHomePage() {
     if (!email) return;
     try {
       const [ordersRes, jobsRes] = await Promise.all([
-        fetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
-        fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
+        authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
+        authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
       ]);
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
@@ -344,7 +344,7 @@ export default function ClienteHomePage() {
       // Fetch ALL offers for ALL active orders (pending offers → offer cards; accepted offers → tracking driver info)
       if (activeOrders.length > 0) {
         const ids = activeOrders.map(o => o.id).join(',');
-        const offersRes  = await fetch(`/api/orders/offers?order_ids=${encodeURIComponent(ids)}`);
+        const offersRes  = await authFetch(`/api/orders/offers?order_ids=${encodeURIComponent(ids)}`);
         const offersData = await offersRes.json();
         if (offersData && typeof offersData === 'object') {
           const pendingMap: Record<string, DriverOffer[]> = {};
@@ -389,7 +389,7 @@ export default function ClienteHomePage() {
       if (activeJobs.length > 0) {
         const allJobOffers: Record<string, TecnicoJobOffer[]> = {};
         await Promise.all(activeJobs.map(async job => {
-          const r    = await fetch(`/api/tecnico/jobs?job_offers=${job.id}`);
+          const r    = await authFetch(`/api/tecnico/jobs?job_offers=${job.id}`);
           const data = await r.json();
           allJobOffers[job.id] = Array.isArray(data) ? data : [];
         }));
