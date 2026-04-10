@@ -23,12 +23,22 @@ export async function GET(req: Request) {
     .limit(200);
 
   if (clientEmail) {
+    // Ownership check: only the authenticated client can see their own orders
+    const user = await getAuthUser(req);
+    if (!user || user.email !== clientEmail) return unauthorized();
     query = query.eq('client_email', clientEmail);
   } else if (driverEmail && searchParams.get('only_failed') === 'true') {
+    // Ownership check: only the authenticated driver can see their own orders
+    const user = await getAuthUser(req);
+    if (!user || user.email !== driverEmail) return unauthorized();
     query = query.eq('accepted_by', driverEmail).in('status', ['failed', 'return_rejected']);
   } else if (driverEmail && history === 'true') {
+    const user = await getAuthUser(req);
+    if (!user || user.email !== driverEmail) return unauthorized();
     query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'returned', 'return_rejected']);
   } else if (driverEmail) {
+    const user = await getAuthUser(req);
+    if (!user || user.email !== driverEmail) return unauthorized();
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
   } else {
     // Pedidos disponibles para drivers — verificar saldo de billetera

@@ -137,13 +137,22 @@ export async function POST(req: Request) {
     .single();
   const clientEmail = orderForClient?.client_email ?? null;
 
+  // Fetch driver info server-side — do NOT trust body.driver_name / body.driver_photo
+  const { data: driverProfile } = await supabaseServer
+    .from('driver_profiles')
+    .select('first_name, last_name, profile_photo')
+    .eq('email', driverEmail)
+    .maybeSingle();
+  const driverName  = [driverProfile?.first_name, driverProfile?.last_name].filter(Boolean).join(' ') || null;
+  const driverPhoto = driverProfile?.profile_photo ?? null;
+
   const { data, error } = await supabaseServer
     .from('driver_offers')
     .insert([{
       order_id,
       driver_email: driverEmail,
-      driver_name: body.driver_name || null,
-      driver_photo: body.driver_photo || null,
+      driver_name: driverName,
+      driver_photo: driverPhoto,
       amount: Number(amount),
       note,
       client_email: clientEmail,

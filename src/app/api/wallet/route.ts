@@ -57,15 +57,16 @@ export async function POST(req: Request) {
     const emailSafe = user.email!.replace(/[^a-z0-9]/g, '_');
     const fileName = `receipts/${emailSafe}_${Date.now()}.${ext}`;
 
+    // Upload receipts to private bucket — not publicly browseable
     const { error: uploadErr } = await db.storage
-      .from('profile-photos')
+      .from('driver-documents')
       .upload(fileName, buffer, { contentType: body.receipt_mime, upsert: false });
 
     if (uploadErr) {
       return NextResponse.json({ error: 'Error al subir comprobante: ' + uploadErr.message }, { status: 500 });
     }
-    const { data: urlData } = db.storage.from('profile-photos').getPublicUrl(fileName);
-    receiptUrl = urlData.publicUrl;
+    // Store relative path; admin generates signed URLs when needed
+    receiptUrl = fileName;
   }
 
   const { data, error } = await db
