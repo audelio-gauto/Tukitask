@@ -806,7 +806,7 @@
   background: #fff;
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-  max-height: 90vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -814,8 +814,8 @@
   touch-action: pan-y;
   overscroll-behavior-x: none;
 }
-.enviar-sheet.collapsed { transform: translateY(80%); }
-.enviar-sheet.half { transform: translateY(calc(100% - 48vh)); }
+.enviar-sheet.collapsed { transform: translateY(85%); }
+.enviar-sheet.half { transform: translateY(calc(100% - 70vh)); }
 .enviar-sheet.full { transform: translateY(0); }
 
 .enviar-sheet-handle {
