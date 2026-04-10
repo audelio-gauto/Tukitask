@@ -116,7 +116,7 @@ export default function SolicitarServicioPage() {
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
 
   // When / verified state
-  const [serviceMode, setServiceMode]     = useState<'ahora' | 'agendar'>('ahora');
+  const [serviceMode, setServiceMode]     = useState<'ahora' | 'agendar' | null>(null);
   const [scheduledAt, setScheduledAt]     = useState('');  // ISO datetime string
   const [requireVerified, setRequireVerified] = useState(false);
 
@@ -482,6 +482,50 @@ export default function SolicitarServicioPage() {
                   </div>
                 </div>
 
+                {/* ── Cuándo lo necesitás (obligatorio) ── */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    ¿Cuándo lo necesitás?
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['ahora', 'agendar'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setServiceMode(mode)}
+                        style={{
+                          flex: 1, padding: '12px 0', borderRadius: 12,
+                          border: `2px solid ${serviceMode === mode ? '#0ea5e9' : '#e2e8f0'}`,
+                          background: serviceMode === mode ? '#e0f2fe' : '#f8fafc',
+                          color: serviceMode === mode ? '#0369a1' : '#64748b',
+                          fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {mode === 'ahora' ? '⚡ Ahora' : '📅 Agendar'}
+                      </button>
+                    ))}
+                  </div>
+                  {serviceMode === 'agendar' && (
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                      onChange={e => setScheduledAt(e.target.value)}
+                      style={{
+                        marginTop: 8, width: '100%', padding: '10px 12px', borderRadius: 10,
+                        border: '1.5px solid #0ea5e9', fontSize: '0.9rem',
+                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
+                      }}
+                    />
+                  )}
+                  {serviceMode === null && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>
+                      Seleccioná cuándo lo necesitás para continuar
+                    </p>
+                  )}
+                </div>
+
                 <div className="enviar-address-section">
                   <div className="enviar-address-row">
                     <span className="enviar-dot green" />
@@ -515,6 +559,7 @@ export default function SolicitarServicioPage() {
                   className="enviar-next-btn"
                   disabled={!locationLat}
                   onClick={() => { setStep(2); setSheet('full'); }}
+                  disabled={!locationLat || serviceMode === null || (serviceMode === 'agendar' && !scheduledAt)}
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -635,83 +680,6 @@ export default function SolicitarServicioPage() {
                     </span>
                   </div>
                 </div>
-
-                {/* ── Cuándo lo necesitás ── */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    ¿Cuándo lo necesitás?
-                  </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {(['ahora', 'agendar'] as const).map(mode => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setServiceMode(mode)}
-                        style={{
-                          flex: 1, padding: '11px 0', borderRadius: 12,
-                          border: `2px solid ${serviceMode === mode ? '#0ea5e9' : '#e2e8f0'}`,
-                          background: serviceMode === mode ? '#e0f2fe' : '#f8fafc',
-                          color: serviceMode === mode ? '#0369a1' : '#64748b',
-                          fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {mode === 'ahora' ? '⚡ Ahora' : '📅 Agendar'}
-                      </button>
-                    ))}
-                  </div>
-                  {serviceMode === 'agendar' && (
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
-                      onChange={e => setScheduledAt(e.target.value)}
-                      style={{
-                        marginTop: 8, width: '100%', padding: '10px 12px', borderRadius: 10,
-                        border: '1.5px solid #e2e8f0', fontSize: '0.9rem',
-                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* ── Profesional Seguro ── */}
-                <button
-                  type="button"
-                  onClick={() => setRequireVerified(v => !v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', padding: '12px 14px', marginBottom: '0.75rem',
-                    borderRadius: 14, cursor: 'pointer', boxSizing: 'border-box',
-                    border: `2px solid ${requireVerified ? '#16a34a' : '#e2e8f0'}`,
-                    background: requireVerified ? '#f0fdf4' : '#f8fafc',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '1.4rem' }}>🛡️</span>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: requireVerified ? '#15803d' : '#374151' }}>
-                        Profesional Seguro
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
-                        Solo técnicos con identidad verificada
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{
-                    width: 44, height: 24, borderRadius: 12, padding: 2,
-                    background: requireVerified ? '#16a34a' : '#d1d5db',
-                    transition: 'background 0.2s', position: 'relative', flexShrink: 0,
-                  }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                      transform: requireVerified ? 'translateX(20px)' : 'translateX(0)',
-                      transition: 'transform 0.2s',
-                    }} />
-                  </div>
-                </button>
 
                 {/* Description */}
                 <div className="enviar-contact-card" style={{ marginBottom: '0.75rem' }}>
