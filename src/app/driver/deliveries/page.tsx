@@ -7,8 +7,10 @@ import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { playNewOrderAlert, playAccepted } from '@/lib/audio';
 import ChatModal from '@/components/ChatModal';
+import ReportModal from '@/components/ReportModal';
 
 const DriverMap = dynamic(() => import('../components/DriverMap'), { ssr: false });
+const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
 const VEHICLE_LABELS: Record<string, string> = {
   moto: '🏍️ Moto Envíos',
@@ -69,6 +71,12 @@ export default function DeliveriesPage() {
   const [stopBeingDelivered, setStopBeingDelivered] = useState<string | null>(null); // stop id
   const [stopFailReason, setStopFailReason] = useState('');
   const [showStopFail, setShowStopFail] = useState<string | null>(null); // stop id
+
+  // Post-delivery rating/report state
+  const [justDeliveredOrder, setJustDeliveredOrder] = useState<any>(null);
+  const [postDeliveryRatingId, setPostDeliveryRatingId] = useState<string | null>(null);
+  const [postDeliveryReport, setPostDeliveryReport] = useState<{ orderId: string; clientEmail: string; clientName: string } | null>(null);
+  const [postDeliveryLocalRating, setPostDeliveryLocalRating] = useState<number | null>(null);
 
   // Chat state
   const [chatOpen, setChatOpen] = useState(false);
@@ -374,6 +382,9 @@ export default function DeliveriesPage() {
       if (res.ok) {
         if (newStatus === 'delivered') {
           playAccepted();
+          // Save order for post-delivery prompt before clearing
+          setJustDeliveredOrder(activeJobRef.current);
+          setPostDeliveryLocalRating(null);
           setActiveJob(null);
           activeJobRef.current = null;
           prevAccepted.current = false;
@@ -968,6 +979,112 @@ export default function DeliveriesPage() {
           <div style={{ color: '#d1d5db', fontWeight: 700, fontSize: '1rem' }}>Sin solicitudes pendientes</div>
           <div style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 6 }}>Las nuevas solicitudes aparecerán aquí automáticamente</div>
         </div>
+      )}
+
+      {/* ════════════ POST-DELIVERY PROMPT ════════════ */}
+      {justDeliveredOrder && !postDeliveryRatingId && !postDeliveryReport && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'flex-end',
+          background: 'rgba(0,0,0,0.65)',
+        }}>
+          <div style={{
+            width: '100%', background: '#111827', borderRadius: '24px 24px 0 0',
+            padding: '1.5rem 1.25rem 2.5rem',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+            animation: 'slideUp 0.3s ease',
+          }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 6 }}>✅</div>
+              <div style={{ color: '#10b981', fontWeight: 800, fontSize: '1.1rem' }}>¡Entrega completada!</div>
+              <div style={{ color: '#6b7280', fontSize: '0.83rem', marginTop: 4 }}>
+                {justDeliveredOrder.client_name || justDeliveredOrder.client_email?.split('@')[0] || 'Cliente'}
+              </div>
+            </div>
+
+            {/* Rating result */}
+            {postDeliveryLocalRating !== null ? (
+              <div style={{ textAlign: 'center', marginBottom: '1rem', color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
+                ✓ Calificación enviada: {'⭐'.repeat(postDeliveryLocalRating)}
+              </div>
+            ) : (
+              <button
+                onClick={() => setPostDeliveryRatingId(justDeliveredOrder.id)}
+                style={{
+                  width: '100%', padding: '0.85rem', border: 'none', borderRadius: 14, cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 10,
+                }}
+              >
+                ⭐ Calificar Cliente
+              </button>
+            )}
+
+            {justDeliveredOrder.client_email && (
+              <button
+                onClick={() => setPostDeliveryReport({
+                  orderId: justDeliveredOrder.id,
+                  clientEmail: justDeliveredOrder.client_email,
+                  clientName: justDeliveredOrder.client_name || justDeliveredOrder.client_email?.split('@')[0] || 'Cliente',
+                })}
+                style={{
+                  width: '100%', padding: '0.75rem', border: '1px solid rgba(239,68,68,0.4)',
+                  borderRadius: 14, cursor: 'pointer', background: 'rgba(239,68,68,0.08)',
+                  color: '#ef4444', fontWeight: 700, fontSize: '0.88rem', marginBottom: 10,
+                }}
+              >
+                🚨 Reportar cliente
+              </button>
+            )}
+
+            <button
+              onClick={() => setJustDeliveredOrder(null)}
+              style={{
+                width: '100%', padding: '0.75rem', border: '1px solid #374151',
+                borderRadius: 14, cursor: 'pointer', background: 'transparent',
+                color: '#9ca3af', fontWeight: 600, fontSize: '0.88rem',
+              }}
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rating modal for post-delivery */}
+      {postDeliveryRatingId && justDeliveredOrder && (
+        <RatingModalDynamic
+          title={`Calificar a ${justDeliveredOrder.client_name || justDeliveredOrder.client_email?.split('@')[0] || 'Cliente'}`}
+          subtitle="¿Cómo fue tu experiencia con este cliente?"
+          avatarUrl={justDeliveredOrder.client_photo || undefined}
+          avatarName={justDeliveredOrder.client_name || justDeliveredOrder.client_email?.split('@')[0]}
+          onSubmit={async (rating: number, note: string) => {
+            const res = await authFetch('/api/orders/rate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: postDeliveryRatingId, rated_by: 'driver', rating, note }),
+            });
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            setPostDeliveryLocalRating(rating);
+            setPostDeliveryRatingId(null);
+          }}
+          onClose={() => setPostDeliveryRatingId(null)}
+        />
+      )}
+
+      {/* Report modal for post-delivery */}
+      {postDeliveryReport && email && (
+        <ReportModal
+          reporterEmail={email}
+          reporterRole="driver"
+          reportedEmail={postDeliveryReport.clientEmail}
+          reportedRole="cliente"
+          reportedName={postDeliveryReport.clientName}
+          referenceType="order"
+          referenceId={postDeliveryReport.orderId}
+          onClose={() => setPostDeliveryReport(null)}
+        />
       )}
 
       {/* ── Chat Modal ─────────────────────────────────────────────────── */}
