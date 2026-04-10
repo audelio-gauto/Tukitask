@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useDriverContext } from '../context';
 import { DriverOffer } from '@/types';
+import { authFetch } from '@/lib/authFetch';
 
 export default function HistorialOfertasDriver() {
   const { email } = useDriverContext();
@@ -11,7 +12,7 @@ export default function HistorialOfertasDriver() {
   useEffect(() => {
     if (!email) return;
     setLoading(true);
-    fetch(`/api/orders/offers?driver_email=${encodeURIComponent(email)}&all=true`)
+    authFetch(`/api/orders/offers?driver_email=${encodeURIComponent(email)}&all=true`)
       .then(r => r.json())
       .then(data => {
         setOffers(Array.isArray(data) ? data : []);

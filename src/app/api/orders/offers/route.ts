@@ -3,8 +3,11 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 
-// GET — open (datos públicos para la negociación)
+// GET — requiere token (datos privados de negociación)
 export async function GET(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   const { searchParams } = new URL(req.url);
   const orderId = searchParams.get('order_id');
   const orderIds = searchParams.get('order_ids'); // batch: comma-separated IDs

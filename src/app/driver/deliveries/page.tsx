@@ -154,7 +154,7 @@ export default function DeliveriesPage() {
   /* ── Fetch my offers ── */
   const fetchMyOffers = useCallback(() => {
     if (!email) return;
-    fetch(`/api/orders/offers?driver_email=${encodeURIComponent(email)}`)
+    authFetch(`/api/orders/offers?driver_email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;

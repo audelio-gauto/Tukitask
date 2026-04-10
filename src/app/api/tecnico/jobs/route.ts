@@ -243,6 +243,8 @@ export async function GET(req: Request) {
     // ── All offers on a specific job (client picks a tecnico) ────────────────
     const jobOffersId = url.searchParams.get('job_offers');
     if (jobOffersId) {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
       const { data, error } = await sb
         .from('tecnico_job_offers')
         .select('*')
