@@ -332,7 +332,7 @@ export default function TecnicoDashboard() {
     if (!email) return;
     let cancelled = false;
     const load = () => {
-      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&stats=true`)
+      authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&stats=true`)
         .then(r => r.json())
         .then(json => {
           if (cancelled) return;

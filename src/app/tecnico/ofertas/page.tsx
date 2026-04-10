@@ -106,7 +106,7 @@ export default function OfertasPage() {
   // Load pending service requests
   const loadOffers = useCallback(() => {
     if (!email) return;
-    fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`)
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`)
       .then(r => r.json())
       .then(data => {
         const arr = Array.isArray(data) ? data : [];

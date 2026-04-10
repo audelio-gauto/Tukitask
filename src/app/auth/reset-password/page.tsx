@@ -3,6 +3,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
+function translateAuthError(msg: string): string {
+  if (!msg) return 'Error desconocido.';
+  const m = msg.toLowerCase();
+  if (m.includes('same_password') || m.includes('same password')) return 'La nueva contraseña no puede ser igual a la anterior.';
+  if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (m.includes('weak password')) return 'La contraseña es demasiado débil. Usá letras, números y símbolos.';
+  if (m.includes('session_not_found') || m.includes('session')) return 'El link de recuperación ya expiró. Solicitá uno nuevo.';
+  if (m.includes('rate limit') || m.includes('too many')) return 'Demasiados intentos. Esperá unos minutos.';
+  return msg;
+}
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
@@ -42,7 +53,7 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(translateAuthError(updateError.message));
     } else {
       setSuccess(true);
       setTimeout(() => router.push('/auth'), 3000);

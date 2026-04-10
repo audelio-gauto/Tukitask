@@ -59,6 +59,7 @@ export default function CitasPage() {
   const { email, displayName } = useDriverContext();
   const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
 
   // Chat
@@ -152,10 +153,10 @@ export default function CitasPage() {
 
   const loadJobs = useCallback(() => {
     if (!email) return;
-    fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`)
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`)
       .then(r => r.json())
-      .then(data => { setJobs(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(data => { setJobs(Array.isArray(data) ? data : []); setLoading(false); setFetchError(false); })
+      .catch(() => { setLoading(false); setFetchError(true); });
   }, [email]);
 
   useEffect(() => {
@@ -237,6 +238,20 @@ export default function CitasPage() {
           ↺
         </button>
       </div>
+
+      {/* Offline / error banner */}
+      {fetchError && (
+        <div style={{ background: '#fef2f2', borderBottom: '2px solid #f87171', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#b91c1c' }}>Sin conexión</p>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: '#ef4444' }}>No se pudieron cargar las citas. Verificá tu internet.</p>
+          </div>
+          <button onClick={loadJobs} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <div style={{ padding: '16px' }}>
         {loading ? (

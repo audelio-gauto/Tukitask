@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
+import { authFetch } from '@/lib/authFetch';
 
 export default function AceptacionPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function AceptacionPage() {
 
   useEffect(() => {
     if (!email) return;
-    fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setHistory(data);

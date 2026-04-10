@@ -5,6 +5,7 @@ import ServiceChatInput from '../components/ServiceChatInput';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useClientContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
@@ -297,14 +298,13 @@ export default function SolicitarServicioPage() {
         if (upRes.ok && upJson.url) audioUrl = upJson.url;
       }
 
-      const res = await fetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action:         'create',
           service_type:   category,
           service_gender: genderPreference,
-          client_email:   email,
           client_name:    displayName || email.split('@')[0] || null,
           client_photo:   profilePhoto || null,
           client_rating:  avgRating > 0 ? avgRating : null,

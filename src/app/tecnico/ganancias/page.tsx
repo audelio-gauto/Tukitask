@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
+import { authFetch } from '@/lib/authFetch';
 
 interface Job {
   id: string;
@@ -47,7 +48,7 @@ export default function GananciasPage() {
 
   useEffect(() => {
     if (!email) return;
-    fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
         const completed = Array.isArray(data) ? data.filter((j: Job) => j.status === 'completado') : [];

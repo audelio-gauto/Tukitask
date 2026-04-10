@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
+import { getAuthUser, unauthorized } from '@/lib/apiAuth';
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -20,6 +21,8 @@ export async function GET(req: Request) {
     // ── Dashboard stats ──────────────────────────────────────────────────────
     if (url.searchParams.get('stats') === 'true') {
       if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== email) return unauthorized();
 
       // Try cache first (10s TTL — stats don't need to be real-time precise)
       const cacheKey = `tecnico:stats:${email}`;
@@ -99,6 +102,8 @@ export async function GET(req: Request) {
     // ── Active jobs for tecnico ──────────────────────────────────────────────
     if (url.searchParams.get('active') === 'true') {
       if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== email) return unauthorized();
       const { data, error } = await sb
         .from('tecnico_jobs')
         .select('*')
@@ -112,6 +117,8 @@ export async function GET(req: Request) {
     // ── History for tecnico ──────────────────────────────────────────────────
     if (url.searchParams.get('history') === 'true') {
       if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== email) return unauthorized();
       const { data, error } = await sb
         .from('tecnico_jobs')
         .select('*')
@@ -125,6 +132,8 @@ export async function GET(req: Request) {
     // ── Marketplace: pending jobs matching tecnico profile ───────────────────
     if (url.searchParams.get('offers') === 'true') {
       if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== email) return unauthorized();
 
       const { data: settings } = await sb
         .from('tecnico_settings')
@@ -200,6 +209,8 @@ export async function GET(req: Request) {
     // ── Client: active service jobs ──────────────────────────────────────────
     if (url.searchParams.get('client_active') === 'true') {
       if (!clientEmail) return NextResponse.json({ error: 'Missing client_email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== clientEmail) return unauthorized();
       const { data, error } = await sb
         .from('tecnico_jobs')
         .select('*')
@@ -213,6 +224,8 @@ export async function GET(req: Request) {
     // ── Client: service history (completado / incidente / cancelled) ──────────
     if (url.searchParams.get('client_history') === 'true') {
       if (!clientEmail) return NextResponse.json({ error: 'Missing client_email' }, { status: 400 });
+      const user = await getAuthUser(req);
+      if (!user || user.email !== clientEmail) return unauthorized();
       const { data, error } = await sb
         .from('tecnico_jobs')
         .select('*')
@@ -265,14 +278,18 @@ export async function POST(req: Request) {
     const { action } = body || {};
     if (!action) return NextResponse.json({ error: 'Missing action' }, { status: 400 });
 
+    // All mutations require a valid session
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
+
     const now = new Date().toISOString();
 
     // ── create (client submits service request) ───────────────────────────────
     if (action === 'create') {
-      const { service_type, service_gender, client_email, client_name, client_photo, client_rating,
+      const { service_type, service_gender, client_name, client_photo, client_rating,
               address, lat, lng, description, price, payment_method, scheduled_at } = body;
-      if (!service_type || !client_email) {
-        return NextResponse.json({ error: 'Missing service_type or client_email' }, { status: 400 });
+      if (!service_type) {
+        return NextResponse.json({ error: 'Missing service_type' }, { status: 400 });
       }
       const { data, error } = await sb
         .from('tecnico_jobs')
@@ -280,7 +297,7 @@ export async function POST(req: Request) {
           status:               'pending',
           service_type,
           service_gender:       service_gender || 'indiferente',
-          client_email:         String(client_email).toLowerCase(),
+          client_email:         user.email, // derived from token — prevents impersonation
           client_name:          client_name || null,
           client_photo:         client_photo || null,
           client_rating:        client_rating || null,
@@ -302,11 +319,12 @@ export async function POST(req: Request) {
 
     // ── send_offer (tecnico sends price offer) ───────────────────────────────
     if (action === 'send_offer') {
-      const { jobId, tecnicoEmail, tecnicoName, tecnicoPhoto, tecnicoRating,
+      const { jobId, tecnicoName, tecnicoPhoto, tecnicoRating,
               proposedPrice, note, distanceKm } = body;
-      if (!jobId || !tecnicoEmail || proposedPrice == null) {
-        return NextResponse.json({ error: 'Missing jobId, tecnicoEmail or proposedPrice' }, { status: 400 });
+      if (!jobId || proposedPrice == null) {
+        return NextResponse.json({ error: 'Missing jobId or proposedPrice' }, { status: 400 });
       }
+      const tecnicoEmail = user.email; // derived from token — prevents impersonation
       // Fetch client_email to store on offer (enables filtered realtime subscriptions)
       const { data: jobForClient } = await sb
         .from('tecnico_jobs')
@@ -355,9 +373,9 @@ export async function POST(req: Request) {
 
     // ── accept_offer (client picks a tecnico) — inline logic (no RPC needed) ──
     if (action === 'accept_offer') {
-      const { jobId, offerId, clientEmail } = body;
+      const { jobId, offerId } = body;
       if (!jobId || !offerId) return NextResponse.json({ error: 'Missing jobId or offerId' }, { status: 400 });
-      const normalizedEmail = String(clientEmail || '').toLowerCase();
+      const normalizedEmail = user.email; // derived from token — prevents impersonation
 
       // Fetch the offer
       const { data: offer, error: offerErr } = await sb
@@ -557,13 +575,13 @@ export async function POST(req: Request) {
 
     // ── accept_completion (client confirms job is done) ───────────────────────
     if (action === 'accept_completion') {
-      const { jobId, clientEmail } = body;
-      if (!jobId || !clientEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing jobId' }, { status: 400 });
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({ status: 'completado', completed_at: now })
         .eq('id', jobId)
-        .eq('client_email', String(clientEmail).toLowerCase())
+        .eq('client_email', user.email) // ownership from token
         .eq('status', 'completion_pending')
         .select()
         .maybeSingle();
@@ -626,8 +644,8 @@ export async function POST(req: Request) {
 
     // ── reject_completion (client rejects; 3rd attempt → incidente) ──────────
     if (action === 'reject_completion') {
-      const { jobId, clientEmail, reason } = body;
-      if (!jobId || !clientEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId, reason } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing jobId' }, { status: 400 });
 
       const { data: cur } = await sb
         .from('tecnico_jobs')
@@ -645,7 +663,7 @@ export async function POST(req: Request) {
           ...(isIncident ? { incident_at: now } : {}),
         })
         .eq('id', jobId)
-        .eq('client_email', String(clientEmail).toLowerCase())
+        .eq('client_email', user.email) // ownership from token
         .eq('status', 'completion_pending')
         .select()
         .maybeSingle();
@@ -655,8 +673,8 @@ export async function POST(req: Request) {
 
     // ── rate_tecnico (client rates the tecnico after completion) ───────────────
     if (action === 'rate_tecnico') {
-      const { jobId, clientEmail, rating, note } = body;
-      if (!jobId || !clientEmail || rating == null) {
+      const { jobId, rating, note } = body;
+      if (!jobId || rating == null) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
       const ratingNum = Number(rating);
@@ -668,7 +686,7 @@ export async function POST(req: Request) {
         .from('tecnico_jobs')
         .select('id, status, tecnico_email, tecnico_rating')
         .eq('id', jobId)
-        .eq('client_email', String(clientEmail).toLowerCase())
+        .eq('client_email', user.email) // ownership from token
         .maybeSingle();
 
       if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -701,18 +719,17 @@ export async function POST(req: Request) {
 
     // ── cancel ────────────────────────────────────────────────────────────────
     if (action === 'cancel') {
-      const { jobId, tecnicoEmail, clientEmail, cancelReason } = body;
-      if (!jobId || (!tecnicoEmail && !clientEmail)) {
-        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-      }
+      const { jobId, cancelReason } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing jobId' }, { status: 400 });
       let q = sb
         .from('tecnico_jobs')
         .update({ status: 'cancelled', cancelled_at: now, cancel_reason: cancelReason || null });
 
-      if (tecnicoEmail) {
-        q = q.eq('tecnico_email', String(tecnicoEmail).toLowerCase()).in('status', ACTIVE_STATUSES);
+      // Determine cancel scope from body hint; identity always from token
+      if (body.tecnicoEmail) {
+        q = q.eq('tecnico_email', user.email).in('status', ACTIVE_STATUSES);
       } else {
-        q = q.eq('client_email', String(clientEmail).toLowerCase()).in('status', ['pending', ...ACTIVE_STATUSES]);
+        q = q.eq('client_email', user.email).in('status', ['pending', ...ACTIVE_STATUSES]);
       }
       const { data, error } = await q.eq('id', jobId).select().maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });

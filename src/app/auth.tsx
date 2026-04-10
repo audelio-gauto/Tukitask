@@ -115,12 +115,25 @@ export default function Auth() {
     if (!email) { setError('Ingresá tu correo electrónico primero.'); return; }
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        }),
+      });
+      if (res.status === 429) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || 'Demasiados intentos. Esperá unos minutos.');
+      } else {
+        setForgotSent(true);
+      }
+    } catch {
+      setError('Error de conexión. Verificá tu internet.');
+    }
     setLoading(false);
-    if (error) setError(translateAuthError(error.message));
-    else setForgotSent(true);
   };
 
   /** Translate common Supabase auth errors to Spanish */
