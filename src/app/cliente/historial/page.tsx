@@ -11,13 +11,15 @@ import { authFetch } from '@/lib/authFetch';
 interface Order {
   id: string;
   status: string;
-  origin_address: string | null;
-  destination_address: string | null;
-  price: number | null;
+  pickup_address: string | null;
+  delivery_address: string | null;
+  offer: number | null;
+  suggested_price: number | null;
   driver_name: string | null;
   driver_email: string | null;
   driver_photo: string | null;
   driver_rating: number | null;
+  accepted_by: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -230,7 +232,7 @@ export default function ClienteHistorialPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ fontSize: '1.5rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{(item.data as Order).origin_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
                           <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
@@ -299,7 +301,7 @@ export default function ClienteHistorialPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ fontSize: '1.4rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).origin_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
                               {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '✅ Entregado' : '❌ Cancelado'}
@@ -308,7 +310,7 @@ export default function ClienteHistorialPage() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {(item.data as Order).price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs((item.data as Order).price)}</div>}
+                          {((item.data as Order).offer ?? (item.data as Order).suggested_price) != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs((item.data as Order).offer ?? (item.data as Order).suggested_price)}</div>}
                           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>

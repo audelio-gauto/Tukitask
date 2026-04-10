@@ -55,6 +55,31 @@ export async function GET(req: Request) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // For client history — enrich with driver info from driver_profiles
+  if (clientEmail && data) {
+    const driverEmails = [...new Set(
+      (data as Record<string, unknown>[]).map(o => o.accepted_by as string).filter(Boolean)
+    )];
+    let driverMap: Record<string, { name: string; photo: string | null; avg_rating: number | null }> = {};
+    if (driverEmails.length > 0) {
+      const { data: profiles } = await db
+        .from('driver_profiles')
+        .select('email, first_name, last_name, profile_photo, avg_rating')
+        .in('email', driverEmails);
+      (profiles ?? []).forEach((p: { email: string; first_name: string | null; last_name: string | null; profile_photo: string | null; avg_rating: number | null }) => {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email.split('@')[0];
+        driverMap[p.email] = { name, photo: p.profile_photo ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null };
+      });
+    }
+    const enriched = (data as Record<string, unknown>[]).map(o => ({
+      ...o,
+      driver_email: o.accepted_by ?? null,
+      driver_name: (o.accepted_by && driverMap[o.accepted_by as string]?.name) ? driverMap[o.accepted_by as string].name : (o.driver_name ?? null),
+      driver_photo: (o.accepted_by && driverMap[o.accepted_by as string]?.photo) ? driverMap[o.accepted_by as string].photo : (o.driver_photo ?? null),
+    }));
+    return NextResponse.json(enriched);
+  }
+
   // For the driver marketplace — enrich with live client_profiles (photo + avg_rating)
   if (!clientEmail && !driverEmail && data) {
     const emails = [...new Set(data.map((o: Record<string,unknown>) => o.client_email as string).filter(Boolean))];
