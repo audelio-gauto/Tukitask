@@ -499,21 +499,10 @@ export default function SolicitarServicioPage() {
                   </div>
                 </div>
 
-                {locationAddress && locationLat && (
-                  <div className="enviar-route-info">
-                    <div className="enviar-route-stat">
-                      <span className="enviar-route-icon" style={{ background: '#10b981' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                      </span>
-                      <span style={{ fontSize: '0.82rem', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationAddress.split(',').slice(0, 2).join(',')}</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* ── Cuándo lo necesitás (obligatorio) ── */}
-                <div style={{ margin: '12px 0' }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '0.78rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    ¿Cuándo lo necesitás?
+                <div style={{ margin: '16px 0', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    ¿Cuándo lo necesitás? <span style={{ color: '#ef4444' }}>*</span>
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
                     <button
@@ -525,6 +514,8 @@ export default function SolicitarServicioPage() {
                         background: serviceMode === 'ahora' ? '#e0f2fe' : '#f8fafc',
                         color: serviceMode === 'ahora' ? '#0369a1' : '#64748b',
                         fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: serviceMode === 'ahora' ? '0 2px 8px rgba(14, 165, 233, 0.15)' : 'none'
                       }}
                     >
                       ⚡ Ahora
@@ -538,40 +529,48 @@ export default function SolicitarServicioPage() {
                         background: serviceMode === 'agendar' ? '#e0f2fe' : '#f8fafc',
                         color: serviceMode === 'agendar' ? '#0369a1' : '#64748b',
                         fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: serviceMode === 'agendar' ? '0 2px 8px rgba(14, 165, 233, 0.15)' : 'none'
                       }}
                     >
                       📅 Agendar
                     </button>
                   </div>
                   {serviceMode === 'agendar' && (
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
-                      onChange={e => setScheduledAt(e.target.value)}
-                      style={{
-                        marginTop: 8, width: '100%', padding: '10px 12px', borderRadius: 10,
-                        border: '1.5px solid #0ea5e9', fontSize: '0.9rem',
-                        background: '#fff', color: '#1e293b', boxSizing: 'border-box',
-                      }}
-                    />
+                    <div style={{ marginTop: '12px', animation: 'fadeIn 0.3s' }}>
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
+                        onChange={e => setScheduledAt(e.target.value)}
+                        style={{
+                          width: '100%', padding: '12px', borderRadius: 10,
+                          border: '2px solid #0ea5e9', fontSize: '0.95rem',
+                          background: '#fff', color: '#1e293b', boxSizing: 'border-box',
+                          outline: 'none', fontWeight: 600
+                        }}
+                      />
+                    </div>
                   )}
                   {serviceMode === null && (
-                    <p style={{ margin: '6px 0 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>
-                      ⚠️ Seleccioná cuándo lo necesitás para continuar
+                    <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                      Seleccioná una opción para continuar
                     </p>
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="enviar-next-btn"
-                  disabled={!locationLat || serviceMode === null || (serviceMode === 'agendar' && !scheduledAt)}
-                  onClick={() => { setStep(2); setSheet('full'); }}
-                >
-                  Continuar
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
+                <div style={{ marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="enviar-next-btn"
+                    disabled={!locationLat || serviceMode === null || (serviceMode === 'agendar' && !scheduledAt)}
+                    onClick={() => { setStep(2); setSheet('full'); }}
+                  >
+                    Continuar
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
               </>
             )}
 
