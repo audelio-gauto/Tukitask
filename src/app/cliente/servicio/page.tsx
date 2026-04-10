@@ -136,6 +136,7 @@ export default function SolicitarServicioPage() {
   // Bottom sheet state
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const sheetContentRef = useRef<HTMLDivElement | null>(null);
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startX = useRef(0);
@@ -158,6 +159,13 @@ export default function SolicitarServicioPage() {
     if (isDesktop()) return;
     setSheetState(state);
   }, [isDesktop]);
+
+  // Scroll sheet content to top whenever step changes
+  useEffect(() => {
+    if (sheetContentRef.current) {
+      sheetContentRef.current.scrollTop = 0;
+    }
+  }, [step]);
 
   useEffect(() => {
     const sheet = sheetRef.current;
@@ -446,7 +454,7 @@ export default function SolicitarServicioPage() {
       <div ref={sheetRef} className={`enviar-sheet ${sheetState}`}>
         <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
 
-        <div className="enviar-sheet-content">
+        <div ref={sheetContentRef} className="enviar-sheet-content">
           {/* Step indicator */}
           <div className="enviar-step-indicator">
             {[1, 2, 3].map((s) => (
