@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useClientContext } from '../context';
 import RatingModal from '@/components/RatingModal';
+import ReportModal from '@/components/ReportModal';
 import { authFetch } from '@/lib/authFetch';
 
 interface Order {
@@ -14,6 +15,7 @@ interface Order {
   destination_address: string | null;
   price: number | null;
   driver_name: string | null;
+  driver_email: string | null;
   driver_photo: string | null;
   driver_rating: number | null;
   created_at: string;
@@ -25,6 +27,7 @@ interface Job {
   service_type: string;
   status: string;
   tecnico_name: string | null;
+  tecnico_email: string | null;
   tecnico_photo: string | null;
   tecnico_rating: number | null;
   total_price: number | null;
@@ -62,6 +65,10 @@ export default function ClienteHistorialPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingModal, setRatingModal] = useState<{ jobId: string; tecnicoName: string | null; tecnicoPhoto: string | null } | null>(null);
+  const [reportModal, setReportModal] = useState<{
+    reportedEmail: string; reportedRole: 'driver' | 'tecnico';
+    reportedName: string | null; referenceType: 'order' | 'job'; referenceId: string;
+  } | null>(null);
 
   const loadHistory = useCallback(async () => {
     if (!email) return;
@@ -265,10 +272,18 @@ export default function ClienteHistorialPage() {
                           Tu calificación: <StarRating rating={item.data.tecnico_rating} />
                         </div>
                       )}
+                      {item.data.status !== 'pending' && (
+                        <button
+                          onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
+                          style={{ marginTop: 6, background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          🚨 Reportar
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ fontSize: '1.4rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).origin_address?.slice(0, 28) || 'Envío'}</div>
@@ -284,6 +299,14 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
+                      {(item.data as Order).driver_name && (
+                        <button
+                          onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
+                          style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          🚨 Reportar
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -332,6 +355,19 @@ export default function ClienteHistorialPage() {
           avatarName={ratingModal.tecnicoName ?? undefined}
           onSubmit={handleRating}
           onClose={() => setRatingModal(null)}
+        />
+      )}
+
+      {reportModal && email && (
+        <ReportModal
+          reporterEmail={email}
+          reporterRole="cliente"
+          reportedEmail={reportModal.reportedEmail || 'desconocido@sistema'}
+          reportedRole={reportModal.reportedRole}
+          reportedName={reportModal.reportedName ?? undefined}
+          referenceType={reportModal.referenceType}
+          referenceId={reportModal.referenceId}
+          onClose={() => setReportModal(null)}
         />
       )}
     </div>

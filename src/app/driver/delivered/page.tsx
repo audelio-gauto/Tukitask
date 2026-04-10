@@ -5,6 +5,7 @@ import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import RatingModal from '@/components/RatingModal';
+import ReportModal from '@/components/ReportModal';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -28,6 +29,7 @@ export default function DeliveredPage() {
   const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<any>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
+  const [reportModal, setReportModal] = useState<{ orderId: string; clientEmail: string; clientName: string } | null>(null);
 
   const fetchDelivered = useCallback(() => {
     if (!email) return;
@@ -158,6 +160,15 @@ export default function DeliveredPage() {
               ✓ Cliente calificado
             </div>
           )}
+          {/* Report button */}
+          {order.client_email && (
+            <button
+              onClick={() => setReportModal({ orderId: order.id, clientEmail: order.client_email, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente' })}
+              style={{ marginTop: 8, background: 'none', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, color: '#ef4444', fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              🚨 Reportar cliente
+            </button>
+          )}
         </div>
       </div>
     );
@@ -214,6 +225,19 @@ export default function DeliveredPage() {
           avatarName={ratingOrder.client_name || ratingOrder.client_email?.split('@')[0]}
           onSubmit={handleSubmitRating}
           onClose={() => { setRatingOrderId(null); setRatingOrder(null); }}
+        />
+      )}
+
+      {reportModal && email && (
+        <ReportModal
+          reporterEmail={email}
+          reporterRole="driver"
+          reportedEmail={reportModal.clientEmail}
+          reportedRole="cliente"
+          reportedName={reportModal.clientName}
+          referenceType="order"
+          referenceId={reportModal.orderId}
+          onClose={() => setReportModal(null)}
         />
       )}
     </DriverScreenLayout>
