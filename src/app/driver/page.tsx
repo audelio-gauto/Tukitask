@@ -370,9 +370,8 @@ export default function DriverDashboard() {
     };
   }, [getTranslateY, isDesktop, setSheet]);
 
-  // Stats (placeholder — would come from Supabase)
+  // Stats
   const stats = [
-    { label: 'Pedidos', value: activeOrderCount, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
     { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 

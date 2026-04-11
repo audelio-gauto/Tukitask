@@ -447,12 +447,6 @@ export default function TecnicoDashboard() {
 
   const stats = [
     {
-      label: 'Pedidos',
-      value: statsLoading ? '…' : statsData.ofertasActivas + statsData.citasConfirmadas,
-      href: '/tecnico/ofertas',
-      icon: '📋',
-    },
-    {
       label: 'Citas Confirmadas',
       value: statsLoading ? '…' : statsData.citasConfirmadas,
       href: '/tecnico/citas',
@@ -836,9 +830,8 @@ export default function TecnicoDashboard() {
 
           <div style={{ marginTop: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones Rápidas</h2>
-            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr 1fr' }}>
+            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr' }}>
               <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)}>🛠 Mis Servicios</button>
-              <Link href="/tecnico/ofertas" className="tuki-btn tuki-btn-success">Ver Ofertas</Link>
             </div>
           </div>
         </div>

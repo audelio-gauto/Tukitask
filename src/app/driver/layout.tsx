@@ -13,11 +13,10 @@ import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from './components/BottomNav';
 
 const DRIVER_TABS = [
-  { href: '/driver',                  icon: '🏠', label: 'Inicio'     },
-  { href: '/driver/deliveries',       icon: '📦', label: 'Pedidos'   },
-  { href: '/driver/delivered',         icon: '📋', label: 'Historial' },
-  { href: '/driver/ganancias',        icon: '📊', label: 'Ganancias' },
-  { href: '/driver/settings',         icon: '⚙️', label: 'Config'    },
+  { href: '/driver',               icon: '🏠', label: 'Inicio'    },
+  { href: '/driver/delivered',     icon: '📋', label: 'Historial' },
+  { href: '/driver/ganancias',     icon: '📊', label: 'Ganancias' },
+  { href: '/driver/settings',      icon: '⚙️', label: 'Config'    },
 ];
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
