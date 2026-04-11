@@ -139,7 +139,7 @@ export default function DriverDashboard() {
       })
         .then(r => r.json())
         .then((data: any[]) => {
-          if (!Array.isArray(data)) return;
+          if (!Array.isArray(data)) { setStatsLoading(false); return; }
 
           const now = new Date();
           const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
