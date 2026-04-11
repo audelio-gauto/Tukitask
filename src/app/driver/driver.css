@@ -58,19 +58,21 @@
   z-index: 100;
   width: 48px; height: 48px;
   border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(10,14,26,0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  color: #1e293b;
-  transition: transform 0.2s, box-shadow 0.2s;
+  color: #e2e8f0;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s;
 }
-.tuki-float-btn:active { transform: scale(0.92); }
+.tuki-float-btn:hover { background: rgba(10,14,26,0.95); box-shadow: 0 8px 28px rgba(0,0,0,0.55); transform: scale(1.06); }
+.tuki-float-btn:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 .tuki-float-btn.menu { top: 16px; right: 16px; }
 .tuki-float-btn.locate { bottom: calc(50vh + 72px); right: 16px; }
 
@@ -85,27 +87,30 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  background: linear-gradient(135deg, rgba(245,197,24,0.95) 0%, rgba(220,130,0,0.95) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 4px 20px rgba(245,197,24,0.4), 0 2px 8px rgba(0,0,0,0.3);
   border-radius: 22px;
-  padding: 6px 20px;
-  min-width: 100px;
+  padding: 7px 20px;
+  min-width: 110px;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: none;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s;
 }
+.tuki-wallet-pill:hover { box-shadow: 0 6px 28px rgba(245,197,24,0.55), 0 4px 12px rgba(0,0,0,0.35); transform: translateX(-50%) translateY(-1px); }
 .tuki-wallet-pill:active { transform: translateX(-50%) scale(0.95); }
 .tuki-wallet-pill-amount {
   font-size: 1rem;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: #111;
   line-height: 1.2;
 }
 .tuki-wallet-pill-label {
-  font-size: 0.7rem;
-  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(0,0,0,0.6);
   line-height: 1.2;
   margin-top: 1px;
 }
@@ -194,9 +199,9 @@
   position: absolute;
   left: 0; right: 0; bottom: var(--tuki-nav-h);
   z-index: 50;
-  background: #fff;
+  background: #1a1a2e;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.55), 0 -1px 0 rgba(255,255,255,0.07);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -215,7 +220,7 @@
   flex-shrink: 0;
   user-select: none;
 }
-.tuki-sheet-bar { width: 40px; height: 5px; background: #d1d5db; border-radius: 999px; }
+.tuki-sheet-bar { width: 40px; height: 5px; background: rgba(255,255,255,0.22); border-radius: 999px; }
 
 .tuki-sheet-content {
   flex: 1;
@@ -227,7 +232,7 @@
 
 /* Availability Toggle — premium redesign */
 .tuki-availability {
-  background: var(--tuki-surface);
+  background: rgba(255,255,255,0.06);
   border-radius: 18px;
   padding: 1rem 1.25rem;
   margin-top: 0.5rem;
@@ -235,13 +240,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1.5px solid var(--tuki-border);
+  border: 1.5px solid rgba(255,255,255,0.1);
   transition: border-color 0.22s ease, box-shadow 0.22s ease;
 }
 /* Glow when online — uses :has() (supported in all modern browsers) */
 .tuki-availability:has(input:checked) {
-  border-color: rgba(16,185,129,0.45);
-  box-shadow: 0 0 0 4px rgba(16,185,129,0.07), 0 4px 20px rgba(16,185,129,0.13);
+  border-color: rgba(16,185,129,0.55);
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.09), 0 4px 20px rgba(16,185,129,0.22);
 }
 
 .tuki-status-badge {
@@ -311,12 +316,12 @@ input:checked + .tuki-toggle-slider:before {
   margin-top: 1rem;
 }
 .tuki-stat-card {
-  background: var(--tuki-surface);
-  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 16px;
   padding: 1rem;
-  box-shadow: var(--tuki-shadow-md);
-  border: 1px solid var(--tuki-border);
-  transition: transform 0.2s ease;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s;
   text-align: center;
   text-decoration: none;
   display: flex;
@@ -327,15 +332,16 @@ input:checked + .tuki-toggle-slider:before {
   cursor: pointer;
   color: inherit;
 }
-.tuki-stat-card:hover { transform: translateY(-2px); box-shadow: var(--tuki-shadow-lg); }
-.tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: var(--tuki-primary-light); }
-.tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--tuki-primary); line-height: 1; margin-bottom: 0.5rem; }
-.tuki-stat-label { color: var(--tuki-text-secondary); font-size: 0.875rem; font-weight: 500; }
+.tuki-stat-card:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
+.tuki-stat-card:active { transform: scale(0.97); }
+.tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: #c8ff00; }
+.tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.5rem; }
+.tuki-stat-label { color: rgba(255,255,255,0.52); font-size: 0.875rem; font-weight: 500; }
 
 /* Heading */
 .tuki-heading {
   font-weight: 700;
-  color: var(--tuki-text-main);
+  color: #f1f5f9;
   margin-bottom: 0.5rem;
   font-size: 1.15rem;
   margin-top: 0.5rem;
@@ -450,8 +456,8 @@ input:checked + .tuki-toggle-slider:before {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #fff;
-  border-bottom: 1px solid #f1f5f9;
+  background: #1a1a2e;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -460,27 +466,31 @@ input:checked + .tuki-toggle-slider:before {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: #f1f5f9;
+  background: rgba(255,255,255,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #1e293b;
+  color: rgba(255,255,255,0.8);
+  transition: background 0.15s;
 }
-.tuki-screen-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: var(--tuki-text-main); }
+.tuki-normal-header .menu-btn:hover { background: rgba(255,255,255,0.14); }
+.tuki-screen-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
 .tuki-back-btn {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: #f1f5f9;
+  background: rgba(200,255,0,0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--tuki-primary);
+  color: #c8ff00;
   text-decoration: none;
+  transition: background 0.15s;
 }
-.tuki-normal-content { padding: 1rem 1rem calc(1rem + var(--tuki-nav-h, 64px)); overflow-y: auto; height: calc(100vh - 72px); -webkit-overflow-scrolling: touch; }
+.tuki-back-btn:hover { background: rgba(200,255,0,0.2); }
+.tuki-normal-content { padding: 1rem 1rem calc(1rem + var(--tuki-nav-h, 64px)); overflow-y: auto; height: calc(100vh - 72px); -webkit-overflow-scrolling: touch; background: #111827; }
 
 /* Loading spinner */
 .tuki-spinner {
@@ -700,12 +710,12 @@ input:checked + .tuki-toggle-slider:before {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: var(--tuki-nav-h, 64px);
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
+  background: #111827;
+  border-top: 1px solid rgba(255,255,255,0.07);
   display: flex;
   align-items: stretch;
   z-index: 200;
-  box-shadow: 0 -2px 16px rgba(0,0,0,0.07);
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.05), 0 -8px 32px rgba(0,0,0,0.45);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -721,12 +731,12 @@ input:checked + .tuki-toggle-slider:before {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s;
 }
-.tuki-bottom-nav-item:active { background: rgba(0,0,0,0.04); }
+.tuki-bottom-nav-item:active { background: rgba(255,255,255,0.06); }
 
 .tuki-bottom-nav-icon {
   font-size: 1.4rem;
   line-height: 1;
-  color: #9ca3af;
+  color: rgba(255,255,255,0.35);
   transition: color 0.15s, transform 0.2s cubic-bezier(.34,1.56,.64,1);
 }
 .tuki-bottom-nav-item.active .tuki-bottom-nav-icon {
@@ -736,7 +746,7 @@ input:checked + .tuki-toggle-slider:before {
 .tuki-bottom-nav-label {
   font-size: 0.62rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: rgba(255,255,255,0.35);
   letter-spacing: 0.01em;
   transition: color 0.15s;
   line-height: 1;
@@ -758,7 +768,7 @@ input:checked + .tuki-toggle-slider:before {
 
 /* Skeleton loader */
 .tuki-skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.07) 25%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.07) 75%);
   background-size: 200% 100%;
   animation: tuki-shimmer 1.4s infinite;
   border-radius: 8px;

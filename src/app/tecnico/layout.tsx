@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import '../driver/driver.css';
+import './tecnico.css';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';

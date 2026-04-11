@@ -403,8 +403,13 @@
   display: block;
 }
 .client-quick-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.11);
+}
+.client-quick-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 .client-quick-card::before {
   content: '';
@@ -465,6 +470,12 @@
 }
 .client-delivery-btn:hover {
   transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+.client-delivery-btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.95);
+  transition: transform 0.1s, filter 0.1s;
 }
 .client-delivery-btn.btn-enviar {
   background: linear-gradient(135deg, #F5C518, #F58A07);
@@ -609,7 +620,11 @@
 }
 .client-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(245,197,24,0.4);
+  box-shadow: 0 8px 20px rgba(245,197,24,0.45);
+}
+.client-btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(245,197,24,0.25);
 }
 .client-btn-success {
   background: linear-gradient(135deg, var(--client-success), var(--client-success-dark));
@@ -618,13 +633,18 @@
 }
 .client-btn-success:hover { transform: translateY(-1px); }
 
-/* Delivery tracking card */
 .client-tracking-card {
   background: white;
   border-radius: var(--client-radius);
   border: 1px solid var(--client-border);
   overflow: hidden;
   margin-bottom: 0.75rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.client-tracking-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.09);
+  transform: translateY(-2px);
 }
 .client-tracking-header {
   padding: 1rem;
