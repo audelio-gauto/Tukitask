@@ -3,6 +3,7 @@
   --tuki-primary: #F5C518;
   --tuki-primary-dark: #E6A800;
   --tuki-primary-light: #F7D060;
+  --tuki-nav-h: 64px;
   --tuki-success: #10b981;
   --tuki-success-dark: #059669;
   --tuki-danger: #ef4444;
@@ -191,7 +192,7 @@
 /* Bottom Sheet */
 .tuki-sheet {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
+  left: 0; right: 0; bottom: var(--tuki-nav-h);
   z-index: 50;
   background: #fff;
   border-radius: 20px 20px 0 0;
@@ -693,3 +694,104 @@ input:checked + .tuki-toggle-slider:before {
   box-shadow: 0 4px 12px rgba(245,197,24,0.3);
 }
 .driver-filter-done:active { transform: scale(0.97); }
+
+/* ── Bottom Navigation Bar ── */
+.tuki-bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--tuki-nav-h, 64px);
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: stretch;
+  z-index: 200;
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.07);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tuki-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.tuki-bottom-nav-item:active { background: rgba(0,0,0,0.04); }
+
+.tuki-bottom-nav-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #9ca3af;
+  transition: color 0.15s, transform 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.tuki-bottom-nav-item.active .tuki-bottom-nav-icon {
+  transform: translateY(-3px) scale(1.1);
+}
+
+.tuki-bottom-nav-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 0.01em;
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.tuki-bottom-nav-dot {
+  position: absolute;
+  top: 7px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+/* On desktop, hide bottom nav (handled by sidebar sheet already) */
+@media (min-width: 768px) {
+  .tuki-bottom-nav { display: none; }
+  .tuki-sheet { bottom: 0 !important; }
+}
+
+/* Skeleton loader */
+.tuki-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: tuki-shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+@keyframes tuki-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Toast notification */
+.tuki-toast {
+  position: fixed;
+  top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 9999;
+  background: #1f2937;
+  color: #fff;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  animation: tuki-toast-in 0.25s cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none;
+}
+.tuki-toast.exit {
+  animation: tuki-toast-out 0.2s ease forwards;
+}
+@keyframes tuki-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.92); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes tuki-toast-out {
+  from { opacity: 1; }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}

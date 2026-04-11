@@ -70,6 +70,15 @@ export default function TecnicoDashboard() {
   const router = useRouter();
   const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
 
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string) => {
+    if (toastTmRef.current) clearTimeout(toastTmRef.current);
+    setToast(msg);
+    toastTmRef.current = setTimeout(() => setToast(null), 2400);
+  }, []);
+
   // ── Availability – persisted ───────────────────────────────────────────────
   const [available, setAvailable] = useState(false);
   // Auto-countdown: when online on dashboard, 20s to disconnect or auto-redirect to offers
@@ -452,7 +461,7 @@ export default function TecnicoDashboard() {
       {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
+          position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
           zIndex: 9990,
           background: '#1C1C2E',
           borderTop: '1px solid rgba(245,197,24,0.2)',
@@ -495,6 +504,9 @@ export default function TecnicoDashboard() {
           </div>
         </div>
       )}
+
+      {/* Toast */}
+      {toast && <div className="tuki-toast">{toast}</div>}
 
       {/* ── Filter Modal ── */}
       {filterOpen && (
@@ -586,12 +598,14 @@ export default function TecnicoDashboard() {
                 if (!available) {
                   setAvailable(true);
                   try { localStorage.setItem('tecnico_available', 'true'); } catch {}
+                  showToast('💰 ¡Online! Buscando solicitudes…');
                   router.push('/tecnico/ofertas');
                 } else {
                   // Going offline → stop countdown and stay on dashboard
                   stopOnlineCountdown();
                   setAvailable(false);
                   try { localStorage.setItem('tecnico_available', 'false'); } catch {}
+                  showToast('💸 Offline — descansando');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -656,6 +670,17 @@ export default function TecnicoDashboard() {
             </div>
           )}
 
+          {statsLoading ? (
+            <div className="tuki-stats-grid">
+              {[0,1,2,3].map(i => (
+                <div key={i} className="tuki-stat-card">
+                  <div className="tuki-skeleton" style={{ width: 28, height: 28, borderRadius: '50%', marginBottom: 8 }} />
+                  <div className="tuki-skeleton" style={{ width: '60%', height: 24, marginBottom: 6 }} />
+                  <div className="tuki-skeleton" style={{ width: '80%', height: 14 }} />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="tuki-stats-grid">
             {stats.map((s) => (
               <Link key={s.label} href={s.href} className="tuki-stat-card">
@@ -665,6 +690,7 @@ export default function TecnicoDashboard() {
               </Link>
             ))}
           </div>
+          )}
 
           <div style={{ marginTop: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones Rápidas</h2>

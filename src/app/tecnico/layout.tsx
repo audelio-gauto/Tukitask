@@ -9,6 +9,15 @@ import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
+import { BottomNav } from '../driver/components/BottomNav';
+
+const TECNICO_TABS = [
+  { href: '/tecnico',                   icon: '🏠', label: 'Inicio'    },
+  { href: '/tecnico/ofertas',           icon: '🔧', label: 'Ofertas'   },
+  { href: '/tecnico/citas',             icon: '📅', label: 'Citas'     },
+  { href: '/tecnico/billetera',         icon: '💰', label: 'Billetera' },
+  { href: '/tecnico/settings',          icon: '⚙️', label: 'Config'    },
+];
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -130,6 +139,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         <main>
           {children}
         </main>
+        <BottomNav tabs={TECNICO_TABS} accent="#F5C518" />
       </DriverContext.Provider>
     </div>
   );

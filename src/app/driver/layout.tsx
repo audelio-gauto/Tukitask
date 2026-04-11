@@ -10,6 +10,15 @@ import { DriverDrawer } from './components/DriverDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
+import { BottomNav } from './components/BottomNav';
+
+const DRIVER_TABS = [
+  { href: '/driver',                  icon: '🏠', label: 'Inicio'    },
+  { href: '/driver/deliveries',       icon: '📦', label: 'Pedidos'   },
+  { href: '/driver/historial-ofertas',icon: '📋', label: 'Historial' },
+  { href: '/driver/billetera',        icon: '💰', label: 'Billetera' },
+  { href: '/driver/settings',         icon: '⚙️', label: 'Config'    },
+];
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -116,6 +125,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       <ChatBadge email={email} href="/driver/deliveries" scope="order" />
       <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
+        <BottomNav tabs={DRIVER_TABS} accent="#10b981" />
       </DriverContext.Provider>
     </div>
   );

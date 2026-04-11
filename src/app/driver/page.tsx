@@ -19,6 +19,16 @@ function getGreeting() {
 export default function DriverDashboard() {
   const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings } = useDriverContext();
   const router = useRouter();
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string) => {
+    if (toastTmRef.current) clearTimeout(toastTmRef.current);
+    setToast(msg);
+    toastTmRef.current = setTimeout(() => setToast(null), 2400);
+  }, []);
+
   // Persist online/offline across page navigations
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
@@ -54,6 +64,7 @@ export default function DriverDashboard() {
   const DRIVER_TOTAL_DOCS = 7; // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
 
   // Stats state
+  const [statsLoading, setStatsLoading] = useState(true);
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
   const [earningsData, setEarningsData] = useState({ dia: 0, semana: 0, mes: 0, año: 0 });
   const [deliveredCount, setDeliveredCount] = useState(0);
@@ -171,8 +182,9 @@ export default function DriverDashboard() {
             mes: sum(startOfMonth),
             año: sum(startOfYear),
           });
+          setStatsLoading(false);
         })
-        .catch(() => {});
+        .catch(() => { setStatsLoading(false); });
     };
 
     fetchStats();
@@ -446,7 +458,7 @@ export default function DriverDashboard() {
       {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
+          position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
           zIndex: 9990,
           background: '#111827',
           borderTop: '1px solid rgba(200,255,0,0.15)',
@@ -490,7 +502,10 @@ export default function DriverDashboard() {
         </div>
       )}
 
-      {/* Earnings Breakdown Modal */}
+      {/* Toast */}
+      {toast && <div className="tuki-toast">{toast}</div>}
+
+      {/* Earnings Breakdown Modal */}}
       {showEarnings && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowEarnings(false)} />
@@ -565,12 +580,14 @@ export default function DriverDashboard() {
                   // Going online → save state and redirect to deliveries immediately
                   setAvailable(true);
                   try { localStorage.setItem('driver_available', 'true'); } catch {}
+                  showToast('💰 ¡Online! Buscando pedidos…');
                   router.push('/driver/deliveries');
                 } else {
                   // Going offline → stop countdown and stay on dashboard
                   stopOnlineCountdown();
                   setAvailable(false);
                   try { localStorage.setItem('driver_available', 'false'); } catch {}
+                  showToast('💸 Offline — descansando');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -670,6 +687,17 @@ export default function DriverDashboard() {
           )}
 
           {/* Stats Grid */}
+          {statsLoading ? (
+            <div className="tuki-stats-grid">
+              {[0,1,2,3].map(i => (
+                <div key={i} className="tuki-stat-card" style={i === 0 ? { gridColumn: 'span 2' } : {}}>
+                  <div className="tuki-skeleton" style={{ width: 28, height: 28, borderRadius: '50%', marginBottom: 8 }} />
+                  <div className="tuki-skeleton" style={{ width: '60%', height: 24, marginBottom: 6 }} />
+                  <div className="tuki-skeleton" style={{ width: '80%', height: 14 }} />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="tuki-stats-grid">
             {/* Ganancias Hoy — full width, first so always visible */}
             <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
@@ -709,6 +737,7 @@ export default function DriverDashboard() {
               <div className="tuki-stat-label">Fallidos Hoy</div>
             </Link>
           </div>
+          )}
 
         </div>
       </div>
