@@ -13,11 +13,11 @@ import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from './components/BottomNav';
 
 const DRIVER_TABS = [
-  { href: '/driver',                  icon: '­ƒÅá', label: 'Inicio'     },
-  { href: '/driver/deliveries',       icon: '­ƒôª', label: 'Pedidos'   },
-  { href: '/driver/delivered',         icon: '­ƒôï', label: 'Historial' },
-  { href: '/driver/ganancias',        icon: '­ƒôè', label: 'Ganancias' },
-  { href: '/driver/settings',         icon: 'ÔÜÖ´©Å', label: 'Config'    },
+  { href: '/driver',                  icon: '🏠', label: 'Inicio'     },
+  { href: '/driver/deliveries',       icon: '📦', label: 'Pedidos'   },
+  { href: '/driver/delivered',         icon: '📋', label: 'Historial' },
+  { href: '/driver/ganancias',        icon: '📊', label: 'Ganancias' },
+  { href: '/driver/settings',         icon: '⚙️', label: 'Config'    },
 ];
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
@@ -38,13 +38,13 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     (async () => {
-      // getSession() reads from localStorage ÔÇö no network call, very fast
+      // getSession() reads from localStorage — no network call, very fast
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) { router.push('/auth'); return; }
       const userEmail = session.user.email || '';
       setEmail(userEmail);
 
-      // Fast path: role verified recently ÔÇö skip network check
+      // Fast path: role verified recently — skip network check
       const cachedRole = getCachedRole(userEmail);
       if (cachedRole !== 'driver') {
         try {
@@ -62,7 +62,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         }
       }
 
-      // Read profile from cache immediately ÔÇö avoids showing email prefix on load
+      // Read profile from cache immediately — avoids showing email prefix on load
       try {
         const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
         if (cached?.displayName) setDisplayName(cached.displayName);
@@ -73,7 +73,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       }
       setChecking(false); // show content BEFORE profile load
 
-      // Load profile in background ÔÇö updates state and refreshes cache
+      // Load profile in background — updates state and refreshes cache
       fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(profJson => {

@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
-// ÔöÇÔöÇ Haversine distance ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ── Haversine distance ──────────────────────────────────────────────────────
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const toRad = (d: number) => d * Math.PI / 180;
@@ -19,27 +19,27 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 
 const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
 
-// ÔöÇÔöÇ Service catalogue (must mirror servicio/page.tsx) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ── Service catalogue (must mirror servicio/page.tsx) ─────────────────────────
 const SERVICES_MUJER = [
-  { key: 'limpieza',         label: 'Limpieza',          icon: '­ƒº╣' },
-  { key: 'niera',            label: 'Ni├▒era',            icon: '­ƒæÂ' },
-  { key: 'cocina',           label: 'Cocina',            icon: '­ƒì│' },
-  { key: 'eventos',          label: 'Eventos',           icon: '­ƒÄë' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '­ƒÉ¥' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '­ƒæ┤' },
-  { key: 'gestor',           label: 'Gestor',            icon: '­ƒôï' },
-  { key: 'otros',            label: 'Otros',             icon: 'Ô£¿' },
+  { key: 'limpieza',         label: 'Limpieza',          icon: '🧹' },
+  { key: 'niera',            label: 'Niñera',            icon: '👶' },
+  { key: 'cocina',           label: 'Cocina',            icon: '🍳' },
+  { key: 'eventos',          label: 'Eventos',           icon: '🎉' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
+  { key: 'otros',            label: 'Otros',             icon: '✨' },
 ];
 const SERVICES_HOMBRE = [
-  { key: 'aire_split',       label: 'Tec Aire Split',    icon: 'ÔØä´©Å' },
-  { key: 'electrico',        label: 'Serv. El├®ctrico',   icon: 'ÔÜí' },
-  { key: 'plomeria',         label: 'Serv. Plomer├¡a',    icon: '­ƒöº' },
-  { key: 'cerrajeria',       label: 'Serv. Cerrajer├¡a',  icon: '­ƒöæ' },
-  { key: 'limpieza',         label: 'Limpieza',          icon: '­ƒº╣' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '­ƒæ┤' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '­ƒÉ¥' },
-  { key: 'gestor',           label: 'Gestor',            icon: '­ƒôï' },
-  { key: 'otros',            label: 'Otros',             icon: 'Ô£¿' },
+  { key: 'aire_split',       label: 'Tec Aire Split',    icon: '❄️' },
+  { key: 'electrico',        label: 'Serv. Eléctrico',   icon: '⚡' },
+  { key: 'plomeria',         label: 'Serv. Plomería',    icon: '🔧' },
+  { key: 'cerrajeria',       label: 'Serv. Cerrajería',  icon: '🔑' },
+  { key: 'limpieza',         label: 'Limpieza',          icon: '🧹' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
+  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
+  { key: 'otros',            label: 'Otros',             icon: '✨' },
 ];
 
 function getCatalogueForGender(gender: string) {
@@ -62,7 +62,7 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h >= 6 && h < 13) return 'Buen d├¡a';
+  if (h >= 6 && h < 13) return 'Buen día';
   if (h >= 13 && h < 20) return 'Buenas tardes';
   return 'Buenas noches';
 }
@@ -80,7 +80,7 @@ export default function TecnicoDashboard() {
     toastTmRef.current = setTimeout(() => setToast(null), 2400);
   }, []);
 
-  // ÔöÇÔöÇ Availability ÔÇô persisted ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Availability – persisted ───────────────────────────────────────────────
   const [available, setAvailable] = useState(false);
   // Auto-countdown: when online on dashboard, 20s to disconnect or auto-redirect to offers
   const [onlineCountdown, setOnlineCountdown] = useState(20);
@@ -110,7 +110,7 @@ export default function TecnicoDashboard() {
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // ÔöÇÔöÇ Document expiry alerts ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Document expiry alerts ────────────────────────────────────────────────
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
   useEffect(() => {
@@ -146,7 +146,7 @@ export default function TecnicoDashboard() {
             localStorage.setItem('tecnico_doc_blocked', 'true');
           } catch {}
         } else {
-          // All docs approved ÔÇö if the system previously forced them offline, auto-restore connection
+          // All docs approved — if the system previously forced them offline, auto-restore connection
           try {
             const wasDocBlocked = localStorage.getItem('tecnico_doc_blocked') === 'true';
             if (wasDocBlocked) {
@@ -160,10 +160,10 @@ export default function TecnicoDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // ÔöÇÔöÇ Gender loaded from profile ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Gender loaded from profile ─────────────────────────────────────────────
   const [gender, setGender] = useState<'hombre' | 'mujer' | ''>('');
 
-  // ÔöÇÔöÇ Dashboard stats ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Dashboard stats ───────────────────────────────────────────────────────
   const [statsData, setStatsData] = useState({
     ofertasActivas:   0,
     citasConfirmadas: 0,
@@ -172,12 +172,12 @@ export default function TecnicoDashboard() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // ÔöÇÔöÇ Filter state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Filter state ───────────────────────────────────────────────────────────
   const [filterOpen, setFilterOpen]     = useState(false);
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
   const [rangoKm, setRangoKm]           = useState(20);
 
-  // ÔöÇÔöÇ Wallet balance ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Wallet balance ────────────────────────────────────────────────────────
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   useEffect(() => {
     if (!email) return;
@@ -191,7 +191,7 @@ export default function TecnicoDashboard() {
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
   const [jobOfferPrices, setJobOfferPrices] = useState<Record<string, string>>({});
   const [sendingJobId, setSendingJobId] = useState<string | null>(null);
-  const [dismissedJobs, setDismissedJobs] = useState<Set<string>>(new Set());
+  const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
 
   const loadPendingJobs = useCallback(() => {
     if (!email) return;
@@ -238,10 +238,13 @@ export default function TecnicoDashboard() {
         }),
       });
       const json = await res.json();
-      if (json.offer) setDismissedJobs(prev => new Set([...prev, jobId]));
+      if (json.offer) setDismissedHome(prev => new Set([...prev, jobId]));
     } catch {}
     setSendingJobId(null);
   };
+
+
+  // Touch drag state
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startTranslate = useRef(0);
@@ -423,27 +426,27 @@ export default function TecnicoDashboard() {
   const stats = [
     {
       label: 'Pedidos',
-      value: statsLoading ? 'ÔÇª' : statsData.ofertasActivas + statsData.citasConfirmadas,
+      value: statsLoading ? '…' : statsData.ofertasActivas + statsData.citasConfirmadas,
       href: '/tecnico/ofertas',
-      icon: '­ƒôï',
+      icon: '📋',
     },
     {
       label: 'Citas Confirmadas',
-      value: statsLoading ? 'ÔÇª' : statsData.citasConfirmadas,
+      value: statsLoading ? '…' : statsData.citasConfirmadas,
       href: '/tecnico/citas',
-      icon: '­ƒôà',
+      icon: '📅',
     },
     {
-      label: 'Tasa Aceptaci├│n',
-      value: statsLoading ? 'ÔÇª' : (statsData.tasaAceptacion !== null ? `${statsData.tasaAceptacion}%` : 'ÔÇö'),
+      label: 'Tasa Aceptación',
+      value: statsLoading ? '…' : (statsData.tasaAceptacion !== null ? `${statsData.tasaAceptacion}%` : '—'),
       href: '/tecnico/aceptacion',
-      icon: '­ƒÅå',
+      icon: '🏆',
     },
     {
       label: 'Ganancias Hoy',
-      value: statsLoading ? 'ÔÇª' : fmtGs(statsData.gananciasHoy),
+      value: statsLoading ? '…' : fmtGs(statsData.gananciasHoy),
       href: '/tecnico/ganancias',
-      icon: '­ƒÆ░',
+      icon: '💰',
     },
   ];
 
@@ -453,47 +456,47 @@ export default function TecnicoDashboard() {
         <DriverMap onLocate={() => {}} />
       </div>
 
-      {/* Profile pill ÔÇö top left */}
+      {/* Profile pill — top left */}
       <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           {profilePhoto ? (
             <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              {displayName?.[0]?.toUpperCase() || '­ƒæñ'}
+              {displayName?.[0]?.toUpperCase() || '👤'}
             </div>
           )}
           {avgRating > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(37,99,235,0.18)', borderRadius: 6, padding: '1px 6px' }}>
-              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>Ôÿà</span>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>★</span>
               <span style={{ color: '#2563EB', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
             </div>
           )}
         </div>
         <div style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
           <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, lineHeight: 1.2 }}>{getGreeting()}</div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'T├®cnico'}</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Técnico'}</div>
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ Men├║ ÔöÇÔöÇ ÔÇö top right */}
-      <button className="tuki-float-btn menu" aria-label="Men├║" onClick={openDrawer}>
+      {/* ── Menú ── — top right */}
+      <button className="tuki-float-btn menu" aria-label="Menú" onClick={openDrawer}>
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
-      {/* Wallet balance pill ÔÇö centrada top */}
+      {/* Wallet balance pill — centrada top */}
       <Link href="/tecnico/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
         <span className="tuki-wallet-pill-amount">
           {walletBalance !== null
-            ? `${Number(walletBalance).toLocaleString('es-PY')} Ôé▓`
-            : 'Ôé▓ ...'}
+            ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
+            : '₲ ...'}
         </span>
         <span className="tuki-wallet-pill-label">Billetera</span>
       </Link>
 
-      {/* ÔöÇÔöÇ Filtro button ÔöÇÔöÇ */}
+      {/* ── Filtro button ── */}
       <button
         className={`tuki-float-btn filter${hasActiveFilter ? ' has-filter' : ''}`}
         aria-label="Filtrar servicios"
@@ -512,7 +515,7 @@ export default function TecnicoDashboard() {
         )}
       </button>
 
-      {/* Online countdown ÔÇö InDrive-style bottom progress bar */}
+      {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
           position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
@@ -539,10 +542,10 @@ export default function TecnicoDashboard() {
           }}>
             <div>
               <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                Redirigiendo a SolicitudesÔÇª
+                Redirigiendo a Solicitudes…
               </p>
               <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>
-                Desconect├í el toggle para cancelar
+                Desconectá el toggle para cancelar
               </p>
             </div>
             <div style={{
@@ -562,7 +565,7 @@ export default function TecnicoDashboard() {
       {/* Toast */}
       {toast && <div className="tuki-toast">{toast}</div>}
 
-      {/* ÔöÇÔöÇ Filter Modal ÔöÇÔöÇ */}
+      {/* ── Filter Modal ── */}
       {filterOpen && (
         <>
           <div className="driver-filter-overlay" onClick={() => setFilterOpen(false)} />
@@ -579,15 +582,15 @@ export default function TecnicoDashboard() {
             {/* Gender indicator */}
             {gender && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 12px', borderBottom: '1px solid #f1f5f9', marginBottom: 8 }}>
-                <span style={{ fontSize: '1.2rem' }}>{gender === 'hombre' ? '­ƒæ¿' : '­ƒæ®'}</span>
+                <span style={{ fontSize: '1.2rem' }}>{gender === 'hombre' ? '👨' : '👩'}</span>
                 <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
                   Perfil: <strong style={{ color: '#F5C518' }}>{gender === 'hombre' ? 'Hombre' : 'Mujer'}</strong>
-                  {' ┬À '}{enabledCount}/{catalogue.length} activos
+                  {' · '}{enabledCount}/{catalogue.length} activos
                 </span>
               </div>
             )}
 
-            <p className="driver-filter-subtitle">Activ├í o desactiv├í los servicios que quer├®s recibir</p>
+            <p className="driver-filter-subtitle">Activá o desactivá los servicios que querés recibir</p>
 
             <div className="driver-filter-list">
               {catalogue.map(item => (
@@ -612,7 +615,7 @@ export default function TecnicoDashboard() {
             <div style={{ padding: '12px 4px 4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>
-                  ­ƒôì Rango de trabajo
+                  📍 Rango de trabajo
                 </label>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#F5C518' }}>{rangoKm} km</span>
               </div>
@@ -633,7 +636,7 @@ export default function TecnicoDashboard() {
         </>
       )}
 
-      {/* ÔöÇÔöÇ Bottom sheet ÔöÇÔöÇ */}
+      {/* ── Bottom sheet ── */}
       <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
         <div className="tuki-sheet-handle"><span className="tuki-sheet-bar" /></div>
         <div className="tuki-sheet-content">
@@ -643,7 +646,7 @@ export default function TecnicoDashboard() {
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
               <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available ? '­ƒÆ░ Hacer money' : '­ƒÆ© Money off'}
+                {available ? '💰 Hacer money' : '💸 Money off'}
               </span>
             </div>
             <label className="tuki-toggle">
@@ -652,14 +655,14 @@ export default function TecnicoDashboard() {
                 if (!available) {
                   setAvailable(true);
                   try { localStorage.setItem('tecnico_available', 'true'); } catch {}
-                  showToast('­ƒÆ░ ┬íOnline! Buscando solicitudesÔÇª');
+                  showToast('💰 ¡Online! Buscando solicitudes…');
                   router.push('/tecnico/ofertas');
                 } else {
-                  // Going offline ÔåÆ stop countdown and stay on dashboard
+                  // Going offline → stop countdown and stay on dashboard
                   stopOnlineCountdown();
                   setAvailable(false);
                   try { localStorage.setItem('tecnico_available', 'false'); } catch {}
-                  showToast('­ƒÆ© Offline ÔÇö descansando');
+                  showToast('💸 Offline — descansando');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -679,19 +682,19 @@ export default function TecnicoDashboard() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: '1.5rem' }}>
-                    {docAlerts.expired.length > 0 ? '­ƒÜ½' : docCounts.rejected > 0 ? 'ÔØî' : '­ƒôÄ'}
+                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
                   </span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
                     <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
                       {docAlerts.expired.length > 0
-                        ? 'Documentos vencidos ÔÇö no pod├®s conectarte'
-                        : `${docCounts.approved}/4 aprobados${docCounts.pending > 0 ? ` ┬À ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` ┬À ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` ┬À ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' ┬À pr├│ximos a vencer' : ''}`
+                        ? 'Documentos vencidos — no podés conectarte'
+                        : `${docCounts.approved}/4 aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
                       }
                     </p>
                   </div>
                 </div>
-                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>ÔÇ║</span>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>›</span>
               </div>
             </Link>
           )}
@@ -701,14 +704,14 @@ export default function TecnicoDashboard() {
             <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
-                  ­ƒøá Serv. activos ┬À {rangoKm} km
+                  🛠 Serv. activos · {rangoKm} km
                 </span>
                 <button
                   type="button"
                   onClick={() => setFilterOpen(true)}
                   style={{ background: 'none', border: 'none', color: '#C8960A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                 >
-                  Editar ÔåÆ
+                  Editar →
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -718,35 +721,35 @@ export default function TecnicoDashboard() {
                   </span>
                 ))}
                 {enabledCount === 0 && (
-                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ning├║n servicio activo ÔÇö abr├¡ el filtro para activar.</span>
+                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ningún servicio activo — abrí el filtro para activar.</span>
                 )}
               </div>
             </div>
           )}
 
           {/* Solicitudes de servicio pendientes */}
-          {pendingJobs.filter(j => !dismissedJobs.has(j.id)).length > 0 && (
+          {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
             <div style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>
                   🔧 Solicitudes 
                   <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
-                    {pendingJobs.filter(j => !dismissedJobs.has(j.id)).length}
+                    {pendingJobs.filter(j => !dismissedHome.has(j.id)).length}
                   </span>
                 </span>
                 <Link href="/tecnico/ofertas" style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Ver todo →</Link>
               </div>
-              {pendingJobs.filter(j => !dismissedJobs.has(j.id)).map(job => (
+              {pendingJobs.filter(j => !dismissedHome.has(j.id)).map(job => (
                 <div key={job.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 14, padding: '10px 12px', marginBottom: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.83rem', flex: 1, marginRight: 8 }}>
-                      {job.service_type ? (job.service_type.replace(/_/g, ' ')).charAt(0).toUpperCase() + (job.service_type.replace(/_/g, ' ')).slice(1) : 'Servicio'}
+                      {(String(job.service_type || 'Servicio').replace(/_/g, ' ')).charAt(0).toUpperCase() + String(job.service_type || 'Servicio').replace(/_/g, ' ').slice(1)}
                     </span>
                     {job.client_initial_price && (
                       <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(job.client_initial_price).toLocaleString()}</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>📍 {job.address?.slice(0, 32) || '—'}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>📍 {job.address?.slice(0, 32) || '—'}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input
                       type="number"
@@ -761,7 +764,7 @@ export default function TecnicoDashboard() {
                       style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0, opacity: !jobOfferPrices[job.id] ? 0.5 : 1 }}
                     >{sendingJobId === job.id ? '...' : 'Ofrecer'}</button>
                     <button
-                      onClick={() => setDismissedJobs(prev => new Set([...prev, job.id]))}
+                      onClick={() => setDismissedHome(prev => new Set([...prev, job.id]))}
                       style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', cursor: 'pointer', background: 'none', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}
                     >×</button>
                   </div>
@@ -793,9 +796,9 @@ export default function TecnicoDashboard() {
           )}
 
           <div style={{ marginTop: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones R├ípidas</h2>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones Rápidas</h2>
             <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr 1fr' }}>
-              <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)}>­ƒøá Mis Servicios</button>
+              <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)}>🛠 Mis Servicios</button>
               <Link href="/tecnico/ofertas" className="tuki-btn tuki-btn-success">Ver Ofertas</Link>
             </div>
           </div>

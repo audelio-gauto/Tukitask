@@ -12,7 +12,7 @@ const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false }
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h >= 6 && h < 13) return 'Buen d├¡a';
+  if (h >= 6 && h < 13) return 'Buen día';
   if (h >= 13 && h < 20) return 'Buenas tardes';
   return 'Buenas noches';
 }
@@ -67,13 +67,13 @@ export default function DriverDashboard() {
   // Stats state
   const [statsLoading, setStatsLoading] = useState(true);
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
-  const [earningsData, setEarningsData] = useState({ dia: 0, semana: 0, mes: 0, anio: 0 });
+  const [earningsData, setEarningsData] = useState({ dia: 0, semana: 0, mes: 0, año: 0 });
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalShipments, setTotalShipments] = useState(0);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const [showEarnings, setShowEarnings] = useState(false);
-  const [earningsPeriod, setEarningsPeriod] = useState<'dia' | 'semana' | 'mes' | 'anio'>('dia');
+  const [earningsPeriod, setEarningsPeriod] = useState<'dia' | 'semana' | 'mes' | 'año'>('dia');
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
   const locateFnRef = useRef<(() => void) | null>(null);
@@ -95,7 +95,7 @@ export default function DriverDashboard() {
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
-  const [dismissedOrders, setDismissedOrders] = useState<Set<string>>(new Set());
+  const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
 
   const loadPendingOrders = useCallback(() => {
     fetch('/api/orders')
@@ -124,12 +124,12 @@ export default function DriverDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note: '' }),
       });
-      setDismissedOrders(prev => new Set([...prev, orderId]));
+      setDismissedHome(prev => new Set([...prev, orderId]));
     } catch {}
     setSendingOfferId(null);
   };
 
-  // Verificar vencimiento de documentos cr├¡ticos
+  // Verificar vencimiento de documentos críticos
   useEffect(() => {
     if (!email) return;
     authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
@@ -219,7 +219,7 @@ export default function DriverDashboard() {
             dia: sum(startOfDay),
             semana: sum(startOfWeek),
             mes: sum(startOfMonth),
-            anio: sum(startOfYear),
+            año: sum(startOfYear),
           });
           setStatsLoading(false);
         })
@@ -337,10 +337,10 @@ export default function DriverDashboard() {
     };
   }, [getTranslateY, isDesktop, setSheet]);
 
-  // Stats (placeholder ÔÇö would come from Supabase)
+  // Stats (placeholder — would come from Supabase)
   const stats = [
-    { label: 'Pedidos', value: activeOrderCount, href: '/driver/deliveries', icon: '­ƒôª', onClick: undefined as (() => void) | undefined },
-    { label: 'Tasa Aceptaci├│n', value: acceptanceRate !== null ? `${acceptanceRate}%` : 'ÔÇö', href: '/driver/aceptacion', icon: '­ƒÅå', onClick: undefined as (() => void) | undefined },
+    { label: 'Pedidos', value: activeOrderCount, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
   return (
@@ -350,19 +350,19 @@ export default function DriverDashboard() {
         <DriverMap onLocate={(fn) => { locateFnRef.current = fn; }} />
       </div>
 
-      {/* Profile pill ÔÇö top left */}
+      {/* Profile pill — top left */}
       <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           {profilePhoto ? (
             <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              {displayName?.[0]?.toUpperCase() || '­ƒæñ'}
+              {displayName?.[0]?.toUpperCase() || '👤'}
             </div>
           )}
           {avgRating > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(37,99,235,0.18)', borderRadius: 6, padding: '1px 6px' }}>
-              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>Ôÿà</span>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>★</span>
               <span style={{ color: '#2563EB', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
             </div>
           )}
@@ -373,25 +373,25 @@ export default function DriverDashboard() {
         </div>
       </div>
 
-      {/* Floating menu button ÔÇö top right */}
-      <button className="tuki-float-btn menu" onClick={openDrawer} aria-label="Men├║">
+      {/* Floating menu button — top right */}
+      <button className="tuki-float-btn menu" onClick={openDrawer} aria-label="Menú">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
-      {/* Wallet balance pill ÔÇö centered top */}
+      {/* Wallet balance pill — centered top */}
       <Link href="/driver/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
         <span className="tuki-wallet-pill-amount">
           {walletBalance !== null
-            ? `${Number(walletBalance).toLocaleString('es-PY')} Ôé▓`
-            : 'Ôé▓ ...'}
+            ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
+            : '₲ ...'}
         </span>
         <span className="tuki-wallet-pill-label">Billetera</span>
       </Link>
 
       {/* Floating locate button */}
-      <button className="tuki-float-btn locate" onClick={() => locateFnRef.current?.()} aria-label="Mi ubicaci├│n">
+      <button className="tuki-float-btn locate" onClick={() => locateFnRef.current?.()} aria-label="Mi ubicación">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -420,13 +420,13 @@ export default function DriverDashboard() {
                 <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
-            <p className="driver-filter-subtitle">Eleg├¡ qu├® tipo de solicitudes quer├®s recibir</p>
+            <p className="driver-filter-subtitle">Elegí qué tipo de solicitudes querés recibir</p>
             <div className="driver-filter-list">
               {[
-                { key: 'moto_envios', label: 'Moto Env├¡os', icon: '­ƒÅì´©Å', desc: 'Paquetes peque├▒os en moto' },
-                { key: 'auto_envios', label: 'Auto Env├¡os', icon: '­ƒÜù', desc: 'Paquetes medianos en auto' },
-                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '­ƒøÁ', desc: 'Fletes en moto o carro' },
-                { key: 'camion_fletes', label: 'Cami├│n Fletes', icon: '­ƒÜø', desc: 'Fletes grandes en cami├│n' },
+                { key: 'moto_envios', label: 'Moto Envíos', icon: '🏍️', desc: 'Paquetes pequeños en moto' },
+                { key: 'auto_envios', label: 'Auto Envíos', icon: '🚗', desc: 'Paquetes medianos en auto' },
+                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', desc: 'Fletes en moto o carro' },
+                { key: 'camion_fletes', label: 'Camión Fletes', icon: '🚛', desc: 'Fletes grandes en camión' },
               ].map(item => (
                 <button
                   key={item.key}
@@ -450,7 +450,7 @@ export default function DriverDashboard() {
             <div style={{ padding: '0 4px', marginTop: 4 }}>
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>­ƒôì Rango de recogida</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>📍 Rango de recogida</label>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981' }}>{pickupRangeKm} km</span>
                 </div>
                 <input type="range" min={1} max={50} step={1} value={pickupRangeKm}
@@ -462,7 +462,7 @@ export default function DriverDashboard() {
               </div>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>­ƒÜø Rango de entrega</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>🚛 Rango de entrega</label>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6' }}>{deliveryRangeKm} km</span>
                 </div>
                 <input type="range" min={1} max={100} step={1} value={deliveryRangeKm}
@@ -494,7 +494,7 @@ export default function DriverDashboard() {
         </>
       )}
 
-      {/* Online countdown ÔÇö InDrive-style bottom progress bar */}
+      {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
           position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
@@ -521,10 +521,10 @@ export default function DriverDashboard() {
           }}>
             <div>
               <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                Redirigiendo a PedidosÔÇª
+                Redirigiendo a Pedidos…
               </p>
               <p style={{ margin: '3px 0 0', color: '#6b7280', fontSize: '0.75rem' }}>
-                Desconect├í el toggle para cancelar
+                Desconectá el toggle para cancelar
               </p>
             </div>
             <div style={{
@@ -559,12 +559,12 @@ export default function DriverDashboard() {
           }}>
             {/* Header */}
             <div style={{ background: 'rgba(250,204,21,0.1)', borderBottom: '1px solid rgba(250,204,21,0.2)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>­ƒÆ░ Ganancias</span>
-              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">Ô£ò</button>
+              <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>💰 Ganancias</span>
+              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
             </div>
             {/* Period tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0.75rem 1rem 0' }}>
-              {(['dia', 'semana', 'mes', 'anio'] as const).map(p => (
+              {(['dia', 'semana', 'mes', 'año'] as const).map(p => (
                 <button key={p} onClick={() => setEarningsPeriod(p)}
                   style={{
                     flex: 1, padding: '0.5rem 0', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
@@ -572,7 +572,7 @@ export default function DriverDashboard() {
                     color: earningsPeriod === p ? '#111' : '#9ca3af',
                     transition: 'all 0.2s',
                   }}>
-                  {p === 'dia' ? 'Hoy' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'anio'}
+                  {p === 'dia' ? 'Hoy' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'Año'}
                 </button>
               ))}
             </div>
@@ -581,7 +581,7 @@ export default function DriverDashboard() {
               <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#c8ff00', lineHeight: 1 }}>
                 {earningsData[earningsPeriod].toLocaleString('es-PY')}
               </div>
-              <div style={{ color: '#9ca3af', fontSize: '0.9rem', marginTop: 6 }}>Guaran├¡es</div>
+              <div style={{ color: '#9ca3af', fontSize: '0.9rem', marginTop: 6 }}>Guaraníes</div>
             </div>
             {/* Summary row */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 1rem 1rem' }}>
@@ -609,24 +609,24 @@ export default function DriverDashboard() {
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
               <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available ? '­ƒÆ░ Hacer money' : '­ƒÆ© Money off'}
+                {available ? '💰 Hacer money' : '💸 Money off'}
               </span>
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return;
                 if (!available) {
-                  // Going online ÔåÆ save state and redirect to deliveries immediately
+                  // Going online → save state and redirect to deliveries immediately
                   setAvailable(true);
                   try { localStorage.setItem('driver_available', 'true'); } catch {}
-                  showToast('­ƒÆ░ ┬íOnline! Buscando pedidosÔÇª');
+                  showToast('💰 ¡Online! Buscando pedidos…');
                   router.push('/driver/deliveries');
                 } else {
-                  // Going offline ÔåÆ stop countdown and stay on dashboard
+                  // Going offline → stop countdown and stay on dashboard
                   stopOnlineCountdown();
                   setAvailable(false);
                   try { localStorage.setItem('driver_available', 'false'); } catch {}
-                  showToast('­ƒÆ© Offline ÔÇö descansando');
+                  showToast('💸 Offline — descansando');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -646,19 +646,19 @@ export default function DriverDashboard() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: '1.5rem' }}>
-                    {docAlerts.expired.length > 0 ? '­ƒÜ½' : docCounts.rejected > 0 ? 'ÔØî' : '­ƒôÄ'}
+                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
                   </span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
                     <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
                       {docAlerts.expired.length > 0
-                        ? 'Documentos vencidos ÔÇö no pod├®s conectarte'
-                        : `${docCounts.approved}/${DRIVER_TOTAL_DOCS} aprobados${docCounts.pending > 0 ? ` ┬À ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` ┬À ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` ┬À ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' ┬À pr├│ximos a vencer' : ''}`
+                        ? 'Documentos vencidos — no podés conectarte'
+                        : `${docCounts.approved}/${DRIVER_TOTAL_DOCS} aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
                       }
                     </p>
                   </div>
                 </div>
-                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>ÔÇ║</span>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>›</span>
               </div>
             </Link>
           )}
@@ -666,28 +666,28 @@ export default function DriverDashboard() {
           {/* Alertas de documentos */}
           {docAlerts.expired.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>­ƒÜ½</span>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🚫</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>Documentos vencidos ÔÇö no pod├®s ponerte En L├¡nea</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Actualiz├í tus documentos en Perfil ÔåÆ Configuraci├│n</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>Documentos vencidos — no podés ponerte En Línea</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Actualizá tus documentos en Perfil → Configuración</p>
               </div>
             </div>
           )}
           {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>­ƒôï</span>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📋</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>No pod├®s ponerte En L├¡nea a├║n</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Ten├®s {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobaci├│n. Revis├í Configuraci├│n.</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>No podés ponerte En Línea aún</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.</p>
               </div>
             </div>
           )}
           {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fffbeb', border: '1.5px solid #fcd34d', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>ÔÜá´©Å</span>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#92400e' }}>Documentos pr├│ximos a vencer</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b45309' }}>Actualiz├í antes de que venzan para seguir operando</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#92400e' }}>Documentos próximos a vencer</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b45309' }}>Actualizá antes de que venzan para seguir operando</p>
               </div>
             </div>
           )}
@@ -697,53 +697,53 @@ export default function DriverDashboard() {
             <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
-                  ­ƒôª Serv. activos ┬À ­ƒôì{pickupRangeKm} km recogida ┬À ­ƒÜÜ{deliveryRangeKm} km entrega
+                  📦 Serv. activos · 📍{pickupRangeKm} km recogida · 🚚{deliveryRangeKm} km entrega
                 </span>
                 <button
                   type="button"
                   onClick={() => setFilterOpen(true)}
                   style={{ background: 'none', border: 'none', color: '#C8960A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                 >
-                  Editar ÔåÆ
+                  Editar →
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {([
-                  { key: 'moto_envios',       label: 'Moto Env├¡os',      icon: '­ƒÅì´©Å' },
-                  { key: 'auto_envios',       label: 'Auto Env├¡os',      icon: '­ƒÜù' },
-                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes',icon: '­ƒøÁ' },
-                  { key: 'camion_fletes',     label: 'Cami├│n Fletes',    icon: '­ƒÜø' },
+                  { key: 'moto_envios',       label: 'Moto Envíos',      icon: '🏍️' },
+                  { key: 'auto_envios',       label: 'Auto Envíos',      icon: '🚗' },
+                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes',icon: '🛵' },
+                  { key: 'camion_fletes',     label: 'Camión Fletes',    icon: '🚛' },
                 ] as { key: string; label: string; icon: string }[]).filter(s => serviceFilters[s.key]).map(s => (
                   <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
                     {s.icon} {s.label}
                   </span>
                 ))}
                 {!Object.values(serviceFilters).some(v => v) && (
-                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ning├║n servicio activo ÔÇö abr├¡ el filtro para activar.</span>
+                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ningún servicio activo — abrí el filtro para activar.</span>
                 )}
               </div>
             </div>
           )}
 
           {/* Solicitudes pendientes */}
-          {pendingOrders.filter(o => !dismissedOrders.has(o.id)).length > 0 && (
+          {pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0 && (
             <div style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>
                   📦 Solicitudes 
                   <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
-                    {pendingOrders.filter(o => !dismissedOrders.has(o.id)).length}
+                    {pendingOrders.filter(o => !dismissedHome.has(o.id)).length}
                   </span>
                 </span>
                 <Link href="/driver/deliveries" style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Ver todo →</Link>
               </div>
-              {pendingOrders.filter(o => !dismissedOrders.has(o.id)).map(order => (
+              {pendingOrders.filter(o => !dismissedHome.has(o.id)).map(order => (
                 <div key={order.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 14, padding: '10px 12px', marginBottom: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.83rem', flex: 1, marginRight: 8 }}>{order.pickup_address?.slice(0, 28) || 'Recogida'}</span>
-                    <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(order.suggested_price||0).toLocaleString()}</span>
+                    <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(order.suggested_price || 0).toLocaleString()}</span>
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>→ {order.delivery_address?.slice(0, 28) || '—'}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>→ {order.delivery_address?.slice(0, 28) || '—'}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input
                       type="number"
@@ -758,7 +758,7 @@ export default function DriverDashboard() {
                       style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0, opacity: !offerAmounts[order.id] ? 0.5 : 1 }}
                     >{sendingOfferId === order.id ? '...' : 'Ofrecer'}</button>
                     <button
-                      onClick={() => setDismissedOrders(prev => new Set([...prev, order.id]))}
+                      onClick={() => setDismissedHome(prev => new Set([...prev, order.id]))}
                       style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', cursor: 'pointer', background: 'none', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}
                     >×</button>
                   </div>
@@ -780,11 +780,11 @@ export default function DriverDashboard() {
             </div>
           ) : (
           <div className="tuki-stats-grid">
-            {/* Ganancias Hoy ÔÇö full width, first so always visible */}
+            {/* Ganancias Hoy — full width, first so always visible */}
             <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
               onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}>
-              <span className="tuki-stat-icon">­ƒÆ░</span>
+              <span className="tuki-stat-icon">💰</span>
               <div className="tuki-stat-value">
                 {earningsData.dia.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
               </div>
@@ -808,12 +808,12 @@ export default function DriverDashboard() {
             ))}
             {/* Entregados + Fallidos side by side */}
             <Link href="/driver/delivered" className="tuki-stat-card">
-              <span className="tuki-stat-icon">Ô£à</span>
+              <span className="tuki-stat-icon">✅</span>
               <div className="tuki-stat-value">{deliveredCount}</div>
               <div className="tuki-stat-label">Entregados Hoy</div>
             </Link>
             <Link href="/driver/failed" className="tuki-stat-card">
-              <span className="tuki-stat-icon">ÔØî</span>
+              <span className="tuki-stat-icon">❌</span>
               <div className="tuki-stat-value">{failedCount}</div>
               <div className="tuki-stat-label">Fallidos Hoy</div>
             </Link>
@@ -825,4 +825,3 @@ export default function DriverDashboard() {
     </>
   );
 }
-

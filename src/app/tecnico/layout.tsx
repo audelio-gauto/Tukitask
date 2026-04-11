@@ -13,11 +13,11 @@ import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '../driver/components/BottomNav';
 
 const TECNICO_TABS = [
-  { href: '/tecnico',                   icon: '­ƒÅá', label: 'Inicio'    },
-  { href: '/tecnico/ofertas',           icon: '­ƒöº', label: 'Ofertas'   },
-  { href: '/tecnico/citas',             icon: '­ƒôà', label: 'Citas'     },
-  { href: '/tecnico/ganancias',         icon: '­ƒôè', label: 'Ganancias' },
-  { href: '/tecnico/settings',          icon: 'ÔÜÖ´©Å', label: 'Config'    },
+  { href: '/tecnico',                   icon: '🏠', label: 'Inicio'    },
+  { href: '/tecnico/ofertas',           icon: '🔧', label: 'Ofertas'   },
+  { href: '/tecnico/citas',             icon: '📅', label: 'Citas'     },
+  { href: '/tecnico/ganancias',         icon: '📊', label: 'Ganancias' },
+  { href: '/tecnico/settings',          icon: '⚙️', label: 'Config'    },
 ];
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
@@ -37,14 +37,14 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
     let mounted = true;
 
     async function checkAccess() {
-      // getSession() reads from localStorage ÔÇö no network call, very fast
+      // getSession() reads from localStorage — no network call, very fast
       const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
       if (!session?.user) { router.push('/auth'); return; }
       const userEmail = session.user.email || '';
       setEmail(userEmail);
 
-      // Fast path: role verified recently ÔÇö skip network check
+      // Fast path: role verified recently — skip network check
       const cachedRole = getCachedRole(userEmail);
       if (!['servicio', 'tecnico'].includes(cachedRole ?? '')) {
         try {
@@ -67,7 +67,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         setRole(cachedRole);
       }
 
-      // Read profile from cache immediately ÔÇö avoids showing email prefix on load
+      // Read profile from cache immediately — avoids showing email prefix on load
       try {
         const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
         if (cached?.displayName) setDisplayName(cached.displayName);
@@ -78,7 +78,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       }
       setChecking(false); // show content BEFORE profile load
 
-      // Load profile in background ÔÇö updates state and refreshes cache
+      // Load profile in background — updates state and refreshes cache
       Promise.all([
         fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
         fetch(`/api/tecnico/settings?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
@@ -102,7 +102,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
     checkAccess();
 
-    // Only react to SIGNED_OUT ÔÇö token refresh fires SIGNED_IN and caused re-auth flash
+    // Only react to SIGNED_OUT — token refresh fires SIGNED_IN and caused re-auth flash
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') router.push('/auth');
     });
