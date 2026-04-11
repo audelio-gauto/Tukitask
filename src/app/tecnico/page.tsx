@@ -1,9 +1,807 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
-export default function TecnicoRoot() {
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useDriverContext } from '../driver/context';
+import { authFetch } from '@/lib/authFetch';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+
+// ÔöÇÔöÇ Haversine distance ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
+
+// ÔöÇÔöÇ Service catalogue (must mirror servicio/page.tsx) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+const SERVICES_MUJER = [
+  { key: 'limpieza',         label: 'Limpieza',          icon: '­ƒº╣' },
+  { key: 'niera',            label: 'Ni├▒era',            icon: '­ƒæÂ' },
+  { key: 'cocina',           label: 'Cocina',            icon: '­ƒì│' },
+  { key: 'eventos',          label: 'Eventos',           icon: '­ƒÄë' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '­ƒÉ¥' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '­ƒæ┤' },
+  { key: 'gestor',           label: 'Gestor',            icon: '­ƒôï' },
+  { key: 'otros',            label: 'Otros',             icon: 'Ô£¿' },
+];
+const SERVICES_HOMBRE = [
+  { key: 'aire_split',       label: 'Tec Aire Split',    icon: 'ÔØä´©Å' },
+  { key: 'electrico',        label: 'Serv. El├®ctrico',   icon: 'ÔÜí' },
+  { key: 'plomeria',         label: 'Serv. Plomer├¡a',    icon: '­ƒöº' },
+  { key: 'cerrajeria',       label: 'Serv. Cerrajer├¡a',  icon: '­ƒöæ' },
+  { key: 'limpieza',         label: 'Limpieza',          icon: '­ƒº╣' },
+  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '­ƒæ┤' },
+  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '­ƒÉ¥' },
+  { key: 'gestor',           label: 'Gestor',            icon: '­ƒôï' },
+  { key: 'otros',            label: 'Otros',             icon: 'Ô£¿' },
+];
+
+function getCatalogueForGender(gender: string) {
+  if (gender === 'mujer')  return SERVICES_MUJER;
+  if (gender === 'hombre') return SERVICES_HOMBRE;
+  // No gender set: show all unique services
+  const seen = new Set<string>();
+  return [...SERVICES_MUJER, ...SERVICES_HOMBRE].filter(s => {
+    if (seen.has(s.key)) return false;
+    seen.add(s.key);
+    return true;
+  });
+}
+
+function buildDefaultFilters(catalogue: { key: string }[]) {
+  const f: Record<string, boolean> = {};
+  catalogue.forEach(s => { f[s.key] = true; });
+  return f;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 13) return 'Buen d├¡a';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+export default function TecnicoDashboard() {
   const router = useRouter();
-  useEffect(() => { router.replace('/tecnico/ofertas'); }, [router]);
-  return null;
+  const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string) => {
+    if (toastTmRef.current) clearTimeout(toastTmRef.current);
+    setToast(msg);
+    toastTmRef.current = setTimeout(() => setToast(null), 2400);
+  }, []);
+
+  // ÔöÇÔöÇ Availability ÔÇô persisted ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [available, setAvailable] = useState(false);
+  // Auto-countdown: when online on dashboard, 20s to disconnect or auto-redirect to offers
+  const [onlineCountdown, setOnlineCountdown] = useState(20);
+  const onlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopOnlineCountdown = useCallback(() => {
+    if (onlineTimerRef.current) { clearInterval(onlineTimerRef.current); onlineTimerRef.current = null; }
+    setOnlineCountdown(20);
+  }, []);
+
+  useEffect(() => {
+    if (!available) { stopOnlineCountdown(); return; }
+    setOnlineCountdown(20);
+    onlineTimerRef.current = setInterval(() => {
+      setOnlineCountdown(prev => {
+        if (prev <= 1) {
+          stopOnlineCountdown();
+          router.push('/tecnico/ofertas');
+          return 20;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { stopOnlineCountdown(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available]);
+  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // ÔöÇÔöÇ Document expiry alerts ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
+  const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
+  useEffect(() => {
+    if (!email) return;
+    const criticalKeys = ['cedula_frente', 'antecedentes'];
+    authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(email)}`)
+      .then(r => r.json())
+      .then(j => {
+        const expired: string[] = [];
+        const soon: string[] = [];
+        const notApproved: string[] = [];
+        const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
+        const docs = j.docs || [];
+        let cApproved = 0, cPending = 0, cRejected = 0;
+        for (const d of docs) {
+          if (d.status === 'approved') cApproved++;
+          else if (d.status === 'pending') cPending++;
+          else if (d.status === 'rejected') cRejected++;
+          if (d.status !== 'approved') notApproved.push(d.doc_type);
+          if (!criticalKeys.includes(d.doc_type)) continue;
+          if (!d.expires_at) continue;
+          const ms = new Date(d.expires_at).getTime() - Date.now();
+          if (ms <= 0) expired.push(d.doc_type);
+          else if (ms <= TEN_DAYS) soon.push(d.doc_type);
+        }
+        setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, 4 - docs.length) });
+        setDocAlerts({ expired, soon, notApproved });
+        if (expired.length > 0 || notApproved.length > 0) {
+          // Force offline while docs are not fully approved
+          setAvailable(false);
+          try {
+            localStorage.setItem('tecnico_available', 'false');
+            localStorage.setItem('tecnico_doc_blocked', 'true');
+          } catch {}
+        } else {
+          // All docs approved ÔÇö if the system previously forced them offline, auto-restore connection
+          try {
+            const wasDocBlocked = localStorage.getItem('tecnico_doc_blocked') === 'true';
+            if (wasDocBlocked) {
+              setAvailable(true);
+              localStorage.setItem('tecnico_available', 'true');
+              localStorage.removeItem('tecnico_doc_blocked');
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [email]);
+
+  // ÔöÇÔöÇ Gender loaded from profile ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [gender, setGender] = useState<'hombre' | 'mujer' | ''>('');
+
+  // ÔöÇÔöÇ Dashboard stats ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [statsData, setStatsData] = useState({
+    ofertasActivas:   0,
+    citasConfirmadas: 0,
+    tasaAceptacion:   null as number | null,
+    gananciasHoy:     0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // ÔöÇÔöÇ Filter state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [filterOpen, setFilterOpen]     = useState(false);
+  const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
+  const [rangoKm, setRangoKm]           = useState(20);
+
+  // ÔöÇÔöÇ Wallet balance ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!email) return;
+    authFetch('/api/wallet')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.balance !== undefined) setWalletBalance(Number(d.balance)); })
+      .catch(() => {});
+  }, [email]);
+
+  // Solicitudes de servicio pendientes en panel principal
+  const [pendingJobs, setPendingJobs] = useState<any[]>([]);
+  const [jobOfferPrices, setJobOfferPrices] = useState<Record<string, string>>({});
+  const [sendingJobId, setSendingJobId] = useState<string | null>(null);
+  const [dismissedJobs, setDismissedJobs] = useState<Set<string>>(new Set());
+
+  const loadPendingJobs = useCallback(() => {
+    if (!email) return;
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`)
+      .then(r => r.json())
+      .then(data => {
+        const arr = Array.isArray(data) ? data.filter((j: any) => !j.my_offer) : [];
+        setPendingJobs(arr);
+        setJobOfferPrices(prev => {
+          const next = { ...prev };
+          arr.forEach((j: any) => { if (!(j.id in next)) next[j.id] = String(j.client_initial_price ?? ''); });
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [email]);
+
+  useEffect(() => {
+    loadPendingJobs();
+    const iv = setInterval(loadPendingJobs, 8_000);
+    const ch = supabase.channel('tecnico-home-pending')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)
+      .subscribe();
+    return () => { clearInterval(iv); supabase.removeChannel(ch); };
+  }, [loadPendingJobs]);
+
+  const sendTecnicoOffer = async (jobId: string) => {
+    const price = Number(jobOfferPrices[jobId]);
+    if (!price || !email || !!sendingJobId) return;
+    setSendingJobId(jobId);
+    try {
+      const res = await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send_offer', jobId,
+          tecnicoEmail: email,
+          tecnicoName: displayName || null,
+          tecnicoPhoto: profilePhoto || null,
+          tecnicoRating: avgRating > 0 ? avgRating : null,
+          proposedPrice: price,
+          note: null, distanceKm: null,
+        }),
+      });
+      const json = await res.json();
+      if (json.offer) setDismissedJobs(prev => new Set([...prev, jobId]));
+    } catch {}
+    setSendingJobId(null);
+  };
+  const isDragging = useRef(false);
+  const startY = useRef(0);
+  const startTranslate = useRef(0);
+
+  const isDesktop = useCallback(() => window.matchMedia('(min-width: 768px)').matches, []);
+
+  const getTranslateY = useCallback(() => {
+    if (!sheetRef.current) return 0;
+    const st = window.getComputedStyle(sheetRef.current);
+    const matrix = new DOMMatrix(st.transform);
+    return matrix.m42;
+  }, []);
+
+  const setSheet = useCallback((state: 'collapsed' | 'half' | 'full') => {
+    if (isDesktop()) return;
+    setSheetState(state);
+  }, [isDesktop]);
+
+  // Attach drag handlers to the sheet
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+
+    function onStart(e: TouchEvent | MouseEvent) {
+      if (isDesktop()) return;
+      const tag = ((e.target as HTMLElement)?.tagName || '').toLowerCase();
+      if (['button', 'input', 'textarea', 'select', 'a'].includes(tag)) return;
+      isDragging.current = true;
+      startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      startTranslate.current = getTranslateY();
+      sheet!.style.transition = 'none';
+    }
+
+    function onMove(e: TouchEvent | MouseEvent) {
+      if (!isDragging.current) return;
+      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const delta = currentY - startY.current;
+      const newTranslate = Math.max(0, startTranslate.current + delta);
+      sheet!.style.transform = `translateY(${newTranslate}px)`;
+    }
+
+    function onEnd() {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      sheet!.style.transition = '';
+      const finalTranslate = getTranslateY();
+      const viewH = window.innerHeight;
+      if (finalTranslate > viewH * 0.6) {
+        setSheet('collapsed');
+      } else if (finalTranslate > viewH * 0.3) {
+        setSheet('half');
+      } else {
+        setSheet('full');
+      }
+    }
+
+    sheet.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    sheet.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+
+    const handleResize = () => {
+      if (isDesktop()) {
+        sheet.style.transform = '';
+      } else {
+        setSheet('half');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      sheet.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      sheet.removeEventListener('mousedown', onStart);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [getTranslateY, isDesktop, setSheet]);
+
+  // Bootstrap from localStorage + API on mount
+  useEffect(() => {
+    if (!isDesktop()) setSheetState('half');
+
+    try {
+      const savedAvail   = localStorage.getItem('tecnico_available');
+      const savedRango   = localStorage.getItem('tecnico_rango_km');
+      const savedFilters = localStorage.getItem('tecnico_service_filters');
+      if (savedAvail !== null)    setAvailable(savedAvail === 'true');
+      if (savedRango)             setRangoKm(Number(savedRango));
+      if (savedFilters)           setServiceFilters(JSON.parse(savedFilters));
+    } catch {}
+
+    if (!email) return;
+    fetch(`/api/tecnico/settings?email=${encodeURIComponent(email)}`)
+      .then(r => r.json())
+      .then(json => {
+        const g = (json?.settings?.gender || '') as 'hombre' | 'mujer' | '';
+        setGender(g);
+        // If no filters saved yet, build defaults from profile gender
+        try {
+          if (!localStorage.getItem('tecnico_service_filters')) {
+            setServiceFilters(buildDefaultFilters(getCatalogueForGender(g)));
+          }
+        } catch {}
+        // Merge server-saved filters (overwrite local if they exist on server)
+        if (json?.settings?.accepted_services) {
+          setServiceFilters(prev => ({ ...prev, ...json.settings.accepted_services }));
+        }
+        if (json?.settings?.pickup_range) setRangoKm(Number(json.settings.pickup_range));
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email]);
+
+  // When gender resolves, ensure filter keys exist for the new catalogue
+  useEffect(() => {
+    if (!gender) return;
+    const catalogue = getCatalogueForGender(gender);
+    setServiceFilters(prev => {
+      const defaults = buildDefaultFilters(catalogue);
+      Object.keys(defaults).forEach(k => { if (prev[k] !== undefined) defaults[k] = prev[k]; });
+      return defaults;
+    });
+  }, [gender]);
+
+  const toggleFilter = (key: string) => {
+    setServiceFilters(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem('tecnico_service_filters', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const applyFilters = () => {
+    try {
+      localStorage.setItem('tecnico_service_filters', JSON.stringify(serviceFilters));
+      localStorage.setItem('tecnico_rango_km', String(rangoKm));
+    } catch {}
+    if (email) {
+      authFetch('/api/tecnico/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, accepted_services: serviceFilters, pickup_range: rangoKm }),
+      }).catch(() => {});
+    }
+    setFilterOpen(false);
+  };
+
+  // Load dashboard stats from API (re-fetch every 30 s when available)
+  useEffect(() => {
+    if (!email) return;
+    let cancelled = false;
+    const load = () => {
+      authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&stats=true`)
+        .then(r => r.json())
+        .then(json => {
+          if (cancelled) return;
+          if (json?.stats) setStatsData(json.stats);
+          setStatsLoading(false);
+        })
+        .catch(() => { if (!cancelled) setStatsLoading(false); });
+    };
+    load();
+    const iv = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [email]);
+
+  const catalogue      = getCatalogueForGender(gender);
+  const hasActiveFilter = Object.values(serviceFilters).some(v => !v);
+  const enabledCount   = catalogue.filter(s => serviceFilters[s.key]).length;
+
+  const fmtGs = (n: number) =>
+    n === 0 ? '0 Gs.' : `${n.toLocaleString('es-PY')} Gs.`;
+
+  const stats = [
+    {
+      label: 'Pedidos',
+      value: statsLoading ? 'ÔÇª' : statsData.ofertasActivas + statsData.citasConfirmadas,
+      href: '/tecnico/ofertas',
+      icon: '­ƒôï',
+    },
+    {
+      label: 'Citas Confirmadas',
+      value: statsLoading ? 'ÔÇª' : statsData.citasConfirmadas,
+      href: '/tecnico/citas',
+      icon: '­ƒôà',
+    },
+    {
+      label: 'Tasa Aceptaci├│n',
+      value: statsLoading ? 'ÔÇª' : (statsData.tasaAceptacion !== null ? `${statsData.tasaAceptacion}%` : 'ÔÇö'),
+      href: '/tecnico/aceptacion',
+      icon: '­ƒÅå',
+    },
+    {
+      label: 'Ganancias Hoy',
+      value: statsLoading ? 'ÔÇª' : fmtGs(statsData.gananciasHoy),
+      href: '/tecnico/ganancias',
+      icon: '­ƒÆ░',
+    },
+  ];
+
+  return (
+    <>
+      <div className="tuki-map">
+        <DriverMap onLocate={() => {}} />
+      </div>
+
+      {/* Profile pill ÔÇö top left */}
+      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+              {displayName?.[0]?.toUpperCase() || '­ƒæñ'}
+            </div>
+          )}
+          {avgRating > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(37,99,235,0.18)', borderRadius: 6, padding: '1px 6px' }}>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem' }}>Ôÿà</span>
+              <span style={{ color: '#2563EB', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+        <div style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, lineHeight: 1.2 }}>{getGreeting()}</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'T├®cnico'}</div>
+        </div>
+      </div>
+
+      {/* ÔöÇÔöÇ Men├║ ÔöÇÔöÇ ÔÇö top right */}
+      <button className="tuki-float-btn menu" aria-label="Men├║" onClick={openDrawer}>
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Wallet balance pill ÔÇö centrada top */}
+      <Link href="/tecnico/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
+        <span className="tuki-wallet-pill-amount">
+          {walletBalance !== null
+            ? `${Number(walletBalance).toLocaleString('es-PY')} Ôé▓`
+            : 'Ôé▓ ...'}
+        </span>
+        <span className="tuki-wallet-pill-label">Billetera</span>
+      </Link>
+
+      {/* ÔöÇÔöÇ Filtro button ÔöÇÔöÇ */}
+      <button
+        className={`tuki-float-btn filter${hasActiveFilter ? ' has-filter' : ''}`}
+        aria-label="Filtrar servicios"
+        onClick={() => setFilterOpen(true)}
+        style={{ bottom: 'calc(50vh + 16px)' }}
+      >
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round">
+          <path d="M3 6h18M7 12h10M11 18h2" />
+        </svg>
+        {hasActiveFilter && (
+          <span style={{
+            position: 'absolute', top: 4, right: 4,
+            width: 8, height: 8, borderRadius: '50%',
+            background: '#f59e0b', border: '1.5px solid #fff',
+          }} />
+        )}
+      </button>
+
+      {/* Online countdown ÔÇö InDrive-style bottom progress bar */}
+      {available && (
+        <div style={{
+          position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
+          zIndex: 9990,
+          background: '#1C1C2E',
+          borderTop: '1px solid rgba(245,197,24,0.2)',
+        }}>
+          {/* Draining progress bar */}
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{
+              height: '100%',
+              width: `${(onlineCountdown / 20) * 100}%`,
+              background: 'linear-gradient(90deg,#F5C518,#e0b015)',
+              transition: 'width 1s linear',
+              borderRadius: '0 2px 2px 0',
+            }} />
+          </div>
+          {/* Content row */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.65rem 1.1rem 1rem',
+            gap: 12,
+          }}>
+            <div>
+              <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                Redirigiendo a SolicitudesÔÇª
+              </p>
+              <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>
+                Desconect├í el toggle para cancelar
+              </p>
+            </div>
+            <div style={{
+              minWidth: 48, height: 48, borderRadius: '50%',
+              border: '3px solid #F5C518',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#F5C518', lineHeight: 1 }}>
+                {onlineCountdown}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <div className="tuki-toast">{toast}</div>}
+
+      {/* ÔöÇÔöÇ Filter Modal ÔöÇÔöÇ */}
+      {filterOpen && (
+        <>
+          <div className="driver-filter-overlay" onClick={() => setFilterOpen(false)} />
+          <div className="driver-filter-modal">
+            <div className="driver-filter-header">
+              <h3>Servicios que acepto</h3>
+              <button className="driver-filter-close" onClick={() => setFilterOpen(false)} aria-label="Cerrar">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Gender indicator */}
+            {gender && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 12px', borderBottom: '1px solid #f1f5f9', marginBottom: 8 }}>
+                <span style={{ fontSize: '1.2rem' }}>{gender === 'hombre' ? '­ƒæ¿' : '­ƒæ®'}</span>
+                <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                  Perfil: <strong style={{ color: '#F5C518' }}>{gender === 'hombre' ? 'Hombre' : 'Mujer'}</strong>
+                  {' ┬À '}{enabledCount}/{catalogue.length} activos
+                </span>
+              </div>
+            )}
+
+            <p className="driver-filter-subtitle">Activ├í o desactiv├í los servicios que quer├®s recibir</p>
+
+            <div className="driver-filter-list">
+              {catalogue.map(item => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`driver-filter-item${serviceFilters[item.key] ? ' active' : ''}`}
+                  onClick={() => toggleFilter(item.key)}
+                >
+                  <span className="driver-filter-item-icon">{item.icon}</span>
+                  <div className="driver-filter-item-info">
+                    <span className="driver-filter-item-label">{item.label}</span>
+                  </div>
+                  <span className={`driver-filter-toggle${serviceFilters[item.key] ? ' on' : ''}`}>
+                    <span className="driver-filter-toggle-knob" />
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Rango de trabajo slider */}
+            <div style={{ padding: '12px 4px 4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>
+                  ­ƒôì Rango de trabajo
+                </label>
+                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#F5C518' }}>{rangoKm} km</span>
+              </div>
+              <input
+                type="range" min={1} max={100} step={1} value={rangoKm}
+                onChange={e => setRangoKm(Number(e.target.value))}
+                style={{ width: '100%', accentColor: '#F5C518' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
+                <span>1 km</span><span>100 km</span>
+              </div>
+            </div>
+
+            <button className="driver-filter-done" onClick={applyFilters}>
+              Aplicar filtros
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ÔöÇÔöÇ Bottom sheet ÔöÇÔöÇ */}
+      <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
+        <div className="tuki-sheet-handle"><span className="tuki-sheet-bar" /></div>
+        <div className="tuki-sheet-content">
+
+          {/* Availability toggle */}
+          <div className="tuki-availability">
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
+              <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
+                {available ? '­ƒÆ░ Hacer money' : '­ƒÆ© Money off'}
+              </span>
+            </div>
+            <label className="tuki-toggle">
+              <input type="checkbox" checked={available} onChange={() => {
+                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
+                if (!available) {
+                  setAvailable(true);
+                  try { localStorage.setItem('tecnico_available', 'true'); } catch {}
+                  showToast('­ƒÆ░ ┬íOnline! Buscando solicitudesÔÇª');
+                  router.push('/tecnico/ofertas');
+                } else {
+                  // Going offline ÔåÆ stop countdown and stay on dashboard
+                  stopOnlineCountdown();
+                  setAvailable(false);
+                  try { localStorage.setItem('tecnico_available', 'false'); } catch {}
+                  showToast('­ƒÆ© Offline ÔÇö descansando');
+                }
+              }} />
+              <span className="tuki-toggle-slider" />
+            </label>
+          </div>
+
+          {/* Mis documentos status card */}
+          {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
+            <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
+              <div style={{
+                padding: '0.85rem 1rem', borderRadius: 14,
+                background: (docAlerts.expired.length > 0 || docCounts.rejected > 0)
+                  ? 'linear-gradient(135deg,#fee2e2,#fecaca)'
+                  : 'linear-gradient(135deg,#fefce8,#fef3c7)',
+                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? '#fca5a5' : '#fcd34d'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.5rem' }}>
+                    {docAlerts.expired.length > 0 ? '­ƒÜ½' : docCounts.rejected > 0 ? 'ÔØî' : '­ƒôÄ'}
+                  </span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                      {docAlerts.expired.length > 0
+                        ? 'Documentos vencidos ÔÇö no pod├®s conectarte'
+                        : `${docCounts.approved}/4 aprobados${docCounts.pending > 0 ? ` ┬À ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` ┬À ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` ┬À ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' ┬À pr├│ximos a vencer' : ''}`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>ÔÇ║</span>
+              </div>
+            </Link>
+          )}
+
+          {/* Active services summary chip strip */}
+          {catalogue.length > 0 && (
+            <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
+                  ­ƒøá Serv. activos ┬À {rangoKm} km
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen(true)}
+                  style={{ background: 'none', border: 'none', color: '#C8960A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                >
+                  Editar ÔåÆ
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {catalogue.filter(s => serviceFilters[s.key]).map(s => (
+                  <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
+                    {s.icon} {s.label}
+                  </span>
+                ))}
+                {enabledCount === 0 && (
+                  <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Ning├║n servicio activo ÔÇö abr├¡ el filtro para activar.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Solicitudes de servicio pendientes */}
+          {pendingJobs.filter(j => !dismissedJobs.has(j.id)).length > 0 && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>
+                  🔧 Solicitudes 
+                  <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
+                    {pendingJobs.filter(j => !dismissedJobs.has(j.id)).length}
+                  </span>
+                </span>
+                <Link href="/tecnico/ofertas" style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Ver todo →</Link>
+              </div>
+              {pendingJobs.filter(j => !dismissedJobs.has(j.id)).map(job => (
+                <div key={job.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 14, padding: '10px 12px', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.83rem', flex: 1, marginRight: 8 }}>
+                      {job.service_type ? (job.service_type.replace(/_/g, ' ')).charAt(0).toUpperCase() + (job.service_type.replace(/_/g, ' ')).slice(1) : 'Servicio'}
+                    </span>
+                    {job.client_initial_price && (
+                      <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(job.client_initial_price).toLocaleString()}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>📍 {job.address?.slice(0, 32) || '—'}</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="number"
+                      placeholder="Tu precio Gs"
+                      value={jobOfferPrices[job.id] || ''}
+                      onChange={e => setJobOfferPrices(prev => ({ ...prev, [job.id]: e.target.value }))}
+                      style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.83rem', padding: '7px 10px', outline: 'none', minWidth: 0 }}
+                    />
+                    <button
+                      onClick={() => sendTecnicoOffer(job.id)}
+                      disabled={!jobOfferPrices[job.id] || !!sendingJobId}
+                      style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0, opacity: !jobOfferPrices[job.id] ? 0.5 : 1 }}
+                    >{sendingJobId === job.id ? '...' : 'Ofrecer'}</button>
+                    <button
+                      onClick={() => setDismissedJobs(prev => new Set([...prev, job.id]))}
+                      style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', cursor: 'pointer', background: 'none', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}
+                    >×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {statsLoading ? (
+            <div className="tuki-stats-grid">
+              {[0,1,2,3].map(i => (
+                <div key={i} className="tuki-stat-card">
+                  <div className="tuki-skeleton" style={{ width: 28, height: 28, borderRadius: '50%', marginBottom: 8 }} />
+                  <div className="tuki-skeleton" style={{ width: '60%', height: 24, marginBottom: 6 }} />
+                  <div className="tuki-skeleton" style={{ width: '80%', height: 14 }} />
+                </div>
+              ))}
+            </div>
+          ) : (
+          <div className="tuki-stats-grid">
+            {stats.map((s) => (
+              <Link key={s.label} href={s.href} className="tuki-stat-card">
+                <span className="tuki-stat-icon">{s.icon}</span>
+                <div className="tuki-stat-value">{s.value}</div>
+                <div className="tuki-stat-label">{s.label}</div>
+              </Link>
+            ))}
+          </div>
+          )}
+
+          <div style={{ marginTop: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones R├ípidas</h2>
+            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr 1fr' }}>
+              <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)}>­ƒøá Mis Servicios</button>
+              <Link href="/tecnico/ofertas" className="tuki-btn tuki-btn-success">Ver Ofertas</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </>
+  );
 }
