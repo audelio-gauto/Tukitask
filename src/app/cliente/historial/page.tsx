@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useClientContext } from '../context';
 import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
+import ChatModal from '@/components/ChatModal';
 import { authFetch } from '@/lib/authFetch';
 
 interface Order {
@@ -73,6 +74,7 @@ export default function ClienteHistorialPage() {
     reportedEmail: string; reportedRole: 'driver' | 'tecnico';
     reportedName: string | null; referenceType: 'order' | 'job'; referenceId: string;
   } | null>(null);
+  const [chatModal, setChatModal] = useState<{ orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null } | null>(null);
 
   const loadHistory = useCallback(async () => {
     if (!email) return;
@@ -237,9 +239,38 @@ export default function ClienteHistorialPage() {
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
-                      <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                        📍 Ver en inicio
-                      </Link>
+                      {/* Route A → B */}
+                      {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
+                        <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
+                              <span style={{ width: 2, height: 20, background: 'rgba(255,255,255,0.18)', display: 'block' }} />
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>Punto A</div>
+                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).pickup_address || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>Punto B</div>
+                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).delivery_address || '—'}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Link href="/cliente" style={{ flex: 1, display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
+                          📍 Ver en inicio
+                        </Link>
+                        <button
+                          onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
+                          style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)', background: 'rgba(245,197,24,0.1)', color: '#F5C518', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                          title="Chat 24h"
+                        >💬</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -301,7 +332,7 @@ export default function ClienteHistorialPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ fontSize: '1.4rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
                               {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '✅ Entregado' : '❌ Cancelado'}
@@ -314,6 +345,37 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
+                      {/* Route A → B */}
+                      {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
+                        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
+                              <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
+                              <span style={{ width: 2, height: 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                              <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div>
+                                <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
+                                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).pickup_address || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
+                                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).delivery_address || '—'}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Chat 24h */}
+                      {(item.data as Order).driver_name && (
+                        <button
+                          onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
+                          style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                        >
+                          💬 Chat 24h con el driver
+                        </button>
+                      )}
                       {/* Driver rating */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_name && (
                         localDriverRatings[item.data.id] != null || (item.data as Order).driver_rating != null ? (
@@ -409,6 +471,19 @@ export default function ClienteHistorialPage() {
           referenceType={reportModal.referenceType}
           referenceId={reportModal.referenceId}
           onClose={() => setReportModal(null)}
+        />
+      )}
+
+      {chatModal && email && (
+        <ChatModal
+          open={true}
+          onClose={() => setChatModal(null)}
+          orderId={chatModal.orderId}
+          jobId={chatModal.jobId}
+          myEmail={email}
+          myName={null}
+          otherName={chatModal.otherName}
+          otherPhoto={chatModal.otherPhoto}
         />
       )}
     </div>
