@@ -575,8 +575,8 @@ export default function TecnicoDashboard() {
           {/* Availability toggle */}
           <div className="tuki-availability">
             <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--tuki-text-main)' }}>Estado</h3>
-              <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`}>
+              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
+              <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
                 {available ? '💰 Hacer money' : '💸 Money off'}
               </span>
             </div>
