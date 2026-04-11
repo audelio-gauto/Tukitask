@@ -15,7 +15,7 @@ const TECNICO_TABS = [
   { href: '/tecnico',                   icon: '🏠', label: 'Inicio'    },
   { href: '/tecnico/ofertas',           icon: '🔧', label: 'Ofertas'   },
   { href: '/tecnico/citas',             icon: '📅', label: 'Citas'     },
-  { href: '/tecnico/billetera',         icon: '💰', label: 'Billetera' },
+  { href: '/tecnico/billetera',         icon: '�', label: 'Ganancias' },
   { href: '/tecnico/settings',          icon: '⚙️', label: 'Config'    },
 ];
 

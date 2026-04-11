@@ -13,10 +13,10 @@ import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from './components/BottomNav';
 
 const DRIVER_TABS = [
-  { href: '/driver',                  icon: '🏠', label: 'Inicio'    },
+  { href: '/driver',                  icon: '🏠', label: 'Inicio'     },
   { href: '/driver/deliveries',       icon: '📦', label: 'Pedidos'   },
   { href: '/driver/historial-ofertas',icon: '📋', label: 'Historial' },
-  { href: '/driver/billetera',        icon: '💰', label: 'Billetera' },
+  { href: '/driver/billetera',        icon: '📊', label: 'Ganancias' },
   { href: '/driver/settings',         icon: '⚙️', label: 'Config'    },
 ];
 

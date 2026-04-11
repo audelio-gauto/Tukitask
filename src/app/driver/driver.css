@@ -480,7 +480,7 @@ input:checked + .tuki-toggle-slider:before {
   color: var(--tuki-primary);
   text-decoration: none;
 }
-.tuki-normal-content { padding: 1rem; overflow-y: auto; height: calc(100vh - 72px); }
+.tuki-normal-content { padding: 1rem 1rem calc(1rem + var(--tuki-nav-h, 64px)); overflow-y: auto; height: calc(100vh - 72px); -webkit-overflow-scrolling: touch; }
 
 /* Loading spinner */
 .tuki-spinner {
