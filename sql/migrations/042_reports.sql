@@ -31,5 +31,10 @@ CREATE INDEX IF NOT EXISTS reports_created_at_idx   ON reports(created_at DESC);
 -- RLS: enable but allow service role full access (admin API uses service role)
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 -- Users cannot read others' reports directly; all access goes through API
-CREATE POLICY "service_role_all" ON reports
-  FOR ALL TO service_role USING (true) WITH CHECK (true);
+DO $$
+BEGIN
+  CREATE POLICY "service_role_all" ON reports
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN
+  NULL; -- policy already exists, skip
+END $$;

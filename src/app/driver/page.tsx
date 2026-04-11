@@ -106,7 +106,6 @@ export default function DriverDashboard() {
 
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
-  const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
   const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
@@ -149,15 +148,14 @@ export default function DriverDashboard() {
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
   }, [loadPendingOrders]);
 
-  const sendDriverOffer = async (orderId: string) => {
-    const amount = Number(offerAmounts[orderId]);
+  const sendDriverOffer = async (orderId: string, amount: number, note: string) => {
     if (!amount || !email || !!sendingOfferId) return;
     setSendingOfferId(orderId);
     try {
       await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note: '' }),
+        body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note }),
       });
       setDismissedHome(prev => new Set([...prev, orderId]));
     } catch {}
@@ -378,6 +376,8 @@ export default function DriverDashboard() {
     { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
+  const feedVisible = available && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
+
   return (
     <>
       {/* Mapbox Map */}
@@ -530,7 +530,7 @@ export default function DriverDashboard() {
       )}
 
       {/* Online countdown — InDrive-style bottom progress bar */}
-      {available && (
+      {available && !feedVisible && (
         <div style={{
           position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
           zIndex: 9990,
@@ -633,8 +633,35 @@ export default function DriverDashboard() {
         </>
       )}
 
+      {/* ── Solicitudes overlay (floating over map) ── */}
+      <RequestsFeed
+        mode="driver"
+        available={available}
+        items={pendingOrders.map((o): FeedItem => ({
+          id: o.id,
+          title: o.vehicle_type || 'envio',
+          from: o.pickup_address,
+          to: o.delivery_address,
+          price: o.suggested_price,
+          createdAt: o.created_at,
+          pickupLat: o.pickup_lat,
+          pickupLng: o.pickup_lng,
+          clientPhoto: o.client_photo,
+          clientName: o.client_name || o.client_email?.split('@')[0],
+          clientRating: o.client_avg_rating,
+          clientVerified: Boolean(o.client_is_verified),
+          instructions: o.instructions,
+        }))}
+        dismissed={dismissedHome}
+        onAccept={sendDriverOffer}
+        onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+        sendingId={sendingOfferId}
+        driverLat={driverPos?.lat}
+        driverLng={driverPos?.lng}
+      />
+
       {/* Bottom Sheet */}
-      <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
+      <div ref={sheetRef} className={`tuki-sheet ${sheetState}`} style={feedVisible ? { display: 'none' } : undefined}>
         <div
           className="tuki-sheet-handle"
           role="button"
@@ -793,31 +820,7 @@ export default function DriverDashboard() {
             </div>
           )}
 
-          {/* ── Requests Feed (InDrive-style) ──────────────────────────────────── */}
-          <RequestsFeed
-            mode="driver"
-            available={available}
-            items={pendingOrders.map((o): FeedItem => ({
-              id: o.id,
-              title: o.vehicle_type || 'envio',
-              from: o.pickup_address,
-              to: o.delivery_address,
-              price: o.suggested_price,
-              createdAt: o.created_at,
-              pickupLat: o.pickup_lat,
-              pickupLng: o.pickup_lng,
-            }))}
-            dismissed={dismissedHome}
-            offerValues={offerAmounts}
-            onOfferChange={(id, val) => setOfferAmounts(prev => ({ ...prev, [id]: val }))}
-            onOffer={sendDriverOffer}
-            onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
-            sendingId={sendingOfferId}
-            viewAllHref="/driver/deliveries"
-            newIds={newOrderIds}
-            driverLat={driverPos?.lat}
-            driverLng={driverPos?.lng}
-          />
+          {/* ── Requests Feed moved to overlay outside the sheet ── */}
 
           {/* Stats Grid */}
           {statsLoading ? (

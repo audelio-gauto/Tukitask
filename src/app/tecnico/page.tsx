@@ -202,7 +202,6 @@ export default function TecnicoDashboard() {
 
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
-  const [jobOfferPrices, setJobOfferPrices] = useState<Record<string, string>>({});
   const [sendingJobId, setSendingJobId] = useState<string | null>(null);
   const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
   const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
@@ -229,11 +228,6 @@ export default function TecnicoDashboard() {
           }, 9_000);
         }
         setPendingJobs(arr);
-        setJobOfferPrices(prev => {
-          const next = { ...prev };
-          arr.forEach((j: any) => { if (!(j.id in next)) next[j.id] = String(j.client_initial_price ?? ''); });
-          return next;
-        });
       })
       .catch(() => {});
   }, [email]);
@@ -248,8 +242,7 @@ export default function TecnicoDashboard() {
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
   }, [loadPendingJobs]);
 
-  const sendTecnicoOffer = async (jobId: string) => {
-    const price = Number(jobOfferPrices[jobId]);
+  const sendTecnicoOffer = async (jobId: string, price: number, note: string) => {
     if (!price || !email || !!sendingJobId) return;
     setSendingJobId(jobId);
     try {
@@ -263,7 +256,7 @@ export default function TecnicoDashboard() {
           tecnicoPhoto: profilePhoto || null,
           tecnicoRating: avgRating > 0 ? avgRating : null,
           proposedPrice: price,
-          note: null, distanceKm: null,
+          note: note || null, distanceKm: null,
         }),
       });
       const json = await res.json();
@@ -479,6 +472,8 @@ export default function TecnicoDashboard() {
     },
   ];
 
+  const feedVisible = available && pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
+
   return (
     <>
       <div className="tuki-map">
@@ -545,7 +540,7 @@ export default function TecnicoDashboard() {
       </button>
 
       {/* Online countdown — InDrive-style bottom progress bar */}
-      {available && (
+      {available && !feedVisible && (
         <div style={{
           position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
           zIndex: 9990,
@@ -665,8 +660,32 @@ export default function TecnicoDashboard() {
         </>
       )}
 
+      {/* ── Solicitudes overlay (floating over map) ── */}
+      <RequestsFeed
+        mode="tecnico"
+        available={available}
+        items={pendingJobs.map((j): FeedItem => ({
+          id: j.id,
+          title: j.service_type || 'servicio',
+          location: j.address,
+          price: j.client_initial_price,
+          createdAt: j.created_at,
+          pickupLat: j.lat,
+          pickupLng: j.lng,
+          clientPhoto: j.client_photo,
+          clientName: j.client_name,
+          clientRating: j.client_rating,
+        }))}
+        dismissed={dismissedHome}
+        onAccept={sendTecnicoOffer}
+        onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+        sendingId={sendingJobId}
+        driverLat={driverPos?.lat}
+        driverLng={driverPos?.lng}
+      />
+
       {/* ── Bottom sheet ── */}
-      <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
+      <div ref={sheetRef} className={`tuki-sheet ${sheetState}`} style={feedVisible ? { display: 'none' } : undefined}>
         <div
           className="tuki-sheet-handle"
           role="button"
@@ -791,30 +810,7 @@ export default function TecnicoDashboard() {
             </div>
           )}
 
-          {/* ── Requests Feed (InDrive-style) ─────────────────────────────────── */}
-          <RequestsFeed
-            mode="tecnico"
-            available={available}
-            items={pendingJobs.map((j): FeedItem => ({
-              id: j.id,
-              title: j.service_type || 'servicio',
-              location: j.address,
-              price: j.client_initial_price,
-              createdAt: j.created_at,
-              pickupLat: j.lat,
-              pickupLng: j.lng,
-            }))}
-            dismissed={dismissedHome}
-            offerValues={jobOfferPrices}
-            onOfferChange={(id, val) => setJobOfferPrices(prev => ({ ...prev, [id]: val }))}
-            onOffer={sendTecnicoOffer}
-            onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
-            sendingId={sendingJobId}
-            viewAllHref="/tecnico/ofertas"
-            newIds={newJobIds}
-            driverLat={driverPos?.lat}
-            driverLng={driverPos?.lng}
-          />
+          {/* ── Requests Feed moved to overlay outside the sheet ── */}
 
           {statsLoading ? (
             <div className="tuki-stats-grid">
