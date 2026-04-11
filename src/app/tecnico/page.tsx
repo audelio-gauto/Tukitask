@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/authFetch';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import RequestsFeed, { type FeedItem } from '../driver/components/RequestsFeed';
 
 // ── Haversine distance ──────────────────────────────────────────────────────
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -187,11 +188,25 @@ export default function TecnicoDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // Solicitudes de servicio pendientes en panel principal
+  // ── GPS position for distance calculation ──────────────────────────────
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, maximumAge: 15_000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
   const [jobOfferPrices, setJobOfferPrices] = useState<Record<string, string>>({});
   const [sendingJobId, setSendingJobId] = useState<string | null>(null);
   const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
+  const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
+  const knownJobIdsRef = useRef<Set<string>>(new Set());
 
   const loadPendingJobs = useCallback(() => {
     if (!email) return;
@@ -199,6 +214,20 @@ export default function TecnicoDashboard() {
       .then(r => r.json())
       .then(data => {
         const arr = Array.isArray(data) ? data.filter((j: any) => !j.my_offer) : [];
+        const incomingIds = new Set(arr.map((j: any) => String(j.id)));
+        const freshIds = new Set([...incomingIds].filter(id => !knownJobIdsRef.current.has(id)));
+        knownJobIdsRef.current = incomingIds;
+        if (freshIds.size > 0) {
+          setNewJobIds(prev => new Set([...prev, ...freshIds]));
+          setSheetState(s => s === 'collapsed' ? 'half' : s);
+          setTimeout(() => {
+            setNewJobIds(prev => {
+              const next = new Set(prev);
+              freshIds.forEach(id => next.delete(id));
+              return next;
+            });
+          }, 9_000);
+        }
         setPendingJobs(arr);
         setJobOfferPrices(prev => {
           const next = { ...prev };
@@ -638,7 +667,42 @@ export default function TecnicoDashboard() {
 
       {/* ── Bottom sheet ── */}
       <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
-        <div className="tuki-sheet-handle"><span className="tuki-sheet-bar" /></div>
+        <div
+          className="tuki-sheet-handle"
+          role="button"
+          aria-label="Expandir panel"
+          onClick={() => setSheet(sheetState === 'collapsed' ? 'half' : sheetState === 'half' ? 'full' : 'collapsed')}
+        >
+          <span className="tuki-sheet-bar" />
+        </div>
+        {/* Collapsed hint */}
+        {sheetState === 'collapsed' && (
+          <div
+            className="tuki-sheet-hint"
+            role="button"
+            onClick={() => setSheet('half')}
+          >
+            {available ? (
+              <>
+                <span className="tuki-sheet-hint-dot" />
+                <span className="tuki-sheet-hint-text">
+                  {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0
+                    ? `${pendingJobs.filter(j => !dismissedHome.has(j.id)).length} solicitudes cerca de ti`
+                    : 'Buscando solicitudes…'}
+                </span>
+                {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
+                  <span className="tuki-sheet-hint-badge">
+                    {pendingJobs.filter(j => !dismissedHome.has(j.id)).length}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
+                💤 Actívate para recibir solicitudes
+              </span>
+            )}
+          </div>
+        )}
         <div className="tuki-sheet-content">
 
           {/* Availability toggle */}
@@ -727,51 +791,30 @@ export default function TecnicoDashboard() {
             </div>
           )}
 
-          {/* Solicitudes de servicio pendientes */}
-          {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
-            <div style={{ marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>
-                  🔧 Solicitudes 
-                  <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
-                    {pendingJobs.filter(j => !dismissedHome.has(j.id)).length}
-                  </span>
-                </span>
-                <Link href="/tecnico/ofertas" style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Ver todo →</Link>
-              </div>
-              {pendingJobs.filter(j => !dismissedHome.has(j.id)).map(job => (
-                <div key={job.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 14, padding: '10px 12px', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.83rem', flex: 1, marginRight: 8 }}>
-                      {(String(job.service_type || 'Servicio').replace(/_/g, ' ')).charAt(0).toUpperCase() + String(job.service_type || 'Servicio').replace(/_/g, ' ').slice(1)}
-                    </span>
-                    {job.client_initial_price && (
-                      <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(job.client_initial_price).toLocaleString()}</span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>📍 {job.address?.slice(0, 32) || '—'}</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      type="number"
-                      placeholder="Tu precio Gs"
-                      value={jobOfferPrices[job.id] || ''}
-                      onChange={e => setJobOfferPrices(prev => ({ ...prev, [job.id]: e.target.value }))}
-                      style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.83rem', padding: '7px 10px', outline: 'none', minWidth: 0 }}
-                    />
-                    <button
-                      onClick={() => sendTecnicoOffer(job.id)}
-                      disabled={!jobOfferPrices[job.id] || !!sendingJobId}
-                      style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0, opacity: !jobOfferPrices[job.id] ? 0.5 : 1 }}
-                    >{sendingJobId === job.id ? '...' : 'Ofrecer'}</button>
-                    <button
-                      onClick={() => setDismissedHome(prev => new Set([...prev, job.id]))}
-                      style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', cursor: 'pointer', background: 'none', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}
-                    >×</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* ── Requests Feed (InDrive-style) ─────────────────────────────────── */}
+          <RequestsFeed
+            mode="tecnico"
+            available={available}
+            items={pendingJobs.map((j): FeedItem => ({
+              id: j.id,
+              title: j.service_type || 'servicio',
+              location: j.address,
+              price: j.client_initial_price,
+              createdAt: j.created_at,
+              pickupLat: j.lat,
+              pickupLng: j.lng,
+            }))}
+            dismissed={dismissedHome}
+            offerValues={jobOfferPrices}
+            onOfferChange={(id, val) => setJobOfferPrices(prev => ({ ...prev, [id]: val }))}
+            onOffer={sendTecnicoOffer}
+            onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+            sendingId={sendingJobId}
+            viewAllHref="/tecnico/ofertas"
+            newIds={newJobIds}
+            driverLat={driverPos?.lat}
+            driverLng={driverPos?.lng}
+          />
 
           {statsLoading ? (
             <div className="tuki-stats-grid">

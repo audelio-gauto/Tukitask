@@ -6,6 +6,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
+import RequestsFeed, { type FeedItem } from './components/RequestsFeed';
 
 // Mapbox GL must be loaded client-side only (no SSR)
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
@@ -91,16 +92,50 @@ export default function DriverDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // Solicitudes pendientes en panel principal
+  // ── GPS position for distance calculation ──────────────────────────────
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, maximumAge: 15_000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [offerAmounts, setOfferAmounts] = useState<Record<string, string>>({});
   const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
   const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
+  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
 
   const loadPendingOrders = useCallback(() => {
     fetch('/api/orders')
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setPendingOrders(data); })
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const incomingIds = new Set(data.map((o: any) => String(o.id)));
+        const freshIds = new Set([...incomingIds].filter(id => !knownOrderIdsRef.current.has(id)));
+        knownOrderIdsRef.current = incomingIds;
+        if (freshIds.size > 0) {
+          // Highlight new cards
+          setNewOrderIds(prev => new Set([...prev, ...freshIds]));
+          // Auto-bump sheet if it was collapsed
+          setSheetState(s => s === 'collapsed' ? 'half' : s);
+          // Clear highlight after 9 s
+          setTimeout(() => {
+            setNewOrderIds(prev => {
+              const next = new Set(prev);
+              freshIds.forEach(id => next.delete(id));
+              return next;
+            });
+          }, 9_000);
+        }
+        setPendingOrders(data);
+      })
       .catch(() => {});
   }, []);
 
@@ -600,9 +635,42 @@ export default function DriverDashboard() {
 
       {/* Bottom Sheet */}
       <div ref={sheetRef} className={`tuki-sheet ${sheetState}`}>
-        <div className="tuki-sheet-handle">
+        <div
+          className="tuki-sheet-handle"
+          role="button"
+          aria-label="Expandir panel"
+          onClick={() => setSheet(sheetState === 'collapsed' ? 'half' : sheetState === 'half' ? 'full' : 'collapsed')}
+        >
           <span className="tuki-sheet-bar" />
         </div>
+        {/* Collapsed hint — visible when dragged down */}
+        {sheetState === 'collapsed' && (
+          <div
+            className="tuki-sheet-hint"
+            role="button"
+            onClick={() => setSheet('half')}
+          >
+            {available ? (
+              <>
+                <span className="tuki-sheet-hint-dot" />
+                <span className="tuki-sheet-hint-text">
+                  {pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0
+                    ? `${pendingOrders.filter(o => !dismissedHome.has(o.id)).length} solicitudes cerca de ti`
+                    : 'Buscando solicitudes…'}
+                </span>
+                {pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0 && (
+                  <span className="tuki-sheet-hint-badge">
+                    {pendingOrders.filter(o => !dismissedHome.has(o.id)).length}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
+                💤 Actívate para recibir solicitudes
+              </span>
+            )}
+          </div>
+        )}
         <div className="tuki-sheet-content">
           {/* Availability Toggle */}
           <div className="tuki-availability">
@@ -725,47 +793,31 @@ export default function DriverDashboard() {
             </div>
           )}
 
-          {/* Solicitudes pendientes */}
-          {pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0 && (
-            <div style={{ marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>
-                  📦 Solicitudes 
-                  <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
-                    {pendingOrders.filter(o => !dismissedHome.has(o.id)).length}
-                  </span>
-                </span>
-                <Link href="/driver/deliveries" style={{ color: '#F5C518', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Ver todo →</Link>
-              </div>
-              {pendingOrders.filter(o => !dismissedHome.has(o.id)).map(order => (
-                <div key={order.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 14, padding: '10px 12px', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.83rem', flex: 1, marginRight: 8 }}>{order.pickup_address?.slice(0, 28) || 'Recogida'}</span>
-                    <span style={{ color: '#F5C518', fontWeight: 800, fontSize: '0.83rem', flexShrink: 0 }}>₲{Number(order.suggested_price || 0).toLocaleString()}</span>
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>→ {order.delivery_address?.slice(0, 28) || '—'}</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      type="number"
-                      placeholder="Tu oferta Gs"
-                      value={offerAmounts[order.id] || ''}
-                      onChange={e => setOfferAmounts(prev => ({ ...prev, [order.id]: e.target.value }))}
-                      style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.83rem', padding: '7px 10px', outline: 'none', minWidth: 0 }}
-                    />
-                    <button
-                      onClick={() => sendDriverOffer(order.id)}
-                      disabled={!offerAmounts[order.id] || !!sendingOfferId}
-                      style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0, opacity: !offerAmounts[order.id] ? 0.5 : 1 }}
-                    >{sendingOfferId === order.id ? '...' : 'Ofrecer'}</button>
-                    <button
-                      onClick={() => setDismissedHome(prev => new Set([...prev, order.id]))}
-                      style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', cursor: 'pointer', background: 'none', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}
-                    >×</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* ── Requests Feed (InDrive-style) ──────────────────────────────────── */}
+          <RequestsFeed
+            mode="driver"
+            available={available}
+            items={pendingOrders.map((o): FeedItem => ({
+              id: o.id,
+              title: o.vehicle_type || 'envio',
+              from: o.pickup_address,
+              to: o.delivery_address,
+              price: o.suggested_price,
+              createdAt: o.created_at,
+              pickupLat: o.pickup_lat,
+              pickupLng: o.pickup_lng,
+            }))}
+            dismissed={dismissedHome}
+            offerValues={offerAmounts}
+            onOfferChange={(id, val) => setOfferAmounts(prev => ({ ...prev, [id]: val }))}
+            onOffer={sendDriverOffer}
+            onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+            sendingId={sendingOfferId}
+            viewAllHref="/driver/deliveries"
+            newIds={newOrderIds}
+            driverLat={driverPos?.lat}
+            driverLng={driverPos?.lng}
+          />
 
           {/* Stats Grid */}
           {statsLoading ? (
