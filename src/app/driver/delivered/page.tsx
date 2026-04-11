@@ -158,7 +158,7 @@ export default function DeliveredPage() {
           </button>
 
           {/* Rate button */}
-          {existingRating == null ? (
+          {existingRating == null && (
             <button
               onClick={() => openRating(order)}
               style={{
@@ -169,13 +169,6 @@ export default function DeliveredPage() {
             >
               ⭐ Calificar Cliente
             </button>
-          ) : (
-            <div style={{
-              textAlign: 'center', padding: '0.5rem', borderRadius: 10, marginBottom: 6,
-              background: 'rgba(16,185,129,0.12)', color: '#4ade80', fontWeight: 600, fontSize: '0.82rem',
-            }}>
-              ✓ Cliente calificado
-            </div>
           )}
           {/* Report button */}
           {order.client_email && (
