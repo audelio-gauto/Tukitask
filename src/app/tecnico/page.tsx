@@ -577,7 +577,7 @@ export default function TecnicoDashboard() {
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--tuki-text-main)' }}>Estado</h3>
               <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`}>
-                {available ? '● CONECTADO' : '● DESCONECTADO'}
+                {available ? '💰 Hacer money' : '💸 Money off'}
               </span>
             </div>
             <label className="tuki-toggle">
