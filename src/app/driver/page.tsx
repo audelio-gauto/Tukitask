@@ -505,7 +505,7 @@ export default function DriverDashboard() {
       {/* Toast */}
       {toast && <div className="tuki-toast">{toast}</div>}
 
-      {/* Earnings Breakdown Modal */}}
+      {/* Earnings Breakdown Modal */}
       {showEarnings && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowEarnings(false)} />
