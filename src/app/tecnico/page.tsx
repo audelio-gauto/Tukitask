@@ -72,6 +72,39 @@ export default function TecnicoDashboard() {
 
   // ── Availability – persisted ───────────────────────────────────────────────
   const [available, setAvailable] = useState(false);
+  // Offline confirmation overlay
+  const [offlineConfirm, setOfflineConfirm] = useState(false);
+  const [offlineCountdown, setOfflineCountdown] = useState(20);
+  const offlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const cancelOfflineConfirm = useCallback(() => {
+    setOfflineConfirm(false);
+    setOfflineCountdown(20);
+    if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    router.push('/tecnico/ofertas');
+  }, [router]);
+
+  const confirmGoOffline = useCallback(() => {
+    setOfflineConfirm(false);
+    setOfflineCountdown(20);
+    if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    setAvailable(false);
+    try { localStorage.setItem('tecnico_available', 'false'); } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!offlineConfirm) return;
+    setOfflineCountdown(20);
+    offlineTimerRef.current = setInterval(() => {
+      setOfflineCountdown(prev => {
+        if (prev <= 1) { cancelOfflineConfirm(); return 20; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    };
+  }, [offlineConfirm, cancelOfflineConfirm]);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -424,6 +457,55 @@ export default function TecnicoDashboard() {
         )}
       </button>
 
+      {/* Offline confirmation overlay */}
+      {offlineConfirm && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.65)' }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)',
+            zIndex: 9999, background: '#fff',
+            borderRadius: 22, width: 'min(340px, 92vw)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.25)',
+            border: '2px solid #ef4444',
+            overflow: 'hidden',
+            padding: '1.5rem',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: `conic-gradient(#ef4444 ${((20 - offlineCountdown) / 20) * 360}deg, #f1f5f9 0deg)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1rem',
+            }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontWeight: 900, fontSize: '1.4rem', color: '#ef4444' }}>{offlineCountdown}</span>
+              </div>
+            </div>
+
+            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b', marginBottom: '0.5rem' }}>¿Desconectarse?</div>
+            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem', lineHeight: 1.4 }}>
+              Si no confirmás en <strong style={{ color: '#ef4444' }}>{offlineCountdown}s</strong>, seguirás conectado y serás redirigido a Solicitudes.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={confirmGoOffline}
+                style={{ flex: 1, padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '1rem' }}
+              >
+                Sí, desconectar
+              </button>
+              <button
+                onClick={cancelOfflineConfirm}
+                style={{ flex: 1, padding: '0.9rem', border: '1.5px solid #e2e8f0', borderRadius: 14, cursor: 'pointer', background: '#f8fafc', color: '#64748b', fontWeight: 700, fontSize: '0.9rem' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Filter Modal ── */}
       {filterOpen && (
         <>
@@ -511,9 +593,13 @@ export default function TecnicoDashboard() {
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
-                const next = !available;
-                setAvailable(next);
-                try { localStorage.setItem('tecnico_available', String(next)); } catch {}
+                if (!available) {
+                  setAvailable(true);
+                  try { localStorage.setItem('tecnico_available', 'true'); } catch {}
+                  router.push('/tecnico/ofertas');
+                } else {
+                  setOfflineConfirm(true);
+                }
               }} />
               <span className="tuki-toggle-slider" />
             </label>

@@ -23,6 +23,45 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
+  // Offline confirmation overlay
+  const [offlineConfirm, setOfflineConfirm] = useState(false);
+  const [offlineCountdown, setOfflineCountdown] = useState(20);
+  const offlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const cancelOfflineConfirm = useCallback(() => {
+    setOfflineConfirm(false);
+    setOfflineCountdown(20);
+    if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    // User didn't disconnect in time — stay online and go back to deliveries
+    router.push('/driver/deliveries');
+  }, [router]);
+
+  const confirmGoOffline = useCallback(() => {
+    setOfflineConfirm(false);
+    setOfflineCountdown(20);
+    if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    setAvailable(false);
+    try { localStorage.setItem('driver_available', 'false'); } catch {}
+  }, []);
+
+  // Start countdown when overlay opens
+  useEffect(() => {
+    if (!offlineConfirm) return;
+    setOfflineCountdown(20);
+    offlineTimerRef.current = setInterval(() => {
+      setOfflineCountdown(prev => {
+        if (prev <= 1) {
+          // Time's up — cancel and redirect back
+          cancelOfflineConfirm();
+          return 20;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (offlineTimerRef.current) { clearInterval(offlineTimerRef.current); offlineTimerRef.current = null; }
+    };
+  }, [offlineConfirm, cancelOfflineConfirm]);
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
   const DRIVER_TOTAL_DOCS = 7; // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
@@ -417,6 +456,56 @@ export default function DriverDashboard() {
         </>
       )}
 
+      {/* Offline confirmation overlay */}
+      {offlineConfirm && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.65)' }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)',
+            zIndex: 9999, background: '#1a1a2e',
+            borderRadius: 22, width: 'min(340px, 92vw)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
+            border: '2px solid #ef4444',
+            overflow: 'hidden',
+            padding: '1.5rem',
+            textAlign: 'center',
+          }}>
+            {/* Countdown ring */}
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: `conic-gradient(#ef4444 ${((20 - offlineCountdown) / 20) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1rem',
+            }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontWeight: 900, fontSize: '1.4rem', color: '#ef4444' }}>{offlineCountdown}</span>
+              </div>
+            </div>
+
+            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff', marginBottom: '0.5rem' }}>¿Desconectarse?</div>
+            <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '1.5rem', lineHeight: 1.4 }}>
+              Si no confirmás en <strong style={{ color: '#f87171' }}>{offlineCountdown}s</strong>, seguirás en línea y serás redirigido a Pedidos.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={confirmGoOffline}
+                style={{ flex: 1, padding: '0.9rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '1rem' }}
+              >
+                Sí, desconectar
+              </button>
+              <button
+                onClick={cancelOfflineConfirm}
+                style={{ flex: 1, padding: '0.9rem', border: '1px solid #333', borderRadius: 14, cursor: 'pointer', background: 'transparent', color: '#9ca3af', fontWeight: 700, fontSize: '0.9rem' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Earnings Breakdown Modal */}
       {showEarnings && (
         <>
@@ -488,9 +577,15 @@ export default function DriverDashboard() {
             <label className="tuki-toggle">
               <input type="checkbox" checked={available} onChange={() => {
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return; // bloquear si docs no aprobados, vencidos o faltantes
-                const next = !available;
-                setAvailable(next);
-                try { localStorage.setItem('driver_available', String(next)); } catch {}
+                if (!available) {
+                  // Going online → save state and redirect to deliveries
+                  setAvailable(true);
+                  try { localStorage.setItem('driver_available', 'true'); } catch {}
+                  router.push('/driver/deliveries');
+                } else {
+                  // Going offline → show confirmation overlay with countdown
+                  setOfflineConfirm(true);
+                }
               }} />
               <span className="tuki-toggle-slider" />
             </label>
