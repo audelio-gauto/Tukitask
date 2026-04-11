@@ -9,8 +9,7 @@ export function BottomNav({ tabs, accent = '#10b981' }: { tabs: NavTab[]; accent
   return (
     <nav className="tuki-bottom-nav" aria-label="Navegación principal">
       {tabs.map(tab => {
-        const isRoot = tab.href === '/driver' || tab.href === '/tecnico';
-        const active = isRoot ? pathname === tab.href : pathname.startsWith(tab.href);
+        const active = pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}

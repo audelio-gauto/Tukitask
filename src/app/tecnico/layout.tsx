@@ -13,8 +13,7 @@ import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '../driver/components/BottomNav';
 
 const TECNICO_TABS = [
-  { href: '/tecnico',                   icon: '🏠', label: 'Inicio'    },
-  { href: '/tecnico/ofertas',           icon: '🔧', label: 'Ofertas'   },
+  { href: '/tecnico/ofertas',           icon: '🏠', label: 'Inicio'    },
   { href: '/tecnico/citas',             icon: '📅', label: 'Citas'     },
   { href: '/tecnico/ganancias',         icon: '📊', label: 'Ganancias' },
   { href: '/tecnico/settings',          icon: '⚙️', label: 'Config'    },
