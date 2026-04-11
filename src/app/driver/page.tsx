@@ -443,30 +443,50 @@ export default function DriverDashboard() {
         </>
       )}
 
-      {/* Online countdown banner — visible while connected on dashboard */}
+      {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
-          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9990, background: '#1a1a2e',
-          border: '2px solid #c8ff00', borderRadius: 18,
-          padding: '0.7rem 1.25rem',
-          display: 'flex', alignItems: 'center', gap: 12,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          whiteSpace: 'nowrap',
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          zIndex: 9990,
+          background: '#111827',
+          borderTop: '1px solid rgba(200,255,0,0.15)',
         }}>
-          {/* Mini ring */}
+          {/* Draining progress bar */}
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{
+              height: '100%',
+              width: `${(onlineCountdown / 20) * 100}%`,
+              background: 'linear-gradient(90deg,#c8ff00,#a8e000)',
+              transition: 'width 1s linear',
+              borderRadius: '0 2px 2px 0',
+            }} />
+          </div>
+          {/* Content row */}
           <div style={{
-            width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-            background: `conic-gradient(#c8ff00 ${(onlineCountdown / 20) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.65rem 1.1rem 1rem',
+            gap: 12,
           }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#c8ff00' }}>{onlineCountdown}</span>
+            <div>
+              <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                Redirigiendo a Pedidos…
+              </p>
+              <p style={{ margin: '3px 0 0', color: '#6b7280', fontSize: '0.75rem' }}>
+                Desconectá el toggle para cancelar
+              </p>
+            </div>
+            <div style={{
+              minWidth: 48, height: 48, borderRadius: '50%',
+              border: '3px solid #c8ff00',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#c8ff00', lineHeight: 1 }}>
+                {onlineCountdown}
+              </span>
             </div>
           </div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
-            Ir a Pedidos en <strong style={{ color: '#c8ff00' }}>{onlineCountdown}s</strong> · Desconectá el toggle para quedarte
-          </span>
         </div>
       )}
 

@@ -449,29 +449,50 @@ export default function TecnicoDashboard() {
         )}
       </button>
 
-      {/* Online countdown banner — visible while connected on dashboard */}
+      {/* Online countdown — InDrive-style bottom progress bar */}
       {available && (
         <div style={{
-          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9990, background: '#1C1C2E',
-          border: '2px solid #F5C518', borderRadius: 18,
-          padding: '0.7rem 1.25rem',
-          display: 'flex', alignItems: 'center', gap: 12,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-          whiteSpace: 'nowrap',
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          zIndex: 9990,
+          background: '#1C1C2E',
+          borderTop: '1px solid rgba(245,197,24,0.2)',
         }}>
+          {/* Draining progress bar */}
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{
+              height: '100%',
+              width: `${(onlineCountdown / 20) * 100}%`,
+              background: 'linear-gradient(90deg,#F5C518,#e0b015)',
+              transition: 'width 1s linear',
+              borderRadius: '0 2px 2px 0',
+            }} />
+          </div>
+          {/* Content row */}
           <div style={{
-            width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-            background: `conic-gradient(#F5C518 ${(onlineCountdown / 20) * 360}deg, rgba(0,0,0,0.12) 0deg)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.65rem 1.1rem 1rem',
+            gap: 12,
           }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#1C1C2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#F5C518' }}>{onlineCountdown}</span>
+            <div>
+              <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                Redirigiendo a Solicitudes…
+              </p>
+              <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>
+                Desconectá el toggle para cancelar
+              </p>
+            </div>
+            <div style={{
+              minWidth: 48, height: 48, borderRadius: '50%',
+              border: '3px solid #F5C518',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#F5C518', lineHeight: 1 }}>
+                {onlineCountdown}
+              </span>
             </div>
           </div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
-            Ir a Solicitudes en <strong style={{ color: '#F5C518' }}>{onlineCountdown}s</strong> · Desconectá el toggle para quedarte
-          </span>
         </div>
       )}
 
