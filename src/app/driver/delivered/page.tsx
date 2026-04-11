@@ -6,6 +6,7 @@ import { useDriverContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
+import ChatModal from '@/components/ChatModal';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -30,6 +31,7 @@ export default function DeliveredPage() {
   const [ratingOrder, setRatingOrder] = useState<any>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
   const [reportModal, setReportModal] = useState<{ orderId: string; clientEmail: string; clientName: string } | null>(null);
+  const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
 
   const fetchDelivered = useCallback(() => {
     if (!email) return;
@@ -91,16 +93,17 @@ export default function DeliveredPage() {
 
     return (
       <div key={order.id} style={{
-        background: '#fff', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #f1f5f9',
+        background: 'rgba(255,255,255,0.04)', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.08)',
       }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #10b981, #059669)',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.18))',
+          borderBottom: '1px solid rgba(16,185,129,0.2)',
           padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>✅ Entregado #{track}</span>
-          <span style={{ color: '#d1fae5', fontSize: '0.78rem' }}>{date}</span>
+          <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.85rem' }}>✅ Entregado #{track}</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>{date}</span>
         </div>
 
         {/* Body */}
@@ -111,34 +114,48 @@ export default function DeliveredPage() {
               width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
               background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 700, fontSize: '1.1rem',
-              border: '2px solid #e5e7eb',
+              color: '#1C1C2E', fontWeight: 700, fontSize: '1.1rem',
+              border: '2px solid rgba(255,255,255,0.12)',
             }}>
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>{clientName}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>{clientName}</div>
               <StarRow rating={existingRating} />
             </div>
-            <div style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>₲{price}</div>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem' }}>₲{price}</div>
           </div>
 
-          {/* Addresses */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
-              <div style={{ width: 1.5, flex: 1, background: '#d1d5db', margin: '2px 0' }} />
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.78rem', color: '#374151', lineHeight: 1.3, marginBottom: 6 }}>
-                {order.pickup_address}
+          {/* Addresses A → B */}
+          {(order.pickup_address || order.delivery_address) && (
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
+                  <span style={{ width: 2, height: 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.pickup_address || '—'}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.delivery_address || '—'}</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#374151', lineHeight: 1.3 }}>
-                {order.delivery_address}
-              </div>
             </div>
-          </div>
+          )}
+
+          {/* Chat 24h */}
+          <button
+            onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
+            style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            💬 Chat 24h con el cliente
+          </button>
 
           {/* Rate button */}
           {existingRating == null ? (
@@ -146,16 +163,16 @@ export default function DeliveredPage() {
               onClick={() => openRating(order)}
               style={{
                 width: '100%', padding: '0.6rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                background: 'linear-gradient(135deg, #F5C518, #f59e0b)',
+                color: '#1C1C2E', fontWeight: 700, fontSize: '0.88rem', marginBottom: 6,
               }}
             >
               ⭐ Calificar Cliente
             </button>
           ) : (
             <div style={{
-              textAlign: 'center', padding: '0.5rem', borderRadius: 10,
-              background: '#f0fdf4', color: '#059669', fontWeight: 600, fontSize: '0.82rem',
+              textAlign: 'center', padding: '0.5rem', borderRadius: 10, marginBottom: 6,
+              background: 'rgba(16,185,129,0.12)', color: '#4ade80', fontWeight: 600, fontSize: '0.82rem',
             }}>
               ✓ Cliente calificado
             </div>
@@ -164,7 +181,7 @@ export default function DeliveredPage() {
           {order.client_email && (
             <button
               onClick={() => setReportModal({ orderId: order.id, clientEmail: order.client_email, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente' })}
-              style={{ marginTop: 8, background: 'none', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, color: '#ef4444', fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer', fontWeight: 600 }}
+              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer', fontWeight: 600 }}
             >
               🚨 Reportar cliente
             </button>
@@ -238,6 +255,18 @@ export default function DeliveredPage() {
           referenceType="order"
           referenceId={reportModal.orderId}
           onClose={() => setReportModal(null)}
+        />
+      )}
+
+      {chatModal && email && (
+        <ChatModal
+          open={true}
+          onClose={() => setChatModal(null)}
+          orderId={chatModal.orderId}
+          myEmail={email}
+          myName={null}
+          otherName={chatModal.clientName}
+          otherPhoto={chatModal.clientPhoto}
         />
       )}
     </DriverScreenLayout>
