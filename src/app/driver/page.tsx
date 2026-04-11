@@ -2,57 +2,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from './context';
-import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { authFetch } from '@/lib/authFetch';
 
 // Mapbox GL must be loaded client-side only (no SSR)
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
-
-// Web Audio API: play delivery alert sound (like plugin)
-let _driverAC: AudioContext | null = null;
-function getDriverAC() {
-  if (typeof window === 'undefined') return null;
-  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioCtx) return null;
-  if (!_driverAC || _driverAC.state === 'closed') _driverAC = new AudioCtx();
-  if (_driverAC.state === 'suspended') _driverAC.resume();
-  return _driverAC;
-}
-if (typeof window !== 'undefined') {
-  const _unlock = () => { getDriverAC(); window.removeEventListener('touchstart', _unlock); window.removeEventListener('click', _unlock); };
-  window.addEventListener('touchstart', _unlock, { once: true });
-  window.addEventListener('click', _unlock, { once: true });
-}
-function playDeliveryAlert() {
-  try {
-    const ctx = getDriverAC();
-    if (!ctx) return;
-
-    function beep(startTime: number, frequency: number, duration: number) {
-      const osc = ctx!.createOscillator();
-      const gain = ctx!.createGain();
-      osc.connect(gain);
-      gain.connect(ctx!.destination);
-      osc.type = 'square';
-      osc.frequency.value = frequency;
-      gain.gain.value = 1.0;
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    }
-
-    // 6 rounds of 3-beep ascending sequence
-    for (let r = 0; r < 6; r++) {
-      const t = ctx.currentTime + r * 0.6;
-      beep(t, 880, 0.12);
-      beep(t + 0.15, 1100, 0.12);
-      beep(t + 0.3, 1320, 0.15);
-    }
-  } catch {
-    // Silently fail
-  }
-}
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -135,31 +90,6 @@ export default function DriverDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // New request popup
-  const [showPopup, setShowPopup] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [newestOrder, setNewestOrder] = useState<any>(null);
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
-  const prevCountRef = useRef(0);
-  // IDs of orders dismissed with "Ahora no" — persisted to localStorage across page loads
-  const dismissedRef = useRef<Set<string>>((() => {
-    try {
-      const saved = typeof window !== 'undefined' && localStorage.getItem('driver_dismissed_orders');
-      return new Set<string>(saved ? JSON.parse(saved) : []);
-    } catch { return new Set<string>(); }
-  })());
-
-  // Track driver position for distance calc
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    const id = navigator.geolocation.watchPosition(
-      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 15000 },
-    );
-    return () => navigator.geolocation.clearWatch(id);
-  }, []);
-
   // Fetch driver stats (delivered/failed counts + earnings)
   // Refreshes every 30 s AND immediately when the tab becomes visible again
   // (browsers throttle/suspend setInterval when tab is in background)
@@ -238,44 +168,6 @@ export default function DriverDashboard() {
       window.removeEventListener('focus', fetchStats);
     };
   }, [email]);
-
-  useEffect(() => {
-    const check = () => {
-      if (!available) return;
-      fetch(`/api/orders?_t=${Date.now()}`, { cache: 'no-store' })
-        .then(r => r.json())
-        .then((data: any[]) => {
-          if (!Array.isArray(data)) return;
-          const visible = data.filter((o: any) => !dismissedRef.current.has(o.id));
-          const count = visible.length;
-          if (count > prevCountRef.current) {
-            setPendingCount(count);
-            setNewestOrder(visible[0] ?? null);
-            setShowPopup(true);
-            playDeliveryAlert();
-          }
-          prevCountRef.current = count;
-        })
-        .catch(() => {});
-    };
-    check();
-    // Realtime handles instant pushes; fallback poll at 60s for resiliency
-    const iv = setInterval(check, 60_000);
-    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
-    document.addEventListener('visibilitychange', onVisible);
-
-    // Realtime: new orders + status changes
-    const ch = supabase.channel('driver-dash-orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' } as never, () => check())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' } as never, () => check())
-      .subscribe();
-
-    return () => {
-      clearInterval(iv);
-      document.removeEventListener('visibilitychange', onVisible);
-      supabase.removeChannel(ch);
-    };
-  }, [available]);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -370,7 +262,7 @@ export default function DriverDashboard() {
 
   // Stats (placeholder — would come from Supabase)
   const stats = [
-    { label: 'Pedidos', value: pendingCount + activeOrderCount, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
+    { label: 'Pedidos', value: activeOrderCount, href: '/driver/deliveries', icon: '📦', onClick: undefined as (() => void) | undefined },
     { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
@@ -524,133 +416,6 @@ export default function DriverDashboard() {
           </div>
         </>
       )}
-
-      {/* New Request Popup */}
-      {showPopup && (() => {
-        const o = newestOrder;
-        // Haversine distance in km
-        function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
-          const R = 6371;
-          const dLat = (lat2 - lat1) * Math.PI / 180;
-          const dLng = (lng2 - lng1) * Math.PI / 180;
-          const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-        const kmPickup = (driverPos && o?.pickup_lat)
-          ? haversine(driverPos.lat, driverPos.lng, o.pickup_lat, o.pickup_lng).toFixed(1)
-          : null;
-        const kmDelivery = (o?.pickup_lat && o?.delivery_lat)
-          ? haversine(o.pickup_lat, o.pickup_lng, o.delivery_lat, o.delivery_lng).toFixed(1)
-          : null;
-        const clientName = o?.client_name || o?.client_email?.split('@')[0] || 'Cliente';
-        const clientPhoto = o?.client_photo || null;
-        const clientPrice = o ? Number(o.offer || o.suggested_price || 0) : 0;
-        return (
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 9999, background: '#1a1a2e',
-            borderRadius: 22, width: 'min(360px, 92vw)',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
-            border: '2px solid #c8ff00',
-            overflow: 'hidden',
-            animation: 'popupIn 0.3s cubic-bezier(0.32,0.72,0,1)',
-          }}>
-            <style>{`@keyframes popupIn{from{opacity:0;transform:translate(-50%,-58%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
-
-            {/* Header */}
-            <div style={{ background: 'rgba(200,255,0,0.08)', borderBottom: '1px solid rgba(200,255,0,0.15)', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#c8ff00', fontWeight: 800, fontSize: '0.9rem', letterSpacing: 0.3 }}>📦 Nueva solicitud</span>
-              {pendingCount > 1 && (
-                <span style={{ background: '#c8ff00', color: '#111', borderRadius: 99, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 800 }}>
-                  +{pendingCount - 1} más
-                </span>
-              )}
-              <button onClick={() => setShowPopup(false)}
-                style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: 0 }}
-                aria-label="Cerrar">✕</button>
-            </div>
-
-            {/* No me interesa — dismiss permanently */}
-            <button
-              onClick={() => {
-                if (newestOrder?.id) {
-                  dismissedRef.current.add(newestOrder.id);
-                  try { localStorage.setItem('driver_dismissed_orders', JSON.stringify([...dismissedRef.current])); } catch {}
-                }
-                setShowPopup(false);
-              }}
-              style={{
-                display: 'block', width: '100%',
-                padding: '0.9rem 1rem',
-                background: 'rgba(239,68,68,0.12)',
-                border: 'none', borderBottom: '1px solid rgba(239,68,68,0.25)',
-                color: '#f87171', fontWeight: 800, fontSize: '1rem',
-                cursor: 'pointer', letterSpacing: 0.2,
-              }}
-            >
-              🚫 No me interesa
-            </button>
-
-            {/* Client info */}
-            <div style={{ padding: '1rem 1rem 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-              {clientPhoto ? (
-                <img src={clientPhoto} alt="" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '2px solid #333', flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#2d2d2d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>👤</div>
-              )}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{clientName}</div>
-                <div style={{ color: '#facc15', fontSize: '0.8rem', marginTop: 2 }}>⭐ 5.0</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: '1.5rem', color: '#c8ff00', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
-                <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Gs</div>
-              </div>
-            </div>
-
-            {/* Distances */}
-            <div style={{ padding: '0.85rem 1rem 0', display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1, background: 'rgba(16,185,129,0.12)', borderRadius: 12, padding: '0.6rem 0.75rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#6ee7b7', fontWeight: 700, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 800, flexShrink: 0 }}>A</span>
-                  Recogida
-                </div>
-                <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.1rem' }}>{kmPickup ? `${kmPickup} km` : '— km'}</div>
-                <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1, lineHeight: 1.3 }}>{o?.pickup_address?.split(',')[0] || '—'}</div>
-              </div>
-              <div style={{ flex: 1, background: 'rgba(239,68,68,0.1)', borderRadius: 12, padding: '0.6rem 0.75rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#fca5a5', fontWeight: 700, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 800, flexShrink: 0 }}>B</span>
-                  Entrega
-                </div>
-                <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.1rem' }}>{kmDelivery ? `${kmDelivery} km` : '— km'}</div>
-                <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 1, lineHeight: 1.3 }}>{o?.delivery_address?.split(',')[0] || '—'}</div>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div style={{ padding: '0.85rem 1rem 1.1rem', display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => { setShowPopup(false); router.push('/driver/deliveries'); }}
-                style={{ flex: 1, padding: '0.85rem', border: 'none', borderRadius: 14, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem' }}>
-                Ver solicitud
-              </button>
-              <button
-                onClick={() => {
-                  if (newestOrder?.id) {
-                    dismissedRef.current.add(newestOrder.id);
-                    try { localStorage.setItem('driver_dismissed_orders', JSON.stringify([...dismissedRef.current])); } catch {}
-                  }
-                  setShowPopup(false);
-                }}
-                style={{ padding: '0.85rem 1rem', border: '1px solid #333', borderRadius: 14, cursor: 'pointer', background: 'transparent', color: '#9ca3af', fontWeight: 600, fontSize: '0.9rem' }}>
-                Ahora no
-              </button>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Earnings Breakdown Modal */}
       {showEarnings && (

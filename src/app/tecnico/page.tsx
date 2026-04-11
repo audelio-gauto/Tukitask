@@ -3,9 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
-import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
-import { playNewJobAlert } from '@/lib/audio';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
@@ -154,25 +152,6 @@ export default function TecnicoDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // ── New-job popup ──────────────────────────────────────────────────────────
-  interface PendingJob { id: string; service_type: string; client_name: string | null; client_photo?: string | null; client_rating?: number | null; client_initial_price?: number | null; client_is_verified?: boolean; description?: string | null; address?: string | null; lat?: number | null; lng?: number | null; }
-  const [pendingPopup, setPendingPopup] = useState<PendingJob | null>(null);
-  const [popupOfferPrice, setPopupOfferPrice] = useState(0);
-  const [popupShowInput, setPopupShowInput]   = useState(false);
-  const [popupSending, setPopupSending]       = useState(false);
-  const [popupCountdown, setPopupCountdown]   = useState(60);
-  const seenJobsRef     = useRef<Set<string>>(new Set());
-  const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tecnicoPosRef   = useRef<{ lat: number; lng: number } | null>(null);
-  useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
-    const wid = navigator.geolocation.watchPosition(
-      pos => { tecnicoPosRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 15_000 },
-    );
-    return () => navigator.geolocation.clearWatch(wid);
-  }, []);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -345,96 +324,6 @@ export default function TecnicoDashboard() {
     const iv = setInterval(load, 30_000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [email]);
-
-  // ── Poll for new pending jobs when available ─────────────────────────────
-  const dismissPopup = useCallback(() => {
-    setPendingPopup(null);
-    setPopupShowInput(false);
-    setPopupOfferPrice(0);
-    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
-  }, []);
-
-  useEffect(() => {
-    if (!available || !email) return;
-    const check = async () => {
-      try {
-        const res  = await authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`);
-        const jobs = await res.json();
-        if (!Array.isArray(jobs)) return;
-        // Only show jobs not yet seen and where no offer was sent
-        const fresh = jobs.filter((j: any) => !seenJobsRef.current.has(j.id) && !j.my_offer);
-        if (fresh.length === 0) return;
-        const newest = fresh[0];
-        seenJobsRef.current.add(newest.id);
-        setPendingPopup(newest);
-        setPopupOfferPrice(Number(newest.client_initial_price ?? 0));
-        setPopupShowInput(false);
-        setPopupCountdown(100);
-        playNewJobAlert();
-        // Countdown timer
-        if (countdownRef.current) clearInterval(countdownRef.current);
-        countdownRef.current = setInterval(() => {
-          setPopupCountdown(prev => {
-            if (prev <= 1) { dismissPopup(); return 100; }
-            return prev - 1;
-          });
-        }, 1000);
-      } catch { /* ignore */ }
-    };
-    check();
-    // Fallback polling at 8s — primary signal is realtime INSERT on tecnico_jobs
-    const iv = setInterval(check, 8_000);
-
-    // Re-check immediately when tecnico returns to app (notification tap)
-    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', check);
-
-    // Realtime: new pending jobs for this técnico
-    const ch = supabase.channel(`tecnico-dash-jobs-${email}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tecnico_jobs',
-      } as never, () => check())
-      .subscribe();
-
-    return () => {
-      clearInterval(iv);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', check);
-      supabase.removeChannel(ch);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, [available, email, dismissPopup]);
-
-  const sendPopupOffer = async () => {
-    if (!pendingPopup || !email || popupSending) return;
-    if (!popupOfferPrice || popupOfferPrice <= 0) return;
-    setPopupSending(true);
-    try {
-      const pos = tecnicoPosRef.current;
-      const distKm = (pos && pendingPopup.lat != null && pendingPopup.lng != null)
-        ? haversineKm(pos.lat, pos.lng, Number(pendingPopup.lat), Number(pendingPopup.lng))
-        : null;
-      await authFetch('/api/tecnico/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send_offer',
-          jobId: pendingPopup.id,
-          tecnicoEmail: email,
-          tecnicoName: displayName || null,
-          tecnicoPhoto: profilePhoto || null,
-          tecnicoRating: avgRating > 0 ? avgRating : null,
-          proposedPrice: popupOfferPrice,
-          distanceKm: distKm,
-        }),
-      });
-    } catch { /* ignore */ }
-    setPopupSending(false);
-    dismissPopup();
-  };
 
   const catalogue      = getCatalogueForGender(gender);
   const hasActiveFilter = Object.values(serviceFilters).some(v => !v);
@@ -708,115 +597,6 @@ export default function TecnicoDashboard() {
         </div>
       </div>
 
-      {/* ── New Job Popup ── */}
-      {pendingPopup && (
-        <>
-          <div onClick={dismissPopup} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9998 }} />
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%',
-            transform: 'translate(-50%,-50%)',
-            zIndex: 9999, width: 'min(92vw, 360px)',
-            background: '#fff', borderRadius: 20,
-            boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
-            padding: '20px 18px 18px',
-            animation: 'popupIn 0.28s cubic-bezier(0.32,0.72,0,1)',
-          }}>
-            <style>{`@keyframes popupIn{from{opacity:0;transform:translate(-50%,-58%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
-
-            {/* Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '1.3rem' }}>🔔</span>
-                <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>Nueva Solicitud</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '0.78rem', background: '#fee2e2', color: '#ef4444', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>
-                  {popupCountdown}s
-                </span>
-                <button onClick={dismissPopup} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1, color: '#94a3b8' }}>✕</button>
-              </div>
-            </div>
-
-            {/* No me interesa — dismiss permanently */}
-            <button
-              onClick={dismissPopup}
-              style={{
-                display: 'block', width: '100%',
-                padding: '0.85rem',
-                marginBottom: 14,
-                background: '#fef2f2',
-                border: '1.5px solid #fecaca',
-                borderRadius: 12,
-                color: '#ef4444', fontWeight: 800, fontSize: '1rem',
-                cursor: 'pointer', letterSpacing: 0.2,
-              }}
-            >
-              🚫 No me interesa
-            </button>
-
-            {/* Client info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              {pendingPopup.client_photo ? (
-                <img src={pendingPopup.client_photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextSibling as HTMLElement)?.style && ((e.currentTarget.nextSibling as HTMLElement).style.display = 'flex'); }} />
-              ) : null}
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,197,24,0.15)', display: pendingPopup.client_photo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
-              <div>
-                <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.95rem' }}>{pendingPopup.client_name ?? 'Cliente'}</div>
-                {pendingPopup.client_is_verified && (
-                  <span title="Identidad verificada" style={{ fontSize: '1.1rem' }}>🛡️</span>
-                )}
-                {pendingPopup.client_rating != null && (
-                  <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{'★'.repeat(Math.round(pendingPopup.client_rating))} {pendingPopup.client_rating.toFixed(1)}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Service + price */}
-            <div style={{ background: '#f8fafc', borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, color: '#F5C518', fontSize: '0.9rem', marginBottom: 4 }}>
-                🛠 {pendingPopup.service_type}
-              </div>
-              {pendingPopup.description && (
-                <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: 4 }}>{pendingPopup.description}</div>
-              )}
-              {pendingPopup.address && (
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>📍 {pendingPopup.address}</div>
-              )}
-              {(() => {
-                const pos = tecnicoPosRef.current;
-                const jLat = pendingPopup.lat; const jLng = pendingPopup.lng;
-                if (pos && jLat != null && jLng != null) {
-                  const km = haversineKm(pos.lat, pos.lng, Number(jLat), Number(jLng));
-                  return <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#F5C518', marginTop: 2 }}>📏 Distancia: {km.toFixed(1)} km</div>;
-                }
-                return null;
-              })()}
-              {pendingPopup.client_initial_price != null && (
-                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#059669', marginTop: 4 }}>
-                  💰 Ofrece: {Number(pendingPopup.client_initial_price).toLocaleString('es-PY')} Gs.
-                </div>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => { dismissPopup(); router.push('/tecnico/ofertas'); }}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
-              >
-                👁 Ver solicitud
-              </button>
-              <button
-                onClick={dismissPopup}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
-              >
-                Ahora no
-              </button>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }
