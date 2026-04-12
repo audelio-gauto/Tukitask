@@ -14,6 +14,7 @@ import { BottomNav } from '../driver/components/BottomNav';
 
 const TECNICO_TABS = [
   { href: '/tecnico',              icon: '🏠', label: 'Inicio'    },
+  { href: '/tecnico/historial',    icon: '📋', label: 'Historial' },
   { href: '/tecnico/citas',        icon: '📅', label: 'Citas'     },
   { href: '/tecnico/ganancias',    icon: '📊', label: 'Ganancias' },
   { href: '/tecnico/settings',     icon: '⚙️', label: 'Config'    },
