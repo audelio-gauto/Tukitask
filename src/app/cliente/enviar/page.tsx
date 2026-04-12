@@ -469,7 +469,7 @@ export default function EnviarPaquetePage() {
           })) : undefined,
         }),
       });
-      if (res.status === 401) { router.push('/auth'); return; }
+      if (res.status === 401) { router.replace('/auth'); return; }
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Error al crear el pedido');
