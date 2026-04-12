@@ -5,6 +5,7 @@ import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
+import ReportModal from '@/components/ReportModal';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -83,6 +84,7 @@ export default function TecnicoHistorialPage() {
   const [ratingJob, setRatingJob] = useState<Job | null>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
   const [chatModal, setChatModal] = useState<{ jobId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
+  const [reportModal, setReportModal] = useState<{ jobId: string; clientEmail: string; clientName: string | null } | null>(null);
 
   const fetchHistory = useCallback(() => {
     if (!email) return;
@@ -250,6 +252,25 @@ export default function TecnicoHistorialPage() {
               ⭐ Calificar Cliente
             </button>
           )}
+
+          {/* Report button */}
+          <button
+            onClick={() => setReportModal({ jobId: job.id, clientEmail: job.client_email, clientName: job.client_name })}
+            style={{
+              marginTop: 8, background: 'none',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, color: 'rgba(239,68,68,0.65)',
+              fontSize: '0.72rem', padding: '5px 12px',
+              cursor: 'pointer', fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Reportar cliente
+          </button>
         </div>
       </div>
     );
@@ -333,6 +354,20 @@ export default function TecnicoHistorialPage() {
           myName={displayName || null}
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
+        />
+      )}
+
+      {/* Report modal */}
+      {reportModal && email && (
+        <ReportModal
+          reporterEmail={email}
+          reporterRole="tecnico"
+          reportedEmail={reportModal.clientEmail}
+          reportedRole="cliente"
+          reportedName={reportModal.clientName ?? undefined}
+          referenceType="job"
+          referenceId={reportModal.jobId}
+          onClose={() => setReportModal(null)}
         />
       )}
 

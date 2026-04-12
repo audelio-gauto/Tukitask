@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
-import ReportModal from '@/components/ReportModal';
 
 interface Job {
   id: string;
@@ -64,7 +63,7 @@ export default function TecnicoGananciasPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('mes');
-  const [reportModal, setReportModal] = useState<{ jobId: string; clientEmail: string; clientName: string | null } | null>(null);
+  // (report moved to historial)
 
   const fetchJobs = useCallback(async () => {
     if (!email) return;
@@ -299,21 +298,6 @@ export default function TecnicoGananciasPage() {
                         +{fmtGs(Number(job.total_price ?? 0))} Gs
                       </span>
                     </div>
-
-                    {job.client_email && (
-                      <button
-                        onClick={() => setReportModal({ jobId: job.id, clientEmail: job.client_email!, clientName: job.client_name })}
-                        style={{
-                          marginTop: 8, background: 'none',
-                          border: '1px solid rgba(239,68,68,0.25)',
-                          borderRadius: 8, color: 'rgba(239,68,68,0.7)',
-                          fontSize: '0.72rem', padding: '4px 10px',
-                          cursor: 'pointer', fontWeight: 600,
-                        }}
-                      >
-                        Reportar cliente
-                      </button>
-                    )}
                   </div>
                 ))
               )}
@@ -321,19 +305,6 @@ export default function TecnicoGananciasPage() {
           </>
         )}
       </div>
-
-      {reportModal && email && (
-        <ReportModal
-          reporterEmail={email}
-          reporterRole="tecnico"
-          reportedEmail={reportModal.clientEmail}
-          reportedRole="cliente"
-          reportedName={reportModal.clientName ?? undefined}
-          referenceType="job"
-          referenceId={reportModal.jobId}
-          onClose={() => setReportModal(null)}
-        />
-      )}
     </div>
   );
 }
