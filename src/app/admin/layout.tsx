@@ -12,13 +12,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     (async () => {
-      const { data: { user, session } } = await supabase.auth.getSession();
-      if (!user) { router.push('/auth'); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/auth'); return; }
       try {
         const res = await fetch('/api/check-role', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-          body: JSON.stringify({ email: user.email }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ email: session.user.email }),
         });
         const json = await res.json();
         if (json?.role !== 'admin') { router.push('/auth'); return; }
