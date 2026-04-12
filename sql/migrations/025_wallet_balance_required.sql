@@ -20,7 +20,13 @@ CREATE INDEX IF NOT EXISTS idx_wallet_balance
 -- ── 2. Ampliar tipos de transacción para acceso a red (uso futuro) ────────
 -- La tabla tiene: CHECK (type IN ('recharge','commission','adjustment'))
 -- Necesitamos también 'access_fee' para eventual tarifa por matcheo (como InDrive).
--- Se actualiza la restricción de forma segura (add → drop old → add new).
+-- IMPORTANTE: primero normalizar cualquier fila con type desconocido para que
+-- el ADD CONSTRAINT no falle con 23514 (check_violation).
+UPDATE wallet_transactions
+  SET type = 'adjustment',
+      note = COALESCE(note, '') || ' [tipo_desconocido_normalizado]'
+  WHERE type NOT IN ('recharge', 'commission', 'adjustment', 'access_fee');
+
 ALTER TABLE wallet_transactions
   DROP CONSTRAINT IF EXISTS wallet_transactions_type_check;
 
