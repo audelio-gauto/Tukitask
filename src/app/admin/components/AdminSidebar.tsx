@@ -161,10 +161,10 @@ export default function AdminSidebar() {
 
   return (
     <aside
-      className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-[#1e1e2d] text-gray-300 flex flex-col transition-all duration-300 fixed left-0 top-0 z-40`}
+      className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-[#1C1C2E] text-[rgba(255,255,255,0.6)] flex flex-col transition-all duration-300 fixed left-0 top-0 z-40`}
     >
       {/* Logo / Brand */}
-      <div className="flex items-center justify-between h-16 px-4 bg-[#1a1a27] border-b border-gray-700/50">
+      <div className="flex items-center justify-between h-16 px-4 bg-[#13131F] border-b border-[rgba(245,197,24,0.12)]">
         {!collapsed && (
           <span className="text-lg font-bold text-white tracking-wide">
             Tukitask
@@ -187,7 +187,7 @@ export default function AdminSidebar() {
       {/* Menu label */}
       {!collapsed && (
         <div className="px-4 pt-6 pb-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Menú principal</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[rgba(255,255,255,0.3)]">Menú principal</span>
         </div>
       )}
 
@@ -204,9 +204,9 @@ export default function AdminSidebar() {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
                   ${isActive
                     ? hasSubItems
-                      ? 'text-white bg-white/5'
-                      : 'bg-[#F5C518] text-[#1C1C2E] shadow-lg shadow-[#F5C518]/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                      ? 'text-white bg-[rgba(255,255,255,0.06)]'
+                      : 'bg-gradient-to-r from-[#F5C518] to-[#F58A07] text-[#1C1C2E] shadow-lg shadow-[rgba(245,197,24,0.25)]'
+                    : 'text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                   }
                   ${collapsed ? 'justify-center' : ''}
                 `}
@@ -229,7 +229,7 @@ export default function AdminSidebar() {
               </Link>
               {/* Sub-items */}
               {hasSubItems && !collapsed && (
-                <div className="ml-6 mt-1 space-y-1 border-l border-gray-700/50 pl-3">
+                <div className="ml-6 mt-1 space-y-1 border-l border-[rgba(245,197,24,0.12)] pl-3">
                   {item.subItems!.map(sub => {
                     const isSubItemActive = pathname === sub.href;
                     return (
@@ -238,8 +238,8 @@ export default function AdminSidebar() {
                         href={sub.href}
                         className={`block px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
                           ${isSubItemActive
-                            ? 'bg-[#F5C518] text-[#1C1C2E]'
-                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            ? 'bg-gradient-to-r from-[#F5C518] to-[#F58A07] text-[#1C1C2E] font-bold'
+                            : 'text-[rgba(255,255,255,0.45)] hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                           }
                         `}
                       >
@@ -256,8 +256,8 @@ export default function AdminSidebar() {
 
       {/* Footer */}
       {!collapsed && (
-        <div className="px-4 py-4 border-t border-gray-700/50">
-          <div className="text-xs text-gray-500">
+        <div className="px-4 py-4 border-t border-[rgba(245,197,24,0.1)]">
+          <div className="text-xs text-[rgba(255,255,255,0.3)]">
             <p>Tukitask Admin</p>
             <p className="mt-1">v1.0.0</p>
           </div>

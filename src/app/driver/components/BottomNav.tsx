@@ -2,9 +2,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export type NavTab = { href: string; icon: string; label: string };
+export type NavTab = { href: string; icon: React.ReactNode; label: string };
 
-export function BottomNav({ tabs, accent = '#10b981' }: { tabs: NavTab[]; accent?: string }) {
+export function BottomNav({ tabs, accent = '#F5C518' }: { tabs: NavTab[]; accent?: string }) {
   const pathname = usePathname();
   return (
     <nav className="tuki-bottom-nav" aria-label="Navegación principal">

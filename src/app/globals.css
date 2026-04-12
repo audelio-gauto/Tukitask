@@ -1,11 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #13131F;
+  --foreground: #ffffff;
   --brand-primary: #F5C518;
   --brand-accent: #F58A07;
   --brand-dark: #E6A800;
+  /* App surfaces */
+  --surface-1: #1C1C2E;
+  --surface-2: #1E1E2E;
+  --surface-3: #252538;
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255,255,255,0.6);
+  --text-muted: rgba(255,255,255,0.35);
+  /* Borders */
+  --border-subtle: rgba(255,255,255,0.07);
+  --border-gold: rgba(245,197,24,0.2);
+  /* Radius scale */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
   /* Safe-area insets (for iOS notch / home indicator) */
   --sat: env(safe-area-inset-top,    0px);
   --sab: env(safe-area-inset-bottom, 0px);
@@ -22,8 +40,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #13131F;
+    --foreground: #ffffff;
   }
 }
 
@@ -87,5 +105,32 @@ input[type="search"],
 select,
 textarea {
   font-size: max(16px, 1em);
+}
+
+/* ── Global interactive transitions ────────────────────────────────────── */
+button, a[role="button"], .tuki-btn,
+.tuki-bottom-nav-item, .tuki-drawer-link {
+  transition: opacity 0.18s ease, transform 0.15s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+button:active:not(:disabled), a[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* ── Skeleton pulse animation ───────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Spin animation for SVG loaders ─────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Fade-in-down toast animation ───────────────────────────────────────── */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 

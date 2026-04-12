@@ -32,17 +32,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#f5f5f9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#13131F] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm">Verificando permisos...</p>
+          <p className="text-[rgba(255,255,255,0.5)] text-sm">Verificando permisos...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f9]">
+    <div className="min-h-screen bg-[#13131F]">
       <AdminSidebar />
       <div className="ml-64 transition-all duration-300">
         <AdminHeader />

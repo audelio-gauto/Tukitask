@@ -37,7 +37,7 @@ export default function AceptacionPage() {
     <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: 80 }}>
       {/* Header — mismo estilo amarillo que driver */}
       <div style={{ background: '#F5C518', color: '#111', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#111', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#111', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🏆 Tasa de Aceptación</h1>
           <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.75 }}>Tu rendimiento histórico</p>
@@ -47,7 +47,7 @@ export default function AceptacionPage() {
       <div style={{ padding: 16 }}>
         {loading ? (
           <div style={{ textAlign: 'center', paddingTop: 60, color: '#9ca3af' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
+            <svg style={{ width: 32, height: 32, marginBottom: 8, display: 'inline-block', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>
             <p>Cargando estadísticas...</p>
           </div>
         ) : (

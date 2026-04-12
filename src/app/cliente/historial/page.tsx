@@ -184,7 +184,7 @@ export default function ClienteHistorialPage() {
           width: 36, height: 36, borderRadius: 10, border: 'none',
           background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '1.1rem',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>←</button>
+        }}>          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
         <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>Historial</h1>
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Envíos y servicios</p>
@@ -200,12 +200,12 @@ export default function ClienteHistorialPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px 16px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>⏳</div>
+            <svg style={{ width: 40, height: 40, marginBottom: 12 }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" style={{ animation: 'spin 1s linear infinite', transformOrigin: 'center' }} /></svg>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Cargando historial…</p>
           </div>
         ) : total === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
-            <div style={{ fontSize: '4rem', marginBottom: 16 }}>📂</div>
+            <svg style={{ width: 56, height: 56, marginBottom: 16, opacity: 0.35 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg>
             <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', marginBottom: 8 }}>Sin historial aún</p>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.88rem' }}>Tus envíos y servicios aparecerán aquí</p>
           </div>
