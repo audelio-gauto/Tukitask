@@ -1,6 +1,5 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useDriverContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -20,7 +19,6 @@ function getGreeting() {
 
 export default function DriverDashboard() {
   const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings } = useDriverContext();
-  const router = useRouter();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -35,32 +33,7 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
-  // Auto-countdown: when online on dashboard, 20s to disconnect or auto-redirect to orders
-  const [onlineCountdown, setOnlineCountdown] = useState(20);
-  const onlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stopOnlineCountdown = useCallback(() => {
-    if (onlineTimerRef.current) { clearInterval(onlineTimerRef.current); onlineTimerRef.current = null; }
-    setOnlineCountdown(20);
-  }, []);
-
-  useEffect(() => {
-    if (!available) { stopOnlineCountdown(); return; }
-    // Start 20s countdown when online on dashboard
-    setOnlineCountdown(20);
-    onlineTimerRef.current = setInterval(() => {
-      setOnlineCountdown(prev => {
-        if (prev <= 1) {
-          stopOnlineCountdown();
-          router.push('/driver/deliveries');
-          return 20;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { stopOnlineCountdown(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available]);
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
   const DRIVER_TOTAL_DOCS = 7; // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
@@ -528,52 +501,7 @@ export default function DriverDashboard() {
         </>
       )}
 
-      {/* Online countdown — InDrive-style bottom progress bar */}
-      {available && !feedVisible && (
-        <div style={{
-          position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
-          zIndex: 9990,
-          background: '#111827',
-          borderTop: '1px solid rgba(200,255,0,0.15)',
-        }}>
-          {/* Draining progress bar */}
-          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)' }}>
-            <div style={{
-              height: '100%',
-              width: `${(onlineCountdown / 20) * 100}%`,
-              background: 'linear-gradient(90deg,#c8ff00,#a8e000)',
-              transition: 'width 1s linear',
-              borderRadius: '0 2px 2px 0',
-            }} />
-          </div>
-          {/* Content row */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.65rem 1.1rem 1rem',
-            gap: 12,
-          }}>
-            <div>
-              <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                Redirigiendo a Pedidos…
-              </p>
-              <p style={{ margin: '3px 0 0', color: '#6b7280', fontSize: '0.75rem' }}>
-                Desconectá el toggle para cancelar
-              </p>
-            </div>
-            <div style={{
-              minWidth: 48, height: 48, borderRadius: '50%',
-              border: '3px solid #c8ff00',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#c8ff00', lineHeight: 1 }}>
-                {onlineCountdown}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Toast */}
       {toast && <div className="tuki-toast">{toast}</div>}
@@ -710,14 +638,12 @@ export default function DriverDashboard() {
               <input type="checkbox" checked={available} onChange={() => {
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return;
                 if (!available) {
-                  // Going online → save state and redirect to deliveries immediately
+                  // Going online → save state
                   setAvailable(true);
                   try { localStorage.setItem('driver_available', 'true'); } catch {}
                   showToast('💰 ¡Online! Buscando pedidos…');
-                  router.push('/driver/deliveries');
                 } else {
-                  // Going offline → stop countdown and stay on dashboard
-                  stopOnlineCountdown();
+                  // Going offline → stay on dashboard
                   setAvailable(false);
                   try { localStorage.setItem('driver_available', 'false'); } catch {}
                   showToast('💸 Offline — descansando');
