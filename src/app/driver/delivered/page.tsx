@@ -90,6 +90,10 @@ export default function DeliveredPage() {
     const date = order.completed_at
       ? new Date(order.completed_at).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
       : new Date(order.created_at).toLocaleDateString('es-PY');
+    const refDate = order.completed_at || order.created_at;
+    const chatAvailable = refDate
+      ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000
+      : false;
 
     return (
       <div key={order.id} style={{
@@ -149,13 +153,15 @@ export default function DeliveredPage() {
             </div>
           )}
 
-          {/* Chat 24h */}
-          <button
-            onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
-            style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-          >
-            💬 Chat 24h con el cliente
-          </button>
+          {/* Chat — solo disponible las primeras 24h */}
+          {chatAvailable && (
+            <button
+              onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
+              style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            >
+              💬 Chat con el cliente
+            </button>
+          )}
 
           {/* Rate button */}
           {existingRating == null && (

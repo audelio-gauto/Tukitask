@@ -124,6 +124,11 @@ export default function TecnicoHistorialPage() {
     const serviceLabel = SERVICE_LABELS[job.service_type ?? ''] ?? (job.service_type ?? '—');
     const existingRating = job.client_rating ?? localRatings[job.id] ?? null;
 
+    const refDate = job.completed_at || job.created_at;
+    const chatAvailable = refDate
+      ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000
+      : false;
+
     return (
       <div key={job.id} style={{
         background: 'rgba(255,255,255,0.04)',
@@ -213,20 +218,22 @@ export default function TecnicoHistorialPage() {
             </div>
           ) : null}
 
-          {/* Chat 24h */}
-          <button
-            onClick={() => setChatModal({ jobId: job.id, clientName: clientName, clientPhoto: clientPhoto })}
-            style={{
-              width: '100%', padding: '9px', borderRadius: 10,
-              border: '1px solid rgba(99,180,255,0.3)',
-              background: 'rgba(59,130,246,0.12)',
-              color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem',
-              cursor: 'pointer', marginBottom: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}
-          >
-            💬 Chat 24h con el cliente
-          </button>
+          {/* Chat — solo disponible las primeras 24h */}
+          {chatAvailable && (
+            <button
+              onClick={() => setChatModal({ jobId: job.id, clientName: clientName, clientPhoto: clientPhoto })}
+              style={{
+                width: '100%', padding: '9px', borderRadius: 10,
+                border: '1px solid rgba(99,180,255,0.3)',
+                background: 'rgba(59,130,246,0.12)',
+                color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem',
+                cursor: 'pointer', marginBottom: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              💬 Chat con el cliente
+            </button>
+          )}
 
           {/* Rate button — only for completado and if not yet rated */}
           {job.status === 'completado' && existingRating == null && (
