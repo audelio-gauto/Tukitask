@@ -90,6 +90,21 @@ export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 
+  // E-1: Verificar saldo mínimo de billetera antes de permitir oferta
+  // Previene que drivers con saldo insuficiente participen en el mercado.
+  const minBal = Number(process.env.DRIVER_MIN_WALLET_BALANCE ?? 0);
+  {
+    const { data: wallet } = await supabaseServer
+      .from('driver_wallets')
+      .select('balance')
+      .eq('driver_email', user.email)
+      .maybeSingle();
+    const balance = Number(wallet?.balance ?? 0);
+    if (balance < minBal) {
+      return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
+    }
+  }
+
   const body = await req.json();
   const { order_id, amount } = body;
   const note: string | null = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 300) : null;

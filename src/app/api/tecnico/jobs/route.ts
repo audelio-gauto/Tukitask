@@ -135,6 +135,20 @@ export async function GET(req: Request) {
       const user = await getAuthUser(req);
       if (!user || user.email !== email) return unauthorized();
 
+      // E-1: Verificar saldo mínimo de billetera antes de mostrar solicitudes
+      {
+        const minBal = Number(process.env.DRIVER_MIN_WALLET_BALANCE ?? 0);
+        const { data: wallet } = await sb
+          .from('driver_wallets')
+          .select('balance')
+          .eq('driver_email', email)
+          .maybeSingle();
+        const balance = Number(wallet?.balance ?? 0);
+        if (balance < minBal) {
+          return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
+        }
+      }
+
       const { data: settings } = await sb
         .from('tecnico_settings')
         .select('gender, accepted_services, is_verified')
@@ -332,6 +346,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Missing jobId or proposedPrice' }, { status: 400 });
       }
       const tecnicoEmail = user.email; // derived from token — prevents impersonation
+
+      // E-1: Verificar saldo mínimo antes de permitir la oferta
+      {
+        const minBal = Number(process.env.DRIVER_MIN_WALLET_BALANCE ?? 0);
+        const { data: wallet } = await sb
+          .from('driver_wallets')
+          .select('balance')
+          .eq('driver_email', tecnicoEmail)
+          .maybeSingle();
+        const balance = Number(wallet?.balance ?? 0);
+        if (balance < minBal) {
+          return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
+        }
+      }
       // Fetch client_email to store on offer (enables filtered realtime subscriptions)
       const { data: jobForClient } = await sb
         .from('tecnico_jobs')

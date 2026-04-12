@@ -154,8 +154,7 @@ export default function TecnicoDashboard() {
   const [rangoKm, setRangoKm]           = useState(20);
 
   // ── Wallet balance ────────────────────────────────────────────────────────
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  useEffect(() => {
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);  const [walletBlocked, setWalletBlocked] = useState(false);  useEffect(() => {
     if (!email) return;
     authFetch('/api/wallet')
       .then(r => r.ok ? r.json() : null)
@@ -185,8 +184,20 @@ export default function TecnicoDashboard() {
   const loadPendingJobs = useCallback(() => {
     if (!email) return;
     authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`)
-      .then(r => r.json())
+      .then(async r => {
+        if (r.status === 402) {
+          // Saldo insuficiente — bloquear acceso al mercado
+          const body = await r.json().catch(() => ({}));
+          setWalletBlocked(true);
+          setWalletBalance(Number(body.balance ?? 0));
+          setPendingJobs([]);
+          return null;
+        }
+        setWalletBlocked(false);
+        return r.json();
+      })
       .then(data => {
+        if (!data) return;
         const arr = Array.isArray(data) ? data.filter((j: any) => !j.my_offer) : [];
         const incomingIds = new Set(arr.map((j: any) => String(j.id)));
         const freshIds = new Set([...incomingIds].filter(id => !knownJobIdsRef.current.has(id)));
@@ -219,6 +230,10 @@ export default function TecnicoDashboard() {
 
   const sendTecnicoOffer = async (jobId: string, price: number, note: string) => {
     if (!price || !email || !!sendingJobId) return;
+    if (walletBlocked) {
+      showToast('⚠️ Recargá tu billetera para enviar ofertas');
+      return;
+    }
     setSendingJobId(jobId);
     try {
       const res = await authFetch('/api/tecnico/jobs', {
@@ -234,11 +249,21 @@ export default function TecnicoDashboard() {
           note: note || null, distanceKm: null,
         }),
       });
+      if (res.status === 402) {
+        const body = await res.json().catch(() => ({}));
+        setWalletBlocked(true);
+        setWalletBalance(Number(body.balance ?? 0));
+        setPendingJobs([]);
+        showToast('⚠️ Saldo insuficiente — recargá tu billetera');
+        setSendingJobId(null);
+        return;
+      }
       const json = await res.json();
       if (json.offer) setDismissedHome(prev => new Set([...prev, jobId]));
     } catch {
       showToast('❌ Error al enviar oferta. Intentá de nuevo.');
-    }    setSendingJobId(null);
+    }
+    setSendingJobId(null);
   };
 
 
@@ -442,7 +467,7 @@ export default function TecnicoDashboard() {
     },
   ];
 
-  const feedVisible = available && pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
+  const feedVisible = available && !walletBlocked && pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
 
   return (
     <>
@@ -481,13 +506,17 @@ export default function TecnicoDashboard() {
       </button>
 
       {/* Wallet balance pill — centrada top */}
-      <Link href="/tecnico/billetera" className="tuki-wallet-pill" aria-label="Mi billetera">
-        <span className="tuki-wallet-pill-amount">
+      <Link href="/tecnico/billetera" className="tuki-wallet-pill" aria-label="Mi billetera"
+        style={walletBlocked ? { background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.5)', boxShadow: '0 0 0 3px rgba(239,68,68,0.12)' } : undefined}
+      >
+        <span className="tuki-wallet-pill-amount" style={walletBlocked ? { color: '#f87171' } : undefined}>
           {walletBalance !== null
             ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
             : <span style={{ display: 'inline-block', width: 72, height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />}
         </span>
-        <span className="tuki-wallet-pill-label">Billetera</span>
+        <span className="tuki-wallet-pill-label" style={walletBlocked ? { color: 'rgba(248,113,113,0.9)' } : undefined}>
+          {walletBlocked ? '⚠️ Recargar' : 'Billetera'}
+        </span>
       </Link>
 
       {/* ── Filtro button ── */}
@@ -626,7 +655,11 @@ export default function TecnicoDashboard() {
             role="button"
             onClick={() => setSheet('half')}
           >
-            {available ? (
+            {walletBlocked ? (
+              <span className="tuki-sheet-hint-text" style={{ color: '#f87171', fontWeight: 700 }}>
+                ⚠️ Recargá tu billetera para recibir solicitudes
+              </span>
+            ) : available ? (
               <>
                 <span className="tuki-sheet-hint-dot" />
                 <span className="tuki-sheet-hint-text">
@@ -653,12 +686,13 @@ export default function TecnicoDashboard() {
           <div className="tuki-availability">
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
-              <span className={`tuki-status-badge ${available ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available ? '💰 Hacer money' : '💸 Money off'}
+              <span className={`tuki-status-badge ${available && !walletBlocked ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
+                {available && !walletBlocked ? '💰 Hacer money' : '💸 Money off'}
               </span>
             </div>
             <label className="tuki-toggle">
-              <input type="checkbox" checked={available} onChange={() => {
+              <input type="checkbox" checked={available && !walletBlocked} onChange={() => {
+                if (walletBlocked) { showToast('⚠️ Recargá tu billetera para activarte'); return; }
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
                 if (!available) {
                   setAvailable(true);
@@ -673,6 +707,37 @@ export default function TecnicoDashboard() {
               <span className="tuki-toggle-slider" />
             </label>
           </div>
+
+          {/* ⚠️ Billetera bloqueada — banner de alta prioridad */}
+          {walletBlocked && (
+            <Link href="/tecnico/billetera" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
+              <div style={{
+                padding: '1rem', borderRadius: 16,
+                background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
+                border: '2px solid #fca5a5',
+                display: 'flex', alignItems: 'center', gap: 12,
+                boxShadow: '0 4px 16px rgba(239,68,68,0.15)',
+              }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="22" height="22" fill="none" stroke="#ef4444" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="9" width="20" height="12" rx="2"/>
+                    <path d="M16 9V7a4 4 0 00-8 0v2"/>
+                    <circle cx="12" cy="15" r="1.5" fill="#ef4444" stroke="none"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#991b1b' }}>Billetera bloqueada</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.73rem', color: '#b91c1c', lineHeight: 1.4 }}>
+                    Necesitás saldo para recibir solicitudes.
+                    Saldo actual: <strong>{Number(walletBalance ?? 0).toLocaleString('es-PY')} ₲</strong>
+                  </p>
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 700, flexShrink: 0, background: '#ef4444', padding: '6px 12px', borderRadius: 10 }}>
+                  Recargar ›
+                </span>
+              </div>
+            </Link>
+          )}
 
           {/* Mis documentos status card */}
           {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
