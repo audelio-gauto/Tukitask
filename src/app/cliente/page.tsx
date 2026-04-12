@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
@@ -1107,29 +1107,88 @@ export default function ClienteHomePage() {
         )}
       </div>
 
-      {/* ── IDLE — centered content ──────────────────────────────────────── */}
+      {/* ── IDLE — service selector ───────────────────────────────────────── */}
       {mode === 'idle' && !loading && (
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center',
-          gap: 10, textAlign: 'center', padding: '0 24px',
+          position: 'absolute', top: 0, bottom: 72, left: 0, right: 0,
+          zIndex: 5, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', padding: '0 20px',
         }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: 4 }}>📭</div>
-          <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>No tenés ofertas pendientes</div>
-          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', textShadow: '0 1px 6px rgba(0,0,0,0.8)', marginBottom: 8 }}>¿Qué ayuda necesitás hoy?</div>
-          <button
-            onClick={() => setShowPublishModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '16px 32px', borderRadius: 50, border: 'none',
-              background: 'linear-gradient(135deg, #F5C518, #F58A07)',
-              color: '#1C1C2E', fontWeight: 900, fontSize: '1.05rem',
-              cursor: 'pointer', boxShadow: '0 6px 24px rgba(245,197,24,0.5)',
-            }}
-          >
-            <span style={{ fontSize: '1.2rem' }}>➕</span> Pedir ahora
-          </button>
+          {/* Hero illustration */}
+          <div style={{ position: 'relative', marginBottom: 22 }}>
+            <div style={{
+              width: 82, height: 82, borderRadius: 26,
+              background: 'linear-gradient(135deg, rgba(245,197,24,0.13), rgba(245,138,7,0.06))',
+              border: '1.5px solid rgba(245,197,24,0.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div style={{ position: 'absolute', inset: -20, borderRadius: 46, background: 'radial-gradient(circle, rgba(245,197,24,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          </div>
+
+          <div style={{ textAlign: 'center', marginBottom: 26 }}>
+            <div style={{ fontWeight: 800, fontSize: '1.22rem', color: '#fff', marginBottom: 6, letterSpacing: '-0.01em' }}>¿Qué necesitás hoy?</div>
+            <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.42)' }}>Elegí un servicio para empezar</div>
+          </div>
+
+          {/* Direct service cards — no modal needed */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 370 }}>
+            {/* Envíos card */}
+            <Link href="/cliente/enviar" style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: '17px 18px',
+              borderRadius: 20, textDecoration: 'none',
+              background: 'rgba(245,197,24,0.07)', border: '1.5px solid rgba(245,197,24,0.22)',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                background: 'linear-gradient(135deg, #F5C518 0%, #F58A07 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 5px 16px rgba(245,197,24,0.38)',
+              }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="3" width="15" height="13" rx="2"/>
+                  <path d="M16 8h4l3 5v3h-7V8z"/>
+                  <circle cx="5.5" cy="18.5" r="2.5"/>
+                  <circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#fff', marginBottom: 3 }}>Mandaditos / Envíos</div>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Delivery rápido a domicilio</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,197,24,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </Link>
+
+            {/* Tasker card */}
+            <Link href="/cliente/servicio" style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: '17px 18px',
+              borderRadius: 20, textDecoration: 'none',
+              background: 'rgba(99,102,241,0.07)', border: '1.5px solid rgba(99,102,241,0.22)',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 5px 16px rgba(99,102,241,0.38)',
+              }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#fff', marginBottom: 3 }}>Contratar un Tasker</div>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Servicios en tu hogar</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(139,92,246,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -1193,23 +1252,37 @@ export default function ClienteHomePage() {
         display: 'flex', gap: 4, justifyContent: 'space-around',
         boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
         }}>
-        {[
-          { icon: '🏠', label: 'Home', path: '/cliente', active: true, onClick: undefined as (() => void) | undefined },
-          { icon: '➕', label: 'Publicar', path: '', active: false, onClick: () => setShowPublishModal(true) },
-          { icon: '📋', label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined },
-          { icon: '👤', label: 'Cuenta', path: '/cliente/settings', active: false, onClick: undefined as (() => void) | undefined },
-        ].map(item => (
+        {([
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>),
+            label: 'Home', path: '/cliente', active: true, onClick: undefined as (() => void) | undefined,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>),
+            label: 'Publicar', path: '', active: false, onClick: () => setShowPublishModal(true),
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>),
+            label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>),
+            label: 'Cuenta', path: '/cliente/settings', active: false, onClick: undefined as (() => void) | undefined,
+          },
+        ] as { icon: React.ReactNode; label: string; path: string; active: boolean; onClick: (() => void) | undefined }[])
+        .map(item => (
             item.onClick ? (
               <button key={item.label} onClick={item.onClick}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
-                <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.45)' }}>
+                {item.icon}
+                <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
               </button>
             ) : (
               <Link key={item.label} href={item.path}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent' }}>
-                <div style={{ fontSize: '1.4rem' }}>{item.icon}</div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.5)' }}>{item.label}</span>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent', color: item.active ? '#F5C518' : 'rgba(255,255,255,0.45)' }}>
+                {item.icon}
+                <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
+                {item.active && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5C518', marginTop: 1 }} />}
               </Link>
             )
         ))}
