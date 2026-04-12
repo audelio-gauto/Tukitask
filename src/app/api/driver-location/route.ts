@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthUser, unauthorized } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,21 +10,29 @@ const sb = createClient(
 );
 
 // GET /api/driver-location?job_id=X  → { lat, lng, updated_at } | null
+// Requires auth: caller must be the driver themselves, or a client with an active job assigned to that driver.
 export async function GET(req: Request) {
+  const caller = await getAuthUser(req);
+  if (!caller) return unauthorized();
+
   try {
-    const url    = new URL(req.url);
-    const jobId  = url.searchParams.get('job_id');
-    const email  = (url.searchParams.get('email') || '').toLowerCase();
+    const url   = new URL(req.url);
+    const jobId = url.searchParams.get('job_id');
+    const email = (url.searchParams.get('email') || '').toLowerCase();
 
     if (jobId) {
-      // Lookup by job: first find tecnico_email from the job, then get their location
+      // Verify the caller is the assigned driver or the client of this job
       const { data: job } = await sb
         .from('tecnico_jobs')
-        .select('tecnico_email')
+        .select('tecnico_email, client_email')
         .eq('id', jobId)
         .maybeSingle();
 
       if (!job?.tecnico_email) return NextResponse.json(null);
+
+      const isDriver = job.tecnico_email.toLowerCase() === caller.email;
+      const isClient = job.client_email?.toLowerCase() === caller.email;
+      if (!isDriver && !isClient) return unauthorized('No autorizado para ver esta ubicación');
 
       const { data: loc } = await sb
         .from('driver_locations')
@@ -35,6 +44,9 @@ export async function GET(req: Request) {
     }
 
     if (email) {
+      // Only the driver themselves can query their own location by email
+      if (email !== caller.email) return unauthorized('Solo podés consultar tu propia ubicación');
+
       const { data: loc } = await sb
         .from('driver_locations')
         .select('lat, lng, updated_at, job_id')
@@ -49,14 +61,18 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/driver-location  body: { driver_email, job_id, lat, lng }
+// POST /api/driver-location  body: { job_id, lat, lng }
+// driver_email is always taken from the auth token — body value ignored.
 export async function POST(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   try {
     const body = await req.json();
-    const { driver_email, job_id, lat, lng } = body || {};
+    const { job_id, lat, lng } = body || {};
 
-    if (!driver_email || lat == null || lng == null) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    if (lat == null || lng == null) {
+      return NextResponse.json({ error: 'Missing fields: lat, lng' }, { status: 400 });
     }
 
     const latN = Number(lat);
@@ -68,7 +84,13 @@ export async function POST(req: Request) {
     const { error } = await sb
       .from('driver_locations')
       .upsert(
-        { driver_email: String(driver_email).toLowerCase(), job_id: job_id ?? null, lat: latN, lng: lngN, updated_at: new Date().toISOString() },
+        {
+          driver_email: user.email,  // always from token
+          job_id: job_id ?? null,
+          lat: latN,
+          lng: lngN,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'driver_email' }
       );
 

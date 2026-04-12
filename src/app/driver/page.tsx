@@ -85,7 +85,7 @@ export default function DriverDashboard() {
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
 
   const loadPendingOrders = useCallback(() => {
-    fetch('/api/orders')
+    authFetch('/api/orders')
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) return;
@@ -131,8 +131,9 @@ export default function DriverDashboard() {
         body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note }),
       });
       setDismissedHome(prev => new Set([...prev, orderId]));
-    } catch {}
-    setSendingOfferId(null);
+    } catch {
+      showToast('❌ Error al enviar oferta. Intentá de nuevo.');
+    }    setSendingOfferId(null);
   };
 
   // Verificar vencimiento de documentos críticos

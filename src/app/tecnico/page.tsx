@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useDriverContext } from '../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import dynamic from 'next/dynamic';
@@ -69,7 +68,6 @@ function getGreeting() {
 }
 
 export default function TecnicoDashboard() {
-  const router = useRouter();
   const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
 
   // Toast
@@ -82,32 +80,9 @@ export default function TecnicoDashboard() {
   }, []);
 
   // ── Availability – persisted ───────────────────────────────────────────────
-  const [available, setAvailable] = useState(false);
-  // Auto-countdown: when online on dashboard, 20s to disconnect or auto-redirect to offers
-  const [onlineCountdown, setOnlineCountdown] = useState(20);
-  const onlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopOnlineCountdown = useCallback(() => {
-    if (onlineTimerRef.current) { clearInterval(onlineTimerRef.current); onlineTimerRef.current = null; }
-    setOnlineCountdown(20);
-  }, []);
-
-  useEffect(() => {
-    if (!available) { stopOnlineCountdown(); return; }
-    setOnlineCountdown(20);
-    onlineTimerRef.current = setInterval(() => {
-      setOnlineCountdown(prev => {
-        if (prev <= 1) {
-          stopOnlineCountdown();
-          router.push('/tecnico/ofertas');
-          return 20;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { stopOnlineCountdown(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available]);
+  const [available, setAvailable] = useState(() => {
+    try { return localStorage.getItem('tecnico_available') === 'true'; } catch { return false; }
+  });
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -261,8 +236,9 @@ export default function TecnicoDashboard() {
       });
       const json = await res.json();
       if (json.offer) setDismissedHome(prev => new Set([...prev, jobId]));
-    } catch {}
-    setSendingJobId(null);
+    } catch {
+      showToast('❌ Error al enviar oferta. Intentá de nuevo.');
+    }    setSendingJobId(null);
   };
 
 
@@ -533,52 +509,7 @@ export default function TecnicoDashboard() {
         )}
       </button>
 
-      {/* Online countdown — InDrive-style bottom progress bar */}
-      {available && !feedVisible && (
-        <div style={{
-          position: 'fixed', bottom: 'var(--tuki-nav-h, 64px)', left: 0, right: 0,
-          zIndex: 9990,
-          background: '#1C1C2E',
-          borderTop: '1px solid rgba(245,197,24,0.2)',
-        }}>
-          {/* Draining progress bar */}
-          <div style={{ height: 4, background: 'rgba(255,255,255,0.08)' }}>
-            <div style={{
-              height: '100%',
-              width: `${(onlineCountdown / 20) * 100}%`,
-              background: 'linear-gradient(90deg,#F5C518,#e0b015)',
-              transition: 'width 1s linear',
-              borderRadius: '0 2px 2px 0',
-            }} />
-          </div>
-          {/* Content row */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.65rem 1.1rem 1rem',
-            gap: 12,
-          }}>
-            <div>
-              <p style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                Redirigiendo a Solicitudes…
-              </p>
-              <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: '0.75rem' }}>
-                Desconectá el toggle para cancelar
-              </p>
-            </div>
-            <div style={{
-              minWidth: 48, height: 48, borderRadius: '50%',
-              border: '3px solid #F5C518',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#F5C518', lineHeight: 1 }}>
-                {onlineCountdown}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Toast */}
       {toast && <div className="tuki-toast">{toast}</div>}
@@ -733,10 +664,7 @@ export default function TecnicoDashboard() {
                   setAvailable(true);
                   try { localStorage.setItem('tecnico_available', 'true'); } catch {}
                   showToast('💰 ¡Online! Buscando solicitudes…');
-                  router.push('/tecnico/ofertas');
                 } else {
-                  // Going offline → stop countdown and stay on dashboard
-                  stopOnlineCountdown();
                   setAvailable(false);
                   try { localStorage.setItem('tecnico_available', 'false'); } catch {}
                   showToast('💸 Offline — descansando');

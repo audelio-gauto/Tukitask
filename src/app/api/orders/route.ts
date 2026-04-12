@@ -41,18 +41,19 @@ export async function GET(req: Request) {
     if (!user || user.email !== driverEmail) return unauthorized();
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
   } else {
-    // Pedidos disponibles para drivers — verificar saldo de billetera
+    // Pedidos disponibles para drivers — requiere auth
     const user = await getAuthUser(req);
-    if (user) {
-      const { data: wallet } = await db
-        .from('driver_wallets')
-        .select('balance')
-        .eq('driver_email', user.email)
-        .maybeSingle();
-      const balance = Number(wallet?.balance ?? 0);
-      if (balance < MIN_WALLET_BALANCE) {
-        return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
-      }
+    if (!user) return unauthorized();
+
+    // Verificar saldo de billetera
+    const { data: wallet } = await db
+      .from('driver_wallets')
+      .select('balance')
+      .eq('driver_email', user.email)
+      .maybeSingle();
+    const balance = Number(wallet?.balance ?? 0);
+    if (balance < MIN_WALLET_BALANCE) {
+      return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
     }
     // Cache available orders for 5s (all drivers see the same list)
     // v2 key: ensures old cache without client_is_verified is not served

@@ -1,5 +1,7 @@
 export async function sendWebhook(url: string, payload: any) {
   if (!url) return
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 3000)
   try {
     // If webhook looks like Slack incoming webhook, send Slack-formatted blocks
     if (url.includes('hooks.slack.com')) {
@@ -25,7 +27,9 @@ export async function sendWebhook(url: string, payload: any) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, blocks }),
+        signal: ctrl.signal,
       })
+      clearTimeout(timer)
       return
     }
 
@@ -34,7 +38,9 @@ export async function sendWebhook(url: string, payload: any) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: ctrl.signal,
     })
+    clearTimeout(timer)
   } catch (err) {
     console.warn('sendWebhook error', err)
   }
