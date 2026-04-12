@@ -63,7 +63,8 @@ interface Job {
   client_name: string | null;
   client_email: string;
   client_photo: string | null;
-  client_rating: number | null;
+  client_rating: number | null;          // snapshot al crear
+  client_rating_given: number | null;   // calificación del técnico al cliente
   address: string | null;
   agreed_price: number | null;
   extra_charge: number | null;
@@ -122,7 +123,7 @@ export default function TecnicoHistorialPage() {
     const date = fmtDate(job.completed_at || job.created_at);
     const st = STATUS_CONFIG[job.status] ?? { label: job.status, color: '#9ca3af' };
     const serviceLabel = SERVICE_LABELS[job.service_type ?? ''] ?? (job.service_type ?? '—');
-    const existingRating = job.client_rating ?? localRatings[job.id] ?? null;
+    const existingRating = job.client_rating_given ?? localRatings[job.id] ?? null;
 
     const refDate = job.completed_at || job.created_at;
     const chatAvailable = refDate

@@ -651,6 +651,54 @@ export async function POST(req: Request) {
     }
 
     // ── rate_tecnico (client rates the tecnico after completion) ───────────────
+    if (action === 'rate_client') {
+      const { jobId, rating, note } = body;
+      if (!jobId || rating == null) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      }
+      const ratingNum = Number(rating);
+      if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+        return NextResponse.json({ error: 'Rating must be 1–5' }, { status: 400 });
+      }
+
+      const { data: job } = await sb
+        .from('tecnico_jobs')
+        .select('id, status, client_email, client_rating_given')
+        .eq('id', jobId)
+        .eq('tecnico_email', user.email) // ownership from token
+        .maybeSingle();
+
+      if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      if (job.status !== 'completado') return NextResponse.json({ error: 'Solo se pueden calificar servicios completados' }, { status: 400 });
+      if (job.client_rating_given != null) return NextResponse.json({ error: 'Ya calificaste a este cliente' }, { status: 409 });
+
+      await sb.from('tecnico_jobs').update({
+        client_rating_given:      ratingNum,
+        client_rating_given_note: note || null,
+      }).eq('id', jobId);
+
+      // Recalculate client avg_rating in client_profiles
+      if (job.client_email) {
+        const { data: ratings } = await sb
+          .from('tecnico_jobs')
+          .select('client_rating_given')
+          .eq('client_email', job.client_email)
+          .not('client_rating_given', 'is', null);
+        if (ratings && ratings.length > 0) {
+          const avg = ratings.reduce((s: number, r: { client_rating_given: number }) => s + Number(r.client_rating_given), 0) / ratings.length;
+          await sb.from('client_profiles')
+            .update({
+              avg_rating:    Math.round(avg * 10) / 10,
+              total_ratings: ratings.length,
+            })
+            .eq('email', job.client_email);
+        }
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ── rate_tecnico (client rates the tecnico) ───────────────────────────────
     if (action === 'rate_tecnico') {
       const { jobId, rating, note } = body;
       if (!jobId || rating == null) {
