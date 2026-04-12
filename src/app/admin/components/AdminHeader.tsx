@@ -15,7 +15,7 @@ export default function AdminHeader() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push('/auth');
+    router.replace('/auth');
   }
 
   return (

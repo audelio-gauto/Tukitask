@@ -18,10 +18,10 @@ export default function Auth() {
           body: JSON.stringify({ email: userEmail }),
         });
         const json = await res.json();
-        if (json?.role === 'admin') router.push('/admin');
-        else if (json?.role === 'driver') router.push('/driver');
-        else if (json?.role === 'cliente') router.push('/cliente');
-        else if (json?.role === 'servicio' || json?.role === 'tecnico') router.push('/tecnico');
+        if (json?.role === 'admin') router.replace('/admin');
+        else if (json?.role === 'driver') router.replace('/driver');
+        else if (json?.role === 'cliente') router.replace('/cliente');
+        else if (json?.role === 'servicio' || json?.role === 'tecnico') router.replace('/tecnico');
         else if (json?.role) router.push('/');
       } catch {}
     })();
@@ -74,11 +74,11 @@ export default function Auth() {
           body: JSON.stringify({ email: userEmail }),
         });
         const json = await res.json();
-        if (json?.role === 'admin')                          router.push('/admin');
-        else if (json?.role === 'driver')                    router.push('/driver');
-        else if (json?.role === 'cliente')                   router.push('/cliente');
-        else if (json?.role === 'servicio' || json?.role === 'tecnico') router.push('/tecnico');
-        else if (json?.role)                                 router.push('/');
+        if (json?.role === 'admin')                          router.replace('/admin');
+        else if (json?.role === 'driver')                    router.replace('/driver');
+        else if (json?.role === 'cliente')                   router.replace('/cliente');
+        else if (json?.role === 'servicio' || json?.role === 'tecnico') router.replace('/tecnico');
+        else if (json?.role)                                 router.replace('/');
         else setError('No se encontró tu cuenta en el sistema.');
       } catch { setError('Error al verificar permisos.'); }
     } else {

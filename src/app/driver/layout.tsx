@@ -39,7 +39,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     (async () => {
       // getSession() reads from localStorage — no network call, very fast
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { router.push('/auth'); return; }
+      if (!session?.user) { router.replace('/auth'); return; }
       const userEmail = session.user.email || '';
       setEmail(userEmail);
 
@@ -53,10 +53,10 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
             body: JSON.stringify({ email: userEmail }),
           });
           const json = await res.json();
-          if (json?.role !== 'driver') { router.push('/auth'); return; }
+          if (json?.role !== 'driver') { router.replace('/auth'); return; }
           setCachedRole(userEmail, json.role);
         } catch {
-          router.push('/auth');
+          router.replace('/auth');
           return;
         }
       }
@@ -97,6 +97,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         })
         .catch(() => {});
     })();
+    // Redirigir al auth solo cuando el usuario cierra sesion explicitamente
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') router.replace('/auth');
+    });
+    return () => { listener?.subscription?.unsubscribe?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

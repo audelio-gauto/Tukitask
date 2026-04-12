@@ -40,7 +40,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       // getSession() reads from localStorage — no network call, very fast
       const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (!session?.user) { router.push('/auth'); return; }
+      if (!session?.user) { router.replace('/auth'); return; }
       const userEmail = session.user.email || '';
       setEmail(userEmail);
 
@@ -56,11 +56,11 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           const json = await res.json();
           const roleVal = (json?.role || '').toString().trim().toLowerCase();
           setRole(roleVal || null);
-          if (!['servicio', 'tecnico'].includes(roleVal)) { router.push('/auth'); return; }
+          if (!['servicio', 'tecnico'].includes(roleVal)) { router.replace('/auth'); return; }
           setCachedRole(userEmail, roleVal);
         } catch (err) {
           console.error('Tecnico role check failed:', err);
-          router.push('/auth');
+          router.replace('/auth');
           return;
         }
       } else {
@@ -104,7 +104,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
     // Only react to SIGNED_OUT — token refresh fires SIGNED_IN and caused re-auth flash
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') router.push('/auth');
+      if (event === 'SIGNED_OUT') router.replace('/auth');
     });
 
     return () => { mounted = false; listener?.subscription?.unsubscribe?.(); };

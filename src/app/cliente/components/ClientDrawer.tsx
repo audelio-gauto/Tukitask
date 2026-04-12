@@ -41,7 +41,7 @@ export function ClientDrawer({ open, onClose, email, displayName, profilePhoto }
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
-    router.push('/auth');
+    router.replace('/auth');
   }, [router]);
 
   return (
