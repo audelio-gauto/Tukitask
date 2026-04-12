@@ -13,7 +13,6 @@ const driverMenuItems = [
 
 const tecnicoMenuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/tecnico', icon: 'home' },
-  { slug: 'ofertas', label: 'Ofertas Activas', href: '/tecnico/ofertas', icon: 'box' },
   { slug: 'citas', label: 'Citas Confirmadas', href: '/tecnico/citas', icon: 'clipboard' },
   { slug: 'aceptacion', label: 'Tasa de Aceptación', href: '/tecnico/aceptacion', icon: 'check' },
   { slug: 'ganancias', label: 'Ganancias', href: '/tecnico/ganancias', icon: 'map' },
