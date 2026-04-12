@@ -43,6 +43,10 @@ export async function getAuthUser(req: Request): Promise<AuthUser | null> {
     const { data: { user }, error } = await sbAdmin().auth.getUser(token);
     if (error) {
       console.error('[getAuthUser] auth.getUser error:', error.message);
+      // A-4: Reset singleton if the client has gone stale (e.g. worker recycled)
+      if (error.message?.includes('Invalid API key') || error.message?.includes('connection')) {
+        _sbAdmin = null;
+      }
       return null;
     }
     if (!user?.email) return null;

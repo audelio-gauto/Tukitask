@@ -49,7 +49,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         try {
           const res = await fetch('/api/check-role', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
             body: JSON.stringify({ email: userEmail }),
           });
           const json = await res.json();

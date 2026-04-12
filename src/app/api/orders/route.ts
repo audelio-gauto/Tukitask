@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
-import { cacheGet, cacheSet } from '@/lib/cache';
+import { cacheGet, cacheSet, cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 
 // Saldo mínimo para poder ver pedidos disponibles.
@@ -329,6 +329,11 @@ export async function PATCH(req: Request) {
 
   const { error } = await db.from('orders').update({ status }).eq('id', order_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Invalidate available-orders cache when an order leaves the public feed
+  if (['accepted', 'cancelled', 'delivered', 'failed'].includes(status)) {
+    await cacheDel('orders:v2:available');
+  }
 
   // Columnas opcionales — fallan silenciosamente si la columna no existe en producción
   const extraUpdates: Record<string, unknown> = {};

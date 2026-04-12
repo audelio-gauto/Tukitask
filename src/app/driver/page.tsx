@@ -83,15 +83,18 @@ export default function DriverDashboard() {
   const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const isLoadingOrdersRef = useRef(false);  // A-2: prevent concurrent mutations
 
   const loadPendingOrders = useCallback(() => {
+    if (isLoadingOrdersRef.current) return;  // skip if already in-flight
+    isLoadingOrdersRef.current = true;
     authFetch('/api/orders')
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) return;
         const incomingIds = new Set(data.map((o: any) => String(o.id)));
         const freshIds = new Set([...incomingIds].filter(id => !knownOrderIdsRef.current.has(id)));
-        knownOrderIdsRef.current = incomingIds;
+        knownOrderIdsRef.current = incomingIds;  // safe: only one write at a time
         if (freshIds.size > 0) {
           // Highlight new cards
           setNewOrderIds(prev => new Set([...prev, ...freshIds]));
@@ -108,7 +111,8 @@ export default function DriverDashboard() {
         }
         setPendingOrders(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { isLoadingOrdersRef.current = false; });
   }, []);
 
   useEffect(() => {

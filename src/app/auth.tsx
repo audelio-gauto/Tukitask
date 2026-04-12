@@ -61,6 +61,7 @@ export default function Auth() {
       const userEmail = (data?.user?.email || email).toLowerCase();
       try {
         let tries = 0;
+        let token = data.session?.access_token ?? '';
         while (tries < 10) {
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user) break;
@@ -69,7 +70,7 @@ export default function Auth() {
         }
         const res = await fetch('/api/check-role', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ email: userEmail }),
         });
         const json = await res.json();

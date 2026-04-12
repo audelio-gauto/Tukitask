@@ -79,6 +79,7 @@ export async function GET(req: Request) {
 
 // POST — driver envía oferta; driver_email se fuerza desde el token
 import { emitNotification } from '@/lib/notificationEmitter';
+import { cacheDel } from '@/lib/cache';
 export async function POST(req: Request) {
 
   // Rate limit por IP+endpoint — 30 ofertas por minuto por IP (negociación activa puede enviar varias)
@@ -215,6 +216,8 @@ export async function PATCH(req: Request) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
     }
+    // Invalidate available-orders cache so drivers see this order disappear immediately
+    await cacheDel('orders:v2:available');
     // Notify the driver that their offer was accepted
     const accepted = result.offer as Record<string, unknown> | undefined;
     if (accepted?.driver_email) {
