@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
+import ChatModal from '@/components/ChatModal';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -72,7 +73,7 @@ interface Job {
 }
 
 export default function TecnicoHistorialPage() {
-  const { email } = useDriverContext();
+  const { email, displayName } = useDriverContext();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,7 @@ export default function TecnicoHistorialPage() {
   const [ratingJobId, setRatingJobId] = useState<string | null>(null);
   const [ratingJob, setRatingJob] = useState<Job | null>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
+  const [chatModal, setChatModal] = useState<{ jobId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
 
   const fetchHistory = useCallback(() => {
     if (!email) return;
@@ -211,6 +213,21 @@ export default function TecnicoHistorialPage() {
             </div>
           ) : null}
 
+          {/* Chat 24h */}
+          <button
+            onClick={() => setChatModal({ jobId: job.id, clientName: clientName, clientPhoto: clientPhoto })}
+            style={{
+              width: '100%', padding: '9px', borderRadius: 10,
+              border: '1px solid rgba(99,180,255,0.3)',
+              background: 'rgba(59,130,246,0.12)',
+              color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem',
+              cursor: 'pointer', marginBottom: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            💬 Chat 24h con el cliente
+          </button>
+
           {/* Rate button — only for completado and if not yet rated */}
           {job.status === 'completado' && existingRating == null && (
             <button
@@ -296,6 +313,19 @@ export default function TecnicoHistorialPage() {
           </p>
           {olderJobs.map(renderCard)}
         </>
+      )}
+
+      {/* Chat modal */}
+      {chatModal && (
+        <ChatModal
+          open
+          onClose={() => setChatModal(null)}
+          jobId={chatModal.jobId}
+          myEmail={email}
+          myName={displayName || null}
+          otherName={chatModal.clientName}
+          otherPhoto={chatModal.clientPhoto}
+        />
       )}
 
       {/* Rating modal */}
