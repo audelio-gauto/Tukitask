@@ -284,6 +284,7 @@ export default function ClienteHomePage() {
   const [acceptedDriverInfo, setAcceptedDriverInfo] = useState<Record<string, { name: string|null; photo: string|null; vehicle_label: string|null; vehicle_brand: string|null; vehicle_plate: string|null; driver_email: string|null }>>({});
   const [loading,   setLoading]   = useState(true);
   const [actionId,  setActionId]  = useState<string | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
@@ -840,7 +841,7 @@ export default function ClienteHomePage() {
                         <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
                       </div>
                       <button
-                        onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
+                        onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                         disabled={busy}
                         style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#f87171', cursor: busy ? 'default' : 'pointer', flexShrink: 0 }}
                       >
@@ -913,7 +914,7 @@ export default function ClienteHomePage() {
                 {activeRequests.map(req => (
                   <button
                     key={req.id}
-                    onClick={() => req.type === 'delivery' ? cancelOrder(req.id) : cancelJob(req.id)}
+                    onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                     disabled={busy}
                     style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.86rem', cursor: busy ? 'default' : 'pointer' }}
                   >
@@ -1053,7 +1054,7 @@ export default function ClienteHomePage() {
                     {/* Cancel */}
                     {canCancel && (
                       <button
-                        onClick={() => item.type === 'delivery' ? cancelOrder(item.id) : cancelJob(item.id)}
+                        onClick={() => setCancelConfirm({ id: item.id, type: item.type })}
                         disabled={busy}
                         style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer' }}
                       >✕ Cancelar solicitud</button>
@@ -1221,6 +1222,57 @@ export default function ClienteHomePage() {
           <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(245,197,24,0.3)', borderTopColor: '#F5C518', animation: 'spin 0.8s linear infinite' }} />
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600 }}>Cargando…</span>
         </div>
+      )}
+
+      {/* ── Cancel confirm modal ─────────────────────────────────────────── */}
+      {cancelConfirm && (
+        <>
+          <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#0f172a', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <p style={{ margin: '0 0 6px', fontWeight: 800, color: '#fff', fontSize: '1.05rem' }}>Cancelar solicitud</p>
+            <p style={{ margin: '0 0 20px', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem' }}>Esta acción no se puede deshacer. ¿Deseás cancelar?</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { cancelConfirm.type === 'delivery' ? cancelOrder(cancelConfirm.id) : cancelJob(cancelConfirm.id); setCancelConfirm(null); }}
+                style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
+              >
+                Sí, cancelar
+              </button>
+              <button
+                onClick={() => setCancelConfirm(null)}
+                style={{ flex: 1, padding: '13px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+              >
+                No, volver
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Cancel confirm modal ───────────────────────────────────────── */}
+      {cancelConfirm && (
+        <>
+          <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1C1C2E', borderRadius: '20px 20px 0 0', padding: '24px 18px 40px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p style={{ margin: '0 0 20px', fontWeight: 700, color: '#fff', fontSize: '1rem', lineHeight: 1.4 }}>
+              ¿Cancelar esta solicitud? Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { cancelConfirm.type === 'delivery' ? cancelOrder(cancelConfirm.id) : cancelJob(cancelConfirm.id); setCancelConfirm(null); }}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Sí, cancelar
+              </button>
+              <button
+                onClick={() => setCancelConfirm(null)}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Volver
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Chat Modal ───────────────────────────────────────────────────── */}

@@ -61,10 +61,10 @@ export function DriverDrawer({ open, onClose, email, displayName, profilePhoto, 
             className="tuki-drawer-avatar"
             style={profilePhoto ? { backgroundImage: `url(${profilePhoto})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
           >
-            {!profilePhoto && (displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || 'D')}
+            {!profilePhoto && (displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || (role === 'servicio' ? 'T' : 'D'))}
           </div>
           <div>
-            <h3 className="tuki-drawer-name">{displayName || 'Conductor'}</h3>
+            <h3 className="tuki-drawer-name">{displayName || (role === 'servicio' ? 'Técnico' : 'Conductor')}</h3>
             <span className="tuki-drawer-email">{email}</span>
           </div>
         </div>

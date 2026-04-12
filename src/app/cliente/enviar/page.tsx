@@ -55,6 +55,7 @@ export default function EnviarPaquetePage() {
   const [maxBudget, setMaxBudget] = useState('');
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -474,8 +475,8 @@ export default function EnviarPaquetePage() {
         throw new Error(errData.error || 'Error al crear el pedido');
       }
       router.push('/cliente');
-    } catch {
-      alert('Error al crear el pedido');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Error al crear el pedido');
     } finally {
       setSending(false);
     }
@@ -1072,6 +1073,11 @@ export default function EnviarPaquetePage() {
                   <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                   </button>
+                  {submitError && (
+                    <div style={{ position: 'absolute', bottom: '88px', left: 16, right: 16, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', fontSize: '0.84rem', fontWeight: 500, zIndex: 10 }}>
+                      ⚠️ {submitError}
+                    </div>
+                  )}
                   <button
                     type="submit"
                     form="enviar-form"

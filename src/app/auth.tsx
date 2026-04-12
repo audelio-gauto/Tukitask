@@ -290,6 +290,7 @@ export default function Auth() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoComplete="email"
                 style={{
                   width: '100%', padding: '12px 14px 12px 40px', borderRadius: 12,
                   border: '1.5px solid rgba(245,197,24,0.2)',
@@ -316,6 +317,7 @@ export default function Auth() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={isRegister ? 8 : 6}
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
                 style={{
                   width: '100%', padding: '12px 44px 12px 40px', borderRadius: 12,
                   border: '1.5px solid rgba(245,197,24,0.2)',
