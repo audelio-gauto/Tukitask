@@ -222,8 +222,7 @@ export default function PricingConfigPage() {
       )}
 
       {/* Pricing Settings (min price) */}
-      {settings.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Mapas y APIs</h3>
           {/* Map provider select */}
           {(() => {
@@ -293,7 +292,6 @@ export default function PricingConfigPage() {
             </div>
           </div>
         </div>
-      )}
 
       {/* ...se elimina sección de multiplicadores por tipo de paquete... */}
 

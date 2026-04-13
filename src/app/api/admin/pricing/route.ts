@@ -93,10 +93,10 @@ export async function PUT(req: Request) {
     // Update vehicle pricing
     if (Array.isArray(vehicle_pricing)) {
       for (const item of vehicle_pricing) {
-        const basePrice = item.base_price === '' || item.base_price === null ? null : parseFloat(item.base_price)
-        const pricePerKm = item.price_per_km === '' || item.price_per_km === null ? null : parseFloat(item.price_per_km)
-        const commissionPct = item.commission_pct === '' || item.commission_pct === null ? 10.00 : parseFloat(item.commission_pct)
-        const commissionFixed = item.commission_fixed === '' || item.commission_fixed === null ? 0 : parseFloat(item.commission_fixed)
+        const basePrice = item.base_price === '' || item.base_price == null ? null : parseFloat(item.base_price)
+        const pricePerKm = item.price_per_km === '' || item.price_per_km == null ? null : parseFloat(item.price_per_km)
+        const commissionPct = item.commission_pct === '' || item.commission_pct == null ? 10.00 : parseFloat(item.commission_pct)
+        const commissionFixed = item.commission_fixed === '' || item.commission_fixed == null ? 0 : parseFloat(item.commission_fixed)
 
         if (basePrice !== null && (isNaN(basePrice) || basePrice < 0)) {
           errors.push(`Precio base inválido para ${item.vehicle_type}`)
