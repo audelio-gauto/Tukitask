@@ -61,6 +61,12 @@ export default function SolicitarServicioPage() {
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  // Promo code state
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState<{ discount_amount: number; description: string | null; code_id: string } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+
   // Service pricing from admin panel
   const [servicePrices, setServicePrices] = useState<Record<string, number | null>>(EMPTY_PRICES);
   useEffect(() => {
@@ -285,6 +291,24 @@ export default function SolicitarServicioPage() {
     setPhotosUploading(false);
   };
 
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    setPromoResult(null);
+    try {
+      const res = await authFetch('/api/promo/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim(), order_amount: offerPrice, order_type: 'tecnico' }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPromoError(data.error || 'Código inválido'); return; }
+      setPromoResult({ discount_amount: data.discount_amount, description: data.description, code_id: data.code_id });
+    } catch { setPromoError('Error al validar código'); }
+    setPromoLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!category) return;
@@ -331,6 +355,8 @@ export default function SolicitarServicioPage() {
           require_verified_tecnico: requireVerified,
           photos:                   photos.length > 0 ? photos : undefined,
           audio_url:                audioUrl || undefined,
+          promo_code:               promoResult ? promoCode.trim() : undefined,
+          promo_discount:           promoResult ? promoResult.discount_amount : undefined,
         }),
       });
       const json = await res.json();
@@ -831,6 +857,41 @@ export default function SolicitarServicioPage() {
                       <span>{pm.label}</span>
                     </button>
                   ))}
+                </div>
+
+                {/* Promo code */}
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
+                  <div className="enviar-field">
+                    <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        className="enviar-field-input"
+                        placeholder="Ej: PROMO10"
+                        value={promoCode}
+                        onChange={e => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
+                        style={{ flex: 1 }}
+                        autoCapitalize="characters"
+                      />
+                      <button
+                        type="button"
+                        onClick={validatePromo}
+                        disabled={promoLoading || !promoCode.trim()}
+                        style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: promoLoading || !promoCode.trim() ? '#e5e7eb' : '#111827', color: promoLoading || !promoCode.trim() ? '#9ca3af' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: promoLoading || !promoCode.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                      >
+                        {promoLoading ? '...' : 'Aplicar'}
+                      </button>
+                    </div>
+                    {promoResult && (
+                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 600 }}>
+                        ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
+                      </div>
+                    )}
+                    {promoError && (
+                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>
+                        ❌ {promoError}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {submitError && (

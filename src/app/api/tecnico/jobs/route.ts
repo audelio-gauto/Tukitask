@@ -307,7 +307,7 @@ export async function POST(req: Request) {
     if (action === 'create') {
       const { service_type, service_gender, client_name, client_photo, client_rating,
               address, lat, lng, description, price, payment_method, scheduled_at,
-              require_verified_tecnico } = body;
+              require_verified_tecnico, promo_code, promo_discount } = body;
       if (!service_type) {
         return NextResponse.json({ error: 'Missing service_type' }, { status: 400 });
       }
@@ -331,6 +331,8 @@ export async function POST(req: Request) {
           require_verified_tecnico: require_verified_tecnico === true,
           photos:                   body.photos || null,
           audio_url:                body.audio_url || null,
+          promo_code:               promo_code || null,
+          promo_discount:           promo_discount ? Number(promo_discount) : 0,
         })
         .select()
         .maybeSingle();
