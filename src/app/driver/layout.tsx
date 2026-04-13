@@ -62,15 +62,16 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      // watchPosition only to track coords; posting done on separate 10s interval to avoid flooding
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           lastLat = pos.coords.latitude;
           lastLng = pos.coords.longitude;
-          postLocation(); // post on every GPS update
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
+      // Post on first fix, then every 10s — max 6 writes/min/driver
       ivId = setInterval(postLocation, 10_000);
     }
 

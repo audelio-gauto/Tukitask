@@ -55,15 +55,24 @@ export default function DriverDashboard() {
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Wallet balance
+  // Wallet balance — initial load + realtime subscription
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletBlocked, setWalletBlocked] = useState(false);
   useEffect(() => {
     if (!email) return;
-    authFetch('/api/wallet')
+    const refreshWallet = () => authFetch('/api/wallet')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.balance !== undefined) setWalletBalance(Number(d.balance)); })
       .catch(() => {});
+    refreshWallet();
+    // Subscribe to wallet changes so balance updates without page reload
+    const ch = supabase.channel(`driver-wallet-${email}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'driver_wallets',
+        filter: `driver_email=eq.${email}`,
+      } as never, () => refreshWallet())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [email]);
 
   // ── GPS position for distance calculation ──────────────────────────────

@@ -427,6 +427,18 @@ export default function EnviarPaquetePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validaciones previas al envío
+    if (!form.pickupAddress.trim()) { setSubmitError('Dirección de recogida requerida'); return; }
+    if (!firstStop.address.trim()) { setSubmitError('Dirección de entrega requerida'); return; }
+    if (orderType === 'mandadito' && !shoppingList?.trim()) {
+      setSubmitError('Para mandaditos debes escribir qué debe comprar el mensajero'); return;
+    }
+    const multiStop = stops.length > 1;
+    if (multiStop && stops.some(s => !s.address.trim())) {
+      setSubmitError('Todas las paradas deben tener dirección'); return;
+    }
+
     setSending(true);
     try {
       const isMulti = stops.length > 1;

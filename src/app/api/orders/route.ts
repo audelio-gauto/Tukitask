@@ -55,7 +55,7 @@ export async function GET(req: Request) {
     if (balance < MIN_WALLET_BALANCE) {
       return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
     }
-    // Cache available orders for 5s (all drivers see the same list)
+    // Cache available orders for 2s (reduces race-condition window vs 5s)
     // v2 key: ensures old cache without client_is_verified is not served
     const cachedOrders = await cacheGet<unknown[]>('orders:v2:available');
     if (cachedOrders) return NextResponse.json(cachedOrders);
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
       client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
       client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
     }));
-    await cacheSet('orders:v2:available', enriched, 5);
+    await cacheSet('orders:v2:available', enriched, 2);
     return NextResponse.json(enriched);
   }
 

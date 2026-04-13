@@ -40,9 +40,10 @@ export default function RatingModal({
       alignItems: 'center', justifyContent: 'center', padding: '1rem',
     }}>
       <div style={{
-        background: '#fff', borderRadius: 24, padding: '1.75rem 1.5rem',
+        background: '#0f172a', borderRadius: 24, padding: '1.75rem 1.5rem',
         width: '100%', maxWidth: 340, textAlign: 'center',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        border: '1px solid rgba(255,255,255,0.08)',
         animation: 'ratingSlideUp 0.25s ease',
       }}>
         {/* Avatar */}
@@ -58,9 +59,9 @@ export default function RatingModal({
           </div>
         )}
 
-        <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: '#111827', margin: '0 0 4px' }}>{title}</h3>
+        <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: '#f1f5f9', margin: '0 0 4px' }}>{title}</h3>
         {subtitle && (
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '1.25rem' }}>{subtitle}</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.88rem', marginBottom: '1.25rem' }}>{subtitle}</p>
         )}
 
         {/* Stars */}
@@ -86,7 +87,7 @@ export default function RatingModal({
         </div>
 
         {rating > 0 && (
-          <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.75rem', fontWeight: 500 }}>
+          <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.75rem', fontWeight: 500 }}>
             {['', '😞 Muy malo', '😕 Malo', '😐 Regular', '😊 Bueno', '🤩 Excelente'][rating]}
           </div>
         )}
@@ -98,10 +99,10 @@ export default function RatingModal({
           onChange={e => setNote(e.target.value)}
           rows={2}
           style={{
-            width: '100%', borderRadius: 10, border: '1.5px solid #e5e7eb',
+            width: '100%', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)',
             padding: '0.6rem 0.75rem', fontSize: '0.9rem', resize: 'none',
-            fontFamily: 'inherit', marginBottom: '0.75rem',
-            outline: 'none', boxSizing: 'border-box', color: '#374151',
+            fontFamily: 'inherit', marginBottom: '0.75rem', background: 'rgba(255,255,255,0.06)',
+            outline: 'none', boxSizing: 'border-box', color: '#f1f5f9',
           }}
         />
 
@@ -112,8 +113,8 @@ export default function RatingModal({
             onClick={onClose}
             style={{
               flex: 1, padding: '0.7rem', borderRadius: 10,
-              background: '#f3f4f6', border: 'none', cursor: 'pointer',
-              fontWeight: 600, color: '#374151', fontSize: '0.9rem',
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+              fontWeight: 600, color: '#94a3b8', fontSize: '0.9rem',
             }}
           >
             Ahora no
@@ -123,9 +124,9 @@ export default function RatingModal({
             disabled={submitting || rating === 0}
             style={{
               flex: 2, padding: '0.7rem', borderRadius: 10,
-              background: rating === 0 ? '#e5e7eb' : 'linear-gradient(135deg, #10b981, #059669)',
+              background: rating === 0 ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #10b981, #059669)',
               border: 'none', cursor: rating === 0 ? 'not-allowed' : 'pointer',
-              fontWeight: 700, color: rating === 0 ? '#9ca3af' : '#fff', fontSize: '0.9rem',
+              fontWeight: 700, color: rating === 0 ? '#475569' : '#fff', fontSize: '0.9rem',
               transition: 'background 0.2s',
             }}
           >
