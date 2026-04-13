@@ -91,7 +91,7 @@ export async function GET(req: Request) {
       .select(
         'id, created_at, updated_at, status, client_email, client_name, ' +
         'tecnico_email, tecnico_name, accepted_at, completed_at, ' +
-        'service_type, address, description, offer_amount, suggested_price',
+        'service_type, address, description, agreed_price, client_initial_price',
         { count: 'exact' }
       )
       .order('created_at', { ascending: false });

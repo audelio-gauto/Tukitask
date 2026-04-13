@@ -38,8 +38,8 @@ interface TecnicoJob {
   service_type: string | null;
   address: string | null;
   description: string | null;
-  offer_amount: number | null;
-  suggested_price: number | null;
+  agreed_price: number | null;
+  client_initial_price: number | null;
   _type: 'tecnico';
   _driver_active: boolean;
 }
@@ -189,8 +189,8 @@ function OrderDrawer({ row, onClose }: { row: Row | null; onClose: () => void })
             <>
               <InfoField label="Técnico" value={j.tecnico_email} extra={<ActiveDot active={j._driver_active} />} />
               <InfoField label="Servicio" value={j.service_type ?? '—'} />
-              <InfoField label="Precio sugerido" value={fmtPrice(j.suggested_price)} />
-              <InfoField label="Precio acordado" value={fmtPrice(j.offer_amount)} highlight />
+              <InfoField label="Precio sugerido" value={fmtPrice(j.client_initial_price)} />
+              <InfoField label="Precio acordado" value={fmtPrice(j.agreed_price)} highlight />
             </>
           )}
         </div>
@@ -553,7 +553,7 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
     ? o.delivery_address
     : (j.service_type ?? j.address ?? '—');
 
-  const price = isOrder ? o.offer : j.offer_amount;
+  const price = isOrder ? o.offer : j.agreed_price;
 
   return (
     <div

@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (sbAdmin() as any)
     .from('users')
-    .select('id, email, full_name, created_at', { count: 'exact' })
+    .select('id, email, role, created_at', { count: 'exact' })
     .eq('role', 'cliente')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
