@@ -16,9 +16,29 @@ export async function GET(req: Request) {
   if (!caller) return unauthorized();
 
   try {
-    const url   = new URL(req.url);
-    const jobId = url.searchParams.get('job_id');
-    const email = (url.searchParams.get('email') || '').toLowerCase();
+    const url     = new URL(req.url);
+    const jobId   = url.searchParams.get('job_id');
+    const orderId = url.searchParams.get('order_id');
+    const email   = (url.searchParams.get('email') || '').toLowerCase();
+
+    // ── Fetch by order_id — client can see driver location for their active order ──
+    if (orderId) {
+      const { data: order } = await sb
+        .from('orders')
+        .select('accepted_by, client_email')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (!order?.accepted_by) return NextResponse.json(null);
+      const isDriver = order.accepted_by.toLowerCase() === caller.email;
+      const isClient = order.client_email?.toLowerCase() === caller.email;
+      if (!isDriver && !isClient) return unauthorized('No autorizado');
+      const { data: loc } = await sb
+        .from('driver_locations')
+        .select('lat, lng, updated_at')
+        .eq('driver_email', order.accepted_by)
+        .maybeSingle();
+      return NextResponse.json(loc ?? null);
+    }
 
     if (jobId) {
       // Verify the caller is the assigned driver or the client of this job

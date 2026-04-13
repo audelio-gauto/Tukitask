@@ -136,7 +136,7 @@ export default function RequestsFeed({
         </div>
 
         {visible.map(item => {
-          const isSending = sendingId === item.id;
+          const isSending = !!sendingId; // block ALL submissions while any offer is in-flight
           const clientPrice = Number(item.price || 0);
           const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
           const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;

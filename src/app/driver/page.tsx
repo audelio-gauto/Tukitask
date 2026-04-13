@@ -381,6 +381,35 @@ export default function DriverDashboard() {
 
   const feedVisible = available && !walletBlocked && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
 
+  // Pre-filter orders by service type preferences before passing to feed
+  const VEHICLE_FILTER_MAP: Record<string, string> = {
+    moto: 'moto_envios',
+    auto: 'auto_envios',
+    motocarro: 'moto_carro_fletes',
+    camion2t: 'camion_fletes',
+  };
+  const filteredFeedItems: FeedItem[] = pendingOrders
+    .filter(o => {
+      const key = VEHICLE_FILTER_MAP[o.vehicle_type as string || ''];
+      if (!key) return true;
+      return serviceFilters[key] !== false;
+    })
+    .map((o): FeedItem => ({
+      id: o.id,
+      title: o.vehicle_type || 'envio',
+      from: o.pickup_address,
+      to: o.delivery_address,
+      price: o.suggested_price,
+      createdAt: o.created_at,
+      pickupLat: o.pickup_lat,
+      pickupLng: o.pickup_lng,
+      clientPhoto: o.client_photo,
+      clientName: o.client_name || o.client_email?.split('@')[0],
+      clientRating: o.client_avg_rating,
+      clientVerified: Boolean(o.client_is_verified),
+      instructions: o.instructions,
+    }));
+
   return (
     <>
       {/* Mapbox Map */}
@@ -599,21 +628,7 @@ export default function DriverDashboard() {
       <RequestsFeed
         mode="driver"
         available={available}
-        items={pendingOrders.map((o): FeedItem => ({
-          id: o.id,
-          title: o.vehicle_type || 'envio',
-          from: o.pickup_address,
-          to: o.delivery_address,
-          price: o.suggested_price,
-          createdAt: o.created_at,
-          pickupLat: o.pickup_lat,
-          pickupLng: o.pickup_lng,
-          clientPhoto: o.client_photo,
-          clientName: o.client_name || o.client_email?.split('@')[0],
-          clientRating: o.client_avg_rating,
-          clientVerified: Boolean(o.client_is_verified),
-          instructions: o.instructions,
-        }))}
+        items={filteredFeedItems}
         dismissed={dismissedHome}
         onAccept={sendDriverOffer}
         onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}

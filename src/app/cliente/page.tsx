@@ -21,6 +21,10 @@ interface Order {
   driver_name: string | null;
   driver_photo: string | null;
   driver_rating: number | null;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  delivery_lat: number | null;
+  delivery_lng: number | null;
 }
 
 interface DriverOffer {
@@ -282,6 +286,8 @@ export default function ClienteHomePage() {
   const [driverOffers, setDriverOffers] = useState<Record<string, DriverOffer[]>>({});
   const [jobOffers,    setJobOffers]    = useState<Record<string, TecnicoJobOffer[]>>({});
   const [acceptedDriverInfo, setAcceptedDriverInfo] = useState<Record<string, { name: string|null; photo: string|null; vehicle_label: string|null; vehicle_brand: string|null; vehicle_plate: string|null; driver_email: string|null }>>({});
+  // Driver ETA: { orderId → { distKm, etaMin } }
+  const [driverEta, setDriverEta] = useState<Record<string, { distKm: number; etaMin: number } | null>>({});
   const [loading,   setLoading]   = useState(true);
   const [actionId,  setActionId]  = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
@@ -428,6 +434,51 @@ export default function ClienteHomePage() {
       if (ch) supabase.removeChannel(ch);
     };
   }, [loadAll]);
+
+  // ── ETA polling: fetch driver location for active tracking orders every 15s ──
+  useEffect(() => {
+    const TRACKING_FOR_ETA = ['accepted', 'picking_up', 'in_transit'];
+    const R = 6371;
+    const toRad = (d: number) => d * Math.PI / 180;
+    function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+      const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    const trackingOrders = orders.filter(o => TRACKING_FOR_ETA.includes(o.status));
+    if (!trackingOrders.length) { setDriverEta({}); return; }
+
+    let cancelled = false;
+    const fetchEtas = async () => {
+      const newEta: Record<string, { distKm: number; etaMin: number } | null> = {};
+      await Promise.all(trackingOrders.map(async (o) => {
+        try {
+          const res = await authFetch(`/api/driver-location?order_id=${encodeURIComponent(o.id)}`);
+          if (!res.ok) { newEta[o.id] = null; return; }
+          const loc = await res.json();
+          if (!loc?.lat || !loc?.lng) { newEta[o.id] = null; return; }
+          // Pick destination: if picking_up use pickup coords, else use delivery coords
+          const destLat = o.status === 'picking_up' || o.status === 'accepted'
+            ? (o.pickup_lat ?? o.delivery_lat)
+            : (o.delivery_lat ?? o.pickup_lat);
+          const destLng = o.status === 'picking_up' || o.status === 'accepted'
+            ? (o.pickup_lng ?? o.delivery_lng)
+            : (o.delivery_lng ?? o.pickup_lng);
+          if (destLat == null || destLng == null) { newEta[o.id] = null; return; }
+          const distKm = haversineKm(loc.lat, loc.lng, destLat, destLng);
+          // ~30 km/h average urban speed → minutes
+          const etaMin = Math.max(1, Math.round(distKm * 2));
+          newEta[o.id] = { distKm, etaMin };
+        } catch { newEta[o.id] = null; }
+      }));
+      if (!cancelled) setDriverEta(newEta);
+    };
+
+    fetchEtas();
+    const iv = setInterval(fetchEtas, 15_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [orders]);
 
   /* ─── Chat: carga contadores iniciales + suscripción Realtime ───────────── */
   useEffect(() => {
@@ -951,12 +1002,26 @@ export default function ClienteHomePage() {
                     {/* Status banner */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                       <span style={{ fontSize: '1.4rem' }}>{info.emoji}</span>
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 800, fontSize: '0.95rem', color: info.color }}>{info.text}</div>
                         <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
                           {item.type === 'delivery' ? '📦 Envío' : `🛠 ${SERVICE_LABELS[item.svcType] ?? item.svcType}`}
                         </div>
                       </div>
+                      {/* ETA badge — only for delivery orders with location */}
+                      {item.type === 'delivery' && driverEta[item.id] != null && (
+                        <div style={{
+                          background: 'rgba(37,99,235,0.18)', border: '1px solid rgba(37,99,235,0.4)',
+                          borderRadius: 20, padding: '5px 12px', flexShrink: 0, textAlign: 'center',
+                        }}>
+                          <div style={{ color: '#60a5fa', fontWeight: 800, fontSize: '1rem', lineHeight: 1 }}>
+                            {driverEta[item.id]!.etaMin} min
+                          </div>
+                          <div style={{ color: 'rgba(96,165,250,0.7)', fontSize: '0.6rem', marginTop: 1 }}>
+                            {driverEta[item.id]!.distKm.toFixed(1)} km
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {/* Provider card — estilo Uber/Bolt */}
                     <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, marginBottom: 12, overflow: 'hidden' }}>
