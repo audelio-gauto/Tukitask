@@ -103,6 +103,8 @@ export default function RequestsFeed({
 }: Props) {
   const [, setTick] = useState(0);
   const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
+  const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
+  const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 1000);
@@ -208,9 +210,8 @@ export default function RequestsFeed({
                 </div>
               )}
 
-              {/* Row 3: note + Accept + counter-offers */}
+              {/* Row 3: note + Accept + counter-offers + custom price */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Ofrece tu oferta</div>
                 <textarea
                   value={offerNotes[item.id] || ''}
                   onChange={e => setOfferNotes(n => ({ ...n, [item.id]: e.target.value }))}
@@ -226,6 +227,10 @@ export default function RequestsFeed({
                 >
                   Aceptar · ₲{clientPrice.toLocaleString()}
                 </button>
+
+                {/* OFRECE TU OFERTA — below accept */}
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Ofrece tu oferta</div>
+
                 <div style={{ display: 'flex', gap: 5 }}>
                   {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
                     <button
@@ -238,7 +243,45 @@ export default function RequestsFeed({
                       <span style={{ fontSize: '0.58rem', color: '#64748b' }}>{pct}</span>
                     </button>
                   ))}
+                  {/* Custom price button */}
+                  <button
+                    onClick={() => setCustomOpen(o => ({ ...o, [item.id]: !o[item.id] }))}
+                    disabled={isSending}
+                    style={{ width: 44, flexShrink: 0, padding: '7px 0', border: `1px solid ${customOpen[item.id] ? '#818cf8' : '#334155'}`, borderRadius: 10, background: customOpen[item.id] ? 'rgba(129,140,248,0.15)' : 'rgba(255,255,255,0.04)', color: customOpen[item.id] ? '#818cf8' : '#94a3b8', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}
+                    title="Precio personalizado"
+                  >
+                    <span>✏️</span>
+                    <span style={{ fontSize: '0.52rem', color: '#64748b' }}>Libre</span>
+                  </button>
                 </div>
+
+                {/* Custom price input (InDrive style) */}
+                {customOpen[item.id] && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', animation: 'fadeIn 0.2s' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ej: 120000"
+                      value={customPrices[item.id] || ''}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setCustomPrices(p => ({ ...p, [item.id]: raw }));
+                      }}
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid #818cf8', background: '#0f172a', color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      onClick={() => {
+                        const amt = parseInt(customPrices[item.id] || '0');
+                        if (amt > 0) onAccept(item.id, amt, offerNotes[item.id] || '', distKm);
+                      }}
+                      disabled={isSending || !customPrices[item.id] || parseInt(customPrices[item.id] || '0') <= 0}
+                      style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: '#818cf8', color: '#fff', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0, opacity: (!customPrices[item.id] || parseInt(customPrices[item.id] || '0') <= 0) ? 0.5 : 1 }}
+                    >
+                      Enviar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
