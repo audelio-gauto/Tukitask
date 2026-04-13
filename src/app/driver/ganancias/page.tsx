@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useDriverContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 type Period = 'dia' | 'semana' | 'mes' | 'año';
 
@@ -47,9 +48,8 @@ export default function GananciasPage() {
   const fetchOrders = useCallback(async () => {
     if (!email) return;
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`,
-        { cache: 'no-store' },
       );
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
