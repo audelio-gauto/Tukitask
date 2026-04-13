@@ -47,6 +47,8 @@ export default function ActivoPage() {
   const [failReason, setFailReason] = useState<Record<string, string>>({});
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
+  // Unread message counts per order
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const showToast = (msg: string) => {
     if (toastRef.current) clearTimeout(toastRef.current);
@@ -68,6 +70,20 @@ export default function ActivoPage() {
       .catch(() => setLoading(false));
   }, [email]);
 
+  const fetchUnreadCounts = useCallback((orderIds: string[]) => {
+    if (!orderIds.length) return;
+    orderIds.forEach(id => {
+      authFetch(`/api/chat?order_id=${id}&count=1`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d && typeof d.unread === 'number') {
+            setUnreadCounts(prev => ({ ...prev, [id]: d.unread }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, []);
+
   useEffect(() => {
     fetchActive();
     const iv = setInterval(fetchActive, 8_000);
@@ -86,6 +102,21 @@ export default function ActivoPage() {
       if (ch) supabase.removeChannel(ch);
     };
   }, [fetchActive, email]);
+
+  // Poll unread counts when orders change
+  useEffect(() => {
+    const ids = orders.map(o => o.id);
+    fetchUnreadCounts(ids);
+    const iv = setInterval(() => fetchUnreadCounts(ids), 10_000);
+    return () => clearInterval(iv);
+  }, [orders, fetchUnreadCounts]);
+
+  // When chat opens: clear unread count for that order
+  useEffect(() => {
+    if (chatModal?.orderId) {
+      setUnreadCounts(prev => ({ ...prev, [chatModal.orderId]: 0 }));
+    }
+  }, [chatModal?.orderId]);
 
   const updateStatus = async (orderId: string, newStatus: string, extraBody?: Record<string, unknown>) => {
     const key = orderId + newStatus;
@@ -191,12 +222,24 @@ export default function ActivoPage() {
             onClick={() => setChatModal({ orderId: order.id, clientName, clientPhoto })}
             style={{
               width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)',
-              background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700,
+              background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : 'rgba(59,130,246,0.12)',
+              color: '#60a5fa', fontWeight: 700,
               fontSize: '0.83rem', cursor: 'pointer', marginBottom: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              position: 'relative',
             }}
           >
             💬 Chat con el cliente
+            {!!unreadCounts[order.id] && (
+              <span style={{
+                background: '#ef4444', color: '#fff',
+                borderRadius: 99, padding: '1px 7px',
+                fontSize: '0.72rem', fontWeight: 800,
+                marginLeft: 4,
+              }}>
+                {unreadCounts[order.id]}
+              </span>
+            )}
           </button>
 
           {/* Addresses */}

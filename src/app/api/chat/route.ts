@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       .eq('id', orderId)
       .maybeSingle();
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
-    const isParticipant = order.client_email === user.email || order.accepted_by === user.email;
+    const isParticipant = order.client_email?.toLowerCase() === user.email || order.accepted_by?.toLowerCase() === user.email;
     if (!isParticipant) return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
 
     // ?count=1 → solo devuelve el nro de mensajes no leídos (para el badge)
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
       .eq('id', jobId)
       .maybeSingle();
     if (!job) return NextResponse.json({ error: 'Trabajo no encontrado' }, { status: 404 });
-    const isParticipant = job.client_email === user.email || job.tecnico_email === user.email;
+    const isParticipant = job.client_email?.toLowerCase() === user.email || job.tecnico_email?.toLowerCase() === user.email;
     if (!isParticipant) return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
 
     if (searchParams.get('count') === '1') {
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       .eq('id', order_id)
       .maybeSingle();
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
-    if (order.client_email !== user.email && order.accepted_by !== user.email) {
+    if (order.client_email?.toLowerCase() !== user.email && order.accepted_by?.toLowerCase() !== user.email) {
       return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
     }
     // Solo permitir chat si el pedido está activo
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     if (!ACTIVE.includes(order.status)) {
       return NextResponse.json({ error: 'El pedido no está activo. No se puede chatear.' }, { status: 409 });
     }
-    senderRole = order.client_email === user.email ? 'client' : 'driver';
+    senderRole = order.client_email?.toLowerCase() === user.email ? 'client' : 'driver';
   }
 
   if (job_id) {
@@ -129,14 +129,14 @@ export async function POST(req: Request) {
       .eq('id', job_id)
       .maybeSingle();
     if (!job) return NextResponse.json({ error: 'Trabajo no encontrado' }, { status: 404 });
-    if (job.client_email !== user.email && job.tecnico_email !== user.email) {
+    if (job.client_email?.toLowerCase() !== user.email && job.tecnico_email?.toLowerCase() !== user.email) {
       return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
     }
     const ACTIVE_JOB = ['accepted','en_camino','llegue','en_proceso','in_progress','completion_pending'];
     if (!ACTIVE_JOB.includes(job.status)) {
       return NextResponse.json({ error: 'El trabajo no está activo. No se puede chatear.' }, { status: 409 });
     }
-    senderRole = job.client_email === user.email ? 'client' : 'tecnico';
+    senderRole = job.client_email?.toLowerCase() === user.email ? 'client' : 'tecnico';
   }
 
   const { data, error } = await db()
