@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface DriverItem {
   id: string;
@@ -18,11 +19,13 @@ export default function DriverListPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/admin/drivers/list');
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/drivers/list', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const serverMsg = json?.error || json?.message || 'Error cargando drivers';
-          throw new Error(serverMsg);
+          throw new Error(json?.error || json?.message || 'Error cargando drivers');
         }
         setDrivers(json.data || []);
       } catch (err: any) {

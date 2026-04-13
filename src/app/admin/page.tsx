@@ -27,16 +27,6 @@ function fmtGs(n: number) {
   return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(n);
 }
 
-interface Stats {
-  total: number;
-  admins: number;
-  drivers: number;
-  vendedores: number;
-  servicios: number;
-  hoteleria: number;
-  clientes: number;
-}
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 });
   const [orderMetrics, setOrderMetrics] = useState<OrderMetrics>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, cancelledOrders: 0, totalRevenue: 0, revenueToday: 0 });
@@ -45,34 +35,58 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: allUsers }, { data: allOrders }] = await Promise.all([
-        supabase.from('users').select('*').order('created_at', { ascending: false }),
-        supabase.from('orders').select('id, status, accepted_price, offer_price, suggested_price, created_at').order('created_at', { ascending: false }).limit(500),
+      // Use HEAD+count queries (zero rows transferred) instead of fetching entire tables.
+      // Safe at millions of users.
+      const [
+        { count: total },
+        { count: drivers },
+        { count: vendedores },
+        { count: servicios },
+        { count: hoteleria },
+        { count: clientes },
+        { count: admins },
+        { data: recentUsersData },
+        { data: allOrders },
+      ] = await Promise.all([
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'driver'),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'vendedor'),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'servicio'),
+        supabase.from('users').select('*', { count: 'exact', head: true })
+          .in('role', ['hoteleria', 'tecnico']),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'cliente'),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
+        supabase.from('users').select('id, email, role, created_at')
+          .order('created_at', { ascending: false }).limit(5),
+        supabase.from('orders')
+          .select('id, status, accepted_price, offer_price, suggested_price, created_at')
+          .order('created_at', { ascending: false }).limit(500),
       ]);
-      const users: any[] = allUsers || [];
-      const orders: any[] = allOrders || [];
+
       setStats({
-        total: users.length,
-        admins: users.filter(u => u.role === 'admin').length,
-        drivers: users.filter(u => u.role === 'driver').length,
-        vendedores: users.filter(u => u.role === 'vendedor').length,
-        servicios: users.filter(u => u.role === 'servicio').length,
-        hoteleria: users.filter(u => u.role === 'hoteleria').length,
-        clientes: users.filter(u => u.role === 'cliente').length,
+        total:      total      ?? 0,
+        admins:     admins     ?? 0,
+        drivers:    drivers    ?? 0,
+        vendedores: vendedores ?? 0,
+        servicios:  servicios  ?? 0,
+        hoteleria:  hoteleria  ?? 0,
+        clientes:   clientes   ?? 0,
       });
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+      const orders: any[] = allOrders || [];
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
       const getPrice = (o: any) => Number(o.accepted_price ?? o.offer_price ?? o.suggested_price ?? 0);
       const deliveredStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'returned'];
       const delivered = orders.filter(o => deliveredStatuses.includes(o.status));
       setOrderMetrics({
-        totalOrders: orders.length,
-        pendingOrders: orders.filter(o => ['pending', 'negotiating'].includes(o.status)).length,
+        totalOrders:     orders.length,
+        pendingOrders:   orders.filter(o => ['pending', 'negotiating'].includes(o.status)).length,
         deliveredOrders: delivered.length,
         cancelledOrders: orders.filter(o => ['cancelled', 'failed', 'return_rejected'].includes(o.status)).length,
-        totalRevenue: delivered.reduce((s, o) => s + getPrice(o), 0),
-        revenueToday: delivered.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
+        totalRevenue:    delivered.reduce((s, o) => s + getPrice(o), 0),
+        revenueToday:    delivered.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
       });
-      setRecentUsers(users.slice(0, 5));
+      setRecentUsers(recentUsersData || []);
       setLoading(false);
     })();
   }, []);

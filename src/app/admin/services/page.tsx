@@ -1,18 +1,35 @@
 'use client';
+import Link from 'next/link';
+
+const SECTIONS = [
+  {
+    href: '/admin/services/commission',
+    icon: '💰',
+    title: 'Técnicos — Comisiones & Suscripciones',
+    desc: 'Ajustar comisión por técnico, precios de servicios y gestionar suscripciones.',
+    color: 'rgba(251,146,60,0.1)',
+    border: 'rgba(251,146,60,0.3)',
+  },
+];
 
 export default function ServicesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Servicios</h1>
-        <p className="text-gray-500 text-sm mt-1">Gestión de servicios disponibles</p>
+        <h1 className="text-2xl font-bold text-white">Servicios</h1>
+        <p className="text-[rgba(255,255,255,0.45)] text-sm mt-1">Gestión de técnicos y configuración de servicios</p>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-        <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">Próximamente</h3>
-        <p className="text-gray-400 text-sm">Esta sección estará disponible pronto con la gestión completa de servicios.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {SECTIONS.map(s => (
+          <Link key={s.href} href={s.href}
+            className="block rounded-xl border p-6 hover:opacity-90 transition-opacity"
+            style={{ background: s.color, borderColor: s.border }}
+          >
+            <div className="text-3xl mb-3">{s.icon}</div>
+            <h3 className="font-bold text-white text-base mb-1">{s.title}</h3>
+            <p className="text-[rgba(255,255,255,0.5)] text-sm leading-relaxed">{s.desc}</p>
+          </Link>
+        ))}
       </div>
     </div>
   );
