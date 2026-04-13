@@ -210,6 +210,7 @@ export default function RequestsFeed({
 
               {/* Row 3: note + Accept + counter-offers */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Ofrece tu oferta</div>
                 <textarea
                   value={offerNotes[item.id] || ''}
                   onChange={e => setOfferNotes(n => ({ ...n, [item.id]: e.target.value }))}
