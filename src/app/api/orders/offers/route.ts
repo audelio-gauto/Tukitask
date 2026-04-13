@@ -25,16 +25,24 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Enrich with driver_profiles (avg_rating, total_ratings)
+    // Enrich with driver_profiles (avg_rating, total_ratings, vehicle info)
     const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
-    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null }> = {};
+    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null }> = {};
     if (driverEmails.length > 0) {
       const { data: profiles } = await supabaseServer
         .from('driver_profiles')
-        .select('email, avg_rating, total_ratings')
+        .select('email, avg_rating, total_ratings, vehicle_type, transport_mode')
         .in('email', driverEmails);
-      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null }) => {
-        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null };
+      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null }) => {
+        let vbrand: string | null = null;
+        let vmodel: string | null = null;
+        try {
+          const vd = JSON.parse(p.vehicle_type || '{}');
+          const mode = p.transport_mode || '';
+          vbrand = vd[mode]?.marca || null;
+          vmodel = vd[mode]?.modelo || null;
+        } catch { /* noop */ }
+        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel };
       });
     }
 
@@ -45,6 +53,8 @@ export async function GET(req: Request) {
         ...offer,
         driver_avg_rating:    profileMap[offer.driver_email]?.avg_rating    ?? null,
         driver_total_ratings: profileMap[offer.driver_email]?.total_ratings ?? null,
+        driver_vehicle_brand: profileMap[offer.driver_email]?.vehicle_brand ?? null,
+        driver_vehicle_model: profileMap[offer.driver_email]?.vehicle_model ?? null,
       };
       if (!grouped[offer.order_id]) grouped[offer.order_id] = [];
       grouped[offer.order_id].push(enriched);

@@ -40,6 +40,8 @@ interface DriverOffer {
   driver_total_ratings: number | null;
   note: string | null;
   distance_km: number | null;
+  driver_vehicle_brand: string | null;
+  driver_vehicle_model: string | null;
 }
 
 interface TecnicoJobOffer {
@@ -78,9 +80,11 @@ interface UnifiedOffer {
   photo: string | null;
   rating: number | null;
   price: number;
+  suggestedPrice: number | null;
   note: string | null;
   distanceKm: number | null;
   totalJobs: number | null;
+  vehicleModel: string | null;
   status: string; // pending, accepted, rejected, cancelled, expired
   createdAt: string;
 }
@@ -197,144 +201,135 @@ function OfferCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining]);
 
-  const r2 = 13, circ2 = 2 * Math.PI * r2;
-  const timerColor = remaining > 20 ? '#22c55e' : remaining > 10 ? '#f59e0b' : '#ef4444';
-  const timerDash = circ2 * (remaining / OFFER_TIMER);
-
   const eta = offer.distanceKm != null ? Math.max(1, Math.round(offer.distanceKm * 2.5)) : null;
   const isDriver = offer.requestType === 'delivery';
-  const accentColor = isDriver ? '#F5C518' : '#818cf8';
+  const isPending  = offer.status === 'pending';
+  const isAccepted = offer.status === 'accepted';
 
-  const isPending    = offer.status === 'pending';
-  const isAccepted   = offer.status === 'accepted';
-  const isRejected   = offer.status === 'rejected';
+  // Badge "Tu tarifa" when price matches client suggested price (within 5%)
+  const isSuggestedPrice = offer.suggestedPrice != null && Math.abs(offer.price - offer.suggestedPrice) / Math.max(offer.suggestedPrice, 1) < 0.05;
 
   return (
     <div style={{
-      background: 'linear-gradient(160deg, #0d1b2a 0%, #111827 100%)',
-      borderRadius: 18,
-      border: isPending ? '1.5px solid rgba(255,255,255,0.08)' : isAccepted ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(239,68,68,0.25)',
+      background: '#1a1a2e',
+      borderRadius: 14,
+      border: '1px solid rgba(255,255,255,0.07)',
       overflow: 'hidden',
-      boxShadow: isPending ? '0 4px 20px rgba(0,0,0,0.5)' : 'none',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
     }}>
-      {/* ── Top accent bar ── */}
-      <div style={{ height: 3, background: isPending ? `linear-gradient(90deg, ${accentColor}, transparent)` : isAccepted ? 'linear-gradient(90deg, #22c55e, transparent)' : 'linear-gradient(90deg, #ef4444, transparent)' }} />
+      <div style={{ padding: '14px 16px 12px' }}>
 
-      {/* ── Main body ── */}
-      <div style={{ padding: '12px 14px 10px' }}>
-
-        {/* Row 1: avatar + info + price pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          {/* Avatar */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            {offer.photo ? (
-              <img src={offer.photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}` }} />
-            ) : (
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', border: `2px solid rgba(255,255,255,0.1)` }}>
-                {isDriver ? '🚗' : '🛠'}
-              </div>
+        {/* ── TOP ROW: price + ETA (big, like inDrive) ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+            {/* Price */}
+            <span style={{ fontSize: '1.7rem', fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>
+              ₲{Number(offer.price).toLocaleString()}
+            </span>
+            {/* ETA */}
+            {eta != null && (
+              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#9ca3af', lineHeight: 1 }}>
+                {eta} min
+              </span>
             )}
-            {/* Type badge on avatar */}
-            <div style={{ position: 'absolute', bottom: -2, right: -2, background: accentColor, borderRadius: 99, fontSize: '0.55rem', fontWeight: 800, color: '#000', padding: '1px 5px', lineHeight: 1.6, border: '1.5px solid #0d1b2a' }}>
-              {isDriver ? 'ENVÍO' : 'SERV'}
-            </div>
           </div>
+          {/* Timer ring (top right) */}
+          {isPending && (() => {
+            const r2 = 12, circ2 = 2 * Math.PI * r2;
+            const timerColor = remaining > 20 ? '#22c55e' : remaining > 10 ? '#f59e0b' : '#ef4444';
+            const timerDash = circ2 * (remaining / OFFER_TIMER);
+            return (
+              <svg width="28" height="28" viewBox="0 0 28 28" style={{ flexShrink: 0 }}>
+                <circle cx="14" cy="14" r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5"/>
+                <circle cx="14" cy="14" r={r2} fill="none" stroke={timerColor} strokeWidth="2.5"
+                  strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
+                  transform="rotate(-90 14 14)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+                <text x="14" y="18.5" textAnchor="middle" fontSize="8" fontWeight="800" fill={timerColor}>{remaining}</text>
+              </svg>
+            );
+          })()}
+          {!isPending && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isAccepted ? '#22c55e' : '#f87171' }}>
+              {isAccepted ? '✓ Aceptada' : '✕ Rechazada'}
+            </span>
+          )}
+        </div>
 
-          {/* Name + badges */}
+        {/* Badge "Tu tarifa" */}
+        {isSuggestedPrice && isPending && (
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#16a34a', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>
+              👍 Tu tarifa
+            </span>
+          </div>
+        )}
+
+        {/* ── DRIVER ROW: photo + name + rating + trips ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          {offer.photo ? (
+            <img src={offer.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#2d3748', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+              {isDriver ? '🚗' : '🛠'}
+            </div>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.95rem', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {/* Name */}
+            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {/* Rating + trips on same line */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
               {offer.rating != null && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.1)', borderRadius: 99, padding: '2px 8px' }}>
-                  ★ {Number(offer.rating).toFixed(1)}
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24' }}>
+                  ★ {Number(offer.rating).toFixed(2)}
                 </span>
               )}
               {offer.totalJobs != null && offer.totalJobs > 0 && (
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '2px 8px' }}>
-                  {offer.totalJobs} {isDriver ? 'viajes' : 'servicios'}
+                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                  {offer.totalJobs.toLocaleString()} {isDriver ? 'viajes' : 'servicios'}
                 </span>
               )}
             </div>
-          </div>
-
-          {/* Price + timer */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-            <div style={{ fontWeight: 900, color: '#c8ff00', fontSize: '1.25rem', letterSpacing: '-0.5px', lineHeight: 1 }}>
-              ₲{Number(offer.price).toLocaleString()}
-            </div>
-            {isPending && (
-              <svg width="30" height="30" viewBox="0 0 30 30">
-                <circle cx="15" cy="15" r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5"/>
-                <circle cx="15" cy="15" r={r2} fill="none" stroke={timerColor} strokeWidth="2.5"
-                  strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
-                  transform="rotate(-90 15 15)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
-                <text x="15" y="20" textAnchor="middle" fontSize="9" fontWeight="800" fill={timerColor}>{remaining}</text>
-              </svg>
-            )}
-            {!isPending && (
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isAccepted ? '#22c55e' : '#f87171' }}>
-                {isAccepted ? '✓ Aceptada' : isRejected ? '✕ Rechazada' : '—'}
-              </span>
+            {/* Vehicle model */}
+            {offer.vehicleModel && (
+              <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 2 }}>
+                {offer.vehicleModel}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Row 2: ETA + distance chips */}
-        {(eta != null || offer.distanceKm != null) && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            {eta != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 10, padding: '5px 10px', flex: 1, justifyContent: 'center' }}>
-                <span style={{ fontSize: '1rem' }}>⏱</span>
-                <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>{eta} min</div>
-                  <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 500 }}>ETA llegada</div>
-                </div>
-              </div>
-            )}
-            {offer.distanceKm != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.2)', borderRadius: 10, padding: '5px 10px', flex: 1, justifyContent: 'center' }}>
-                <span style={{ fontSize: '1rem' }}>📍</span>
-                <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#94a3b8', lineHeight: 1 }}>{offer.distanceKm.toFixed(1)} km</div>
-                  <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 500 }}>distancia</div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Note */}
         {offer.note && (
-          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: `3px solid ${accentColor}`, lineHeight: 1.5 }}>
-            💬 "{offer.note}"
+          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, borderLeft: '2px solid rgba(255,255,255,0.15)' }}>
+            "{offer.note}"
           </div>
         )}
 
-        {/* Buttons */}
+        {/* ── BUTTONS ── */}
         {isPending ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button
               onClick={onReject}
               disabled={busy}
-              style={{ flex: 1, padding: '11px 0', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer', transition: 'background 0.15s' }}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: '#2d3748', color: '#9ca3af', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
             >
               Rechazar
             </button>
             <button
               onClick={onAccept}
               disabled={busy}
-              style={{ flex: 2, padding: '11px 0', borderRadius: 12, border: 'none', background: busy ? 'rgba(34,197,94,0.4)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 2px 12px rgba(34,197,94,0.35)', transition: 'all 0.15s' }}
+              style={{ flex: 2, padding: '12px 0', borderRadius: 10, border: 'none', background: busy ? '#15803d' : 'linear-gradient(90deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}
             >
-              ✓  Aceptar
+              Aceptar
             </button>
           </div>
         ) : (
           <button
             onClick={onReject}
             disabled={busy}
-            style={{ width: '100%', padding: '9px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer' }}
+            style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', marginTop: 4 }}
           >
             ✕ Cancelar oferta
           </button>
@@ -622,8 +617,12 @@ export default function ClienteHomePage() {
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo,
       rating: off.driver_avg_rating ?? null,
-      price: Number(off.amount), note: off.note ?? null, distanceKm: off.distance_km ?? null,
+      price: Number(off.amount),
+      suggestedPrice: o.suggested_price ?? null,
+      note: off.note ?? null,
+      distanceKm: off.distance_km ?? null,
       totalJobs: off.driver_total_ratings ?? null,
+      vehicleModel: off.driver_vehicle_model ?? null,
       status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
     }))
   );
@@ -631,7 +630,10 @@ export default function ClienteHomePage() {
     (jobOffers[j.id] ?? []).map((off: TecnicoJobOffer & { created_at?: string }) => ({
       id: off.id, requestId: j.id, requestType: 'service' as const,
       name: off.tecnico_name, photo: off.tecnico_photo, rating: off.tecnico_rating,
-      price: Number(off.proposed_price), note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
+      price: Number(off.proposed_price),
+      suggestedPrice: null,
+      note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
+      vehicleModel: null,
       status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
     }))
   );
@@ -639,7 +641,8 @@ export default function ClienteHomePage() {
   // Pagination for offers
   const [offersPage, setOffersPage] = useState(1);
   const OFFERS_PER_PAGE = 10;
-  const allOffers = [...allDriverOffers, ...allJobOffers];
+  // Sort by price ascending (cheapest first), like inDrive
+  const allOffers = [...allDriverOffers, ...allJobOffers].sort((a, b) => a.price - b.price);
   const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
   const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
