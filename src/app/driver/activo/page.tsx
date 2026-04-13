@@ -111,40 +111,6 @@ export default function ActivoPage() {
     return () => clearInterval(iv);
   }, [orders, fetchUnreadCounts]);
 
-  // ── GPS broadcast: post driver location every 10s while there are active orders ──
-  useEffect(() => {
-    if (!orders.length || !email) return;
-    let watchId: number | null = null;
-    let lastLat: number | null = null;
-    let lastLng: number | null = null;
-    let ivId: ReturnType<typeof setInterval> | null = null;
-
-    const postLocation = () => {
-      if (lastLat == null || lastLng == null) return;
-      authFetch('/api/driver-location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: lastLat, lng: lastLng }),
-      }).catch(() => {});
-    };
-
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => { lastLat = pos.coords.latitude; lastLng = pos.coords.longitude; },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 5_000 },
-      );
-      // Post immediately + every 10s
-      postLocation();
-      ivId = setInterval(postLocation, 10_000);
-    }
-
-    return () => {
-      if (watchId != null) navigator.geolocation.clearWatch(watchId);
-      if (ivId != null) clearInterval(ivId);
-    };
-  }, [orders.length, email]);
-
   // When chat opens: clear unread count for that order
   useEffect(() => {
     if (chatModal?.orderId) {

@@ -36,6 +36,50 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
   usePushNotifications(email || undefined);
 
+  // ── GPS broadcast: always-on while driver app is open ──────────────────────
+  // Broadcasts location every 10s so clients can see ETA for active orders.
+  // auth token from supabase session is attached by authFetch.
+  useEffect(() => {
+    if (!email) return;
+    let lastLat: number | null = null;
+    let lastLng: number | null = null;
+    let watchId: number | null = null;
+    let ivId: ReturnType<typeof setInterval> | null = null;
+
+    const postLocation = () => {
+      if (lastLat == null || lastLng == null) return;
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.access_token) return;
+        fetch('/api/driver-location', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ lat: lastLat, lng: lastLng }),
+        }).catch(() => {});
+      });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          lastLat = pos.coords.latitude;
+          lastLng = pos.coords.longitude;
+          postLocation(); // post on every GPS update
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
+      );
+      ivId = setInterval(postLocation, 10_000);
+    }
+
+    return () => {
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      if (ivId != null) clearInterval(ivId);
+    };
+  }, [email]);
+
   useEffect(() => {
     (async () => {
       // getSession() reads from localStorage — no network call, very fast

@@ -41,19 +41,30 @@ const FAILED_STATUSES    = ['failed', 'cancelled', 'return_rejected'];
 
 export default function GananciasPage() {
   const { email } = useDriverContext();
-  const [period, setPeriod] = useState<Period>('dia');
+  const [period, setPeriod] = useState<Period>('semana');
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!email) return;
+    setFetchError(null);
     try {
       const res = await authFetch(
         `/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`,
       );
       const data = await res.json();
-      setOrders(Array.isArray(data) ? data : []);
-    } catch {
+      if (!res.ok) {
+        setFetchError(`Error ${res.status}: ${data?.error ?? 'Error del servidor'}`);
+        setOrders([]);
+      } else {
+        setOrders(Array.isArray(data) ? data : []);
+        if (!Array.isArray(data)) {
+          setFetchError('Respuesta inesperada del servidor');
+        }
+      }
+    } catch (e) {
+      setFetchError('Sin conexión');
       setOrders([]);
     } finally {
       setLoading(false);
@@ -109,6 +120,12 @@ export default function GananciasPage() {
           </button>
         ))}
       </div>
+
+      {fetchError && (
+        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1rem', color: '#f87171', fontSize: '0.82rem', fontWeight: 600 }}>
+          ⚠️ {fetchError}
+        </div>
+      )}
 
       {loading ? (
         /* Skeleton */
