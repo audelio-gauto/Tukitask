@@ -228,7 +228,7 @@ export default function TecnicoDashboard() {
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
   }, [loadPendingJobs]);
 
-  const sendTecnicoOffer = async (jobId: string, price: number, note: string) => {
+  const sendTecnicoOffer = async (jobId: string, price: number, note: string, distanceKm: number | null = null) => {
     if (!price || !email || !!sendingJobId) return;
     if (walletBlocked) {
       showToast('⚠️ Recargá tu billetera para enviar ofertas');
@@ -246,7 +246,7 @@ export default function TecnicoDashboard() {
           tecnicoPhoto: profilePhoto || null,
           tecnicoRating: avgRating > 0 ? avgRating : null,
           proposedPrice: price,
-          note: note || null, distanceKm: null,
+          note: note || null, distanceKm,
         }),
       });
       if (res.status === 402) {
