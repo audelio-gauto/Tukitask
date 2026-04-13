@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <AdminSidebar />
       <div className="ml-64 transition-all duration-300">
         <AdminHeader />
-        <main className="p-6">
+        <main className="p-6 text-gray-900">
           {children}
         </main>
       </div>
