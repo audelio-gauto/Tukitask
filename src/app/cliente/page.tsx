@@ -14,9 +14,10 @@ const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false }
 interface Order {
   id: string;
   status: string;
-  origin_address: string | null;
-  destination_address: string | null;
-  price: number | null;
+  pickup_address: string | null;
+  delivery_address: string | null;
+  offer: number | null;
+  suggested_price: number | null;
   created_at: string;
   driver_name: string | null;
   driver_photo: string | null;
@@ -592,7 +593,7 @@ export default function ClienteHomePage() {
     ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => ({
       id: o.id, type: 'delivery' as const, icon: '📦',
       label: 'Envío de paquete',
-      subtitle: [o.origin_address, o.destination_address].filter(Boolean).join(' → ') || 'Sin dirección',
+      subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
       createdAt: o.created_at,
     })),
     ...jobs.filter(j => SEARCHING_STS.includes(j.status)).map(j => ({
@@ -1000,7 +1001,7 @@ export default function ClienteHomePage() {
                   vehicle_label: acceptedDriverInfo[o.id]?.vehicle_label ?? null,
                   vehicle_brand: acceptedDriverInfo[o.id]?.vehicle_brand ?? null,
                   vehicle_plate: acceptedDriverInfo[o.id]?.vehicle_plate ?? null,
-                  price: o.price, origin: o.origin_address, dest: o.destination_address, svcType: '' })),
+                  price: o.offer ?? o.suggested_price, origin: o.pickup_address, dest: o.delivery_address, svcType: '' })),
                 ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
