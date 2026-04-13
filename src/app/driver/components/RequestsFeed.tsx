@@ -74,6 +74,8 @@ export type FeedItem = {
   clientRating?: number | null;
   clientVerified?: boolean;
   instructions?: string | null;
+  /** ISO timestamp for scheduled delivery (null = ASAP) */
+  dateScheduled?: string | null;
 };
 
 type Props = {
@@ -199,6 +201,11 @@ export default function RequestsFeed({
 
               {item.instructions && (
                 <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {item.instructions}</div>
+              )}
+              {item.dateScheduled && (
+                <div style={{ fontSize: '0.72rem', color: '#818cf8', marginBottom: 8, padding: '5px 8px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.25)' }}>
+                  📅 Programado: {new Date(item.dateScheduled).toLocaleString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </div>
               )}
 
               {/* Row 3: note + Accept + counter-offers */}

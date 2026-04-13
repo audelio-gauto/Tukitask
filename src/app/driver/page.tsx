@@ -418,6 +418,7 @@ export default function DriverDashboard() {
       clientRating: o.client_avg_rating,
       clientVerified: Boolean(o.client_is_verified),
       instructions: o.instructions,
+      dateScheduled: o.date_scheduled ?? null,
     }));
 
   return (

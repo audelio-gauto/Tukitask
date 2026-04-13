@@ -56,6 +56,11 @@ export default function EnviarPaquetePage() {
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [dateScheduled, setDateScheduled] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState<{ discount_amount: number; description: string | null; code_id: string } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -425,6 +430,24 @@ export default function EnviarPaquetePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.pickupLat, form.pickupLng, deliveryLat, deliveryLng, stops]);
 
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    setPromoResult(null);
+    try {
+      const res = await authFetch('/api/promo/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim(), order_amount: offerPrice || suggestedPrice, order_type: orderType }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPromoError(data.error || 'Código inválido'); return; }
+      setPromoResult({ discount_amount: data.discount_amount, description: data.description, code_id: data.code_id });
+    } catch { setPromoError('Error al validar código'); }
+    setPromoLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -437,6 +460,18 @@ export default function EnviarPaquetePage() {
     const multiStop = stops.length > 1;
     if (multiStop && stops.some(s => !s.address.trim())) {
       setSubmitError('Todas las paradas deben tener dirección'); return;
+    }
+
+    // Validação formato teléfono Paraguay (+595 9XX o 09XX, 10 dígitos)
+    const PY_PHONE_RE = /^(\+595|0)9\d{8}$/;
+    if (form.senderPhone && !PY_PHONE_RE.test(form.senderPhone.replace(/[\s\-()]/g, ''))) {
+      setSubmitError('Teléfono de remitente inválido. Ej: 0981 123456 o +595981123456'); return;
+    }
+    for (let i = 0; i < stops.length; i++) {
+      const ph = stops[i].receiverPhone;
+      if (ph && !PY_PHONE_RE.test(ph.replace(/[\s\-()]/g, ''))) {
+        setSubmitError(`Teléfono de destinatario inválido en parada ${i + 1}. Ej: 0981 123456`); return;
+      }
     }
 
     setSending(true);
@@ -470,6 +505,9 @@ export default function EnviarPaquetePage() {
           pickup_lng: form.pickupLng,
           delivery_lat: firstStop.lat,
           delivery_lng: firstStop.lng,
+          date_scheduled: dateScheduled ? new Date(dateScheduled).toISOString() : null,
+          promo_code: promoResult ? promoCode.trim() : null,
+          promo_discount: promoResult?.discount_amount ?? 0,
           // Multi-stop
           stops: isMulti ? stops.map(s => ({
             address: s.address,
@@ -1077,6 +1115,59 @@ export default function EnviarPaquetePage() {
                         ? (firstStop.address || '').split(',')[0]
                         : `${stops.length} paradas`}
                     </span>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                {/* Scheduled order + Promo code — optional extras */}
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Scheduled date-time */}
+                  <div className="enviar-contact-card">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">📅 Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                      <input
+                        type="datetime-local"
+                        className="enviar-field-input"
+                        value={dateScheduled}
+                        onChange={e => setDateScheduled(e.target.value)}
+                        min={new Date(Date.now() + 5 * 60000).toISOString().slice(0, 16)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Promo code */}
+                  <div className="enviar-contact-card">
+                    <div className="enviar-field">
+                      <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          className="enviar-field-input"
+                          placeholder="Ej: PROMO10"
+                          value={promoCode}
+                          onChange={e => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
+                          style={{ flex: 1 }}
+                          autoCapitalize="characters"
+                        />
+                        <button
+                          type="button"
+                          onClick={validatePromo}
+                          disabled={promoLoading || !promoCode.trim()}
+                          style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: promoLoading || !promoCode.trim() ? '#e5e7eb' : '#111827', color: promoLoading || !promoCode.trim() ? '#9ca3af' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: promoLoading || !promoCode.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                        >
+                          {promoLoading ? '...' : 'Aplicar'}
+                        </button>
+                      </div>
+                      {promoResult && (
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 600 }}>
+                          ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
+                        </div>
+                      )}
+                      {promoError && (
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>
+                          ❌ {promoError}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

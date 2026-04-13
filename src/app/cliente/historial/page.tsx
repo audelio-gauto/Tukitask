@@ -22,6 +22,7 @@ interface Order {
   driver_rating: number | null;
   accepted_by: string | null;
   fail_reason: string | null;
+  tip_amount: number | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -71,6 +72,12 @@ export default function ClienteHistorialPage() {
   const [ratingModal, setRatingModal] = useState<{ jobId: string; tecnicoName: string | null; tecnicoPhoto: string | null } | null>(null);
   const [driverRatingModal, setDriverRatingModal] = useState<{ orderId: string; driverName: string | null; driverPhoto: string | null } | null>(null);
   const [localDriverRatings, setLocalDriverRatings] = useState<Record<string, number>>({});
+  const [tipModal, setTipModal] = useState<{ orderId: string; driverName: string | null } | null>(null);
+  const [tipInput, setTipInput] = useState('');
+  const [tipSending, setTipSending] = useState(false);
+  const [localTips, setLocalTips] = useState<Record<string, number>>({});
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favLoading, setFavLoading] = useState<Record<string, boolean>>({});
   const [reportModal, setReportModal] = useState<{
     reportedEmail: string; reportedRole: 'driver' | 'tecnico';
     reportedName: string | null; referenceType: 'order' | 'job'; referenceId: string;
@@ -103,6 +110,52 @@ export default function ClienteHistorialPage() {
   }, [email]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
+
+  // Load favourites
+  useEffect(() => {
+    if (!email) return;
+    authFetch('/api/favorites').then(r => r.json()).then((data: { driver_email: string }[]) => {
+      if (Array.isArray(data)) setFavorites(new Set(data.map(d => d.driver_email)));
+    }).catch(() => {});
+  }, [email]);
+
+  const toggleFavorite = async (driverEmail: string) => {
+    setFavLoading(prev => ({ ...prev, [driverEmail]: true }));
+    const isFav = favorites.has(driverEmail);
+    try {
+      await authFetch('/api/favorites', {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_email: driverEmail }),
+      });
+      setFavorites(prev => {
+        const next = new Set(prev);
+        isFav ? next.delete(driverEmail) : next.add(driverEmail);
+        return next;
+      });
+    } catch { /* silent */ }
+    setFavLoading(prev => ({ ...prev, [driverEmail]: false }));
+  };
+
+  const handleTip = async () => {
+    if (!tipModal || !tipInput) return;
+    const amount = parseInt(tipInput.replace(/\D/g, ''), 10);
+    if (!amount || amount <= 0) return;
+    setTipSending(true);
+    try {
+      const res = await authFetch('/api/tips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: tipModal.orderId, amount }),
+      });
+      if (res.ok) {
+        setLocalTips(prev => ({ ...prev, [tipModal.orderId]: amount }));
+        setTipModal(null);
+        setTipInput('');
+      }
+    } catch { /* silent */ }
+    setTipSending(false);
+  };
 
   const handleRating = async (rating: number, note: string) => {
     if (!ratingModal || !email) return;
@@ -417,6 +470,33 @@ export default function ClienteHistorialPage() {
                           🚨 Reportar
                         </button>
                       )}
+                      {/* Tip + Favourite row */}
+                      {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_email && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                          {/* Tip */}
+                          {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount ?? 0) > 0 ? (
+                            <div style={{ flex: 1, padding: '8px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#4ade80', fontSize: '0.78rem', fontWeight: 700, textAlign: 'center' }}>
+                              💰 Propina: {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount!).toLocaleString('es-PY')} Gs
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setTipModal({ orderId: (item.data as Order).id, driverName: (item.data as Order).driver_name }); setTipInput(''); }}
+                              style={{ flex: 1, padding: '8px', borderRadius: 10, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#4ade80', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                            >
+                              💰 Dar propina
+                            </button>
+                          )}
+                          {/* Favourite */}
+                          <button
+                            onClick={() => toggleFavorite((item.data as Order).driver_email!)}
+                            disabled={favLoading[(item.data as Order).driver_email!]}
+                            style={{ width: 44, height: 44, borderRadius: 10, border: favorites.has((item.data as Order).driver_email!) ? '1px solid #F5C518' : '1px solid rgba(255,255,255,0.15)', background: favorites.has((item.data as Order).driver_email!) ? 'rgba(245,197,24,0.2)' : 'rgba(255,255,255,0.05)', color: favorites.has((item.data as Order).driver_email!) ? '#F5C518' : 'rgba(255,255,255,0.4)', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800 }}
+                            title={favorites.has((item.data as Order).driver_email!) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                          >
+                            {favorites.has((item.data as Order).driver_email!) ? '★' : '☆'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -503,6 +583,33 @@ export default function ClienteHistorialPage() {
           otherName={chatModal.otherName}
           otherPhoto={chatModal.otherPhoto}
         />
+      )}
+
+      {/* Tip modal */}
+      {tipModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: '#1C1C2E', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, border: '1px solid rgba(245,197,24,0.2)' }}>
+            <h3 style={{ margin: '0 0 6px', color: '#fff', fontSize: '1.1rem', fontWeight: 800 }}>💰 Dar propina</h3>
+            <p style={{ margin: '0 0 18px', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+              {tipModal.driverName ? `Para ${tipModal.driverName}` : 'Para el conductor'} · ingresa monto en Gs
+            </p>
+            <input
+              type="number"
+              placeholder="Ej: 10000"
+              value={tipInput}
+              onChange={e => setTipInput(e.target.value)}
+              style={{ width: '100%', padding: '13px 14px', borderRadius: 12, border: '1px solid rgba(245,197,24,0.3)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setTipModal(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>
+                Cancelar
+              </button>
+              <button onClick={handleTip} disabled={tipSending || !tipInput} style={{ flex: 2, padding: '12px', borderRadius: 12, border: 'none', background: tipSending || !tipInput ? 'rgba(245,197,24,0.3)' : 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', cursor: tipSending || !tipInput ? 'not-allowed' : 'pointer' }}>
+                {tipSending ? 'Enviando...' : 'Confirmar propina'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

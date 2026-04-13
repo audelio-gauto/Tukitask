@@ -575,7 +575,7 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       if (data?.client_email) {
-        emitNotification(data.client_email, 'job_status', 'Servicio completado', 'El técnico marcó el servicio como completado. Por favor confirma.', { job_id: jobId }, { priority: 'urgent' });
+        emitNotification(data.client_email, 'job_status', 'Servicio completado', 'El técnico marcó el servicio como completado. Por favor confirma.', { job_id: jobId }, { priority: 'urgent', groupKey: `job:${jobId}:completion_pending` });
       }
       return NextResponse.json({ job: data });
     }
@@ -629,13 +629,19 @@ export async function POST(req: Request) {
 
           const commissionAmount = Math.round(totalPrice * commissionPct / 100 + commissionFixed);
           if (commissionAmount > 0) {
-            const { error: rpcErr } = await sb.rpc('deduct_tecnico_commission', {
-              p_job_id: jobId,
-              p_email:  tecnicoEmail,
-              p_amount: commissionAmount,
-            });
+            let rpcErr: { message: string } | null = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              const { error } = await sb.rpc('deduct_tecnico_commission', {
+                p_job_id: jobId,
+                p_email:  tecnicoEmail,
+                p_amount: commissionAmount,
+              });
+              rpcErr = error as { message: string } | null;
+              if (!rpcErr) break;
+              if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
+            }
             if (rpcErr) {
-              console.error('[accept_completion] deduct_tecnico_commission failed:', rpcErr.message);
+              console.error('[accept_completion] deduct_tecnico_commission failed after 3 attempts:', rpcErr.message);
             }
           }
         }
@@ -643,7 +649,11 @@ export async function POST(req: Request) {
 
       // Notify tecnico that client confirmed completion
       if (data?.tecnico_email) {
-        emitNotification(String(data.tecnico_email), 'job_status', 'Servicio confirmado', '¡El cliente confirmó tu trabajo! Tu comisión fue descontada.', { job_id: jobId }, { priority: 'high' });
+        emitNotification(String(data.tecnico_email), 'job_status', 'Servicio confirmado', '¡El cliente confirmó tu trabajo! Tu comisión fue descontada.', { job_id: jobId }, { priority: 'high', groupKey: `job:${jobId}:completado` });
+      }
+      // Notify client that service is now complete
+      if (data?.client_email) {
+        emitNotification(String(data.client_email), 'job_status', '¡Servicio completado!', 'Tu servicio fue completado y confirmado exitosamente.', { job_id: jobId }, { priority: 'normal', groupKey: `job:${jobId}:completado` });
       }
 
       return NextResponse.json({ job: data });
