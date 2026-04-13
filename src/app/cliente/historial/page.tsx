@@ -21,6 +21,7 @@ interface Order {
   driver_photo: string | null;
   driver_rating: number | null;
   accepted_by: string | null;
+  fail_reason: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -364,6 +365,20 @@ export default function ClienteHistorialPage() {
                                 <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).delivery_address || '—'}</div>
                               </div>
                             </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* fail_reason — visible al cliente si la entrega falló */}
+                      {item.data.status === 'failed' && (item.data as Order).fail_reason && (
+                        <div style={{
+                          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                          borderRadius: 10, padding: '9px 12px', marginBottom: 8,
+                        }}>
+                          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                            Motivo del fallo
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>
+                            {(item.data as Order).fail_reason}
                           </div>
                         </div>
                       )}
