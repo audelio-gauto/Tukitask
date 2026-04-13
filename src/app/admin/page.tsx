@@ -14,15 +14,43 @@ interface Stats {
   clientes: number;
 }
 
+interface OrderMetrics {
+  totalOrders: number;
+  pendingOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalRevenue: number;
+  revenueToday: number;
+}
+
+function fmtGs(n: number) {
+  return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(n);
+}
+
+interface Stats {
+  total: number;
+  admins: number;
+  drivers: number;
+  vendedores: number;
+  servicios: number;
+  hoteleria: number;
+  clientes: number;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 });
+  const [orderMetrics, setOrderMetrics] = useState<OrderMetrics>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, cancelledOrders: 0, totalRevenue: 0, revenueToday: 0 });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data: allUsers } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+      const [{ data: allUsers }, { data: allOrders }] = await Promise.all([
+        supabase.from('users').select('*').order('created_at', { ascending: false }),
+        supabase.from('orders').select('id, status, accepted_price, offer_price, suggested_price, created_at').order('created_at', { ascending: false }).limit(500),
+      ]);
       const users: any[] = allUsers || [];
+      const orders: any[] = allOrders || [];
       setStats({
         total: users.length,
         admins: users.filter(u => u.role === 'admin').length,
@@ -31,6 +59,18 @@ export default function AdminDashboard() {
         servicios: users.filter(u => u.role === 'servicio').length,
         hoteleria: users.filter(u => u.role === 'hoteleria').length,
         clientes: users.filter(u => u.role === 'cliente').length,
+      });
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const getPrice = (o: any) => Number(o.accepted_price ?? o.offer_price ?? o.suggested_price ?? 0);
+      const deliveredStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'returned'];
+      const delivered = orders.filter(o => deliveredStatuses.includes(o.status));
+      setOrderMetrics({
+        totalOrders: orders.length,
+        pendingOrders: orders.filter(o => ['pending', 'negotiating'].includes(o.status)).length,
+        deliveredOrders: delivered.length,
+        cancelledOrders: orders.filter(o => ['cancelled', 'failed', 'return_rejected'].includes(o.status)).length,
+        totalRevenue: delivered.reduce((s, o) => s + getPrice(o), 0),
+        revenueToday: delivered.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
       });
       setRecentUsers(users.slice(0, 5));
       setLoading(false);
@@ -75,6 +115,27 @@ export default function AdminDashboard() {
             <p className="text-sm font-medium text-[rgba(255,255,255,0.6)]">{card.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Order Metrics */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-[rgba(255,255,255,0.5)] uppercase tracking-wider mb-4">Pedidos & Facturación</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { label: 'Total Pedidos',  value: orderMetrics.totalOrders,     icon: '📦', color: 'text-blue-400' },
+            { label: 'Pendientes',     value: orderMetrics.pendingOrders,    icon: '⏳', color: 'text-yellow-400' },
+            { label: 'Entregados',     value: orderMetrics.deliveredOrders,  icon: '✅', color: 'text-emerald-400' },
+            { label: 'Cancelados',     value: orderMetrics.cancelledOrders,  icon: '❌', color: 'text-red-400' },
+            { label: 'Ingresos Hoy',   value: `${fmtGs(orderMetrics.revenueToday)} Gs`, icon: '💰', color: 'text-[#F5C518]' },
+            { label: 'Ingresos Total', value: `${fmtGs(orderMetrics.totalRevenue)} Gs`, icon: '💵', color: 'text-[#F5C518]' },
+          ].map(card => (
+            <div key={card.label} className="bg-[#1C1C2E] rounded-xl border border-[rgba(255,255,255,0.06)] p-4 hover:border-[rgba(245,197,24,0.2)] transition-all">
+              <div className="text-xl mb-2">{card.icon}</div>
+              <div className={`font-bold text-lg leading-tight ${card.color}`}>{card.value}</div>
+              <p className="text-xs text-[rgba(255,255,255,0.4)] mt-1">{card.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Quick Actions + Recent Users */}

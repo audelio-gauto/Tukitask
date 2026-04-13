@@ -260,11 +260,19 @@ export async function PATCH(req: Request) {
         completed_at: new Date().toISOString(),
       }).eq('id', order_id);
       if (!doneErr) {
-        await db.rpc('deduct_commission', { p_order_id: order_id }).catch(() => {});
+        // Retry commission RPC up to 3 times
+        let commErr = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (attempt > 0) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+          const { error } = await db.rpc('deduct_commission', { p_order_id: order_id });
+          if (!error) { commErr = null; break; }
+          commErr = error;
+        }
+        if (commErr) console.error('[multi-stop] deduct_commission failed after 3 attempts:', commErr.message, '— order_id:', order_id);
         // Notify client
         const { data: ord } = await db.from('orders').select('client_email').eq('id', order_id).single();
         if (ord?.client_email) {
-          emitNotification(ord.client_email, 'status_change', 'Todos los envíos entregados', '¡Todos tus paquetes fueron entregados!', { order_id, status: 'delivered' }, { priority: 'urgent' });
+          emitNotification(ord.client_email, 'status_change', 'Todos los envíos entregados', '¡Todos tus paquetes fueron entregados!', { order_id, status: 'delivered' }, { priority: 'urgent', groupKey: `order:${order_id}:delivered` });
         }
       }
       return NextResponse.json({ success: true, order_status: 'delivered', all_stops_done: true });
@@ -353,10 +361,17 @@ export async function PATCH(req: Request) {
   // ── Descontar comisión automáticamente cuando el driver confirma entrega ──
   // El RPC deduct_commission también actualiza el status a 'commission_charged'
   if (status === 'delivered') {
-    const { error: rpcErr } = await db.rpc('deduct_commission', { p_order_id: order_id });
+    // Retry up to 3 times with exponential backoff (500ms, 1000ms, 2000ms)
+    let rpcErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+      const result = await db.rpc('deduct_commission', { p_order_id: order_id });
+      if (!result.error) { rpcErr = null; break; }
+      rpcErr = result.error;
+    }
     if (rpcErr) {
-      // Registrar error pero no fallar — la entrega fue confirmada, comisión se gestiona manualmente
-      console.error('[orders PATCH] deduct_commission failed:', rpcErr.message);
+      // All retries failed — log for manual reconciliation, but don't fail the delivery
+      console.error('[orders PATCH] deduct_commission failed after 3 attempts:', rpcErr.message, '— order_id:', order_id);
     }
   }
 
@@ -383,7 +398,7 @@ export async function PATCH(req: Request) {
         'Actualización de envío',
         label,
         { order_id, status },
-        { priority: urgentStatuses.includes(status) ? 'urgent' : 'high' },
+        { priority: urgentStatuses.includes(status) ? 'urgent' : 'high', groupKey: `order:${order_id}:${status}` },
       );
     }
   }

@@ -184,7 +184,7 @@ export default function ChatModal({
           <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, background: '#334155', borderRadius: 2 }} />
 
           {otherPhoto ? (
-            <img src={otherPhoto} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e', flexShrink: 0 }} />
+            <img src={otherPhoto} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e', flexShrink: 0 }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
               {orderId ? '🚗' : '👷'}

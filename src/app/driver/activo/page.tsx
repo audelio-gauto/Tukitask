@@ -38,11 +38,16 @@ export default function ActivoPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Toast queue — supports multiple simultaneous toasts
+  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
+  const toastIdRef = useRef(0);
 
   // "Finalizar servicio" expanded state per order
   const [finalizeOpen, setFinalizeOpen] = useState<Set<string>>(new Set());
+  // Confirmation step before marking as delivered
+  const [confirmDelivery, setConfirmDelivery] = useState<Set<string>>(new Set());
+  // Delivery proof photo per order { orderId → { file, previewUrl } }
+  const [deliveryPhotos, setDeliveryPhotos] = useState<Record<string, { file: File; previewUrl: string }>>({});
   // Fail reason text per order
   const [failReason, setFailReason] = useState<Record<string, string>>({});
   // Chat modal
@@ -51,9 +56,9 @@ export default function ActivoPage() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const showToast = (msg: string) => {
-    if (toastRef.current) clearTimeout(toastRef.current);
-    setToast(msg);
-    toastRef.current = setTimeout(() => setToast(null), 2500);
+    const id = ++toastIdRef.current;
+    setToasts(prev => [...prev, { id, msg }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2800);
   };
 
   const fetchActive = useCallback(() => {
@@ -86,7 +91,9 @@ export default function ActivoPage() {
 
   useEffect(() => {
     fetchActive();
-    const iv = setInterval(fetchActive, 8_000);
+    // Realtime subscription for instant updates; fallback poll every 60s
+    // (covers edge cases where realtime misses an event)
+    const iv = setInterval(fetchActive, 60_000);
     const ch = email
       ? supabase.channel(`driver-activo-${email}`)
           .on('postgres_changes', {
@@ -218,29 +225,46 @@ export default function ActivoPage() {
           </div>
 
           {/* Chat button — always visible once order is accepted */}
-          <button
-            onClick={() => setChatModal({ orderId: order.id, clientName, clientPhoto })}
-            style={{
-              width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)',
-              background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : 'rgba(59,130,246,0.12)',
-              color: '#60a5fa', fontWeight: 700,
-              fontSize: '0.83rem', cursor: 'pointer', marginBottom: 14,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              position: 'relative',
-            }}
-          >
-            💬 Chat con el cliente
-            {!!unreadCounts[order.id] && (
-              <span style={{
-                background: '#ef4444', color: '#fff',
-                borderRadius: 99, padding: '1px 7px',
-                fontSize: '0.72rem', fontWeight: 800,
-                marginLeft: 4,
-              }}>
-                {unreadCounts[order.id]}
-              </span>
-            )}
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <button
+              onClick={() => setChatModal({ orderId: order.id, clientName, clientPhoto })}
+              style={{
+                flex: 1, padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)',
+                background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : 'rgba(59,130,246,0.12)',
+                color: '#60a5fa', fontWeight: 700,
+                fontSize: '0.83rem', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                position: 'relative',
+              }}
+            >
+              💬 Chat con el cliente
+              {!!unreadCounts[order.id] && (
+                <span style={{
+                  background: '#ef4444', color: '#fff',
+                  borderRadius: 99, padding: '1px 7px',
+                  fontSize: '0.72rem', fontWeight: 800,
+                  marginLeft: 4,
+                }}>
+                  {unreadCounts[order.id]}
+                </span>
+              )}
+            </button>
+            {/* SOS — emergency call */}
+            <a
+              href="tel:911"
+              style={{
+                padding: '9px 12px', borderRadius: 10,
+                border: '1px solid rgba(239,68,68,0.4)',
+                background: 'rgba(239,68,68,0.12)', color: '#f87171',
+                fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none', flexShrink: 0,
+              }}
+              title="Llamar emergencias (911)"
+            >
+              🆘
+            </a>
+          </div>
 
           {/* Addresses */}
           {(order.pickup_address || order.delivery_address) && (
@@ -367,7 +391,7 @@ export default function ActivoPage() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   disabled={!!acting}
-                  onClick={() => updateStatus(order.id, 'delivered')}
+                  onClick={() => setConfirmDelivery(prev => new Set([...prev, order.id]))}
                   style={{
                     flex: 1, padding: '13px', borderRadius: 12, border: 'none',
                     cursor: acting ? 'not-allowed' : 'pointer',
@@ -445,6 +469,7 @@ export default function ActivoPage() {
                 onClick={() => {
                   setFinalizeOpen(prev => { const n = new Set(prev); n.delete(order.id); return n; });
                   setFailReason(prev => { const n = { ...prev }; delete n[order.id]; return n; });
+                  setConfirmDelivery(prev => { const n = new Set(prev); n.delete(order.id); return n; });
                 }}
                 style={{
                   background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
@@ -462,19 +487,19 @@ export default function ActivoPage() {
 
   return (
     <DriverScreenLayout title="Envío Activo">
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
+      {/* Toast queue */}
+      {toasts.map((t, i) => (
+        <div key={t.id} style={{
+          position: 'fixed', top: 80 + i * 48, left: '50%', transform: 'translateX(-50%)',
           background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)',
           borderRadius: 12, padding: '10px 20px', color: '#fff',
           fontSize: '0.88rem', fontWeight: 600, zIndex: 9999,
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap', transition: 'top 0.2s',
         }}>
-          {toast}
+          {t.msg}
         </div>
-      )}
+      ))}
 
       <div style={{ padding: '16px 16px 100px' }}>
         {loading && (
@@ -511,6 +536,107 @@ export default function ActivoPage() {
 
         {!loading && orders.map(renderCard)}
       </div>
+
+      {/* Delivery Confirmation Dialog */}
+      {[...confirmDelivery].map(orderId => {
+        const photoEntry = deliveryPhotos[orderId];
+        return (
+        <div key={orderId} style={{
+          position: 'fixed', inset: 0, zIndex: 9998,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 24px',
+        }}>
+          <div style={{
+            background: '#1e293b',
+            border: '1.5px solid rgba(16,185,129,0.4)',
+            borderRadius: 20, padding: '28px 24px',
+            width: '100%', maxWidth: 360, textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
+            <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
+              ¿Confirmar entrega?
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.
+            </p>
+            {/* Optional delivery proof photo */}
+            <label style={{
+              display: 'block', cursor: 'pointer', marginBottom: 18,
+              background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+              border: '1.5px dashed rgba(255,255,255,0.15)', padding: '12px',
+              color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600,
+            }}>
+              {photoEntry
+                ? <img src={photoEntry.previewUrl} alt="Foto de entrega" loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8 }} />
+                : <>📷 Adjuntar foto de entrega <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional)</span></>
+              }
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  const url = URL.createObjectURL(f);
+                  setDeliveryPhotos(prev => ({ ...prev, [orderId]: { file: f, previewUrl: url } }));
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => {
+                  setConfirmDelivery(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                  if (photoEntry) URL.revokeObjectURL(photoEntry.previewUrl);
+                  setDeliveryPhotos(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                }}
+                style={{
+                  flex: 1, padding: '13px', borderRadius: 12,
+                  border: '1.5px solid rgba(255,255,255,0.15)',
+                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
+                  fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!!acting}
+                onClick={async () => {
+                  setConfirmDelivery(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                  // Upload photo if provided
+                  if (photoEntry) {
+                    try {
+                      const ab = await photoEntry.file.arrayBuffer();
+                      const b64 = Buffer.from(ab).toString('base64');
+                      await authFetch('/api/upload-delivery-photo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: orderId, base64: b64, mimeType: photoEntry.file.type }),
+                      });
+                    } catch {}
+                    URL.revokeObjectURL(photoEntry.previewUrl);
+                    setDeliveryPhotos(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                  }
+                  updateStatus(orderId, 'delivered');
+                }}
+                style={{
+                  flex: 1, padding: '13px', borderRadius: 12, border: 'none',
+                  background: acting ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)',
+                  color: acting ? 'rgba(255,255,255,0.4)' : '#fff',
+                  fontWeight: 700, fontSize: '0.9rem',
+                  cursor: acting ? 'not-allowed' : 'pointer',
+                  opacity: acting ? 0.7 : 1,
+                }}
+              >
+                {acting === orderId + 'delivered' ? '...' : '✅ Sí, entregado'}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })}
 
       {/* Chat Modal */}
       {chatModal && email && (

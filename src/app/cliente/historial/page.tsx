@@ -134,8 +134,11 @@ export default function ClienteHistorialPage() {
       pending: '⏳ Buscando...', negotiating: '💬 Negociando', assigned: '✅ Asignado',
       accepted: '✅ Asignado', in_progress: '🔧 En progreso', picking_up: '🚗 Recogiendo',
       in_transit: '🚚 En camino', completado: '✅ Completado', completed: '✅ Completado',
-      delivered: '✅ Entregado', cancelled: '❌ Cancelado', failed: '⚠️ Fallido',
+      delivered: '✅ Entregado', cancelled: '🚫 Cancelado por cliente', failed: '⚠️ Entrega fallida',
+      return_rejected: '📦 Devolución rechazada', returning: '↩️ Devolviendo', returned: '↩️ Devuelto',
+      return_delivered: '↩️ Devolución entregada', incident_closed: '✓ Incidente cerrado',
       incidente: '⚠️ Incidente', client_confirmed: '✅ Confirmado', commission_charged: '✅ Completado',
+      driver_returning: '↩️ Conductor devolviendo',
     };
     return labels[status] || status;
   };

@@ -39,12 +39,26 @@ const PERIOD_LABELS: Record<Period, string> = {
 const DELIVERED_STATUSES = ['delivered', 'commission_charged', 'client_confirmed', 'returned'];
 const FAILED_STATUSES    = ['failed', 'cancelled', 'return_rejected'];
 
+const STATUS_HUMAN: Record<string, string> = {
+  delivered:          'Entregado',
+  commission_charged: 'Entregado ✓',
+  client_confirmed:   'Confirmado',
+  returned:           'Devuelto',
+  failed:             'Fallido',
+  cancelled:          'Cancelado',
+  return_rejected:    'Devolución rechazada',
+};
+
 export default function GananciasPage() {
   const { email } = useDriverContext();
   const [period, setPeriod] = useState<Period>('semana');
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const handleExportPDF = () => {
+    window.print();
+  };
 
   const fetchOrders = useCallback(async () => {
     if (!email) return;
@@ -85,8 +99,16 @@ export default function GananciasPage() {
   const from = boundaries[period];
   const inPeriod = (o: OrderRow) => new Date(o.created_at) >= from;
 
-  const delivered  = orders.filter(o => DELIVERED_STATUSES.includes(o.status) && inPeriod(o));
-  const failed     = orders.filter(o => FAILED_STATUSES.includes(o.status)    && inPeriod(o));
+  // Deduplicate by order ID to prevent double-counting if any order appears multiple times
+  const seenIds = new Set<string>();
+  const uniqueOrders = orders.filter(o => {
+    if (!o.id) return true;
+    if (seenIds.has(o.id)) return false;
+    seenIds.add(o.id); return true;
+  });
+
+  const delivered  = uniqueOrders.filter(o => DELIVERED_STATUSES.includes(o.status) && inPeriod(o));
+  const failed     = uniqueOrders.filter(o => FAILED_STATUSES.includes(o.status)    && inPeriod(o));
   const earnings   = delivered.reduce((acc, o) => acc + orderPrice(o), 0);
   const total      = delivered.length + failed.length;
   const acceptance = total > 0 ? Math.round((delivered.length / total) * 100) : null;
@@ -94,15 +116,15 @@ export default function GananciasPage() {
   // Summary cards for all periods
   const allPeriodEarnings = (Object.keys(boundaries) as Period[]).map(p => ({
     period: p,
-    amount: orders
+    amount: uniqueOrders
       .filter(o => DELIVERED_STATUSES.includes(o.status) && new Date(o.created_at) >= boundaries[p])
       .reduce((acc, o) => acc + orderPrice(o), 0),
   }));
 
   return (
     <DriverScreenLayout title="Ganancias">
-      {/* Period selector */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
+      {/* Period selector + Export */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem', alignItems: 'center' }}>
         {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
           <button
             key={p}
@@ -119,6 +141,17 @@ export default function GananciasPage() {
             {PERIOD_LABELS[p]}
           </button>
         ))}
+        <button
+          onClick={handleExportPDF}
+          title="Exportar PDF"
+          style={{
+            padding: '0.55rem 0.75rem', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: 'rgba(255,255,255,0.08)', color: '#9ca3af', fontWeight: 700, fontSize: '0.82rem',
+            flexShrink: 0,
+          }}
+        >
+          📄
+        </button>
       </div>
 
       {fetchError && (
@@ -239,6 +272,7 @@ export default function GananciasPage() {
                       {o.origin || 'Origen'} → {o.destination || 'Destino'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmtDate(o.created_at)}</div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#10b981', marginTop: 2 }}>{STATUS_HUMAN[o.status] ?? o.status}</div>
                   </div>
                   <div style={{ marginLeft: 12, flexShrink: 0 }}>
                     <span style={{

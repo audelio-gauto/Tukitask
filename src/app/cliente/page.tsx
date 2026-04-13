@@ -113,6 +113,14 @@ const TRACKING_STATUS_INFO: Record<string, { emoji: string; text: string; color:
   returning:           { emoji: '↩️', text: 'El conductor solicita devolver el paquete', color: '#f97316' },
   driver_returning:    { emoji: '🔄', text: 'El conductor va a devolverte el paquete', color: '#f59e0b' },
   return_delivered:    { emoji: '📦', text: 'El conductor llegó a devolver el paquete', color: '#a78bfa' },
+  // Terminal statuses — displayed in active tracking when order just finished
+  cancelled:           { emoji: '🚫', text: 'Pedido cancelado por el cliente', color: '#9ca3af' },
+  failed:              { emoji: '⚠️', text: 'Entrega fallida — el conductor no pudo entregar', color: '#f87171' },
+  return_rejected:     { emoji: '📦', text: 'Devolución rechazada — pedido cerrado', color: '#f97316' },
+  returned:            { emoji: '↩️', text: 'Paquete devuelto al remitente', color: '#a78bfa' },
+  delivered:           { emoji: '✅', text: '¡Entregado! Tu paquete llegó', color: '#22c55e' },
+  commission_charged:  { emoji: '✅', text: '¡Entregado y completado!', color: '#22c55e' },
+  client_confirmed:    { emoji: '✅', text: 'Entrega confirmada', color: '#22c55e' },
 };
 
 function getGreeting() {
