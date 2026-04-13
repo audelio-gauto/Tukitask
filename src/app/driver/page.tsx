@@ -147,7 +147,7 @@ export default function DriverDashboard() {
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
   }, [loadPendingOrders]);
 
-  const sendDriverOffer = async (orderId: string, amount: number, note: string) => {
+  const sendDriverOffer = async (orderId: string, amount: number, note: string, distanceKm: number | null = null) => {
     if (!amount || !email || !!sendingOfferId) return;
     if (walletBlocked) {
       showToast('⚠️ Recargá tu billetera para enviar ofertas');
@@ -158,7 +158,7 @@ export default function DriverDashboard() {
       const res = await authFetch('/api/orders/offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note }),
+        body: JSON.stringify({ order_id: orderId, driver_email: email, amount, note, distance_km: distanceKm }),
       });
       if (res.status === 402) {
         const body = await res.json().catch(() => ({}));

@@ -39,6 +39,7 @@ interface DriverOffer {
   driver_avg_rating: number | null;
   driver_total_ratings: number | null;
   note: string | null;
+  distance_km: number | null;
 }
 
 interface TecnicoJobOffer {
@@ -177,7 +178,7 @@ function RadarPulse() {
 
 const OFFER_TIMER = 50;
 
-/* ─── Offer card ────────────────────────────────────────────────────────────────────────────────── */
+/* ─── Offer card (inDrive style) ─────────────────────────────────────────── */
 function OfferCard({
   offer, onAccept, onReject, busy,
 }: {
@@ -196,90 +197,147 @@ function OfferCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining]);
 
-  const r2 = 14, circ2 = 2 * Math.PI * r2;
+  const r2 = 13, circ2 = 2 * Math.PI * r2;
   const timerColor = remaining > 20 ? '#22c55e' : remaining > 10 ? '#f59e0b' : '#ef4444';
   const timerDash = circ2 * (remaining / OFFER_TIMER);
 
   const eta = offer.distanceKm != null ? Math.max(1, Math.round(offer.distanceKm * 2.5)) : null;
   const isDriver = offer.requestType === 'delivery';
-  const accentColor = isDriver ? '#F5C518' : '#6366f1';
-  const accentBg    = isDriver ? 'rgba(245,197,24,0.12)' : 'rgba(99,102,241,0.12)';
-  const accentBorder = isDriver ? 'rgba(245,197,24,0.3)' : 'rgba(99,102,241,0.3)';
+  const accentColor = isDriver ? '#F5C518' : '#818cf8';
 
-
-  // Estado de la oferta: pending, accepted, rejected, expired, cancelled
-  let status = offer.status || 'pending';
-  let color = '#F7D060', bg = 'rgba(245,197,24,0.15)', icon = '📤', text = 'Oferta enviada · esperando...';
-  if (status === 'accepted') { color = '#6ee7b7'; bg = 'rgba(16,185,129,0.15)'; icon = '✅'; text = 'Aceptada — te eligieron'; }
-  else if (status === 'rejected') { color = '#f87171'; bg = 'rgba(239,68,68,0.13)'; icon = '❌'; text = 'Rechazada'; }
-  else if (status === 'expired') { color = '#a3a3a3'; bg = 'rgba(156,163,175,0.13)'; icon = '⌛'; text = 'Expirada'; }
-  else if (status === 'cancelled') { color = '#f59e42'; bg = 'rgba(245,158,66,0.13)'; icon = '🚫'; text = 'Cancelada'; }
+  const isPending    = offer.status === 'pending';
+  const isAccepted   = offer.status === 'accepted';
+  const isRejected   = offer.status === 'rejected';
 
   return (
     <div style={{
-      background: '#0f172a',
-      borderRadius: 14, padding: '10px 12px',
-      border: `1px solid ${accentBorder}`,
+      background: 'linear-gradient(160deg, #0d1b2a 0%, #111827 100%)',
+      borderRadius: 18,
+      border: isPending ? '1.5px solid rgba(255,255,255,0.08)' : isAccepted ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(239,68,68,0.25)',
+      overflow: 'hidden',
+      boxShadow: isPending ? '0 4px 20px rgba(0,0,0,0.5)' : 'none',
     }}>
-      {/* Row 1: status + timer ring + price */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '6px 10px', background: bg, borderRadius: 10, border: `1px solid ${color}` }}>
-        <span style={{ fontSize: '0.95rem', color, fontWeight: 700 }}>{icon}</span>
-        <span style={{ fontSize: '0.78rem', color, fontWeight: 700, flex: 1 }}>{text}</span>
-        {offer.status === 'pending' && (
-          <svg width="34" height="34" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
-            <circle cx="18" cy="18" r={r2} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
-            <circle cx="18" cy="18" r={r2} fill="none" stroke={timerColor} strokeWidth="3"
-              strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
-              transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
-            <text x="18" y="23" textAnchor="middle" fontSize="10" fontWeight="800" fill={timerColor}>{remaining}</text>
-          </svg>
-        )}
-        <span style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>₲{Number(offer.price).toLocaleString()}</span>
-      </div>
-      {/* Row 2: photo + name + badges */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-        {offer.photo ? (
-          <img src={offer.photo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}`, flexShrink: 0 }} />
-        ) : (
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${accentColor}, #1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', border: `2px solid ${accentBorder}`, flexShrink: 0 }}>
-            {isDriver ? '🚗' : '👷'}
+      {/* ── Top accent bar ── */}
+      <div style={{ height: 3, background: isPending ? `linear-gradient(90deg, ${accentColor}, transparent)` : isAccepted ? 'linear-gradient(90deg, #22c55e, transparent)' : 'linear-gradient(90deg, #ef4444, transparent)' }} />
+
+      {/* ── Main body ── */}
+      <div style={{ padding: '12px 14px 10px' }}>
+
+        {/* Row 1: avatar + info + price pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+          {/* Avatar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {offer.photo ? (
+              <img src={offer.photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}` }} />
+            ) : (
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', border: `2px solid rgba(255,255,255,0.1)` }}>
+                {isDriver ? '🚗' : '🛠'}
+              </div>
+            )}
+            {/* Type badge on avatar */}
+            <div style={{ position: 'absolute', bottom: -2, right: -2, background: accentColor, borderRadius: 99, fontSize: '0.55rem', fontWeight: 800, color: '#000', padding: '1px 5px', lineHeight: 1.6, border: '1.5px solid #0d1b2a' }}>
+              {isDriver ? 'ENVÍO' : 'SERV'}
+            </div>
           </div>
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
+
+          {/* Name + badges */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.95rem', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {offer.rating != null && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.1)', borderRadius: 99, padding: '2px 8px' }}>
+                  ★ {Number(offer.rating).toFixed(1)}
+                </span>
+              )}
+              {offer.totalJobs != null && offer.totalJobs > 0 && (
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', background: 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '2px 8px' }}>
+                  {offer.totalJobs} {isDriver ? 'viajes' : 'servicios'}
+                </span>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, borderRadius: 20, padding: '2px 7px', background: accentBg, border: `1px solid ${accentBorder}`, color: accentColor }}>
-              {isDriver ? '🚗 Envío' : '🛠 Servicio'}
-            </span>
-            {offer.rating != null && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, borderRadius: 20, padding: '2px 7px', background: 'rgba(245,197,24,0.15)', border: '1px solid rgba(245,197,24,0.3)', color: '#F5C518' }}>★ {Number(offer.rating).toFixed(1)}</span>
+
+          {/* Price + timer */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            <div style={{ fontWeight: 900, color: '#c8ff00', fontSize: '1.25rem', letterSpacing: '-0.5px', lineHeight: 1 }}>
+              ₲{Number(offer.price).toLocaleString()}
+            </div>
+            {isPending && (
+              <svg width="30" height="30" viewBox="0 0 30 30">
+                <circle cx="15" cy="15" r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5"/>
+                <circle cx="15" cy="15" r={r2} fill="none" stroke={timerColor} strokeWidth="2.5"
+                  strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
+                  transform="rotate(-90 15 15)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+                <text x="15" y="20" textAnchor="middle" fontSize="9" fontWeight="800" fill={timerColor}>{remaining}</text>
+              </svg>
             )}
-            {offer.totalJobs != null && offer.totalJobs > 0 && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, borderRadius: 20, padding: '2px 7px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{isDriver ? `${offer.totalJobs} envíos` : `${offer.totalJobs} servicios`}</span>
-            )}
-            {eta != null && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, borderRadius: 20, padding: '2px 7px', background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)', color: '#60a5fa' }}>⏱ {eta}m</span>
-            )}
-            {offer.distanceKm != null && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 600, borderRadius: 20, padding: '2px 7px', background: 'rgba(100,116,139,0.25)', border: '1px solid rgba(100,116,139,0.35)', color: '#94a3b8' }}>📍 {offer.distanceKm.toFixed(1)}km</span>
+            {!isPending && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isAccepted ? '#22c55e' : '#f87171' }}>
+                {isAccepted ? '✓ Aceptada' : isRejected ? '✕ Rechazada' : '—'}
+              </span>
             )}
           </div>
         </div>
-      </div>
-      {offer.note && (
-        <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', padding: '5px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, borderLeft: `2px solid ${accentColor}`, lineHeight: 1.4 }}>"{offer.note}"</p>
-      )}
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {status === 'pending' ? (
-          <>
-            <button onClick={onReject} disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer' }}>Rechazar</button>
-            <button onClick={onAccept} disabled={busy} style={{ flex: 2, padding: '9px 0', borderRadius: 12, border: 'none', background: busy ? 'rgba(34,197,94,0.5)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer' }}>✓ Aceptar</button>
-          </>
+
+        {/* Row 2: ETA + distance chips */}
+        {(eta != null || offer.distanceKm != null) && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {eta != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 10, padding: '5px 10px', flex: 1, justifyContent: 'center' }}>
+                <span style={{ fontSize: '1rem' }}>⏱</span>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>{eta} min</div>
+                  <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 500 }}>ETA llegada</div>
+                </div>
+              </div>
+            )}
+            {offer.distanceKm != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.2)', borderRadius: 10, padding: '5px 10px', flex: 1, justifyContent: 'center' }}>
+                <span style={{ fontSize: '1rem' }}>📍</span>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#94a3b8', lineHeight: 1 }}>{offer.distanceKm.toFixed(1)} km</div>
+                  <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 500 }}>distancia</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Note */}
+        {offer.note && (
+          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: `3px solid ${accentColor}`, lineHeight: 1.5 }}>
+            💬 "{offer.note}"
+          </div>
+        )}
+
+        {/* Buttons */}
+        {isPending ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={onReject}
+              disabled={busy}
+              style={{ flex: 1, padding: '11px 0', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#64748b', fontWeight: 700, fontSize: '0.88rem', cursor: busy ? 'default' : 'pointer', transition: 'background 0.15s' }}
+            >
+              Rechazar
+            </button>
+            <button
+              onClick={onAccept}
+              disabled={busy}
+              style={{ flex: 2, padding: '11px 0', borderRadius: 12, border: 'none', background: busy ? 'rgba(34,197,94,0.4)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 2px 12px rgba(34,197,94,0.35)', transition: 'all 0.15s' }}
+            >
+              ✓  Aceptar
+            </button>
+          </div>
         ) : (
-          <button onClick={onReject} disabled={busy} style={{ flex: 1, padding: '8px', borderRadius: 12, border: '1px solid #f59e42', background: 'rgba(245,158,66,0.08)', color: '#f59e42', fontWeight: 700, fontSize: '0.78rem', cursor: busy ? 'default' : 'pointer' }}>✕ Cancelar oferta</button>
+          <button
+            onClick={onReject}
+            disabled={busy}
+            style={{ width: '100%', padding: '9px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.82rem', cursor: busy ? 'default' : 'pointer' }}
+          >
+            ✕ Cancelar oferta
+          </button>
         )}
       </div>
     </div>
@@ -564,7 +622,7 @@ export default function ClienteHomePage() {
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo,
       rating: off.driver_avg_rating ?? null,
-      price: Number(off.amount), note: off.note ?? null, distanceKm: null,
+      price: Number(off.amount), note: off.note ?? null, distanceKm: off.distance_km ?? null,
       totalJobs: off.driver_total_ratings ?? null,
       status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
     }))

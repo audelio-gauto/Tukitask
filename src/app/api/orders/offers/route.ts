@@ -108,6 +108,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { order_id, amount } = body;
   const note: string | null = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 300) : null;
+  const distanceKm: number | null = typeof body.distance_km === 'number' && body.distance_km >= 0 ? Math.round(body.distance_km * 10) / 10 : null;
 
   if (!order_id || !amount) {
     return NextResponse.json({ error: 'order_id y amount son requeridos' }, { status: 400 });
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
   if (existing) {
     const { data, error } = await supabaseServer
       .from('driver_offers')
-      .update({ amount: Number(amount), note, updated_at: new Date().toISOString() })
+      .update({ amount: Number(amount), note, distance_km: distanceKm, updated_at: new Date().toISOString() })
       .eq('id', existing.id)
       .select()
       .single();
@@ -171,6 +172,7 @@ export async function POST(req: Request) {
       driver_photo: driverPhoto,
       amount: Number(amount),
       note,
+      distance_km: distanceKm,
       client_email: clientEmail,
     }])
     .select()

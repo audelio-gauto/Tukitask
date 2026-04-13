@@ -82,7 +82,7 @@ type Props = {
   items: FeedItem[];
   available: boolean;
   dismissed: Set<string>;
-  onAccept: (id: string, amount: number, note: string) => void;
+  onAccept: (id: string, amount: number, note: string, distanceKm: number | null) => void;
   onDismiss: (id: string) => void;
   sendingId: string | null;
   mode?: 'driver' | 'tecnico';
@@ -219,7 +219,7 @@ export default function RequestsFeed({
                   style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
                 />
                 <button
-                  onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '')}
+                  onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
                   disabled={isSending}
                   style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}
                 >
@@ -229,7 +229,7 @@ export default function RequestsFeed({
                   {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
                     <button
                       key={pct}
-                      onClick={() => onAccept(item.id, amount, offerNotes[item.id] || '')}
+                      onClick={() => onAccept(item.id, amount, offerNotes[item.id] || '', distKm)}
                       disabled={isSending}
                       style={{ flex: 1, padding: '7px 0', border: '1px solid #334155', borderRadius: 10, background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}
                     >
