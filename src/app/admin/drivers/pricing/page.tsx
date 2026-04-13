@@ -88,8 +88,8 @@ export default function PricingConfigPage() {
         const a = (data.app_settings || []).find((x: any) => x.key === k)
         return a ? String(a.value || '') : ''
       }
-      setMapboxKey('')
-      setGoogleKey('')
+      setMapboxKey(getApp('mapbox_api_key'))
+      setGoogleKey(getApp('google_maps_api_key'))
     } catch (err) {
       console.error('fetchData error:', err);
       setError(String(err));

@@ -117,15 +117,17 @@ export async function PUT(req: Request) {
 
         const { error } = await supabaseServer
           .from('vehicle_pricing')
-          .update({
+          .upsert({
+            vehicle_type: item.vehicle_type,
+            label: item.label,
+            emoji: item.emoji,
             base_price: basePrice,
             price_per_km: pricePerKm,
             commission_pct: commissionPct,
             commission_fixed: commissionFixed,
             updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.id)
-        if (error) errors.push(`vehicle_pricing ${item.id}: ${error.message}`)
+          }, { onConflict: 'vehicle_type' })
+        if (error) errors.push(`vehicle_pricing ${item.vehicle_type}: ${error.message}`)
       }
     }
 
