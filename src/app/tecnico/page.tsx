@@ -630,6 +630,8 @@ export default function TecnicoDashboard() {
           clientName: j.client_name,
           clientRating: j.client_rating,
           dateScheduled: j.scheduled_at ?? null,
+          instructions: j.description ?? null,
+          photos: (j.photos as string[] | null) ?? null,
         }))}
         dismissed={dismissedHome}
         onAccept={sendTecnicoOffer}

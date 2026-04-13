@@ -76,6 +76,8 @@ export type FeedItem = {
   instructions?: string | null;
   /** ISO timestamp for scheduled delivery (null = ASAP) */
   dateScheduled?: string | null;
+  /** Service photos uploaded by the client */
+  photos?: string[] | null;
 };
 
 type Props = {
@@ -201,6 +203,26 @@ export default function RequestsFeed({
                 )}
               </div>
 
+              {/* Client photos */}
+              {item.photos && item.photos.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never }}>
+                  {item.photos.slice(0, 4).map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`foto ${i + 1}`}
+                      onClick={() => window.open(url, '_blank')}
+                      style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #334155', cursor: 'pointer' }}
+                    />
+                  ))}
+                  {item.photos.length > 4 && (
+                    <div style={{ width: 52, height: 52, borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+                      +{item.photos.length - 4}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {item.instructions && (
                 <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {item.instructions}</div>
               )}
@@ -263,7 +285,7 @@ export default function RequestsFeed({
                       type="text"
                       inputMode="numeric"
                       placeholder="Ej: 120000"
-                      value={customPrices[item.id] || ''}
+                      value={customPrices[item.id] ? Number(customPrices[item.id]).toLocaleString('es-PY') : ''}
                       onChange={e => {
                         const raw = e.target.value.replace(/\D/g, '');
                         setCustomPrices(p => ({ ...p, [item.id]: raw }));
