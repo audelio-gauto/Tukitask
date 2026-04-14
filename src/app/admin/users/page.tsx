@@ -427,27 +427,8 @@ export default function UsersPage() {
         </div>
       )}
     </div>
-  );'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-
-const roles = ['admin', 'driver', 'vendedor', 'servicio', 'hoteleria', 'cliente'];
-const roleFilters = ['all', ...roles];
-
-export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-
-  // Create user form
-  const [showForm, setShowForm] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState('driver');
-  const [creating, setCreating] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  );
+}
 
   // Edit user
   const [editing, setEditing] = useState<string | null>(null);

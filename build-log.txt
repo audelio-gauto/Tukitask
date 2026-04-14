@@ -1,25 +1,8 @@
-ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
+
+> wep-app-local-driver@0.1.0 build
+> next build
 
 Ôû▓ Next.js 16.1.6 (Turbopack)
 - Environments: .env.local
 
   Creating an optimized production build ...
-Ô£ô Compiled successfully in 4.8min
-  Running TypeScript ...
-Failed to compile.
-
-.next/dev/types/validator.ts:377:39
-Type error: Cannot find module '../../../src/app/api/debug-env/route.js' or its corresponding type declarations.
-
-  375 | {
-  376 |   type __IsExpected<Specific extends RouteHandlerConfig<"/api/debug-env">> = Specific
-> 377 |   const handler = {} as typeof import("../../../src/app/api/debug-env/route.js")
-      |                                       ^
-  378 |   type __Check = __IsExpected<typeof handler>
-  379 |   // @ts-ignore
-  380 |   type __Unused = __Check
-Next.js build worker exited with code: 1 and signal: null
