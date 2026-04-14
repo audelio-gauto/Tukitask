@@ -245,8 +245,8 @@ export default function RequestsFeed({
                 </div>
               )}
               {item.orderType === 'mandadito' && item.maxBudget != null && (
-                <div style={{ fontSize: '0.72rem', color: '#34d399', marginBottom: 6, padding: '5px 10px', background: 'rgba(52,211,153,0.08)', borderRadius: 8, border: '1px solid rgba(52,211,153,0.2)' }}>
-                  💰 Presupuesto máx.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
+                <div style={{ fontSize: '0.85rem', color: '#34d399', marginBottom: 6, padding: '7px 12px', background: 'rgba(52,211,153,0.08)', borderRadius: 8, border: '1px solid rgba(52,211,153,0.2)' }}>
+                  💰 Presupuesto máx.: <strong style={{ fontSize: '0.95rem' }}>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
                 </div>
               )}
               {item.instructions && (
