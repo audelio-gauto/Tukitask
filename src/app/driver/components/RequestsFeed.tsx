@@ -30,10 +30,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
-  moto: '🏍️ Moto Envíos',
-  auto: '🚗 Auto Envíos',
-  motocarro: '🛵 Moto Carro Fletes',
-  camion2t: '🚛 Camión Fletes',
+  moto: ' Moto Envíos',
+  auto: ' Auto Envíos',
+  motocarro: ' Moto Carro Fletes',
+  camion2t: ' Camión Fletes',
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -55,6 +55,8 @@ export type FeedItem = {
   id: string;
   /** Vehicle type key (driver) or service type key (tecnico) */
   title: string;
+  /** Order type: envio | mandadito | flete */
+  orderType?: 'envio' | 'mandadito' | 'flete' | null;
   /** Pickup address (driver) */
   from?: string;
   /** Delivery address (driver) */
@@ -78,6 +80,10 @@ export type FeedItem = {
   dateScheduled?: string | null;
   /** Service photos uploaded by the client */
   photos?: string[] | null;
+  /** Shopping list for mandadito orders */
+  shoppingList?: string | null;
+  /** Max budget in Gs for mandadito orders */
+  maxBudget?: number | null;
 };
 
 type Props = {
@@ -162,7 +168,15 @@ export default function RequestsFeed({
                   : <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                    {item.orderType === 'mandadito' && (
+                      <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '1px 7px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>🛒 Mandadito</span>
+                    )}
+                    {item.orderType === 'flete' && (
+                      <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>🚛 Flete</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span>{item.clientName || 'Cliente'}</span>
                     {item.clientVerified && <span title="Identidad verificada">🛡️</span>}
@@ -223,6 +237,18 @@ export default function RequestsFeed({
                 </div>
               )}
 
+              {/* Mandadito: shopping list + budget */}
+              {item.orderType === 'mandadito' && item.shoppingList && (
+                <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginBottom: 6, padding: '7px 10px', background: 'rgba(245,158,11,0.1)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.25)' }}>
+                  <div style={{ fontWeight: 700, marginBottom: 3 }}>🛒 Lista de compras</div>
+                  <div style={{ whiteSpace: 'pre-wrap', color: '#fde68a' }}>{item.shoppingList}</div>
+                </div>
+              )}
+              {item.orderType === 'mandadito' && item.maxBudget != null && (
+                <div style={{ fontSize: '0.72rem', color: '#34d399', marginBottom: 6, padding: '5px 10px', background: 'rgba(52,211,153,0.08)', borderRadius: 8, border: '1px solid rgba(52,211,153,0.2)' }}>
+                  💰 Presupuesto máx.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
+                </div>
+              )}
               {item.instructions && (
                 <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {item.instructions}</div>
               )}

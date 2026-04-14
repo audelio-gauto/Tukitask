@@ -1,20 +1,16 @@
-
-> wep-app-local-driver@0.1.0 build
-> next build
-
 ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
 Ôû▓ Next.js 16.1.6 (Turbopack)
 - Environments: .env.local
 
   Creating an optimized production build ...
-Ô£ô Compiled successfully in 5.7min
+Ô£ô Compiled successfully in 5.8min
   Running TypeScript ...
   Collecting page data using 1 worker ...
   Generating static pages using 1 worker (0/109) ...
   Generating static pages using 1 worker (27/109) 
   Generating static pages using 1 worker (54/109) 
   Generating static pages using 1 worker (81/109) 
-Ô£ô Generating static pages using 1 worker (109/109) in 43s
+Ô£ô Generating static pages using 1 worker (109/109) in 37.7s
   Finalizing page optimization ...
 
 Route (app)

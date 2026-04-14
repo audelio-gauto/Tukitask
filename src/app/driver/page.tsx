@@ -406,7 +406,8 @@ export default function DriverDashboard() {
     })
     .map((o): FeedItem => ({
       id: o.id,
-      title: o.vehicle_type || 'envio',
+      title: o.vehicle_type || 'moto',
+      orderType: (o.order_type as 'envio' | 'mandadito' | 'flete') || 'envio',
       from: o.pickup_address,
       to: o.delivery_address,
       price: o.suggested_price,
@@ -419,6 +420,8 @@ export default function DriverDashboard() {
       clientVerified: Boolean(o.client_is_verified),
       instructions: o.instructions,
       dateScheduled: o.date_scheduled ?? null,
+      shoppingList: o.shopping_list ?? null,
+      maxBudget: o.max_budget ?? null,
     }));
 
   return (
