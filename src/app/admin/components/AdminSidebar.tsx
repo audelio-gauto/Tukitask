@@ -73,7 +73,7 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
-      { label: 'Lista de Técnicos', href: '/admin/services' },
+      { label: 'Lista de Técnicos', href: '/admin/services/tecnico' },
       { label: 'Precios y Comisión', href: '/admin/services/commission' },
     ],
   },
