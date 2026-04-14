@@ -12,10 +12,10 @@ export async function GET(req: Request) {
   const offset = (page - 1) * limit;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (sbAdmin() as any)
       .from('users')
       .select('id,email,role,created_at', { count: 'exact' })
-      .ilike('role', 'driver%')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

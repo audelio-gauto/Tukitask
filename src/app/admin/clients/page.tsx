@@ -57,88 +57,149 @@ export default function ClientsPage() {
   const fmtDate = (s: string) => new Date(s).toLocaleDateString('es-PY', { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
-    <div>
-      <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
+    <div className="max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Clientes</h1>
-          <p className="text-[rgba(255,255,255,0.45)] text-sm mt-1">
-            {loading ? '…' : `${total.toLocaleString()} clientes registrados`}
+          <h1 className="text-2xl font-bold text-gray-800">Clientes</h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {loading ? 'Cargando...' : `${total.toLocaleString('es-PY')} clientes registrados`}
           </p>
         </div>
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por email…"
-            className="px-3 py-2 rounded-lg bg-[#1C1C2E] border border-[rgba(255,255,255,0.1)] text-white text-sm outline-none focus:border-[#F5C518] w-56"
-          />
-          <button type="submit" className="px-4 py-2 rounded-lg bg-[#F5C518] text-[#1C1C2E] font-bold text-sm hover:opacity-90">
+        <button
+          onClick={() => fetchClients(page, query)}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualizar
+        </button>
+      </div>
+
+      {/* Filters (Buscador) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5 shadow-sm">
+        <form onSubmit={handleSearch} className="flex gap-3 items-end">
+          <div className="flex-1 max-w-md">
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Buscar cliente</label>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Email del cliente..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] text-gray-800 placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+          <button type="submit" className="px-4 py-2 bg-[#F5C518] text-[#1C1C2E] rounded-lg font-bold text-sm hover:bg-[#E6A800] transition-colors shadow-sm">
             Buscar
           </button>
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setSearch(''); setQuery(''); fetchClients(1, ''); }}
+              className="px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Limpiar
+            </button>
+          )}
         </form>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-[rgba(239,68,68,0.12)] border border-[rgba(239,68,68,0.3)] rounded-lg text-[#f87171] text-sm">{error}</div>
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
       )}
 
-      <div className="bg-[#1C1C2E] rounded-xl border border-[rgba(255,255,255,0.06)] overflow-hidden">
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 flex justify-center">
-            <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#F5C518]" />
           </div>
         ) : clients.length === 0 ? (
-          <div className="py-16 text-center text-[rgba(255,255,255,0.35)]">
-            <div className="text-4xl mb-3">👤</div>
-            <p className="font-semibold">No se encontraron clientes</p>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <svg className="w-12 h-12 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <p className="font-medium">No se encontraron clientes</p>
+            {query && <p className="text-sm mt-0.5">Probá limpiando el buscador</p>}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[rgba(255,255,255,0.07)]">
-                <th className="text-left py-3 px-4 text-xs font-semibold text-[rgba(255,255,255,0.35)] uppercase tracking-wider">Email</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-[rgba(255,255,255,0.35)] uppercase tracking-wider hidden sm:table-cell">Nombre</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-[rgba(255,255,255,0.35)] uppercase tracking-wider hidden md:table-cell">Registrado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[rgba(255,255,255,0.04)]">
-              {clients.map(c => (
-                <tr key={c.id} className="hover:bg-[rgba(255,255,255,0.03)] transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-gradient-to-br from-rose-500 to-rose-700 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-white">{c.email?.[0]?.toUpperCase()}</span>
-                      </div>
-                      <span className="text-[rgba(255,255,255,0.75)] truncate max-w-[200px]">{c.email}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-[rgba(255,255,255,0.5)] hidden sm:table-cell">
-                    <span className="text-[rgba(255,255,255,0.2)]">—</span>
-                  </td>
-                  <td className="py-3 px-4 text-[rgba(255,255,255,0.4)] hidden md:table-cell">{fmtDate(c.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            <div className="grid grid-cols-[1fr_1fr_150px] gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div>Email</div>
+              <div className="hidden sm:block">Nombre</div>
+              <div className="text-right">Registrado</div>
+            </div>
+            {clients.map((c, i) => (
+              <div key={c.id} className={`grid grid-cols-[1fr_1fr_150px] gap-4 px-6 py-4 border-b border-gray-100 transition-colors hover:bg-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-700 font-bold border border-indigo-200">
+                    {c.email[0]?.toUpperCase() || 'C'}
+                  </div>
+                  <span className="text-sm font-medium text-gray-800 truncate">{c.email}</span>
+                </div>
+                <div className="hidden sm:flex items-center">
+                  <span className="text-sm text-gray-500">—</span>
+                </div>
+                <div className="flex items-center justify-end">
+                  <span className="text-sm text-gray-500">{fmtDate(c.created_at)}</span>
+                </div>
+              </div>
+            ))}
+          </>
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-[rgba(255,255,255,0.4)]">Página {page} de {totalPages}</span>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-500">
+            Mostrando {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} de {total.toLocaleString('es-PY')}
+          </p>
+          <div className="flex items-center gap-2">
             <button
               disabled={page <= 1}
               onClick={() => goPage(page - 1)}
-              className="px-3 py-1.5 rounded-lg bg-[#1C1C2E] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.6)] disabled:opacity-30 hover:border-[rgba(255,255,255,0.2)]"
-            >← Anterior</button>
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors text-gray-700"
+            >
+              ← Anterior
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) p = i + 1;
+                else if (page <= 4) p = i + 1;
+                else if (page >= totalPages - 3) p = totalPages - 6 + i;
+                else p = page - 3 + i;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => goPage(p)}
+                    className={`w-8 h-8 text-sm rounded-lg transition-colors font-medium ${
+                      p === page
+                        ? 'bg-[#F5C518] text-[#1C1C2E] font-bold'
+                        : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
             <button
               disabled={page >= totalPages}
               onClick={() => goPage(page + 1)}
-              className="px-3 py-1.5 rounded-lg bg-[#1C1C2E] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.6)] disabled:opacity-30 hover:border-[rgba(255,255,255,0.2)]"
-            >Siguiente →</button>
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors text-gray-700"
+            >
+              Siguiente →
+            </button>
           </div>
         </div>
       )}
