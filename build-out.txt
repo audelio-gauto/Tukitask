@@ -1,5 +1,138 @@
+
+> wep-app-local-driver@0.1.0 build
+> next build
+
 ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
 Ôû▓ Next.js 16.1.6 (Turbopack)
 - Environments: .env.local
 
   Creating an optimized production build ...
+Ô£ô Compiled successfully in 2.4min
+  Running TypeScript ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/108) ...
+  Generating static pages using 1 worker (27/108) 
+  Generating static pages using 1 worker (54/108) 
+  Generating static pages using 1 worker (81/108) 
+Ô£ô Generating static pages using 1 worker (108/108) in 27.9s
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /admin
+Ôö£ Ôùï /admin/bank-alias
+Ôö£ Ôùï /admin/billetera/historial
+Ôö£ Ôùï /admin/clients
+Ôö£ ãÆ /admin/clients/[id]
+Ôö£ Ôùï /admin/documentos
+Ôö£ Ôùï /admin/documentos/aprobados
+Ôö£ Ôùï /admin/documentos/rechazados
+Ôö£ Ôùï /admin/drivers
+Ôö£ ãÆ /admin/drivers/[id]
+Ôö£ Ôùï /admin/drivers/commission
+Ôö£ Ôùï /admin/drivers/driver
+Ôö£ Ôùï /admin/drivers/pricing
+Ôö£ Ôùï /admin/hotels
+Ôö£ Ôùï /admin/metrics
+Ôö£ Ôùï /admin/orders
+Ôö£ Ôùï /admin/promos
+Ôö£ Ôùï /admin/reports
+Ôö£ Ôùï /admin/services
+Ôö£ Ôùï /admin/services/commission
+Ôö£ Ôùï /admin/settings
+Ôö£ Ôùï /admin/users
+Ôö£ Ôùï /admin/vendors
+Ôö£ Ôùï /admin/wallets
+Ôö£ ãÆ /api/admin/bank-alias
+Ôö£ ãÆ /api/admin/clients
+Ôö£ ãÆ /api/admin/clients/[id]
+Ôö£ ãÆ /api/admin/config
+Ôö£ ãÆ /api/admin/documents
+Ôö£ ãÆ /api/admin/drivers/[id]
+Ôö£ ãÆ /api/admin/drivers/commissions
+Ôö£ ãÆ /api/admin/drivers/list
+Ôö£ ãÆ /api/admin/drivers/verify
+Ôö£ ãÆ /api/admin/metrics
+Ôö£ ãÆ /api/admin/metrics/clear
+Ôö£ ãÆ /api/admin/orders
+Ôö£ ãÆ /api/admin/pricing
+Ôö£ ãÆ /api/admin/promos
+Ôö£ ãÆ /api/admin/recharge-history
+Ôö£ ãÆ /api/admin/services/commissions
+Ôö£ ãÆ /api/admin/services/tecnico
+Ôö£ ãÆ /api/admin/upload-logo
+Ôö£ ãÆ /api/admin/upload-pwa-icon
+Ôö£ ãÆ /api/admin/users
+Ôö£ ãÆ /api/admin/wallets
+Ôö£ ãÆ /api/auth/forgot-password
+Ôö£ ãÆ /api/chat
+Ôö£ ãÆ /api/check-admin
+Ôö£ ãÆ /api/check-role
+Ôö£ ãÆ /api/client-profile
+Ôö£ ãÆ /api/create-user
+Ôö£ ãÆ /api/debug-env
+Ôö£ ãÆ /api/driver-location
+Ôö£ ãÆ /api/driver-profile
+Ôö£ ãÆ /api/favorites
+Ôö£ ãÆ /api/firebase-sw
+Ôö£ ãÆ /api/manifest
+Ôö£ ãÆ /api/maps/directions
+Ôö£ ãÆ /api/maps/geocode
+Ôö£ ãÆ /api/notifications
+Ôö£ ãÆ /api/orders
+Ôö£ ãÆ /api/orders/offers
+Ôö£ ãÆ /api/orders/rate
+Ôö£ ãÆ /api/pricing
+Ôö£ ãÆ /api/promo/validate
+Ôö£ ãÆ /api/push-tokens
+Ôö£ ãÆ /api/pwa-icon/[size]
+Ôö£ ãÆ /api/register
+Ôö£ ãÆ /api/reports
+Ôö£ ãÆ /api/service-pricing
+Ôö£ ãÆ /api/sw
+Ôö£ ãÆ /api/tecnico/jobs
+Ôö£ ãÆ /api/tecnico/settings
+Ôö£ ãÆ /api/test-push
+Ôö£ ãÆ /api/tips
+Ôö£ ãÆ /api/upload-audio
+Ôö£ ãÆ /api/upload-delivery-photo
+Ôö£ ãÆ /api/upload-driver-doc
+Ôö£ ãÆ /api/upload-photo
+Ôö£ ãÆ /api/upload-service-photo
+Ôö£ ãÆ /api/wallet
+Ôö£ Ôùï /auth
+Ôö£ Ôùï /auth/reset-password
+Ôö£ Ôùï /cliente
+Ôö£ Ôùï /cliente/direcciones
+Ôö£ Ôùï /cliente/enviar
+Ôö£ Ôùï /cliente/historial
+Ôö£ Ôùï /cliente/historial-ofertas
+Ôö£ Ôùï /cliente/mis-envios
+Ôö£ Ôùï /cliente/mis-servicios
+Ôö£ Ôùï /cliente/pedidos
+Ôö£ Ôùï /cliente/servicio
+Ôö£ Ôùï /cliente/settings
+Ôö£ Ôùï /driver
+Ôö£ Ôùï /driver/aceptacion
+Ôö£ Ôùï /driver/activo
+Ôö£ Ôùï /driver/billetera
+Ôö£ Ôùï /driver/delivered
+Ôö£ Ôùï /driver/failed
+Ôö£ Ôùï /driver/ganancias
+Ôö£ Ôùï /driver/historial-ofertas
+Ôö£ Ôùï /driver/settings
+Ôö£ Ôùï /tecnico
+Ôö£ Ôùï /tecnico/aceptacion
+Ôö£ Ôùï /tecnico/activo
+Ôö£ Ôùï /tecnico/billetera
+Ôö£ Ôùï /tecnico/citas
+Ôö£ Ôùï /tecnico/ganancias
+Ôö£ Ôùï /tecnico/historial
+Ôö£ Ôùï /tecnico/historial-ofertas
+Ôöö Ôùï /tecnico/settings
+
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

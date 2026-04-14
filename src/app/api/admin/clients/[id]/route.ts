@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
-  const { id } = params;
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
 
   try {
