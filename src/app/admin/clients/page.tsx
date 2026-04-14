@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 interface Client {
   id: string;
   email: string;
-  full_name: string | null;
   created_at: string;
 }
 
@@ -115,7 +114,7 @@ export default function ClientsPage() {
                     </div>
                   </td>
                   <td className="py-3 px-4 text-[rgba(255,255,255,0.5)] hidden sm:table-cell">
-                    {c.full_name || <span className="text-[rgba(255,255,255,0.2)]">—</span>}
+                    <span className="text-[rgba(255,255,255,0.2)]">—</span>
                   </td>
                   <td className="py-3 px-4 text-[rgba(255,255,255,0.4)] hidden md:table-cell">{fmtDate(c.created_at)}</td>
                 </tr>

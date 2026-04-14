@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   try {
     const { data, error } = await sbAdmin()
       .from('users')
-      .select('id,email,full_name,role')
+      .select('id,email,role')
       .ilike('role', 'driver%')
       .limit(500);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 interface DriverItem {
   id: string;
   email: string;
-  full_name?: string | null;
   role?: string | null;
 }
 
@@ -61,7 +60,7 @@ export default function DriverListPage() {
                 <li key={d.id} className="py-3 sm:py-4">
                   <div className="flex items-center space-x-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{d.full_name || d.email}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{d.email}</p>
                       <p className="text-sm text-gray-500 truncate">{d.email}</p>
                     </div>
                     <div className="text-sm text-gray-500">{d.role || 'driver'}</div>
