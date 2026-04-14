@@ -76,9 +76,13 @@ export default function UsersPage() {
     if (!newEmail || !newPassword) { setErrorMsg('Email y contraseña son obligatorios'); setCreating(false); return; }
     if (newPassword.length < 6) { setErrorMsg('La contraseña debe tener al menos 6 caracteres'); setCreating(false); return; }
     try {
+      const { data: { session: csSession } } = await supabase.auth.getSession();
       const res = await fetch('/api/create-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${csSession?.access_token || ''}`,
+        },
         body: JSON.stringify({ email: newEmail, password: newPassword, role: newRole }),
       });
       const json = await res.json();

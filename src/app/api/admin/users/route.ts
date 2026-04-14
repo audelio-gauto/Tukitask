@@ -9,7 +9,9 @@ export async function GET(req: Request) {
   const page   = Math.max(1, parseInt(searchParams.get('page')  || '1'));
   const limit  = Math.min(100, parseInt(searchParams.get('limit') || '50'));
   const search = (searchParams.get('search') || '').trim().slice(0, 100);
+  const role   = (searchParams.get('role') || '').trim();
   const offset = (page - 1) * limit;
+  const validRoles = ['admin', 'super_admin', 'owner', 'driver', 'vendedor', 'servicio', 'hoteleria', 'cliente', 'tecnico'];
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,6 +23,9 @@ export async function GET(req: Request) {
 
     if (search) {
       query = query.ilike('email', `%${search}%`);
+    }
+    if (role && validRoles.includes(role)) {
+      query = query.eq('role', role);
     }
 
     const { data, count, error } = await query;

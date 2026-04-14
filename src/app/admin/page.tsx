@@ -46,6 +46,10 @@ export default function AdminDashboard() {
         { count: clientes },
         { count: admins },
         { data: recentUsersData },
+        { count: totalOrders },
+        { count: pendingOrders },
+        { count: deliveredOrders },
+        { count: cancelledOrders },
         { data: allOrders },
       ] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
@@ -58,9 +62,17 @@ export default function AdminDashboard() {
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
         supabase.from('users').select('id, email, role, created_at')
           .order('created_at', { ascending: false }).limit(5),
+        // Counts exactos por estado — cero filas transferidas
+        supabase.from('orders').select('*', { count: 'exact', head: true }),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pending', 'negotiating']),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned']),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['cancelled', 'failed', 'return_rejected']),
+        // Revenue: solo últimos 30 días y solo campo de precio (mínimo de datos)
         supabase.from('orders')
-          .select('id, status, accepted_price, offer_price, suggested_price, created_at')
-          .order('created_at', { ascending: false }).limit(500),
+          .select('accepted_price, offer_price, suggested_price, created_at')
+          .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned'])
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .limit(2000),
       ]);
 
       setStats({
@@ -73,18 +85,18 @@ export default function AdminDashboard() {
         clientes:   clientes   ?? 0,
       });
 
-      const orders: any[] = allOrders || [];
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const getPrice = (o: any) => Number(o.accepted_price ?? o.offer_price ?? o.suggested_price ?? 0);
-      const deliveredStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'returned'];
-      const delivered = orders.filter(o => deliveredStatuses.includes(o.status));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rev30: any[] = (allOrders as any) || [];
       setOrderMetrics({
-        totalOrders:     orders.length,
-        pendingOrders:   orders.filter(o => ['pending', 'negotiating'].includes(o.status)).length,
-        deliveredOrders: delivered.length,
-        cancelledOrders: orders.filter(o => ['cancelled', 'failed', 'return_rejected'].includes(o.status)).length,
-        totalRevenue:    delivered.reduce((s, o) => s + getPrice(o), 0),
-        revenueToday:    delivered.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
+        totalOrders:     (totalOrders     as number) ?? 0,
+        pendingOrders:   (pendingOrders   as number) ?? 0,
+        deliveredOrders: (deliveredOrders as number) ?? 0,
+        cancelledOrders: (cancelledOrders as number) ?? 0,
+        totalRevenue:    rev30.reduce((s, o) => s + getPrice(o), 0),
+        revenueToday:    rev30.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
       });
       setRecentUsers(recentUsersData || []);
       setLoading(false);

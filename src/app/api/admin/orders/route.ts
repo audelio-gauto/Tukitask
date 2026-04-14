@@ -134,7 +134,8 @@ export async function GET(req: Request) {
       const tb = new Date((b as Record<string, unknown>).created_at as string).getTime();
       return tb - ta;
     });
-    total = results.length;
+    // Usar counts reales de BD, no results.length (que está limitado a 500+500)
+    total = totalOrders + totalTecnico;
     paginatedResults = results.slice(offset, offset + limit);
   } else if (type === 'orders') {
     total = totalOrders;
