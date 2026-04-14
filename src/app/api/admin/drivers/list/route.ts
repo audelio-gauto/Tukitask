@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     let query = (sbAdmin() as any)
       .from('users')
       .select('id,email,role,created_at', { count: 'exact' })
-      .ilike('role', 'driver%')
+      .eq('role', 'driver')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

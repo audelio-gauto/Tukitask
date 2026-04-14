@@ -1,26 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '../../../../../lib/supabaseServer'
-
-async function authorize(req: Request) {
-  const auth = (req.headers.get('authorization') || '').trim()
-  if (!auth.startsWith('Bearer ')) return { ok: false }
-  const token = auth.split(' ')[1]
-  if (!token) return { ok: false }
-  try {
-    // @ts-ignore
-    const { data: { user } } = await supabaseServer.auth.getUser(token)
-    if (!user) return { ok: false }
-    const { data, error } = await supabaseServer.from('users').select('role').eq('id', user.id).maybeSingle()
-    if (error || !data) return { ok: false }
-    if (!['admin', 'super_admin', 'owner'].includes(data.role)) return { ok: false }
-    return { ok: true }
-  } catch { return { ok: false } }
-}
+import { getAuthAdmin, unauthorized } from '@/lib/apiAuth'
 
 // GET: list tecnico/servicio users + service pricing config
 export async function GET(req: Request) {
-  const auth = await authorize(req)
-  if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const admin = await getAuthAdmin(req)
+  if (!admin) return unauthorized()
 
   // Get emails of all users with servicio/tecnico role
   // Note: 'servicio' is the primary role for technicians in the user_role enum.
@@ -62,8 +47,8 @@ export async function GET(req: Request) {
 
 // PUT: update tecnico commission/subscription OR service pricing
 export async function PUT(req: Request) {
-  const auth = await authorize(req)
-  if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const admin = await getAuthAdmin(req)
+  if (!admin) return unauthorized()
 
   const body = await req.json()
 

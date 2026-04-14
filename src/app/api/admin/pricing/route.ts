@@ -1,44 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '../../../../lib/supabaseServer'
-
-async function authorizeRequest(req: Request) {
-  const auth = (req.headers.get('authorization') || '').trim()
-  const fallbackToken = process.env.ADMIN_PRICING_TOKEN || ''
-
-  // Legacy static token (keeps compatibility)
-  if (fallbackToken && auth === `Bearer ${fallbackToken}`) {
-    return { ok: true, method: 'token' }
-  }
-
-  if (!auth.startsWith('Bearer ')) return { ok: false }
-  const accessToken = auth.split(' ')[1]
-  if (!accessToken) return { ok: false }
-
-  try {
-    // Validate access token with Supabase (service role client)
-    // supabaseServer.auth.getUser accepts an access token and returns user info
-    // (using service role key so this is safe on server-side)
-    // @ts-ignore - supabase-js typings may vary across versions
-    const userRes = await supabaseServer.auth.getUser(accessToken)
-    const user = userRes?.data?.user
-    if (!user) return { ok: false }
-
-    // Look up role in our users table
-    const { data, error } = await supabaseServer.from('users').select('role').eq('id', user.id).maybeSingle()
-    if (error || !data) return { ok: false }
-    const role = data.role
-    if (role === 'admin' || role === 'super_admin' || role === 'owner') return { ok: true, method: 'supabase', user, role }
-    return { ok: false }
-  } catch (err) {
-    console.error('authorizeRequest error', err)
-    return { ok: false }
-  }
-}
+import { getAuthAdmin, unauthorized } from '@/lib/apiAuth'
 
 export async function GET(req: Request) {
   try {
-    const auth = await authorizeRequest(req)
-    if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const admin = await getAuthAdmin(req)
+    if (!admin) return unauthorized()
 
     const [multipliers, vehicles, settings, appSettings] = await Promise.all([
       supabaseServer.from('package_multipliers').select('*').order('sort_order'),
@@ -67,8 +34,8 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const auth = await authorizeRequest(req)
-    if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    const admin = await getAuthAdmin(req)
+    if (!admin) return unauthorized()
 
     const body = await req.json()
     const { package_multipliers, vehicle_pricing, pricing_settings, app_settings } = body
