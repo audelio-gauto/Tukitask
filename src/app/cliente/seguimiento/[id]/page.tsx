@@ -176,8 +176,8 @@ export default function SeguimientoPage() {
         const res = await fetch(`/api/orders?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const json = await res.json();
-        const ord = Array.isArray(json) ? json[0] : json.data?.[0] ?? json;
+        if (!res.ok) { setError('Pedido no encontrado'); return; }
+        const ord = await res.json();
         if (!ord?.id) { setError('Pedido no encontrado'); return; }
         setOrder({ ...ord, type: 'delivery' });
       }

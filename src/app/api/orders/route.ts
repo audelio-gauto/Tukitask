@@ -14,7 +14,26 @@ export async function GET(req: Request) {
   const clientEmail = searchParams.get('client_email');
   const driverEmail = searchParams.get('driver_email');
   const history = searchParams.get('history');
+  const orderId = searchParams.get('id');
   const db = sbAdmin();
+
+  // ── Single order by ID (client or driver tracking) ───────────────────────
+  if (orderId) {
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
+    const { data: order, error } = await db
+      .from('orders')
+      .select('*, order_stops(*)')
+      .eq('id', orderId)
+      .maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!order) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    // Security: only the client or the assigned driver may fetch
+    const isClient = order.client_email?.toLowerCase() === user.email;
+    const isDriver = order.accepted_by?.toLowerCase() === user.email;
+    if (!isClient && !isDriver) return forbidden('No autorizado');
+    return NextResponse.json(order);
+  }
 
   let query = db
     .from('orders')

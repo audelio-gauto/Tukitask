@@ -223,9 +223,26 @@ export async function GET(req: Request) {
       );
     }
 
+    // ── Single job by ID (client or tecnico tracking) ────────────────────────
+    const singleJobId = url.searchParams.get('job_id');
+    if (singleJobId) {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      const { data: job, error } = await sb
+        .from('tecnico_jobs')
+        .select('*')
+        .eq('id', singleJobId)
+        .maybeSingle();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (!job) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      const isClient  = job.client_email?.toLowerCase()  === user.email;
+      const isTecnico = job.tecnico_email?.toLowerCase() === user.email;
+      if (!isClient && !isTecnico) return unauthorized();
+      return NextResponse.json({ data: [job] });
+    }
+
     // ── Client: active service jobs ──────────────────────────────────────────
     if (url.searchParams.get('client_active') === 'true') {
-      if (!clientEmail) return NextResponse.json({ error: 'Missing client_email' }, { status: 400 });
       const user = await getAuthUser(req);
       if (!user || user.email !== clientEmail) return unauthorized();
       const { data, error } = await sb
