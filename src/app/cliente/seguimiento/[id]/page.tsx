@@ -130,6 +130,7 @@ export default function SeguimientoPage() {
   const routeLineRef    = useRef<any>(null);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastRouteKey    = useRef<string>('');
+  const etaFromApiRef   = useRef<boolean>(false);
 
   const [order,    setOrder]    = useState<OrderDetail | null>(null);
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
@@ -208,10 +209,8 @@ export default function SeguimientoPage() {
           tecnico_email: job.tecnico_email,
           service_type: job.service_type,
         };
-        setOrder(prev => {
-          if (!prev?.accepted_by && mapped.accepted_by) fetchVehicle(mapped.accepted_by);
-          return mapped;
-        });
+        setOrder(mapped);
+        if (mapped.accepted_by) fetchVehicle(mapped.accepted_by);
       } else {
         const res = await fetch(`/api/orders?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -220,10 +219,8 @@ export default function SeguimientoPage() {
         const ord = await res.json();
         if (!ord?.id) { setError('Pedido no encontrado'); return; }
         const mapped: OrderDetail = { ...ord, type: 'delivery' };
-        setOrder(prev => {
-          if (!prev?.accepted_by && mapped.accepted_by) fetchVehicle(mapped.accepted_by);
-          return mapped;
-        });
+        setOrder(mapped);
+        if (mapped.accepted_by) fetchVehicle(mapped.accepted_by);
       }
     } catch {
       setError('Error cargando el pedido');
@@ -389,6 +386,7 @@ export default function SeguimientoPage() {
               if (json.duration_seconds) {
                 const etaMin = Math.max(1, Math.round(json.duration_seconds / 60));
                 const distKm = json.distance_meters ? json.distance_meters / 1000 : haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+                etaFromApiRef.current = true;
                 setEta({ distKm, etaMin, fromApi: true });
               }
             } else {
@@ -397,8 +395,10 @@ export default function SeguimientoPage() {
                 [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
                 { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
               ).addTo(map);
-              const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
-              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+              if (!etaFromApiRef.current) {
+                const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+                setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+              }
             }
           }).catch(() => {
             // Fallback on any error
@@ -407,15 +407,17 @@ export default function SeguimientoPage() {
               [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
               { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
             ).addTo(map);
-            const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
-            setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+            if (!etaFromApiRef.current) {
+              const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+            }
           });
         }
 
-        // Live haversine ETA while waiting for real route
-        if (!eta?.fromApi) {
+        // Live haversine ETA while waiting for real route (only if no API eta yet)
+        if (!etaFromApiRef.current) {
           const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
-          setEta(prev => prev?.fromApi ? prev : { distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+          setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
         }
       }
 
@@ -429,7 +431,7 @@ export default function SeguimientoPage() {
         map.setView([driverLoc.lat, driverLoc.lng], 15);
       }
     }
-  }, [order, driverLoc, vehicle, mapReady, type, getToken, eta]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order, driverLoc, vehicle, mapReady, type, getToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
