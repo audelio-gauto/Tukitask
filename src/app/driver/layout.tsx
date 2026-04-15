@@ -37,16 +37,32 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   usePushNotifications(email || undefined);
 
   // ── GPS broadcast: always-on while driver app is open ──────────────────────
-  // Broadcasts location every 10s so clients can see ETA for active orders.
-  // auth token from supabase session is attached by authFetch.
+  // 1. Broadcasts via Supabase Realtime (0 DB writes, < 1s latency for clients)
+  // 2. Writes to DB every 60s only (down from 10s) — for analytics / fallback
   useEffect(() => {
     if (!email) return;
     let lastLat: number | null = null;
     let lastLng: number | null = null;
     let watchId: number | null = null;
-    let ivId: ReturnType<typeof setInterval> | null = null;
+    let dbIntervalId: ReturnType<typeof setInterval> | null = null;
 
-    const postLocation = () => {
+    // Supabase Broadcast channel — ephemeral, no DB writes
+    const broadcastCh = supabase.channel(`loc:driver:${email}`, {
+      config: { broadcast: { self: false } },
+    });
+    broadcastCh.subscribe();
+
+    const broadcastLocation = (lat: number, lng: number) => {
+      broadcastCh.send({
+        type: 'broadcast',
+        event: 'location',
+        payload: { lat, lng },
+      }).catch(() => {});
+    };
+
+    // DB write (throttled to 60s) — keeps driver_locations table fresh for
+    // clients that open the page after the driver started moving
+    const postToDB = () => {
       if (lastLat == null || lastLng == null) return;
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
@@ -62,22 +78,24 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      // watchPosition only to track coords; posting done on separate 10s interval to avoid flooding
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           lastLat = pos.coords.latitude;
           lastLng = pos.coords.longitude;
+          // Broadcast immediately on every GPS fix (< 1s for client)
+          broadcastLocation(lastLat, lastLng);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      // Post on first fix, then every 10s — max 6 writes/min/driver
-      ivId = setInterval(postLocation, 10_000);
+      // DB write only every 60s — 6x fewer writes than before
+      dbIntervalId = setInterval(postToDB, 60_000);
     }
 
     return () => {
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
-      if (ivId != null) clearInterval(ivId);
+      if (dbIntervalId != null) clearInterval(dbIntervalId);
+      supabase.removeChannel(broadcastCh);
     };
   }, [email]);
 

@@ -131,6 +131,8 @@ export default function SeguimientoPage() {
   const pickupMarkerRef = useRef<any>(null);
   const routeLineRef    = useRef<any>(null);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const broadcastChRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const subscribedDriverRef = useRef<string>('');
   const lastRouteKey      = useRef<string>('');
   const etaFromApiRef     = useRef<boolean>(false);
   const vehicleFetchedRef = useRef<boolean>(false);
@@ -481,13 +483,49 @@ export default function SeguimientoPage() {
     const isActive = STATUS_ACTIVE.has(order.status);
     if (!isActive) return;
 
+    // Only refresh order STATUS (not driver location — that comes via Broadcast)
     intervalRef.current = setInterval(() => {
-      fetchDriverLoc();
-      fetchOrder(); // also refresh order status
+      fetchOrder();
     }, POLL_INTERVAL);
 
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [mapReady, order, fetchDriverLoc, fetchOrder]);
+  }, [mapReady, order, fetchOrder]);
+
+  // ── Supabase Broadcast subscription for real-time driver location ─────────
+  // Listens to the channel `loc:driver:<email>` that the driver app broadcasts to.
+  // Zero DB reads — pure websocket. Falls back to DB on first load via fetchDriverLoc.
+  useEffect(() => {
+    const driverEmail = order?.accepted_by;
+    if (!driverEmail) return;
+    if (!STATUS_ACTIVE.has(order?.status ?? '')) return;
+    // Only subscribe once per driver
+    if (subscribedDriverRef.current === driverEmail) return;
+    subscribedDriverRef.current = driverEmail;
+
+    // Clean up any previous channel
+    if (broadcastChRef.current) {
+      supabase.removeChannel(broadcastChRef.current);
+      broadcastChRef.current = null;
+    }
+
+    const ch = supabase.channel(`loc:driver:${driverEmail}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    ch.on('broadcast', { event: 'location' }, ({ payload }) => {
+      if (payload?.lat != null && payload?.lng != null) {
+        setDriverLoc({ lat: Number(payload.lat), lng: Number(payload.lng), updated_at: new Date().toISOString() });
+      }
+    }).subscribe();
+
+    broadcastChRef.current = ch;
+
+    return () => {
+      supabase.removeChannel(ch);
+      broadcastChRef.current = null;
+      subscribedDriverRef.current = '';
+    };
+  }, [order?.accepted_by, order?.status]);
 
   const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
