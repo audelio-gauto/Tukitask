@@ -10,6 +10,14 @@ import RequestsFeed, { type FeedItem } from './components/RequestsFeed';
 // Mapbox GL must be loaded client-side only (no SSR)
 const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h >= 6 && h < 13) return 'Buen día';
@@ -400,9 +408,31 @@ export default function DriverDashboard() {
   };
   const filteredFeedItems: FeedItem[] = pendingOrders
     .filter(o => {
+      // ── Filtro 1: tipo de vehículo ──────────────────────────────────────
       const key = VEHICLE_FILTER_MAP[o.vehicle_type as string || ''];
-      if (!key) return true;
-      return serviceFilters[key] !== false;
+      if (key && serviceFilters[key] === false) return false;
+
+      // ── Filtro 2: rango de recogida y entrega ───────────────────────────
+      // Solo filtrar si ya tenemos posición GPS. Si no hay GPS, mostrar todo
+      // para no bloquear al conductor que no dio permisos de ubicación aún.
+      if (driverPos) {
+        const dLat = driverPos.lat;
+        const dLng = driverPos.lng;
+
+        // Rango de recogida: distancia del conductor al punto A
+        if (o.pickup_lat != null && o.pickup_lng != null) {
+          const distPickup = haversineKm(dLat, dLng, Number(o.pickup_lat), Number(o.pickup_lng));
+          if (distPickup > pickupRangeKm) return false;
+        }
+
+        // Rango de entrega: distancia del conductor al punto B
+        if (o.delivery_lat != null && o.delivery_lng != null) {
+          const distDelivery = haversineKm(dLat, dLng, Number(o.delivery_lat), Number(o.delivery_lng));
+          if (distDelivery > deliveryRangeKm) return false;
+        }
+      }
+
+      return true;
     })
     .map((o): FeedItem => ({
       id: o.id,

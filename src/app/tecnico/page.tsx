@@ -467,7 +467,17 @@ export default function TecnicoDashboard() {
     },
   ];
 
-  const feedVisible = available && !walletBlocked && pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
+  // ── Filtrar por rango de trabajo ─────────────────────────────────────────
+  // Solo muestra trabajos cuya ubicación del cliente esté dentro de rangoKm.
+  // Si no hay GPS aún, se muestran todos para no bloquear al técnico.
+  const filteredJobs = pendingJobs.filter(j => {
+    if (!driverPos) return true;
+    if (j.lat == null || j.lng == null) return true;
+    const dist = haversineKm(driverPos.lat, driverPos.lng, Number(j.lat), Number(j.lng));
+    return dist <= rangoKm;
+  });
+
+  const feedVisible = available && !walletBlocked && filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
 
   return (
     <>
@@ -618,7 +628,7 @@ export default function TecnicoDashboard() {
       <RequestsFeed
         mode="tecnico"
         available={available}
-        items={pendingJobs.map((j): FeedItem => ({
+        items={filteredJobs.map((j): FeedItem => ({
           id: j.id,
           title: j.service_type || 'servicio',
           location: j.address,
@@ -666,13 +676,13 @@ export default function TecnicoDashboard() {
               <>
                 <span className="tuki-sheet-hint-dot" />
                 <span className="tuki-sheet-hint-text">
-                  {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0
-                    ? `${pendingJobs.filter(j => !dismissedHome.has(j.id)).length} solicitudes cerca de ti`
+                  {filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0
+                    ? `${filteredJobs.filter(j => !dismissedHome.has(j.id)).length} solicitudes cerca de ti`
                     : 'Buscando solicitudes…'}
                 </span>
-                {pendingJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
+                {filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
                   <span className="tuki-sheet-hint-badge">
-                    {pendingJobs.filter(j => !dismissedHome.has(j.id)).length}
+                    {filteredJobs.filter(j => !dismissedHome.has(j.id)).length}
                   </span>
                 )}
               </>
