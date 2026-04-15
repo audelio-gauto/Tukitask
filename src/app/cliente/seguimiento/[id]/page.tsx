@@ -330,6 +330,8 @@ export default function SeguimientoPage() {
     const L   = leafletRef.current;
     if (!map || !L || !order) return;
 
+    try {
+
     const destLat = order.delivery_lat ?? order.client_lat ?? null;
     const destLng = order.delivery_lng ?? order.client_lng ?? null;
 
@@ -357,6 +359,8 @@ export default function SeguimientoPage() {
 
     // ── Driver marker (moving) ──
     if (driverLoc) {
+      const dLat = Number(driverLoc.lat);
+      const dLng = Number(driverLoc.lng);
       const name = order.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
       const inits = name.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
       const color = type === 'service' ? '#8b5cf6' : '#22c55e';
@@ -378,82 +382,92 @@ export default function SeguimientoPage() {
       });
 
       if (driverMarkerRef.current) {
-        driverMarkerRef.current.setLatLng([driverLoc.lat, driverLoc.lng]);
+        driverMarkerRef.current.setLatLng([dLat, dLng]);
         driverMarkerRef.current.setIcon(driverIcon);
       } else {
-        driverMarkerRef.current = L.marker([driverLoc.lat, driverLoc.lng], { icon: driverIcon })
+        driverMarkerRef.current = L.marker([dLat, dLng], { icon: driverIcon })
           .addTo(map)
           .bindPopup(`<b>${name}</b>`);
       }
 
       // ── Route: real roads via /api/maps/directions, fallback straight line ──
       if (destLat != null && destLng != null) {
-        const routeKey = `${driverLoc.lat.toFixed(4)},${driverLoc.lng.toFixed(4)}->${destLat.toFixed(4)},${destLng.toFixed(4)}`;
+        const nDestLat = Number(destLat);
+        const nDestLng = Number(destLng);
+        const routeKey = `${dLat.toFixed(4)},${dLng.toFixed(4)}->${nDestLat.toFixed(4)},${nDestLng.toFixed(4)}`;
         if (routeKey !== lastRouteKey.current) {
           lastRouteKey.current = routeKey;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           getToken().then(token => fetch('/api/maps/directions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ from: { lat: driverLoc.lat, lng: driverLoc.lng }, to: { lat: destLat, lng: destLng } }),
+            body: JSON.stringify({ from: { lat: dLat, lng: dLng }, to: { lat: nDestLat, lng: nDestLng } }),
           })).then(r => r.ok ? r.json() : null).then((json: any) => {
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             if (json?.coords?.length > 1) {
               routeLineRef.current = L.polyline(
-                json.coords.map((c: { lat: number; lng: number }) => [c.lat, c.lng] as [number, number]),
+                json.coords.map((c: { lat: number; lng: number }) => [Number(c.lat), Number(c.lng)] as [number, number]),
                 { color, weight: 4, opacity: 0.85, lineJoin: 'round', lineCap: 'round' }
               ).addTo(map);
               if (json.duration_seconds) {
-                const etaMin = Math.max(1, Math.round(json.duration_seconds / 60));
-                const distKm = json.distance_meters ? json.distance_meters / 1000 : haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+                const etaMin = Math.max(1, Math.round(Number(json.duration_seconds) / 60));
+                const distKm = json.distance_meters ? Number(json.distance_meters) / 1000 : haversineKm(dLat, dLng, nDestLat, nDestLng);
                 etaFromApiRef.current = true;
                 setEta({ distKm, etaMin, fromApi: true });
               }
             } else {
-              // Fallback: straight dashed line
               routeLineRef.current = L.polyline(
-                [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
+                [[dLat, dLng], [nDestLat, nDestLng]],
                 { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
               ).addTo(map);
               if (!etaFromApiRef.current) {
-                const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+                const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
                 setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
               }
             }
           }).catch(() => {
-            // Fallback on any error
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             routeLineRef.current = L.polyline(
-              [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
+              [[dLat, dLng], [nDestLat, nDestLng]],
               { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
             ).addTo(map);
             if (!etaFromApiRef.current) {
-              const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+              const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
               setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
             }
           });
         }
-
-        // Live haversine ETA while waiting for real route (only if no API eta yet)
-        if (!etaFromApiRef.current) {
-          const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
-          setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
-        }
       }
 
-      // ── Fit bounds to show driver + destination ──
-      const points: [number, number][] = [[driverLoc.lat, driverLoc.lng]];
-      if (destLat != null && destLng != null) points.push([destLat, destLng]);
-      if (order.pickup_lat != null && order.pickup_lng != null) points.push([order.pickup_lat, order.pickup_lng]);
+      // ── Fit bounds ──
+      const points: [number, number][] = [[dLat, dLng]];
+      if (destLat != null && destLng != null) points.push([Number(destLat), Number(destLng)]);
+      if (order.pickup_lat != null && order.pickup_lng != null) points.push([Number(order.pickup_lat), Number(order.pickup_lng)]);
       if (points.length > 1) {
         map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 16 });
       } else {
-        map.setView([driverLoc.lat, driverLoc.lng], 15);
+        map.setView([dLat, dLng], 15);
       }
     }
+    } catch (err) {
+      console.error('[tracking] map effect error:', err);
+    }
+
   }, [order, driverLoc, mapReady, type, getToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Initial load ──────────────────────────────────────────────────────────
+  // ── Haversine ETA (separate from map, no loop risk) ─────────────────────
+  useEffect(() => {
+    if (!driverLoc || etaFromApiRef.current) return;
+    const order_ = order;
+    if (!order_) return;
+    const destLat = Number(order_.delivery_lat ?? order_.client_lat ?? 0);
+    const destLng = Number(order_.delivery_lng ?? order_.client_lng ?? 0);
+    if (!destLat || !destLng) return;
+    const dLat = Number(driverLoc.lat);
+    const dLng = Number(driverLoc.lng);
+    const distKm = haversineKm(dLat, dLng, destLat, destLng);
+    setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+  }, [driverLoc, order]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (id) {
       fetchOrder();
