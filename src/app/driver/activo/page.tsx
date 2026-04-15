@@ -50,6 +50,10 @@ export default function ActivoPage() {
   const [deliveryPhotos, setDeliveryPhotos] = useState<Record<string, { file: File; previewUrl: string }>>({});
   // Fail reason text per order
   const [failReason, setFailReason] = useState<Record<string, string>>({});
+  // ── Stop-level state ──────────────────────────────────────────────────────
+  const [stopActing, setStopActing] = useState<Record<string, boolean>>({}); // stopId → busy
+  const [stopFailOpen, setStopFailOpen] = useState<Set<string>>(new Set()); // which stops show fail form
+  const [stopFailReason, setStopFailReason] = useState<Record<string, string>>({}); // stopId → reason text
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
@@ -156,6 +160,54 @@ export default function ActivoPage() {
       showToast('❌ Error de conexión. Intentá de nuevo.');
     }
     setActing(null);
+  };
+
+  // Per-stop status update (multi-stop orders)
+  const updateStopStatus = async (orderId: string, stopId: string, stopStatus: 'delivered' | 'failed', failReasonText?: string) => {
+    setStopActing(prev => ({ ...prev, [stopId]: true }));
+    try {
+      const res = await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          stop_id: stopId,
+          stop_status: stopStatus,
+          driver_email: email,
+          ...(failReasonText ? { fail_reason: failReasonText } : {}),
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (stopStatus === 'delivered') {
+          showToast('✅ Parada marcada como entregada');
+        } else {
+          showToast('⚠️ Parada fallida registrada');
+        }
+        setStopFailOpen(prev => { const n = new Set(prev); n.delete(stopId); return n; });
+        setStopFailReason(prev => { const n = { ...prev }; delete n[stopId]; return n; });
+        // If all stops done, the API auto-transitions order to delivered
+        if (json?.all_stops_done) {
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+          showToast('🏁 ¡Todos los paquetes entregados!');
+        } else {
+          // Refresh to reflect updated stop status
+          setOrders(prev => prev.map(o => {
+            if (o.id !== orderId) return o;
+            const updatedStops = (o.order_stops || []).map((s: any) =>
+              s.id === stopId ? { ...s, status: stopStatus, fail_reason: failReasonText ?? null } : s
+            );
+            return { ...o, order_stops: updatedStops };
+          }));
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast('❌ ' + (err?.error || 'Error al actualizar parada'));
+      }
+    } catch {
+      showToast('❌ Error de conexión');
+    }
+    setStopActing(prev => ({ ...prev, [stopId]: false }));
   };
 
   const renderCard = (order: any) => {
@@ -337,6 +389,153 @@ export default function ActivoPage() {
             }}>
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Paquete: </span>
               {order.package_description}
+            </div>
+          )}
+
+          {/* ── Multi-stop paradas ── */}
+          {order.is_multi_stop && Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+                📍 Paradas ({order.order_stops.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence).map((stop: any) => {
+                  const isDone = stop.status === 'delivered';
+                  const isFailed = stop.status === 'failed';
+                  const isPending = stop.status === 'pending';
+                  const isBusy = stopActing[stop.id];
+                  const failFormOpen = stopFailOpen.has(stop.id);
+                  const stopReason = stopFailReason[stop.id] ?? '';
+
+                  return (
+                    <div key={stop.id} style={{
+                      background: isDone ? 'rgba(74,222,128,0.07)' : isFailed ? 'rgba(239,68,68,0.07)' : 'rgba(0,0,0,0.25)',
+                      border: `1.5px solid ${isDone ? 'rgba(74,222,128,0.3)' : isFailed ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                      borderRadius: 12, padding: '10px 12px',
+                    }}>
+                      {/* Stop header */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: isPending && status === 'in_transit' ? 8 : 4 }}>
+                        <span style={{
+                          minWidth: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                          background: isDone ? '#4ade80' : isFailed ? '#ef4444' : '#475569',
+                          color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {isDone ? '✓' : isFailed ? '✗' : stop.sequence}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.82rem', color: isDone ? '#4ade80' : isFailed ? '#f87171' : 'rgba(255,255,255,0.85)', lineHeight: 1.35 }}>
+                            {stop.address}
+                          </div>
+                          {stop.receiver_contact && (
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                              👤 {stop.receiver_contact}
+                              {stop.receiver_phone && (
+                                <a href={`tel:${stop.receiver_phone}`} style={{ color: '#60a5fa', marginLeft: 6, textDecoration: 'none' }}>
+                                  📞 {stop.receiver_phone}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {stop.description && (
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                              📝 {stop.description}
+                            </div>
+                          )}
+                          {isFailed && stop.fail_reason && (
+                            <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: 3, borderLeft: '2px solid #ef4444', paddingLeft: 6 }}>
+                              {stop.fail_reason}
+                            </div>
+                          )}
+                        </div>
+                        {/* Nav button */}
+                        <button
+                          onClick={() => openMaps(navApp, stop.address)}
+                          style={{
+                            padding: '5px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
+                            background: 'rgba(255,255,255,0.06)', color: '#94a3b8',
+                            fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >🗺️</button>
+                      </div>
+
+                      {/* Action buttons — only when pending + in_transit */}
+                      {isPending && status === 'in_transit' && !failFormOpen && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          <button
+                            disabled={isBusy}
+                            onClick={() => updateStopStatus(order.id, stop.id, 'delivered')}
+                            style={{
+                              flex: 1, padding: '8px', borderRadius: 10, border: 'none',
+                              background: isBusy ? 'rgba(255,255,255,0.06)' : 'rgba(74,222,128,0.18)',
+                              color: isBusy ? '#6b7280' : '#4ade80',
+                              fontWeight: 700, fontSize: '0.78rem', cursor: isBusy ? 'not-allowed' : 'pointer',
+                              border: '1px solid rgba(74,222,128,0.3)' as never,
+                            }}
+                          >
+                            {isBusy ? '...' : '✅ Entregado'}
+                          </button>
+                          <button
+                            disabled={isBusy}
+                            onClick={() => setStopFailOpen(prev => new Set([...prev, stop.id]))}
+                            style={{
+                              flex: 1, padding: '8px', borderRadius: 10,
+                              border: '1px solid rgba(239,68,68,0.3)',
+                              background: 'rgba(239,68,68,0.1)', color: '#f87171',
+                              fontWeight: 700, fontSize: '0.78rem', cursor: isBusy ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            ❌ Fallido
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Stop fail reason form */}
+                      {isPending && failFormOpen && (
+                        <div style={{ marginTop: 6 }}>
+                          <textarea
+                            value={stopReason}
+                            onChange={e => setStopFailReason(prev => ({ ...prev, [stop.id]: e.target.value }))}
+                            placeholder="Ej: No había nadie en casa, dirección incorrecta..."
+                            rows={2}
+                            style={{
+                              width: '100%', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
+                              background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: '0.8rem',
+                              padding: '7px 9px', resize: 'none', boxSizing: 'border-box',
+                              outline: 'none', fontFamily: 'inherit',
+                            }}
+                          />
+                          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                            <button
+                              onClick={() => {
+                                setStopFailOpen(prev => { const n = new Set(prev); n.delete(stop.id); return n; });
+                                setStopFailReason(prev => { const n = { ...prev }; delete n[stop.id]; return n; });
+                              }}
+                              style={{
+                                flex: 1, padding: '7px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'transparent', color: '#6b7280', cursor: 'pointer', fontSize: '0.78rem',
+                              }}
+                            >Cancelar</button>
+                            <button
+                              disabled={!stopReason.trim() || isBusy}
+                              onClick={() => updateStopStatus(order.id, stop.id, 'failed', stopReason.trim())}
+                              style={{
+                                flex: 2, padding: '7px', borderRadius: 9, border: 'none',
+                                background: !stopReason.trim() || isBusy ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ef4444,#dc2626)',
+                                color: !stopReason.trim() || isBusy ? '#6b7280' : '#fff',
+                                fontWeight: 700, fontSize: '0.78rem',
+                                cursor: !stopReason.trim() || isBusy ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {isBusy ? '...' : 'Confirmar fallido'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

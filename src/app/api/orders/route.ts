@@ -71,7 +71,7 @@ export async function GET(req: Request) {
   } else if (driverEmail && history === 'true') {
     const user = await getAuthUser(req);
     if (!user || user.email !== driverEmail) return unauthorized();
-    query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'returned', 'return_rejected']);
+    query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'failed', 'cancelled', 'returned', 'return_rejected']);
   } else if (driverEmail) {
     const user = await getAuthUser(req);
     if (!user || user.email !== driverEmail) return unauthorized();
