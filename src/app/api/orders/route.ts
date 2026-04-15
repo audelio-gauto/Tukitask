@@ -32,7 +32,24 @@ export async function GET(req: Request) {
     const isClient = order.client_email?.toLowerCase() === user.email;
     const isDriver = order.accepted_by?.toLowerCase() === user.email;
     if (!isClient && !isDriver) return forbidden('No autorizado');
-    return NextResponse.json(order);
+
+    // Enrich with driver name/photo for client tracking view
+    let driver_name: string | null = null;
+    let driver_photo: string | null = null;
+    let driver_avg_rating: number | null = null;
+    if (order.accepted_by) {
+      const { data: dp } = await db
+        .from('driver_profiles')
+        .select('first_name, last_name, profile_photo, avg_rating')
+        .eq('email', order.accepted_by)
+        .maybeSingle();
+      if (dp) {
+        driver_name = [dp.first_name, dp.last_name].filter(Boolean).join(' ') || null;
+        driver_photo = dp.profile_photo ?? null;
+        driver_avg_rating = dp.avg_rating ?? null;
+      }
+    }
+    return NextResponse.json({ ...order, driver_name, driver_photo, driver_avg_rating });
   }
 
   let query = db
