@@ -32,11 +32,12 @@ export async function GET(req: Request) {
       }
     }
 
-    return NextResponse.json({ mapbox: mapboxToken || null });
+    const token = mapboxToken || null;
+    return NextResponse.json({ mapbox: token, missing: !token });
   } catch (err) {
     console.error('[admin/ruta/mapkey]', err);
     // Fallback to env var even on DB error
     const fallback = process.env.MAPBOX_API_KEY || process.env.NEXT_PUBLIC_MAPBOX_TOKEN || null;
-    return NextResponse.json({ mapbox: fallback });
+    return NextResponse.json({ mapbox: fallback, missing: !fallback });
   }
 }

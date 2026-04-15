@@ -136,6 +136,7 @@ export default function RutaPage() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [noToken, setNoToken] = useState(false);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, online: 0, en_route: 0, free: 0 });
 
@@ -158,7 +159,7 @@ export default function RutaPage() {
         });
         const json = await res.json();
         if (json?.mapbox) setMapboxToken(json.mapbox);
-        else setMapError(true);
+        else setNoToken(true);
       } catch {
         setMapError(true);
       }
@@ -199,7 +200,7 @@ export default function RutaPage() {
   // Depends on mapboxToken being fetched first
 
   useEffect(() => {
-    if (!mapboxToken || !mapRef.current || initRef.current) return;
+    if (noToken || !mapboxToken || !mapRef.current || initRef.current) return;
     initRef.current = true;
 
     let mounted = true;
@@ -288,7 +289,7 @@ export default function RutaPage() {
       mounted = false;
       if (loadTimer) clearTimeout(loadTimer);
     };
-  }, [mapboxToken]);
+  }, [mapboxToken, noToken]);
 
   // ── Update map markers when data changes ────────────────────────────────────
 
@@ -520,18 +521,47 @@ export default function RutaPage() {
         <div className="flex-1 relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ minHeight: 0 }}>
           {/* absolute inset-0 guarantees the map fills the container in production builds */}
           <div ref={mapRef} className="absolute inset-0" />
-          {!mapboxToken && !mapError && (
+          {/* Spinner while loading token */}
+          {!mapboxToken && !mapError && !noToken && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
               <div className="w-7 h-7 border-2 border-green-400/40 border-t-green-400 rounded-full animate-spin" />
               <p className="text-white/40 text-sm">Cargando mapa…</p>
             </div>
           )}
+          {/* Token not configured — show link to settings */}
+          {noToken && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-4 px-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-yellow-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-white/70 font-semibold text-sm mb-1">Mapbox API Key no configurada</p>
+                <p className="text-white/35 text-xs leading-relaxed">
+                  Ingresá tu token en
+                </p>
+              </div>
+              <a
+                href="/admin/drivers/pricing"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/25 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Configuración de Precios
+              </a>
+              <p className="text-white/25 text-xs">Sección “API Keys de Mapas” → Mapbox API Key</p>
+            </div>
+          )}
+          {/* WebGL / runtime map error */}
           {mapError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
               <svg className="w-10 h-10 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
               </svg>
-              <p className="text-white/40 text-sm">Token de Mapbox no configurado en Configuración de Precios.</p>
+              <p className="text-white/40 text-sm">El mapa no pudo cargarse (WebGL no disponible).</p>
             </div>
           )}
           {/* Map legend */}
