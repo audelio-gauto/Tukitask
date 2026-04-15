@@ -422,7 +422,7 @@ export default function SeguimientoPage() {
               ).addTo(map);
               if (!etaFromApiRef.current) {
                 const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
-                setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+                setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
               }
             }
           }).catch(() => {
@@ -433,7 +433,7 @@ export default function SeguimientoPage() {
             ).addTo(map);
             if (!etaFromApiRef.current) {
               const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
-              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
             }
           });
         }
@@ -466,7 +466,7 @@ export default function SeguimientoPage() {
     const dLat = Number(driverLoc.lat);
     const dLng = Number(driverLoc.lng);
     const distKm = haversineKm(dLat, dLng, destLat, destLng);
-    setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+    setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
   }, [driverLoc, order]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (id) {

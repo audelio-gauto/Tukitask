@@ -520,7 +520,6 @@ export default function ClienteHomePage() {
           if (!res.ok) { newEta[o.id] = null; return; }
           const loc = await res.json();
           if (!loc?.lat || !loc?.lng) { newEta[o.id] = null; return; }
-          // Pick destination: if picking_up use pickup coords, else use delivery coords
           const destLat = o.status === 'picking_up' || o.status === 'accepted'
             ? (o.pickup_lat ?? o.delivery_lat)
             : (o.delivery_lat ?? o.pickup_lat);
@@ -528,8 +527,28 @@ export default function ClienteHomePage() {
             ? (o.pickup_lng ?? o.delivery_lng)
             : (o.delivery_lng ?? o.pickup_lng);
           if (destLat == null || destLng == null) { newEta[o.id] = null; return; }
-          const distKm = haversineKm(loc.lat, loc.lng, destLat, destLng);
-          // ~30 km/h average urban speed → minutes
+
+          // Try real road route first
+          try {
+            const dirRes = await authFetch('/api/maps/directions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ from: { lat: Number(loc.lat), lng: Number(loc.lng) }, to: { lat: Number(destLat), lng: Number(destLng) } }),
+            });
+            if (dirRes.ok) {
+              const dir = await dirRes.json();
+              if (dir.distance_meters && dir.duration_seconds) {
+                newEta[o.id] = {
+                  distKm: Number(dir.distance_meters) / 1000,
+                  etaMin: Math.max(1, Math.round(Number(dir.duration_seconds) / 60)),
+                };
+                return;
+              }
+            }
+          } catch { /* fall through to haversine */ }
+
+          // Haversine fallback
+          const distKm = haversineKm(Number(loc.lat), Number(loc.lng), Number(destLat), Number(destLng));
           const etaMin = Math.max(1, Math.round(distKm * 2));
           newEta[o.id] = { distKm, etaMin };
         } catch { newEta[o.id] = null; }
