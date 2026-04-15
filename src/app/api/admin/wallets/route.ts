@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
+import { emitNotification } from '@/lib/notificationEmitter';
 
 // GET — lista solicitudes de recarga (admin)
 // ?status=pending|approved|rejected  (default: pending)
@@ -69,6 +70,20 @@ export async function POST(req: Request) {
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data?.ok) return NextResponse.json({ error: data?.error || 'No se pudo aprobar' }, { status: 409 });
+
+    // Notify the driver/tecnico that their recharge was approved
+    if (data.driver) {
+      const amountFmt = new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(data.amount ?? 0);
+      emitNotification(
+        data.driver,
+        'wallet',
+        '💰 Recarga aprobada',
+        `Tu recarga de ${amountFmt} fue acreditada a tu billetera.`,
+        { amount: data.amount },
+        { priority: 'urgent', groupKey: `recharge_approved_${request_id}` },
+      );
+    }
+
     return NextResponse.json({ success: true, amount: data.amount, driver: data.driver });
   }
 
@@ -80,5 +95,20 @@ export async function POST(req: Request) {
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data?.ok) return NextResponse.json({ error: data?.error || 'No se pudo rechazar' }, { status: 409 });
+
+  // Notify driver/tecnico that their recharge was rejected
+  if (data.driver) {
+    emitNotification(
+      data.driver,
+      'wallet',
+      '❌ Recarga rechazada',
+      rejection_note
+        ? `Tu solicitud de recarga fue rechazada: ${rejection_note}`
+        : 'Tu solicitud de recarga fue rechazada. Contactá al soporte para más detalles.',
+      {},
+      { groupKey: `recharge_rejected_${request_id}` },
+    );
+  }
+
   return NextResponse.json({ success: true });
 }

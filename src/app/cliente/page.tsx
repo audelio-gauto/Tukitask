@@ -1160,32 +1160,49 @@ export default function ClienteHomePage() {
                         {item.dest   && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>🏁 {item.dest}</div>}
                       </div>
                     )}
-                    {/* ── Chat button ── */}
-                    <button
-                      onClick={() => openChat({
-                        orderId:    item.type === 'delivery' ? item.id : undefined,
-                        jobId:      item.type === 'service'  ? item.id : undefined,
-                        otherName:  item.name,
-                        otherPhoto: item.photo,
-                      })}
-                      style={{
-                        width: '100%', padding: '12px 0', borderRadius: 14, marginBottom: 10,
-                        border: `1px solid ${(unreadChats[item.id] ?? 0) > 0 ? 'rgba(34,197,94,0.7)' : 'rgba(34,197,94,0.4)'}`,
-                        background: (unreadChats[item.id] ?? 0) > 0
-                          ? 'linear-gradient(135deg,rgba(34,197,94,0.25),rgba(22,163,74,0.15))'
-                          : 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
-                        color: '#4ade80', fontWeight: 800, fontSize: '0.9rem',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      }}
-                    >
-                      <span style={{ fontSize: '1.1rem' }}>💬</span>
-                      Chatear con {item.type === 'delivery' ? 'el conductor' : 'el técnico'}
-                      {(unreadChats[item.id] ?? 0) > 0 && (
-                        <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.72rem', fontWeight: 800, lineHeight: 1.5 }}>
-                          {unreadChats[item.id]}
-                        </span>
-                      )}
-                    </button>
+                    {/* ── Action buttons row ── */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                      {/* Chat */}
+                      <button
+                        onClick={() => openChat({
+                          orderId:    item.type === 'delivery' ? item.id : undefined,
+                          jobId:      item.type === 'service'  ? item.id : undefined,
+                          otherName:  item.name,
+                          otherPhoto: item.photo,
+                        })}
+                        style={{
+                          flex: 1, padding: '12px 0', borderRadius: 14,
+                          border: `1px solid ${(unreadChats[item.id] ?? 0) > 0 ? 'rgba(34,197,94,0.7)' : 'rgba(34,197,94,0.4)'}`,
+                          background: (unreadChats[item.id] ?? 0) > 0
+                            ? 'linear-gradient(135deg,rgba(34,197,94,0.25),rgba(22,163,74,0.15))'
+                            : 'linear-gradient(135deg,rgba(34,197,94,0.15),rgba(22,163,74,0.08))',
+                          color: '#4ade80', fontWeight: 800, fontSize: '0.85rem',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>💬</span>
+                        Chat
+                        {(unreadChats[item.id] ?? 0) > 0 && (
+                          <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                            {unreadChats[item.id]}
+                          </span>
+                        )}
+                      </button>
+                      {/* Ver en mapa */}
+                      <Link
+                        href={`/cliente/seguimiento/${item.id}${item.type === 'service' ? '?type=service' : ''}`}
+                        style={{
+                          flex: 1, padding: '12px 0', borderRadius: 14, textDecoration: 'none',
+                          border: '1px solid rgba(14,165,233,0.4)',
+                          background: 'linear-gradient(135deg,rgba(14,165,233,0.15),rgba(2,132,199,0.08))',
+                          color: '#38bdf8', fontWeight: 800, fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🗺️</span>
+                        Ver mapa
+                      </Link>
+                    </div>
                     {/* Cancel */}
                     {canCancel && (
                       <button
