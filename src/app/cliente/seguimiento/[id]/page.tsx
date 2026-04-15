@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -129,8 +131,10 @@ export default function SeguimientoPage() {
   const pickupMarkerRef = useRef<any>(null);
   const routeLineRef    = useRef<any>(null);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastRouteKey    = useRef<string>('');
-  const etaFromApiRef   = useRef<boolean>(false);
+  const lastRouteKey      = useRef<string>('');
+  const etaFromApiRef     = useRef<boolean>(false);
+  const vehicleFetchedRef = useRef<boolean>(false);
+  const fetchVehicleRef   = useRef<((email: string) => void) | null>(null);
 
   const [order,    setOrder]    = useState<OrderDetail | null>(null);
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
@@ -155,7 +159,7 @@ export default function SeguimientoPage() {
     return session?.access_token ?? '';
   }, []);
 
-  // ── Fetch driver/tecnico vehicle info + photo ─────────────────────────────
+  // ── Fetch driver/tecnico vehicle info + photo (called once) ────────────────
   const fetchVehicle = useCallback(async (driverEmail: string) => {
     try {
       const token = await getToken();
@@ -177,6 +181,9 @@ export default function SeguimientoPage() {
       });
     } catch { /* silent */ }
   }, [getToken]);
+
+  // keep ref in sync so fetchOrder can call it without being a dep
+  useEffect(() => { fetchVehicleRef.current = fetchVehicle; }, [fetchVehicle]);
 
   // ── Fetch order details ───────────────────────────────────────────────────
   const fetchOrder = useCallback(async () => {
@@ -210,7 +217,10 @@ export default function SeguimientoPage() {
           service_type: job.service_type,
         };
         setOrder(mapped);
-        if (mapped.accepted_by) fetchVehicle(mapped.accepted_by);
+        if (mapped.accepted_by && !vehicleFetchedRef.current) {
+          vehicleFetchedRef.current = true;
+          fetchVehicleRef.current?.(mapped.accepted_by);
+        }
       } else {
         const res = await fetch(`/api/orders?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -220,14 +230,17 @@ export default function SeguimientoPage() {
         if (!ord?.id) { setError('Pedido no encontrado'); return; }
         const mapped: OrderDetail = { ...ord, type: 'delivery' };
         setOrder(mapped);
-        if (mapped.accepted_by) fetchVehicle(mapped.accepted_by);
+        if (mapped.accepted_by && !vehicleFetchedRef.current) {
+          vehicleFetchedRef.current = true;
+          fetchVehicleRef.current?.(mapped.accepted_by);
+        }
       }
     } catch {
       setError('Error cargando el pedido');
     } finally {
       setLoading(false);
     }
-  }, [id, type, getToken, fetchVehicle]);
+  }, [id, type, getToken]);
 
   // ── Fetch driver location ─────────────────────────────────────────────────
   const fetchDriverLoc = useCallback(async () => {
