@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+// Token fetched at runtime from app_settings (Supabase) via admin API
 const DEFAULT_CENTER: [number, number] = [-57.5759, -25.2637]; // Asunción
 const REFRESH_INTERVAL = 15_000; // 15 s
 
@@ -136,6 +136,7 @@ export default function RutaPage() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, online: 0, en_route: 0, free: 0 });
 
   // ── Auth token ──────────────────────────────────────────────────────────────
@@ -143,6 +144,26 @@ export default function RutaPage() {
   const getToken = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ?? '';
+  }, []);
+
+  // ── Fetch Mapbox token from app_settings ─────────────────────────────────
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch('/api/admin/ruta/mapkey', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const json = await res.json();
+        if (json?.mapbox) setMapboxToken(json.mapbox);
+        else setMapError(true);
+      } catch {
+        setMapError(true);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Fetch live data ─────────────────────────────────────────────────────────
@@ -175,10 +196,10 @@ export default function RutaPage() {
   }, [getToken]);
 
   // ── Map init ────────────────────────────────────────────────────────────────
+  // Depends on mapboxToken being fetched first
 
   useEffect(() => {
-    if (!mapRef.current || initRef.current) return;
-    if (!MAPBOX_TOKEN) { setMapError(true); return; }
+    if (!mapboxToken || !mapRef.current || initRef.current) return;
     initRef.current = true;
 
     let mounted = true;
@@ -215,7 +236,7 @@ export default function RutaPage() {
           style: 'mapbox://styles/mapbox/dark-v11',
           center: DEFAULT_CENTER,
           zoom: 11,
-          accessToken: MAPBOX_TOKEN,
+          accessToken: mapboxToken,
           attributionControl: false,
           failIfMajorPerformanceCaveat: false,
         });
@@ -267,7 +288,7 @@ export default function RutaPage() {
       mounted = false;
       if (loadTimer) clearTimeout(loadTimer);
     };
-  }, []);
+  }, [mapboxToken]);
 
   // ── Update map markers when data changes ────────────────────────────────────
 
@@ -499,12 +520,18 @@ export default function RutaPage() {
         <div className="flex-1 relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ minHeight: 0 }}>
           {/* absolute inset-0 guarantees the map fills the container in production builds */}
           <div ref={mapRef} className="absolute inset-0" />
+          {!mapboxToken && !mapError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
+              <div className="w-7 h-7 border-2 border-green-400/40 border-t-green-400 rounded-full animate-spin" />
+              <p className="text-white/40 text-sm">Cargando mapa…</p>
+            </div>
+          )}
           {mapError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
               <svg className="w-10 h-10 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
-              <p className="text-white/40 text-sm">{!MAPBOX_TOKEN ? 'Token de Mapbox no configurado.' : 'El mapa no pudo cargarse (WebGL no disponible).'}</p>
+              <p className="text-white/40 text-sm">Token de Mapbox no configurado en Configuración de Precios.</p>
             </div>
           )}
           {/* Map legend */}
