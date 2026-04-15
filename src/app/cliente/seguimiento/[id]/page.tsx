@@ -135,6 +135,7 @@ export default function SeguimientoPage() {
   const etaFromApiRef     = useRef<boolean>(false);
   const vehicleFetchedRef = useRef<boolean>(false);
   const fetchVehicleRef   = useRef<((email: string) => void) | null>(null);
+  const vehicleRef        = useRef<VehicleInfo | null>(null);
 
   const [order,    setOrder]    = useState<OrderDetail | null>(null);
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
@@ -179,6 +180,12 @@ export default function SeguimientoPage() {
         plate: p.license_plate || null,
         photo: p.profile_photo || null,
       });
+      vehicleRef.current = {
+        label: VEHICLE_LABELS[vmode] || vmode || null,
+        brand: brand || null,
+        plate: p.license_plate || null,
+        photo: p.profile_photo || null,
+      };
     } catch { /* silent */ }
   }, [getToken]);
 
@@ -353,7 +360,7 @@ export default function SeguimientoPage() {
       const name = order.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
       const inits = name.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
       const color = type === 'service' ? '#8b5cf6' : '#22c55e';
-      const photo = vehicle?.photo ?? order.driver_photo ?? null;
+      const photo = vehicleRef.current?.photo ?? order.driver_photo ?? null;
 
       const innerHtml = photo
         ? `<img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" />`
@@ -444,7 +451,7 @@ export default function SeguimientoPage() {
         map.setView([driverLoc.lat, driverLoc.lng], 15);
       }
     }
-  }, [order, driverLoc, vehicle, mapReady, type, getToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order, driverLoc, mapReady, type, getToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -536,7 +543,7 @@ export default function SeguimientoPage() {
             <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.15)' }} />
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#0ea5e9', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
-                {eta.distKm < 1 ? `${Math.round(eta.distKm * 1000)}m` : `${eta.distKm.toFixed(1)}km`}
+                {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>DISTANCIA</div>
             </div>
