@@ -82,6 +82,16 @@ function initials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
 }
 
+function isStale(u: LiveUser): boolean {
+  if (!u.updated_at || !u.online) return false;
+  return (Date.now() - new Date(u.updated_at).getTime()) > 10 * 60 * 1000;
+}
+
+function effectiveColor(u: LiveUser): string {
+  if (isStale(u)) return '#6b7280';
+  return markerColor(u);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RutaPage() {
@@ -229,36 +239,56 @@ export default function RutaPage() {
     data.forEach(u => {
       if (u.lat == null || u.lng == null) return;
       seen.add(u.id);
-      const color = markerColor(u);
+      const color = effectiveColor(u);
+      const stale = isStale(u);
       const inits = initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧');
 
       const icon = L.divIcon({
         className: '',
-        html: `<div style="
-          width:38px;height:38px;border-radius:50%;
-          background:${color};color:#fff;
-          display:flex;align-items:center;justify-content:center;
-          font-weight:800;font-size:13px;
-          border:3px solid #fff;
-          box-shadow:0 3px 12px rgba(0,0,0,0.35);
-          cursor:pointer;
-        ">${inits}</div>
-        <div style="
-          width:0;height:0;border-left:5px solid transparent;
-          border-right:5px solid transparent;border-top:8px solid ${color};
-          margin-left:14px;
-        "></div>`,
+        html: `<div style="position:relative;width:38px;">
+          <div style="
+            width:38px;height:38px;border-radius:50%;
+            background:${color};color:#fff;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:800;font-size:13px;
+            border:3px solid ${stale ? '#f59e0b' : '#fff'};
+            box-shadow:0 3px 12px rgba(0,0,0,0.35);
+            cursor:pointer;
+            opacity:${stale ? '0.7' : '1'};
+          ">${inits}</div>
+          ${stale ? '<div style="position:absolute;top:-3px;right:-3px;width:11px;height:11px;background:#f59e0b;border-radius:50%;border:2px solid #fff;"></div>' : ''}
+          <div style="
+            width:0;height:0;border-left:5px solid transparent;
+            border-right:5px solid transparent;border-top:8px solid ${color};
+            margin-left:14px;
+          "></div>
+        </div>`,
         iconSize: [38, 50],
         iconAnchor: [19, 50],
       });
+
+      const st = statusLabel(u);
+      const popupHtml = `<div style="min-width:165px;font-family:system-ui,sans-serif;line-height:1.4;">
+        <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${u.name}</div>
+        <div style="font-size:11px;color:#666;margin-bottom:6px;">${u.email}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:${stale ? '5px' : '0'};">
+          <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+          <span style="font-size:11px;font-weight:600;color:${stale ? '#6b7280' : st.color};">${stale ? 'Sin señal' : st.text}</span>
+          <span style="font-size:10px;color:#999;">· ${u.role === 'driver' ? 'Conductor' : 'Técnico'}</span>
+        </div>
+        ${stale ? `<div style="font-size:10px;color:#f59e0b;font-weight:600;">⚠ Sin GPS +10 min · última: ${timeAgo(u.updated_at)}</div>` : ''}
+      </div>`;
 
       if (markersRef.current.has(u.id)) {
         const m = markersRef.current.get(u.id);
         m.setLatLng([u.lat, u.lng]);
         m.setIcon(icon);
+        m.unbindPopup();
+        m.bindPopup(popupHtml, { maxWidth: 230 });
       } else {
         const m = L.marker([u.lat, u.lng], { icon })
           .addTo(map)
+          .bindPopup(popupHtml, { maxWidth: 230 })
           .on('click', () => setSelected(u));
         markersRef.current.set(u.id, m);
       }
@@ -428,6 +458,27 @@ export default function RutaPage() {
               ))}
             </div>
 
+            {/* Centrar todos — top left inside map */}
+            <button
+              onClick={() => {
+                const pts = users.filter(u => u.lat != null && u.lng != null);
+                if (pts.length && mapInst.current && leafletRef.current) {
+                  const L = leafletRef.current;
+                  mapInst.current.fitBounds(
+                    L.latLngBounds(pts.map((u: LiveUser) => [u.lat!, u.lng!])),
+                    { padding: [50, 50] }
+                  );
+                }
+              }}
+              title="Centrar todos los conductores"
+              className="absolute top-3 left-3 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-black/60 text-white/80 hover:bg-black/80 border border-white/20 backdrop-blur-md shadow-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              </svg>
+              Centrar
+            </button>
+
             {/* Stats overlay — bottom center inside map */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
               <div className="flex items-center gap-6 bg-white/90 backdrop-blur-md rounded-2xl px-8 py-3 shadow-xl border border-white/50">
@@ -519,6 +570,7 @@ export default function RutaPage() {
 
             {filtered.map(u => {
               const st = statusLabel(u);
+              const stale = isStale(u);
               const isSelected = selected?.id === u.id;
               return (
                 <div
@@ -540,13 +592,13 @@ export default function RutaPage() {
                           width={40}
                           height={40}
                           className="w-10 h-10 rounded-full object-cover"
-                          style={{ border: `2px solid ${markerColor(u)}` }}
+                          style={{ border: `2px solid ${effectiveColor(u)}` }}
                           unoptimized
                         />
                       ) : (
                         <div
                           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                          style={{ background: markerColor(u) + '33', border: `2px solid ${markerColor(u)}` }}
+                          style={{ background: effectiveColor(u) + '33', border: `2px solid ${effectiveColor(u)}` }}
                         >
                           {initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧')}
                         </div>
@@ -568,10 +620,10 @@ export default function RutaPage() {
                       <div className="flex items-center gap-1.5 mt-1">
                         <span
                           className="inline-flex items-center gap-1 text-[10px] font-semibold"
-                          style={{ color: st.color }}
+                          style={{ color: stale ? '#f59e0b' : st.color }}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: st.color }} />
-                          {st.text}
+                          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: stale ? '#f59e0b' : st.color }} />
+                          {stale ? '⚠ Sin señal' : st.text}
                         </span>
                         <span className="text-white/20 text-[10px]">·</span>
                         <span className="text-white/35 text-[10px]">
