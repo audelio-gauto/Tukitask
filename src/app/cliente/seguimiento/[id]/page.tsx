@@ -9,6 +9,17 @@ import { authFetch } from '@/lib/authFetch';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface VehicleInfo {
+  label: string | null;    // e.g. '🏍️ Moto'
+  brand: string | null;    // e.g. 'Taiga 150'
+  plate: string | null;    // e.g. 'ACF 5432'
+  photo: string | null;    // profile photo URL
+}
+
+const VEHICLE_LABELS: Record<string, string> = {
+  moto: '🏍️ Moto', auto: '🚗 Auto', moto_carro: '🛵 Moto Carro', camion: '🚛 Camión',
+};
+
 interface OrderDetail {
   id: string;
   status: string;
@@ -118,13 +129,15 @@ export default function SeguimientoPage() {
   const pickupMarkerRef = useRef<any>(null);
   const routeLineRef    = useRef<any>(null);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastRouteKey    = useRef<string>('');
 
   const [order,    setOrder]    = useState<OrderDetail | null>(null);
+  const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
   const [driverLoc, setDriverLoc] = useState<DriverLoc | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>('Map');
   const [loading,  setLoading]  = useState(true);
-  const [eta,      setEta]      = useState<{ distKm: number; etaMin: number } | null>(null);
+  const [eta,      setEta]      = useState<{ distKm: number; etaMin: number; fromApi: boolean } | null>(null);
   const [error,    setError]    = useState('');
 
   // ── Read type from query param ───────────────────────────────────────────
@@ -141,6 +154,29 @@ export default function SeguimientoPage() {
     return session?.access_token ?? '';
   }, []);
 
+  // ── Fetch driver/tecnico vehicle info + photo ─────────────────────────────
+  const fetchVehicle = useCallback(async (driverEmail: string) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/driver-profile?email=${encodeURIComponent(driverEmail)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const p = json?.profile;
+      if (!p) return;
+      const vmode = p.transport_mode || '';
+      let brand = '';
+      try { const vd = JSON.parse(p.vehicle_type || '{}'); brand = vd[vmode]?.marca || ''; } catch { brand = p.vehicle_type || ''; }
+      setVehicle({
+        label: VEHICLE_LABELS[vmode] || vmode || null,
+        brand: brand || null,
+        plate: p.license_plate || null,
+        photo: p.profile_photo || null,
+      });
+    } catch { /* silent */ }
+  }, [getToken]);
+
   // ── Fetch order details ───────────────────────────────────────────────────
   const fetchOrder = useCallback(async () => {
     try {
@@ -152,7 +188,7 @@ export default function SeguimientoPage() {
         const json = await res.json();
         const job = json.data?.[0] ?? json;
         if (!job?.id) { setError('Trabajo no encontrado'); return; }
-        setOrder({
+        const mapped: OrderDetail = {
           id: job.id,
           status: job.status,
           pickup_address: null,
@@ -171,6 +207,10 @@ export default function SeguimientoPage() {
           client_address: job.client_address,
           tecnico_email: job.tecnico_email,
           service_type: job.service_type,
+        };
+        setOrder(prev => {
+          if (!prev?.accepted_by && mapped.accepted_by) fetchVehicle(mapped.accepted_by);
+          return mapped;
         });
       } else {
         const res = await fetch(`/api/orders?id=${id}`, {
@@ -179,14 +219,18 @@ export default function SeguimientoPage() {
         if (!res.ok) { setError('Pedido no encontrado'); return; }
         const ord = await res.json();
         if (!ord?.id) { setError('Pedido no encontrado'); return; }
-        setOrder({ ...ord, type: 'delivery' });
+        const mapped: OrderDetail = { ...ord, type: 'delivery' };
+        setOrder(prev => {
+          if (!prev?.accepted_by && mapped.accepted_by) fetchVehicle(mapped.accepted_by);
+          return mapped;
+        });
       }
     } catch {
       setError('Error cargando el pedido');
     } finally {
       setLoading(false);
     }
-  }, [id, type, getToken]);
+  }, [id, type, getToken, fetchVehicle]);
 
   // ── Fetch driver location ─────────────────────────────────────────────────
   const fetchDriverLoc = useCallback(async () => {
@@ -299,13 +343,16 @@ export default function SeguimientoPage() {
       const name = order.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
       const inits = name.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
       const color = type === 'service' ? '#8b5cf6' : '#22c55e';
+      const photo = vehicle?.photo ?? order.driver_photo ?? null;
+
+      const innerHtml = photo
+        ? `<img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" />`
+        : `<div style="width:42px;height:42px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${inits || (type === 'service' ? '🔧' : '🚗')}</div>`;
 
       const driverIcon = L.divIcon({
         className: '',
         html: `<div style="position:relative;width:42px;">
-          <div style="width:42px;height:42px;border-radius:50%;background:${color};color:#fff;
-            display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;
-            border:3px solid #fff;box-shadow:0 3px 14px rgba(0,0,0,0.4);">${inits || (type === 'service' ? '🔧' : '🚗')}</div>
+          <div style="width:42px;height:42px;border-radius:50%;border:3px solid ${color};box-shadow:0 3px 14px rgba(0,0,0,0.4);overflow:hidden;">${innerHtml}</div>
           <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
             border-top:9px solid ${color};margin-left:16px;"></div>
         </div>`,
@@ -319,23 +366,57 @@ export default function SeguimientoPage() {
       } else {
         driverMarkerRef.current = L.marker([driverLoc.lat, driverLoc.lng], { icon: driverIcon })
           .addTo(map)
-          .bindPopup(`<b>${name}</b><br/><small>${type === 'service' ? 'Técnico' : 'Conductor'}</small>`);
+          .bindPopup(`<b>${name}</b>`);
       }
 
-      // ── Route line (dashed, driver → destination) ──
+      // ── Route: real roads via /api/maps/directions, fallback straight line ──
       if (destLat != null && destLng != null) {
-        if (routeLineRef.current) { map.removeLayer(routeLineRef.current); }
-        routeLineRef.current = L.polyline(
-          [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
-          { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
-        ).addTo(map);
-      }
+        const routeKey = `${driverLoc.lat.toFixed(4)},${driverLoc.lng.toFixed(4)}->${destLat.toFixed(4)},${destLng.toFixed(4)}`;
+        if (routeKey !== lastRouteKey.current) {
+          lastRouteKey.current = routeKey;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          getToken().then(token => fetch('/api/maps/directions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ from: { lat: driverLoc.lat, lng: driverLoc.lng }, to: { lat: destLat, lng: destLng } }),
+          })).then(r => r.ok ? r.json() : null).then((json: any) => {
+            if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
+            if (json?.coords?.length > 1) {
+              routeLineRef.current = L.polyline(
+                json.coords.map((c: { lat: number; lng: number }) => [c.lat, c.lng] as [number, number]),
+                { color, weight: 4, opacity: 0.85, lineJoin: 'round', lineCap: 'round' }
+              ).addTo(map);
+              if (json.duration_seconds) {
+                const etaMin = Math.max(1, Math.round(json.duration_seconds / 60));
+                const distKm = json.distance_meters ? json.distance_meters / 1000 : haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+                setEta({ distKm, etaMin, fromApi: true });
+              }
+            } else {
+              // Fallback: straight dashed line
+              routeLineRef.current = L.polyline(
+                [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
+                { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
+              ).addTo(map);
+              const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+            }
+          }).catch(() => {
+            // Fallback on any error
+            if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
+            routeLineRef.current = L.polyline(
+              [[driverLoc.lat, driverLoc.lng], [destLat, destLng]],
+              { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
+            ).addTo(map);
+            const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+            setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+          });
+        }
 
-      // ── ETA calculation ──
-      if (destLat != null && destLng != null) {
-        const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
-        const etaMin = Math.max(1, Math.round(distKm * 3));
-        setEta({ distKm, etaMin });
+        // Live haversine ETA while waiting for real route
+        if (!eta?.fromApi) {
+          const distKm = haversineKm(driverLoc.lat, driverLoc.lng, destLat, destLng);
+          setEta(prev => prev?.fromApi ? prev : { distKm, etaMin: Math.max(1, Math.round(distKm * 3)), fromApi: false });
+        }
       }
 
       // ── Fit bounds to show driver + destination ──
@@ -348,7 +429,7 @@ export default function SeguimientoPage() {
         map.setView([driverLoc.lat, driverLoc.lng], 15);
       }
     }
-  }, [order, driverLoc, mapReady, type]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order, driverLoc, vehicle, mapReady, type, getToken, eta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -372,10 +453,12 @@ export default function SeguimientoPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [mapReady, order, fetchDriverLoc, fetchOrder]);
 
-  const workerName  = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
-  const workerPhoto = order?.driver_photo ?? null;
-  const st          = order ? statusLabel(order.status) : null;
-  const isActive    = order ? STATUS_ACTIVE.has(order.status) : false;
+  const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
+  const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
+  const workerRating = order?.driver_avg_rating ?? null;
+  const st           = order ? statusLabel(order.status) : null;
+  const isActive     = order ? STATUS_ACTIVE.has(order.status) : false;
+  const priceVal     = order?.offer ?? order?.agreed_price ?? null;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -498,21 +581,19 @@ export default function SeguimientoPage() {
 
             {/* Worker info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {workerName}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                {order.driver_avg_rating != null && (
-                  <span style={{ color: '#fbbf24', fontSize: '0.82rem', fontWeight: 700 }}>
-                    ★ {Number(order.driver_avg_rating).toFixed(2)}
-                  </span>
-                )}
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem' }}>
-                  {type === 'service' ? (order.service_type ?? 'Técnico') : 'Conductor'}
-                </span>
-              </div>
+              {workerRating != null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
+                  {'★★★★★'.split('').map((_, i) => (
+                    <span key={i} style={{ color: i < Math.round(Number(workerRating)) ? '#F5C518' : 'rgba(255,255,255,0.2)', fontSize: '0.82rem' }}>★</span>
+                  ))}
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginLeft: 3 }}>{Number(workerRating).toFixed(1)}</span>
+                </div>
+              )}
               {/* Address */}
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {type === 'service'
                   ? (order.client_address ?? order.delivery_address ?? '—')
                   : (order.delivery_address ?? '—')}
@@ -522,11 +603,32 @@ export default function SeguimientoPage() {
             {/* Price */}
             <div style={{ flexShrink: 0, textAlign: 'right' }}>
               <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.1rem' }}>
-                {fmtGs(order.offer)}
+                {fmtGs(priceVal)}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>acordado</div>
             </div>
           </div>
+
+          {/* Vehicle chips */}
+          {vehicle && (vehicle.label || vehicle.brand || vehicle.plate) && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              {vehicle.label && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                  {vehicle.label}
+                </span>
+              )}
+              {vehicle.brand && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                  🏷️ {vehicle.brand}
+                </span>
+              )}
+              {vehicle.plate && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.73rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.04em' }}>
+                  🪪 {vehicle.plate}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Address row A → B (delivery only) */}
           {type === 'delivery' && order.pickup_address && order.delivery_address && (
