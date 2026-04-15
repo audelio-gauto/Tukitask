@@ -4,9 +4,27 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 
-// Token fetched at runtime from app_settings (Supabase) via admin API
-const DEFAULT_CENTER: [number, number] = [-57.5759, -25.2637]; // Asunción
-const REFRESH_INTERVAL = 15_000; // 15 s
+// Leaflet — no WebGL required, works in all browsers
+const DEFAULT_CENTER: [number, number] = [-25.2637, -57.5759]; // [lat, lng] Asunción
+const DEFAULT_ZOOM = 11;
+const REFRESH_INTERVAL = 15_000;
+
+type MapStyle = 'Map' | 'Satelite' | 'Noche';
+
+const TILES: Record<MapStyle, { url: string; attr: string }> = {
+  Map: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr: '© OpenStreetMap',
+  },
+  Satelite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attr: '© Esri',
+  },
+  Noche: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attr: '© CARTO',
+  },
+};
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,95 +51,48 @@ interface LiveUser {
 
 type ActionType = 'suspend' | 'block' | 'reactivate';
 
-interface ConfirmDialog {
-  user: LiveUser;
-  action: ActionType;
-}
+interface ConfirmDialog { user: LiveUser; action: ActionType; }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function roleBadge(role: string) {
-  return role === 'driver'
-    ? { label: 'Conductor', bg: '#22c55e22', color: '#4ade80', border: '#4ade8044' }
-    : { label: 'Técnico', bg: '#3b82f622', color: '#60a5fa', border: '#60a5fa44' };
-}
-
-function statusBadge(u: LiveUser) {
-  if (u.banned) return { label: 'Bloqueado', color: '#ef4444', bg: '#ef444422' };
-  if (u.suspended) return { label: 'Suspendido', color: '#f59e0b', bg: '#f59e0b22' };
-  if (!u.online) return { label: 'Offline', color: '#6b7280', bg: '#6b728022' };
-  if (u.en_route) return { label: 'En Ruta', color: '#22c55e', bg: '#22c55e22' };
-  return { label: 'Libre', color: '#60a5fa', bg: '#60a5fa22' };
-}
-
-function markerColor(u: LiveUser): string {
+function markerColor(u: LiveUser) {
   if (u.banned || u.suspended) return '#ef4444';
   if (u.en_route) return '#22c55e';
-  if (u.online) return '#60a5fa';
-  return '#6b7280';
+  if (u.online) return '#0ea5e9';
+  return '#94a3b8';
 }
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return '—';
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return `${diff}s`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  return `${Math.floor(diff / 3600)}h`;
+function statusLabel(u: LiveUser) {
+  if (u.banned) return { text: 'Bloqueado', color: '#ef4444' };
+  if (u.suspended) return { text: 'Suspendido', color: '#f59e0b' };
+  if (!u.online) return { text: 'Offline', color: '#94a3b8' };
+  if (u.en_route) return { text: 'En Ruta', color: '#22c55e' };
+  return { text: 'Libre', color: '#0ea5e9' };
 }
 
-function initials(name: string): string {
+function timeAgo(iso: string | null) {
+  if (!iso) return '';
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h`;
+}
+
+function initials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
-}
-
-// ─── Map Marker element ───────────────────────────────────────────────────────
-
-function makeMarkerEl(u: LiveUser): HTMLElement {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    width:36px;height:36px;border-radius:50%;
-    background:${markerColor(u)};color:#fff;
-    display:flex;align-items:center;justify-content:center;
-    font-weight:800;font-size:12px;
-    border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4);
-    cursor:pointer;transition:transform .15s;
-  `;
-  el.title = u.name;
-  el.textContent = initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧');
-  el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.2)'; });
-  el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-  return el;
-}
-
-function makePinEl(color: string, label: string): HTMLElement {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    position:relative;display:flex;flex-direction:column;align-items:center;
-  `;
-  el.innerHTML = `
-    <div style="
-      background:${color};color:#fff;font-size:10px;font-weight:700;
-      padding:2px 6px;border-radius:8px;white-space:nowrap;
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);
-    ">${label}</div>
-    <div style="
-      width:0;height:0;border-left:5px solid transparent;
-      border-right:5px solid transparent;border-top:8px solid ${color};
-    "></div>
-  `;
-  return el;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RutaPage() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
+  const mapInst = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
-  const routeLinesRef = useRef<Map<string, any>>(new Map());
-  const pinMarkersRef = useRef<any[]>([]);
-  const mbRef = useRef<any>(null);
+  const linesRef = useRef<any[]>([]);
   const initRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leafletRef = useRef<any>(null);
 
   const [users, setUsers] = useState<LiveUser[]>([]);
   const [filtered, setFiltered] = useState<LiveUser[]>([]);
@@ -135,9 +106,7 @@ export default function RutaPage() {
   const [actioning, setActioning] = useState(false);
   const [actionSuccess, setActionSuccess] = useState('');
   const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState(false);
-  const [noToken, setNoToken] = useState(false);
-  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>('Map');
   const [stats, setStats] = useState({ total: 0, online: 0, en_route: 0, free: 0 });
 
   // ── Auth token ──────────────────────────────────────────────────────────────
@@ -145,26 +114,6 @@ export default function RutaPage() {
   const getToken = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ?? '';
-  }, []);
-
-  // ── Fetch Mapbox token from app_settings ─────────────────────────────────
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const token = await getToken();
-        const res = await fetch('/api/admin/ruta/mapkey', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const json = await res.json();
-        if (json?.mapbox) setMapboxToken(json.mapbox);
-        else setNoToken(true);
-      } catch {
-        setMapError(true);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Fetch live data ─────────────────────────────────────────────────────────
@@ -196,188 +145,161 @@ export default function RutaPage() {
     }
   }, [getToken]);
 
-  // ── Map init ────────────────────────────────────────────────────────────────
-  // Depends on mapboxToken being fetched first
+  // ── Map init (Leaflet — no WebGL) ───────────────────────────────────────────
 
   useEffect(() => {
-    if (noToken || !mapboxToken || !mapRef.current || initRef.current) return;
+    if (!mapRef.current || initRef.current) return;
     initRef.current = true;
-
     let mounted = true;
-    let loadTimer: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
-      let mapboxgl: any;
-      try {
-        mapboxgl = (await import('mapbox-gl')).default;
-      } catch {
-        if (mounted) setMapError(true);
-        return;
-      }
-
-      if (!document.getElementById('mapbox-gl-css')) {
+      // Load Leaflet CSS
+      if (!document.getElementById('leaflet-css')) {
         const link = document.createElement('link');
-        link.id = 'mapbox-gl-css';
+        link.id = 'leaflet-css';
         link.rel = 'stylesheet';
-        link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
         document.head.appendChild(link);
       }
 
+      const L = (await import('leaflet')).default;
+      leafletRef.current = L;
+
+      // Fix default icon paths broken by bundlers
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+
       if (!mounted || !mapRef.current) return;
 
-      if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
-        if (mounted) setMapError(true);
-        return;
-      }
-
-      let map: any;
-      try {
-        map = new mapboxgl.Map({
-          container: mapRef.current,
-          style: 'mapbox://styles/mapbox/dark-v11',
-          center: DEFAULT_CENTER,
-          zoom: 11,
-          accessToken: mapboxToken,
-          attributionControl: false,
-          failIfMajorPerformanceCaveat: false,
-        });
-      } catch {
-        if (mounted) setMapError(true);
-        return;
-      }
-
-      mbRef.current = mapboxgl;
-      mapInstance.current = map;
-
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
-      map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }), 'bottom-left');
-
-      // Timeout fallback — if map doesn't load in 8s, show error
-      loadTimer = setTimeout(() => {
-        if (mounted && !map._loaded) {
-          try { map.remove(); } catch {}
-          mapInstance.current = null;
-          setMapError(true);
-        }
-      }, 8000);
-
-      map.on('error', (e: any) => {
-        if (e?.error?.message?.toLowerCase().includes('webgl') && mounted) {
-          try { map.remove(); } catch {}
-          mapInstance.current = null;
-          setMapError(true);
-        }
+      const map = L.map(mapRef.current, {
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
+        zoomControl: false,
       });
 
-      map.on('load', () => {
-        if (loadTimer) clearTimeout(loadTimer);
-        if (!mounted) return;
-        // resize ensures map fills its container after flex layout resolves
-        map.resize();
-        setMapReady(true);
-      });
+      L.control.zoom({ position: 'topright' }).addTo(map);
+      L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map);
 
-      // ResizeObserver keeps map sized correctly on layout changes
-      const ro = new ResizeObserver(() => {
-        if (mapInstance.current) mapInstance.current.resize();
-      });
-      if (mapRef.current) ro.observe(mapRef.current);
+      const tile = L.tileLayer(TILES['Map'].url, { attribution: TILES['Map'].attr, maxZoom: 19 });
+      tile.addTo(map);
+      tileLayerRef.current = tile;
 
+      mapInst.current = map;
+
+      // Resize on container size change
+      const ro = new ResizeObserver(() => map.invalidateSize());
+      ro.observe(mapRef.current);
+
+      if (mounted) setMapReady(true);
     })();
 
-    return () => {
-      mounted = false;
-      if (loadTimer) clearTimeout(loadTimer);
-    };
-  }, [mapboxToken, noToken]);
+    return () => { mounted = false; };
+  }, []);
 
-  // ── Update map markers when data changes ────────────────────────────────────
+  // ── Switch tile layer when mapStyle changes ─────────────────────────────────
+
+  useEffect(() => {
+    const map = mapInst.current;
+    const L = leafletRef.current;
+    if (!map || !L) return;
+    if (tileLayerRef.current) { map.removeLayer(tileLayerRef.current); }
+    const tile = L.tileLayer(TILES[mapStyle].url, { attribution: TILES[mapStyle].attr, maxZoom: 19 });
+    tile.addTo(map);
+    tileLayerRef.current = tile;
+  }, [mapStyle]);
+
+  // ── Update map markers ──────────────────────────────────────────────────────
 
   const updateMapMarkers = useCallback((data: LiveUser[]) => {
-    const map = mapInstance.current;
-    const mapboxgl = mbRef.current;
-    if (!map || !mapboxgl) return;
+    const map = mapInst.current;
+    const L = leafletRef.current;
+    if (!map || !L) return;
+
+    // Clear route lines
+    linesRef.current.forEach(l => map.removeLayer(l));
+    linesRef.current = [];
 
     const seen = new Set<string>();
-
-    // Clear prior route lines + pin markers
-    routeLinesRef.current.forEach((_, id) => {
-      if (map.getLayer(`route-${id}`)) map.removeLayer(`route-${id}`);
-      if (map.getSource(`route-${id}`)) map.removeSource(`route-${id}`);
-    });
-    routeLinesRef.current.clear();
-    pinMarkersRef.current.forEach(m => m.remove());
-    pinMarkersRef.current = [];
 
     data.forEach(u => {
       if (u.lat == null || u.lng == null) return;
       seen.add(u.id);
-
       const color = markerColor(u);
+      const inits = initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧');
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:38px;height:38px;border-radius:50%;
+          background:${color};color:#fff;
+          display:flex;align-items:center;justify-content:center;
+          font-weight:800;font-size:13px;
+          border:3px solid #fff;
+          box-shadow:0 3px 12px rgba(0,0,0,0.35);
+          cursor:pointer;
+        ">${inits}</div>
+        <div style="
+          width:0;height:0;border-left:5px solid transparent;
+          border-right:5px solid transparent;border-top:8px solid ${color};
+          margin-left:14px;
+        "></div>`,
+        iconSize: [38, 50],
+        iconAnchor: [19, 50],
+      });
 
       if (markersRef.current.has(u.id)) {
-        // Update position
-        markersRef.current.get(u.id).setLngLat([u.lng, u.lat]);
+        const m = markersRef.current.get(u.id);
+        m.setLatLng([u.lat, u.lng]);
+        m.setIcon(icon);
       } else {
-        const el = makeMarkerEl(u);
-        el.addEventListener('click', () => setSelected(u));
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([u.lng, u.lat])
-          .addTo(map);
-        markersRef.current.set(u.id, marker);
+        const m = L.marker([u.lat, u.lng], { icon })
+          .addTo(map)
+          .on('click', () => setSelected(u));
+        markersRef.current.set(u.id, m);
       }
 
-      // Draw route line if driver is en_route
+      // Route line A → B
       if (u.en_route) {
         const dest = u.delivery || u.job_dest;
-        const origin = u.pickup || (u.lat != null ? { lat: u.lat, lng: u.lng, address: '' } : null);
-
         if (dest) {
-          // Pin A (pickup or current loc)
+          const start: [number, number] = [u.lat, u.lng];
+          const end: [number, number] = [dest.lat, dest.lng];
+
+          // Pin A (origin)
           if (u.pickup) {
-            const pinA = makePinEl('#f59e0b', 'A');
-            const mA = new mapboxgl.Marker({ element: pinA, anchor: 'bottom' })
-              .setLngLat([u.pickup.lng, u.pickup.lat])
-              .addTo(map);
-            pinMarkersRef.current.push(mA);
-          }
-          // Pin B (delivery)
-          const pinB = makePinEl('#ef4444', 'B');
-          const mB = new mapboxgl.Marker({ element: pinB, anchor: 'bottom' })
-            .setLngLat([dest.lng, dest.lat])
-            .addTo(map);
-          pinMarkersRef.current.push(mB);
-
-          // Straight dashed line A → B
-          const coords: [number, number][] = [];
-          if (origin) coords.push([origin.lng, origin.lat]);
-          coords.push([dest.lng, dest.lat]);
-
-          const srcId = `route-${u.id}`;
-          if (!map.getSource(srcId)) {
-            map.addSource(srcId, {
-              type: 'geojson',
-              data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
+            const pinA = L.divIcon({
+              className: '',
+              html: `<div style="background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">A</div>`,
+              iconSize: [24, 24], iconAnchor: [12, 24],
             });
-            map.addLayer({
-              id: `route-${u.id}`,
-              type: 'line',
-              source: srcId,
-              layout: { 'line-join': 'round', 'line-cap': 'round' },
-              paint: { 'line-color': color, 'line-width': 2, 'line-dasharray': [3, 2] },
-            });
-            routeLinesRef.current.set(u.id, true);
+            linesRef.current.push(L.marker([u.pickup.lat, u.pickup.lng], { icon: pinA }).addTo(map));
           }
+
+          // Pin B (destination)
+          const pinB = L.divIcon({
+            className: '',
+            html: `<div style="background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">B</div>`,
+            iconSize: [24, 24], iconAnchor: [12, 24],
+          });
+          linesRef.current.push(L.marker(end, { icon: pinB }).addTo(map));
+
+          // Dashed line
+          const line = L.polyline([start, end], {
+            color, weight: 2, dashArray: '6 4', opacity: 0.8,
+          }).addTo(map);
+          linesRef.current.push(line);
         }
       }
     });
 
-    // Remove markers for users no longer in data
-    markersRef.current.forEach((marker, id) => {
-      if (!seen.has(id)) {
-        marker.remove();
-        markersRef.current.delete(id);
-      }
+    // Remove stale markers
+    markersRef.current.forEach((m, id) => {
+      if (!seen.has(id)) { map.removeLayer(m); markersRef.current.delete(id); }
     });
   }, []);
 
@@ -394,7 +316,6 @@ export default function RutaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
-  // Update map when data changes without re-running polling
   useEffect(() => {
     if (mapReady && users.length) updateMapMarkers(users);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -406,10 +327,7 @@ export default function RutaPage() {
     let list = users;
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(u =>
-        u.email.toLowerCase().includes(q) ||
-        u.name.toLowerCase().includes(q)
-      );
+      list = list.filter(u => u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q));
     }
     if (roleFilter !== 'all') list = list.filter(u => u.role === roleFilter);
     if (statusFilter === 'online') list = list.filter(u => u.online);
@@ -422,8 +340,8 @@ export default function RutaPage() {
 
   const focusUser = useCallback((u: LiveUser) => {
     setSelected(u);
-    if (mapInstance.current && u.lat != null && u.lng != null) {
-      mapInstance.current.flyTo({ center: [u.lng, u.lat], zoom: 15, duration: 800 });
+    if (mapInst.current && u.lat != null && u.lng != null) {
+      mapInst.current.flyTo([u.lat, u.lng], 15, { duration: 0.8 });
     }
   }, []);
 
@@ -440,16 +358,11 @@ export default function RutaPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Error');
-      setActionSuccess(`${u.name}: ${action === 'suspend' ? 'Suspendido' : action === 'block' ? 'Bloqueado' : 'Reactivado'} correctamente`);
-      setTimeout(() => setActionSuccess(''), 3500);
-      // Refresh data
+      setActionSuccess(`${u.name}: ${action === 'suspend' ? 'Suspendido' : action === 'block' ? 'Bloqueado' : 'Reactivado'}`);
+      setTimeout(() => setActionSuccess(''), 3000);
       const data = await fetchLive();
       if (data && mapReady) updateMapMarkers(data);
-      // Update selected state
-      if (selected?.id === u.id) {
-        const updated = data?.find(d => d.id === u.id);
-        if (updated) setSelected(updated);
-      }
+      if (selected?.id === u.id) setSelected(data?.find(d => d.id === u.id) ?? null);
     } catch (err: any) {
       alert('Error: ' + String(err?.message || err));
     } finally {
@@ -460,193 +373,164 @@ export default function RutaPage() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
-  const totalPages = 1; // all shown (no pagination in live view)
-
   return (
-    <div className="flex flex-col h-[calc(100vh-88px)] overflow-hidden">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 88px)' }}>
 
-      {/* ── Header ── */}
-      <div className="flex-shrink-0 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20">
-                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-              </span>
-              Ruta en Vivo
-            </h1>
-            <p className="text-white/40 text-sm mt-0.5">Monitoreo en tiempo real de conductores y técnicos</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-              ${loading ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${loading ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'}`} />
-              {loading ? 'Actualizando…' : 'En vivo'}
-            </span>
-            <button
-              onClick={() => fetchLive().then(d => { if (d && mapReady) updateMapMarkers(d); })}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title="Actualizar ahora"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      {/* ── Page title ── */}
+      <div className="flex-shrink-0 flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
-            </button>
-          </div>
+            </span>
+            Ruta en Vivo
+          </h1>
+          <p className="text-white/35 text-xs mt-0.5">Monitoreo en tiempo real</p>
         </div>
-
-        {/* Stats cards */}
-        <div className="grid grid-cols-4 gap-3 mt-4">
-          {[
-            { label: 'TOTAL', value: stats.total, color: '#a78bfa', bg: 'rgba(167,139,250,0.1)' },
-            { label: 'EN LÍNEA', value: stats.online, color: '#4ade80', bg: 'rgba(74,222,128,0.1)' },
-            { label: 'EN RUTA', value: stats.en_route, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-            { label: 'LIBRES', value: stats.free, color: '#60a5fa', bg: 'rgba(96,165,250,0.1)' },
-          ].map(s => (
-            <div key={s.label} className="rounded-xl border border-white/8 p-3 text-center"
-              style={{ background: s.bg }}>
-              <div className="text-2xl font-black" style={{ color: s.color }}>{s.value}</div>
-              <div className="text-xs text-white/40 font-semibold tracking-wider mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
+        <button
+          onClick={() => fetchLive().then(d => { if (d && mapReady) updateMapMarkers(d); })}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-xs font-medium transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {loading ? 'Actualizando…' : 'Actualizar'}
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+        </button>
       </div>
 
-      {/* ── Main content ── */}
+      {/* ── Main area ── */}
       <div className="flex flex-1 gap-4 min-h-0">
 
-        {/* ── Map ── */}
-        <div className="flex-1 relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ minHeight: 0 }}>
-          {/* absolute inset-0 guarantees the map fills the container in production builds */}
-          <div ref={mapRef} className="absolute inset-0" />
-          {/* Spinner while loading token */}
-          {!mapboxToken && !mapError && !noToken && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
-              <div className="w-7 h-7 border-2 border-green-400/40 border-t-green-400 rounded-full animate-spin" />
-              <p className="text-white/40 text-sm">Cargando mapa…</p>
+        {/* ── Map column ── */}
+        <div className="flex-1 flex flex-col min-h-0 gap-3">
+
+          {/* Map container */}
+          <div className="relative flex-1 rounded-2xl overflow-hidden shadow-2xl border border-white/10" style={{ minHeight: 0 }}>
+            <div ref={mapRef} className="absolute inset-0" />
+
+            {/* Map style switcher — top right inside map */}
+            <div className="absolute top-3 right-3 z-[1000] flex rounded-xl overflow-hidden shadow-lg border border-white/20 backdrop-blur-md">
+              {(['Map', 'Satelite', 'Noche'] as MapStyle[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setMapStyle(s)}
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    mapStyle === s
+                      ? 'bg-white text-gray-900'
+                      : 'bg-black/50 text-white/70 hover:bg-white/20'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
-          )}
-          {/* Token not configured — show link to settings */}
-          {noToken && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-4 px-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
-                <svg className="w-8 h-8 text-yellow-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
+
+            {/* Stats overlay — bottom center inside map */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
+              <div className="flex items-center gap-6 bg-white/90 backdrop-blur-md rounded-2xl px-8 py-3 shadow-xl border border-white/50">
+                {[
+                  { value: stats.total, label: 'TOTAL', color: '#6366f1' },
+                  { value: stats.en_route, label: 'EN RUTA', color: '#22c55e' },
+                  { value: stats.free, label: 'LIBRES', color: '#0ea5e9' },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <div className="text-2xl font-black leading-none" style={{ color: s.color }}>{s.value}</div>
+                    <div className="text-[10px] font-bold text-gray-400 tracking-widest mt-1">{s.label}</div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-white/70 font-semibold text-sm mb-1">Mapbox API Key no configurada</p>
-                <p className="text-white/35 text-xs leading-relaxed">
-                  Ingresá tu token en
-                </p>
-              </div>
-              <a
-                href="/admin/drivers/pricing"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/25 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Configuración de Precios
-              </a>
-              <p className="text-white/25 text-xs">Sección “API Keys de Mapas” → Mapbox API Key</p>
             </div>
-          )}
-          {/* WebGL / runtime map error */}
-          {mapError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f1117] gap-3">
-              <svg className="w-10 h-10 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
-              <p className="text-white/40 text-sm">El mapa no pudo cargarse (WebGL no disponible).</p>
-            </div>
-          )}
-          {/* Map legend */}
-          <div className="absolute bottom-10 left-2 bg-black/70 backdrop-blur-sm rounded-xl p-3 text-xs border border-white/10">
-            {[
-              { color: '#22c55e', label: 'En Ruta' },
-              { color: '#60a5fa', label: 'Libre / Online' },
-              { color: '#6b7280', label: 'Offline' },
-              { color: '#ef4444', label: 'Bloq. / Susp.' },
-            ].map(l => (
-              <div key={l.label} className="flex items-center gap-2 mb-1 last:mb-0">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: l.color }} />
-                <span className="text-white/70">{l.label}</span>
+
+            {/* Spinner */}
+            {!mapReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-[999]">
+                <div className="w-8 h-8 border-3 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* ── Side panel ── */}
-        <div className="w-80 flex flex-col min-h-0">
+        {/* ── Right panel ── */}
+        <div className="w-72 flex flex-col min-h-0">
 
-          {/* Filters */}
+          {/* Search + filters */}
           <div className="flex-shrink-0 space-y-2 mb-3">
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por correo o nombre…"
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/25 transition-colors"
+                placeholder="Buscar por correo…"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/25 transition-colors"
               />
             </div>
-            <div className="flex gap-2">
-              <select
-                value={roleFilter}
-                onChange={e => setRoleFilter(e.target.value as any)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-white/25"
-              >
-                <option value="all">Todos los roles</option>
-                <option value="driver">Conductores</option>
-                <option value="tecnico">Técnicos</option>
-              </select>
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as any)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-white/25"
-              >
-                <option value="all">Todos</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="en_route">En Ruta</option>
-              </select>
+            <div className="flex gap-1.5">
+              {(['all', 'driver', 'tecnico'] as const).map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRoleFilter(r)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    roleFilter === r
+                      ? 'bg-white/15 text-white'
+                      : 'bg-white/4 text-white/40 hover:bg-white/8'
+                  }`}
+                >
+                  {r === 'all' ? 'Todos' : r === 'driver' ? 'Conductor' : 'Técnico'}
+                </button>
+              ))}
             </div>
-            <p className="text-white/30 text-xs pl-1">{filtered.length} encontrados</p>
+            <div className="flex gap-1.5">
+              {(['all', 'online', 'en_route', 'offline'] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors ${
+                    statusFilter === s
+                      ? 'bg-white/15 text-white'
+                      : 'bg-white/4 text-white/40 hover:bg-white/8'
+                  }`}
+                >
+                  {s === 'all' ? 'Todos' : s === 'online' ? 'Online' : s === 'en_route' ? 'En Ruta' : 'Offline'}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-white/25 text-xs">{filtered.length} conductor{filtered.length !== 1 ? 'es' : ''}</span>
+              <span className="flex items-center gap-1 text-xs text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                En vivo
+              </span>
+            </div>
           </div>
 
-          {/* User list */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-0.5 custom-scroll">
+          {/* Driver cards list */}
+          <div className="flex-1 overflow-y-auto space-y-2">
             {error && (
-              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
-                {error}
-              </div>
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-xs text-red-400">{error}</div>
             )}
-            {loading && !users.length && (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />
-              ))
-            )}
+            {loading && !users.length && Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 rounded-xl bg-white/5 animate-pulse" />
+            ))}
+
             {filtered.map(u => {
-              const sb = statusBadge(u);
-              const rb = roleBadge(u.role);
+              const st = statusLabel(u);
               const isSelected = selected?.id === u.id;
               return (
                 <div
                   key={u.id}
                   onClick={() => focusUser(u)}
-                  className={`rounded-xl border p-3 cursor-pointer transition-all
-                    ${isSelected
-                      ? 'border-green-400/40 bg-green-400/5'
+                  className={`rounded-xl border cursor-pointer transition-all ${
+                    isSelected
+                      ? 'border-emerald-400/40 bg-emerald-400/5 shadow-lg'
                       : 'border-white/8 bg-white/3 hover:bg-white/6 hover:border-white/15'
-                    }`}
+                  }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3 p-3">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       {u.profile_photo ? (
@@ -655,109 +539,123 @@ export default function RutaPage() {
                           alt={u.name}
                           width={40}
                           height={40}
-                          className="w-10 h-10 rounded-full object-cover border-2"
-                          style={{ borderColor: markerColor(u) }}
+                          className="w-10 h-10 rounded-full object-cover"
+                          style={{ border: `2px solid ${markerColor(u)}` }}
                           unoptimized
                         />
                       ) : (
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white border-2"
-                          style={{ background: markerColor(u) + '33', borderColor: markerColor(u) }}
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                          style={{ background: markerColor(u) + '33', border: `2px solid ${markerColor(u)}` }}
                         >
                           {initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧')}
                         </div>
                       )}
+                      {/* Online dot */}
                       <span
-                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1a1a2e]"
+                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1d2327]"
                         style={{ background: u.online ? '#22c55e' : '#6b7280' }}
                       />
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-white font-semibold text-sm truncate">{u.name}</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-white text-sm font-semibold truncate">{u.name}</span>
+                        <span className="text-white/25 text-[10px] flex-shrink-0">{timeAgo(u.updated_at)}</span>
                       </div>
-                      <p className="text-white/40 text-xs truncate mb-1.5">{u.email}</p>
-                      <div className="flex flex-wrap gap-1">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{ background: rb.bg, color: rb.color, border: `1px solid ${rb.border}` }}>
-                          {rb.label}
+                      <p className="text-white/35 text-[11px] truncate">{u.email}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold"
+                          style={{ color: st.color }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: st.color }} />
+                          {st.text}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{ background: sb.bg, color: sb.color }}>
-                          {sb.label}
+                        <span className="text-white/20 text-[10px]">·</span>
+                        <span className="text-white/35 text-[10px]">
+                          {u.role === 'driver' ? 'Conductor' : 'Técnico'}
+                          {u.transport_mode ? ` · ${u.transport_mode}` : ''}
                         </span>
-                        {u.transport_mode && (
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-white/5 text-white/50">
-                            {u.transport_mode}
-                          </span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Time */}
-                    <span className="text-white/30 text-xs flex-shrink-0">{timeAgo(u.updated_at)}</span>
+                    {/* Toggle (visual indicator) */}
+                    <div className="flex-shrink-0">
+                      <div
+                        className="w-9 h-5 rounded-full relative transition-colors"
+                        style={{ background: u.online ? '#22c55e' : '#374151' }}
+                      >
+                        <div
+                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                          style={{ left: u.online ? '18px' : '2px' }}
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Action buttons */}
+                  {/* Expanded: route + action buttons */}
                   {isSelected && (
-                    <div className="mt-3 pt-3 border-t border-white/8 flex gap-2">
-                      {!u.banned && !u.suspended ? (
-                        <>
-                          <button
-                            onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'suspend' }); }}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 border border-yellow-500/20 transition-colors"
-                          >
-                            Suspender
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'block' }); }}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 transition-colors"
-                          >
-                            Bloquear
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'reactivate' }); }}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20 transition-colors"
-                        >
-                          Reactivar
-                        </button>
+                    <div className="px-3 pb-3 border-t border-white/8 mt-0 pt-3">
+                      {/* Route A→B */}
+                      {u.en_route && (
+                        <div className="space-y-1.5 mb-3">
+                          {u.pickup && (
+                            <div className="flex items-start gap-2 text-xs">
+                              <span className="w-5 h-5 rounded-md bg-yellow-500/20 text-yellow-400 flex items-center justify-center font-bold flex-shrink-0 text-[10px]">A</span>
+                              <span className="text-white/45 leading-tight truncate">{u.pickup.address || `${u.pickup.lat.toFixed(4)}, ${u.pickup.lng.toFixed(4)}`}</span>
+                            </div>
+                          )}
+                          {(u.delivery || u.job_dest) && (
+                            <div className="flex items-start gap-2 text-xs">
+                              <span className="w-5 h-5 rounded-md bg-red-500/20 text-red-400 flex items-center justify-center font-bold flex-shrink-0 text-[10px]">B</span>
+                              <span className="text-white/45 leading-tight truncate">
+                                {(u.delivery || u.job_dest)?.address || `${(u.delivery || u.job_dest)?.lat.toFixed(4)}, ${(u.delivery || u.job_dest)?.lng.toFixed(4)}`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Route detail if en_route */}
-                  {isSelected && u.en_route && (
-                    <div className="mt-2 space-y-1">
-                      {u.pickup && (
-                        <div className="flex items-start gap-2 text-xs">
-                          <span className="w-4 h-4 rounded bg-yellow-500/20 text-yellow-400 flex items-center justify-center font-bold flex-shrink-0">A</span>
-                          <span className="text-white/50 truncate">{u.pickup.address || `${u.pickup.lat.toFixed(4)}, ${u.pickup.lng.toFixed(4)}`}</span>
-                        </div>
-                      )}
-                      {(u.delivery || u.job_dest) && (
-                        <div className="flex items-start gap-2 text-xs">
-                          <span className="w-4 h-4 rounded bg-red-500/20 text-red-400 flex items-center justify-center font-bold flex-shrink-0">B</span>
-                          <span className="text-white/50 truncate">
-                            {(u.delivery || u.job_dest)?.address ||
-                              `${(u.delivery || u.job_dest)?.lat.toFixed(4)}, ${(u.delivery || u.job_dest)?.lng.toFixed(4)}`}
-                          </span>
-                        </div>
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex gap-2">
+                        {!u.banned && !u.suspended ? (
+                          <>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'suspend' }); }}
+                              className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-colors"
+                            >
+                              Suspender
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'block' }); }}
+                              className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                            >
+                              Bloquear
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirm({ user: u, action: 'reactivate' }); }}
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                          >
+                            Reactivar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
+
             {!loading && !filtered.length && !error && (
-              <div className="flex flex-col items-center justify-center py-12 text-white/30">
-                <svg className="w-10 h-10 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex flex-col items-center py-10 text-white/25">
+                <svg className="w-8 h-8 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
-                <p className="text-sm">Sin resultados</p>
+                <p className="text-xs">Sin conductores</p>
               </div>
             )}
           </div>
@@ -766,41 +664,42 @@ export default function RutaPage() {
 
       {/* ── Success toast ── */}
       {actionSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 bg-green-500/20 border border-green-500/30 text-green-300 px-5 py-3 rounded-xl text-sm shadow-xl backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-5 py-3 rounded-xl text-sm shadow-xl backdrop-blur-sm">
           ✓ {actionSuccess}
         </div>
       )}
 
       {/* ── Confirm dialog ── */}
       {confirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => !actioning && setConfirm(null)}>
-          <div className="bg-[#1e1e2e] border border-white/10 rounded-2xl p-6 shadow-2xl w-full max-w-sm mx-4"
-            onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => !actioning && setConfirm(null)}
+        >
+          <div
+            className="bg-[#1e1e2e] border border-white/10 rounded-2xl p-6 shadow-2xl w-full max-w-sm mx-4"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="text-center mb-5">
               <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 text-2xl
-                ${confirm.action === 'block' ? 'bg-red-500/15' : confirm.action === 'suspend' ? 'bg-yellow-500/15' : 'bg-green-500/15'}`}>
+                ${confirm.action === 'block' ? 'bg-red-500/15' : confirm.action === 'suspend' ? 'bg-yellow-500/15' : 'bg-emerald-500/15'}`}>
                 {confirm.action === 'block' ? '🚫' : confirm.action === 'suspend' ? '⏸️' : '✅'}
               </div>
-              <h3 className="text-white font-bold text-lg">
-                {confirm.action === 'block' ? 'Bloquear usuario' :
-                  confirm.action === 'suspend' ? 'Suspender usuario' : 'Reactivar usuario'}
+              <h3 className="text-white font-bold text-base">
+                {confirm.action === 'block' ? 'Bloquear usuario' : confirm.action === 'suspend' ? 'Suspender 30 días' : 'Reactivar usuario'}
               </h3>
-              <p className="text-white/50 text-sm mt-1">
-                {confirm.action === 'block'
-                  ? 'El usuario no podrá ingresar. Acción permanente.'
-                  : confirm.action === 'suspend'
-                    ? 'El usuario será suspendido 30 días.'
-                    : 'Se levantarán todas las restricciones.'}
+              <p className="text-white/50 text-xs mt-1 leading-relaxed">
+                {confirm.action === 'block' ? 'Bloqueo permanente. No podrá ingresar.' :
+                  confirm.action === 'suspend' ? 'El usuario no podrá operar por 30 días.' :
+                    'Se levantarán todas las restricciones.'}
               </p>
               <p className="text-white/70 text-sm mt-3 font-semibold">{confirm.user.name}</p>
-              <p className="text-white/40 text-xs">{confirm.user.email}</p>
+              <p className="text-white/35 text-xs">{confirm.user.email}</p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirm(null)}
                 disabled={actioning}
-                className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 text-sm font-semibold transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/50 hover:bg-white/5 text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -808,12 +707,9 @@ export default function RutaPage() {
                 onClick={() => executeAction(confirm.user, confirm.action)}
                 disabled={actioning}
                 className={`flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:opacity-60
-                  ${confirm.action === 'block'
-                    ? 'bg-red-600 hover:bg-red-500'
-                    : confirm.action === 'suspend'
-                      ? 'bg-yellow-600 hover:bg-yellow-500'
-                      : 'bg-green-600 hover:bg-green-500'
-                  }`}
+                  ${confirm.action === 'block' ? 'bg-red-600 hover:bg-red-500' :
+                    confirm.action === 'suspend' ? 'bg-yellow-600 hover:bg-yellow-500' :
+                      'bg-emerald-600 hover:bg-emerald-500'}`}
               >
                 {actioning ? (
                   <span className="flex items-center justify-center gap-2">
