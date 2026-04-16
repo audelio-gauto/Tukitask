@@ -48,6 +48,8 @@ interface OrderDetail {
   tecnico_rating?: number | null;
   agreed_price?: number | null;
   service_type?: string | null;
+  // multi-stop
+  order_stops?: Array<{ sequence: number; address: string; lat?: number | null; lng?: number | null; status?: string }> | null;
 }
 
 interface DriverLoc {
@@ -130,6 +132,7 @@ export default function SeguimientoPage() {
   const destMarkerRef   = useRef<any>(null);
   const pickupMarkerRef = useRef<any>(null);
   const routeLineRef    = useRef<any>(null);
+  const stopMarkersRef  = useRef<any[]>([]);
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const broadcastChRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const subscribedDriverRef = useRef<string>('');
@@ -140,6 +143,7 @@ export default function SeguimientoPage() {
   const vehicleRef        = useRef<VehicleInfo | null>(null);
 
   const [order,    setOrder]    = useState<OrderDetail | null>(null);
+  const [stopsOpen, setStopsOpen] = useState(false);
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
   const [driverLoc, setDriverLoc] = useState<DriverLoc | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -359,6 +363,31 @@ export default function SeguimientoPage() {
       pickupMarkerRef.current = L.marker([order.pickup_lat, order.pickup_lng], { icon: pinA }).addTo(map);
     }
 
+    // ── Stop markers (P1, P2 ...) ──
+    stopMarkersRef.current.forEach(m => { try { map.removeLayer(m); } catch { /* ignore */ } });
+    stopMarkersRef.current = [];
+    if (order.order_stops && order.order_stops.length > 0) {
+      const colors = ['#f59e0b','#fb923c','#facc15','#a3e635','#34d399','#22d3ee','#818cf8','#e879f9'];
+      const sorted = [...order.order_stops].sort((a, b) => a.sequence - b.sequence);
+      sorted.forEach((s, i) => {
+        if (s.lat != null && s.lng != null) {
+          const isDone = s.status === 'delivered';
+          const isFailed = s.status === 'failed';
+          const bg = isDone ? '#22c55e' : isFailed ? '#ef4444' : (colors[i % colors.length]);
+          const icon = isDone ? '✓' : isFailed ? '✗' : `${s.sequence}`;
+          const pinP = L.divIcon({
+            className: '',
+            html: `<div style="background:${bg};color:#111;font-size:11px;font-weight:900;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.5);border:2px solid rgba(255,255,255,0.6);">${icon}</div>`,
+            iconSize: [26, 26], iconAnchor: [13, 26],
+          });
+          const marker = L.marker([Number(s.lat), Number(s.lng)], { icon: pinP })
+            .addTo(map)
+            .bindPopup(`<b>Parada ${s.sequence}</b><br/>${s.address}`);
+          stopMarkersRef.current.push(marker);
+        }
+      });
+    }
+
     // ── Driver marker (moving) ──
     if (driverLoc) {
       const dLat = Number(driverLoc.lat);
@@ -445,6 +474,10 @@ export default function SeguimientoPage() {
       const points: [number, number][] = [[dLat, dLng]];
       if (destLat != null && destLng != null) points.push([Number(destLat), Number(destLng)]);
       if (order.pickup_lat != null && order.pickup_lng != null) points.push([Number(order.pickup_lat), Number(order.pickup_lng)]);
+      // include stop coords in bounds
+      if (order.order_stops) {
+        order.order_stops.forEach(s => { if (s.lat != null && s.lng != null) points.push([Number(s.lat), Number(s.lng)]); });
+      }
       if (points.length > 1) {
         map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 16 });
       } else {
@@ -704,17 +737,55 @@ export default function SeguimientoPage() {
             </div>
           )}
 
-          {/* Address row A → B (delivery only) */}
-          {type === 'delivery' && order.pickup_address && order.delivery_address && (
+          {/* Address row A → stops → B (delivery only) */}
+          {type === 'delivery' && (order.pickup_address || order.delivery_address) && (
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
-                <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>A</span>
-                <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.pickup_address}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
-                <span style={{ background: '#ef4444', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>B</span>
-                <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address}</span>
-              </div>
+              {order.pickup_address && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
+                  <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>A</span>
+                  <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.pickup_address}</span>
+                </div>
+              )}
+              {order.order_stops && order.order_stops.length > 0 && (
+                <div style={{ borderRadius: 9, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setStopsOpen(v => !v)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.1)', padding: '5px 9px', cursor: 'pointer', border: 'none' }}
+                  >
+                    <span style={{ fontSize: '0.75rem' }}>📦</span>
+                    <span style={{ flex: 1, fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>
+                      {order.order_stops.length} parada{order.order_stops.length !== 1 ? 's' : ''} de entrega
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>{stopsOpen ? '▲ cerrar' : '▼ ver todas'}</span>
+                  </button>
+                  {stopsOpen && (
+                    <div style={{ maxHeight: 180, overflowY: 'auto', padding: '5px 9px 7px', display: 'flex', flexDirection: 'column', gap: 5, background: 'rgba(245,158,11,0.04)', WebkitOverflowScrolling: 'touch' as never }}>
+                      {[...order.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, i) => {
+                        const isDone = s.status === 'delivered';
+                        const isFailed = s.status === 'failed';
+                        return (
+                          <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                            <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: isDone ? 'rgba(34,197,94,0.2)' : isFailed ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', border: `1px solid ${isDone ? '#22c55e' : isFailed ? '#ef4444' : 'rgba(245,158,11,0.5)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: isDone ? '#22c55e' : isFailed ? '#ef4444' : '#fbbf24', marginTop: 1 }}>
+                              {isDone ? '✓' : isFailed ? '✗' : s.sequence}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '0.72rem', color: isDone ? '#4ade80' : isFailed ? '#f87171' : '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
+                              {isDone && <span style={{ fontSize: '0.6rem', color: '#4ade80', marginLeft: 4, fontWeight: 700 }}>Entregado</span>}
+                              {isFailed && <span style={{ fontSize: '0.6rem', color: '#f87171', marginLeft: 4, fontWeight: 700 }}>Fallido</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              {order.delivery_address && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
+                  <span style={{ background: '#ef4444', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>B</span>
+                  <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address}</span>
+                </div>
+              )}
             </div>
           )}
 
