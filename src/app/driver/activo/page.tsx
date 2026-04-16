@@ -466,11 +466,11 @@ export default function ActivoPage() {
                             disabled={isBusy}
                             onClick={() => updateStopStatus(order.id, stop.id, 'delivered')}
                             style={{
-                              flex: 1, padding: '8px', borderRadius: 10, border: 'none',
+                              flex: 1, padding: '8px', borderRadius: 10,
+                              border: isBusy ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(74,222,128,0.3)',
                               background: isBusy ? 'rgba(255,255,255,0.06)' : 'rgba(74,222,128,0.18)',
                               color: isBusy ? '#6b7280' : '#4ade80',
                               fontWeight: 700, fontSize: '0.78rem', cursor: isBusy ? 'not-allowed' : 'pointer',
-                              border: '1px solid rgba(74,222,128,0.3)' as never,
                             }}
                           >
                             {isBusy ? '...' : '✅ Entregado'}
