@@ -274,21 +274,25 @@ export default function GananciasPage() {
                       {o.origin || 'Origen'} → {o.destination || 'Destino'}
                     </div>
                     {o.order_stops && o.order_stops.length > 0 && (
-                      <div style={{ marginTop: 3, marginBottom: 2 }}>
+                      <div style={{ marginTop: 3, marginBottom: 2, borderRadius: 8, border: '1px solid rgba(245,158,11,0.25)', overflow: 'hidden' }}>
                         <button
                           onClick={() => setStopsOpen(prev => ({ ...prev, [o.id!]: !prev[o.id!] }))}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.08)', padding: '3px 8px', cursor: 'pointer', border: 'none' }}
                         >
-                          <span style={{ fontSize: '0.67rem', fontWeight: 800, color: '#fbbf24' }}>+{o.order_stops.length} paradas</span>
-                          <span style={{ fontSize: '0.72rem', display: 'inline-block', transform: stopsOpen[o.id!] ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>⬇️</span>
+                          <span style={{ fontSize: '0.7rem' }}>📦</span>
+                          <span style={{ flex: 1, fontSize: '0.67rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{o.order_stops.length} paradas de entrega</span>
+                          <span style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 700 }}>{stopsOpen[o.id!] ? '▲' : '▼'}</span>
                         </button>
-                        {stopsOpen[o.id!] && [
-                          ...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => (
-                          <div key={si} style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
-                            <span style={{ fontSize: '0.63rem', fontWeight: 800, color: '#f59e0b', minWidth: 18 }}>P{s.sequence}</span>
-                            <span style={{ fontSize: '0.68rem', color: '#fde68a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.address}</span>
+                        {stopsOpen[o.id!] && (
+                          <div style={{ maxHeight: 160, overflowY: 'auto', padding: '4px 8px 6px', display: 'flex', flexDirection: 'column', gap: 4, WebkitOverflowScrolling: 'touch' as never }}>
+                            {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => (
+                              <div key={si} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                                <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: '#fbbf24', marginTop: 1 }}>{s.sequence}</div>
+                                <span style={{ flex: 1, fontSize: '0.68rem', color: '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                     <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmtDate(o.created_at)}</div>

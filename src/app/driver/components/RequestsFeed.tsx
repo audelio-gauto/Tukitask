@@ -161,13 +161,15 @@ export default function RequestsFeed({
             ? haversineKm(driverLat, driverLng, item.pickupLat, item.pickupLng)
             : null;
           const label = labels[item.title] || item.title;
+          const stopCount = item.stops?.length ?? 0;
+          const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
 
           return (
-            <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: '1px solid #1e293b', padding: '12px 14px' }}>
+            <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : '#1e293b'}`, padding: '12px 14px' }}>
               {/* Row 1: photo + label + client + price + timer + dismiss */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 {item.clientPhoto
-                  ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #c8ff00', flexShrink: 0 }} />
+                  ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
                   : <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -178,6 +180,11 @@ export default function RequestsFeed({
                     )}
                     {item.orderType === 'flete' && (
                       <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>🚛 Flete</span>
+                    )}
+                    {stopCount >= 2 && (
+                      <span style={{ background: stopCount >= 5 ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)', color: '#fbbf24', borderRadius: 99, padding: '1px 7px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0, border: '1px solid rgba(245,158,11,0.35)' }}>
+                        📦 {stopCount} paradas
+                      </span>
                     )}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -190,6 +197,9 @@ export default function RequestsFeed({
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, color: '#c8ff00', fontSize: '1rem' }}>{clientPrice.toLocaleString()}</div>
                   <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
+                  {pricePerStop && (
+                    <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, lineHeight: 1.1 }}>≈{pricePerStop.toLocaleString()}/stop</div>
+                  )}
                 </div>
                 <CountdownRing seconds={remaining} />
                 <button
@@ -207,22 +217,44 @@ export default function RequestsFeed({
                   </div>
                 )}
                 {item.stops && item.stops.length > 0 && (
-                  <>
+                  <div style={{ borderRadius: 10, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden', marginTop: 2 }}>
+                    {/* Collapsed header — always visible */}
                     <button
                       onClick={() => setStopsOpen(o => ({ ...o, [item.id]: !o[item.id] }))}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '3px 9px', cursor: 'pointer', width: 'fit-content' }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.1)', padding: '5px 10px', cursor: 'pointer', border: 'none' }}
                     >
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24' }}>+{item.stops.length} paradas</span>
-                      <span style={{ fontSize: '0.8rem', transition: 'transform 0.2s', display: 'inline-block', transform: stopsOpen[item.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}>⬇️</span>
-                    </button>
-                    {stopsOpen[item.id] && [
-                      ...item.stops].sort((a, b) => a.sequence - b.sequence).map((s, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <span style={{ color: '#f59e0b', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, minWidth: 18, textAlign: 'center' }}>P{s.sequence}</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: '#fde68a' }}>{s.address}</span>
+                      <span style={{ fontSize: '0.85rem' }}>📦</span>
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24' }}>
+                          {item.stops.length} parada{item.stops.length !== 1 ? 's' : ''} de entrega
+                        </span>
+                        {!stopsOpen[item.id] && (
+                          <span style={{ fontSize: '0.65rem', color: '#92400e', marginLeft: 6 }}>
+                            · {[...item.stops].sort((a,b)=>a.sequence-b.sequence)[0].address.substring(0, 28)}{item.stops[0].address.length > 28 ? '…' : ''}
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </>
+                      <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 700, flexShrink: 0 }}>
+                        {stopsOpen[item.id] ? '▲ cerrar' : '▼ ver todas'}
+                      </span>
+                    </button>
+                    {/* Expanded scrollable list */}
+                    {stopsOpen[item.id] && (
+                      <div style={{ maxHeight: 210, overflowY: 'auto', padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', gap: 5, background: 'rgba(245,158,11,0.04)', WebkitOverflowScrolling: 'touch' as never }}>
+                        {[...item.stops].sort((a, b) => a.sequence - b.sequence).map((s, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                            <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: '#fbbf24', marginTop: 1 }}>
+                              {s.sequence}
+                            </div>
+                            <span style={{ flex: 1, fontSize: '0.73rem', color: '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
+                          </div>
+                        ))}
+                        <div style={{ fontSize: '0.62rem', color: '#78350f', marginTop: 2, fontStyle: 'italic' }}>
+                          {item.stops.length} entregas · recorrido de distribución
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {item.to && (
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
