@@ -44,6 +44,9 @@ interface LiveUser {
   pickup: { lat: number; lng: number; address: string } | null;
   delivery: { lat: number; lng: number; address: string } | null;
   job_dest: { lat: number; lng: number; address: string } | null;
+  is_multi_stop: boolean;
+  stop_count: number | null;
+  order_stops: { sequence: number; address: string; lat: number; lng: number; status: string }[] | null;
   banned: boolean;
   banned_until: string | null;
   suspended: boolean;
@@ -293,7 +296,7 @@ export default function RutaPage() {
         markersRef.current.set(u.id, m);
       }
 
-      // Route line A → B
+      // Route line A → stops → B
       if (u.en_route) {
         const dest = u.delivery || u.job_dest;
         if (dest) {
@@ -309,6 +312,19 @@ export default function RutaPage() {
             });
             linesRef.current.push(L.marker([u.pickup.lat, u.pickup.lng], { icon: pinA }).addTo(map));
           }
+
+          // Intermediate stops P1..Pn (multi-stop orders)
+          const pendingStops = (u.order_stops || [])
+            .filter((s) => s.status === 'pending')
+            .sort((a, b) => a.sequence - b.sequence);
+          pendingStops.forEach((s, idx) => {
+            const pinP = L.divIcon({
+              className: '',
+              html: `<div style="background:#8b5cf6;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">P${idx + 1}</div>`,
+              iconSize: [28, 20], iconAnchor: [14, 20],
+            });
+            linesRef.current.push(L.marker([s.lat, s.lng], { icon: pinP }).addTo(map));
+          });
 
           // Pin B (destination)
           const pinB = L.divIcon({

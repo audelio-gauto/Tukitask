@@ -49,9 +49,9 @@ export async function GET(req: Request) {
     if (driverEmails.length > 0) {
       const { data: orders } = await db
         .from('orders')
-        .select('accepted_by, pickup_lat, pickup_lng, delivery_lat, delivery_lng, pickup_address, delivery_address, status, id')
+        .select('accepted_by, pickup_lat, pickup_lng, delivery_lat, delivery_lng, pickup_address, delivery_address, status, id, is_multi_stop, stop_count, order_stops(sequence, address, lat, lng, status)')
         .in('accepted_by', driverEmails)
-        .in('status', ['accepted', 'picked_up', 'in_transit']);
+        .in('status', ['accepted', 'picking_up', 'picked_up', 'in_transit']);
       (orders || []).forEach((o: any) => {
         if (o.accepted_by) orderMap.set(o.accepted_by, o);
       });
@@ -102,13 +102,16 @@ export async function GET(req: Request) {
         updated_at: loc?.updated_at ?? null,
         online:     !!loc,
         en_route:   !!(order || job),
-        // Route A → B for driver
-        pickup:     order && order.pickup_lat != null
+        // Route A → stops → B for driver
+        pickup:      order && order.pickup_lat != null
           ? { lat: order.pickup_lat, lng: order.pickup_lng, address: order.pickup_address }
           : null,
-        delivery:   order && order.delivery_lat != null
+        delivery:    order && order.delivery_lat != null
           ? { lat: order.delivery_lat, lng: order.delivery_lng, address: order.delivery_address }
           : null,
+        is_multi_stop: order?.is_multi_stop ?? false,
+        stop_count:    order?.stop_count ?? null,
+        order_stops:   order?.order_stops ?? null,
         // Tecnico destination
         job_dest:   job && job.client_lat != null
           ? { lat: job.client_lat, lng: job.client_lng, address: job.client_address }

@@ -20,6 +20,9 @@ interface Order {
   cancelled_at: string | null;
   payment_method: string | null;
   description: string | null;
+  is_multi_stop: boolean;
+  stop_count: number | null;
+  order_stops: { sequence: number; address: string; lat: number; lng: number; status: string; fail_reason: string | null }[] | null;
   _type: 'order';
   _driver_active: boolean;
 }
@@ -199,7 +202,31 @@ function OrderDrawer({ row, onClose }: { row: Row | null; onClose: () => void })
         {isOrder && (
           <div className="space-y-2">
             <AddrField label="📍 Origen" value={o.pickup_address} />
-            <AddrField label="🎯 Destino" value={o.delivery_address} />
+            {o.is_multi_stop && o.order_stops && o.order_stops.length > 0 ? (
+              <div className="bg-gray-50 rounded-lg p-2.5">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">📦 Paradas ({o.order_stops.length})</p>
+                <div className="space-y-1.5">
+                  {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                        s.status === 'delivered' ? 'bg-green-500' : s.status === 'failed' ? 'bg-red-500' : 'bg-purple-500'
+                      }`}>{s.sequence}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-700 leading-snug">{s.address}</p>
+                        {s.status === 'failed' && s.fail_reason && (
+                          <p className="text-[10px] text-red-500 mt-0.5">✗ {s.fail_reason}</p>
+                        )}
+                      </div>
+                      <span className={`flex-shrink-0 text-[10px] font-semibold ${
+                        s.status === 'delivered' ? 'text-green-600' : s.status === 'failed' ? 'text-red-500' : 'text-gray-400'
+                      }`}>{s.status === 'delivered' ? '✓' : s.status === 'failed' ? '✗' : '···'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <AddrField label="🎯 Destino" value={o.delivery_address} />
+            )}
             {o.description && <AddrField label="📝 Descripción" value={o.description} />}
           </div>
         )}
@@ -578,6 +605,11 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
       {/* Destination */}
       <div className="flex flex-col justify-center overflow-hidden pr-3">
         <p className="text-xs text-gray-700 leading-snug line-clamp-2">{destination || '—'}</p>
+        {isOrder && o.is_multi_stop && (
+          <span className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 w-fit">
+            📦 {o.stop_count ?? o.order_stops?.length ?? '?'} paradas
+          </span>
+        )}
       </div>
 
       {/* Price */}
