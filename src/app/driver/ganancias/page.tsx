@@ -16,7 +16,7 @@ interface OrderRow {
   origin?: string;
   destination?: string;
   id?: string;
-  order_stops?: Array<{ sequence: number; address: string }> | null;
+  order_stops?: Array<{ sequence: number; address: string; status: string; fail_reason?: string | null }> | null;
 }
 
 function orderPrice(o: OrderRow) {
@@ -285,12 +285,25 @@ export default function GananciasPage() {
                         </button>
                         {stopsOpen[o.id!] && (
                           <div style={{ maxHeight: 160, overflowY: 'auto', padding: '4px 8px 6px', display: 'flex', flexDirection: 'column', gap: 4, WebkitOverflowScrolling: 'touch' as never }}>
-                            {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => (
-                              <div key={si} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
-                                <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: '#fbbf24', marginTop: 1 }}>{s.sequence}</div>
-                                <span style={{ flex: 1, fontSize: '0.68rem', color: '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
-                              </div>
-                            ))}
+                            {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => {
+                              const isDelivered = s.status === 'delivered';
+                              const isFailed = s.status === 'failed';
+                              const dotColor = isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#fbbf24';
+                              const dotBg = isDelivered ? 'rgba(16,185,129,0.15)' : isFailed ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
+                              const dotBorder = isDelivered ? 'rgba(16,185,129,0.35)' : isFailed ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)';
+                              const icon = isDelivered ? '✓' : isFailed ? '✗' : String(s.sequence);
+                              return (
+                                <div key={si} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                                  <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: dotBg, border: `1px solid ${dotBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: dotColor, marginTop: 1 }}>{icon}</div>
+                                  <div style={{ flex: 1 }}>
+                                    <span style={{ fontSize: '0.68rem', color: isDelivered ? '#6ee7b7' : isFailed ? '#fca5a5' : '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
+                                    {isFailed && s.fail_reason && (
+                                      <div style={{ fontSize: '0.62rem', color: '#f87171', marginTop: 1 }}>✗ {s.fail_reason}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
