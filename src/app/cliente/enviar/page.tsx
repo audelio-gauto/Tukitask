@@ -486,8 +486,8 @@ export default function EnviarPaquetePage() {
           client_photo: profilePhoto || '',
           client_avg_rating: avgRating > 0 ? avgRating : null,
           pickup_address: form.pickupAddress,
-          // First stop backward-compat fields
-          delivery_address: firstStop.address,
+          // delivery = last stop (single-stop: that one stop; multi-stop: final destination — no A→stops→A duplication)
+          delivery_address: stops[stops.length - 1].address,
           receiver_contact: firstStop.receiverContact,
           receiver_phone: firstStop.receiverPhone,
           description: firstStop.description || null,
@@ -503,8 +503,8 @@ export default function EnviarPaquetePage() {
           offer: offerPrice > 0 ? String(offerPrice) : form.offer,
           pickup_lat: form.pickupLat,
           pickup_lng: form.pickupLng,
-          delivery_lat: firstStop.lat,
-          delivery_lng: firstStop.lng,
+          delivery_lat: stops[stops.length - 1].lat,
+          delivery_lng: stops[stops.length - 1].lng,
           date_scheduled: dateScheduled ? new Date(dateScheduled).toISOString() : null,
           promo_code: promoResult ? promoCode.trim() : null,
           promo_discount: promoResult?.discount_amount ?? 0,

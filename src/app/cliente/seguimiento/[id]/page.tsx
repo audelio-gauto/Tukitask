@@ -427,17 +427,21 @@ export default function SeguimientoPage() {
         const nDestLat = Number(destLat);
         const nDestLng = Number(destLng);
 
-        // Build ordered waypoints: driver → pending stops (by sequence) → final destination
+        // Build ordered waypoints for route drawing:
+        // Multi-stop: driver → pending stops only (skip delivered & failed — no dest duplication)
+        // Single-stop (no order_stops): driver → delivery destination
         const pendingStops = order.order_stops
           ? [...order.order_stops]
-              .filter(s => s.status !== 'delivered' && s.lat != null && s.lng != null)
+              .filter(s => s.status === 'pending' && s.lat != null && s.lng != null)
               .sort((a, b) => a.sequence - b.sequence)
           : [];
 
+        const hasOrderStops = (order.order_stops?.length ?? 0) > 0;
         const waypoints: Array<{ lat: number; lng: number }> = [
           { lat: dLat, lng: dLng },
           ...pendingStops.map(s => ({ lat: Number(s.lat), lng: Number(s.lng) })),
-          { lat: nDestLat, lng: nDestLng },
+          // Single-stop legacy: append delivery dest (it is NOT already covered by order_stops)
+          ...(hasOrderStops ? [] : [{ lat: nDestLat, lng: nDestLng }]),
         ];
 
         // Route key: driver position (low-res) + stop statuses + dest
@@ -521,10 +525,11 @@ export default function SeguimientoPage() {
             // ETA badge = first segment (driver → next stop)
             if (firstSegDurationSec > 0) {
               const etaMin = Math.max(1, Math.round(firstSegDurationSec / 60));
-              const distKm = firstSegDistanceM > 0 ? firstSegDistanceM / 1000 : haversineKm(dLat, dLng, waypoints[1].lat, waypoints[1].lng);
+              // waypoints[1] may not exist when all stops are resolved — fall back to dest coords
+              const distKm = firstSegDistanceM > 0 ? firstSegDistanceM / 1000 : haversineKm(dLat, dLng, waypoints[1]?.lat ?? nDestLat, waypoints[1]?.lng ?? nDestLng);
               etaFromApiRef.current = true;
               setEta({ distKm, etaMin, fromApi: true });
-            } else if (!etaFromApiRef.current) {
+            } else if (!etaFromApiRef.current && waypoints.length >= 2) {
               const distKm = haversineKm(dLat, dLng, waypoints[1].lat, waypoints[1].lng);
               setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
             }

@@ -202,6 +202,10 @@ export async function POST(req: Request) {
 
   const isMultiStop = Array.isArray(stops) && stops.length > 1;
 
+  if (Array.isArray(stops) && stops.length > 20) {
+    return NextResponse.json({ error: 'Máximo 20 paradas permitidas' }, { status: 400 });
+  }
+
   // Forzar client_email desde el token — nunca confiar en el body
   const safeBody: Record<string, unknown> = {
     ...orderBody,
@@ -289,29 +293,51 @@ export async function PATCH(req: Request) {
       .eq('status', 'pending');
 
     if (!remaining || remaining.length === 0) {
-      // All stops resolved — mark order as delivered
+      // Count delivered vs failed outcomes for accurate status + notification
+      const { data: allStops } = await db
+        .from('order_stops')
+        .select('status')
+        .eq('order_id', order_id);
+      const deliveredCount = (allStops || []).filter((s: { status: string }) => s.status === 'delivered').length;
+      const failedCount    = (allStops || []).filter((s: { status: string }) => s.status === 'failed').length;
+      const totalCount     = (allStops || []).length;
+      // 'failed' only when ALL stops failed; otherwise 'delivered' (partial deliveries accepted)
+      const finalStatus = deliveredCount === 0 && failedCount > 0 ? 'failed' : 'delivered';
+
       await db.from('orders').update({ status: 'in_transit' }).eq('id', order_id); // ensure correct base
       const { error: doneErr } = await db.from('orders').update({
-        status: 'delivered',
+        status: finalStatus,
         completed_at: new Date().toISOString(),
       }).eq('id', order_id);
       if (!doneErr) {
-        // Retry commission RPC up to 3 times
-        let commErr = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (attempt > 0) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
-          const { error } = await db.rpc('deduct_commission', { p_order_id: order_id });
-          if (!error) { commErr = null; break; }
-          commErr = error;
+        // Charge commission only when at least one stop was delivered
+        if (deliveredCount > 0) {
+          let commErr = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+            const { error } = await db.rpc('deduct_commission', { p_order_id: order_id });
+            if (!error) { commErr = null; break; }
+            commErr = error;
+          }
+          if (commErr) console.error('[multi-stop] deduct_commission failed after 3 attempts:', commErr.message, '— order_id:', order_id);
         }
-        if (commErr) console.error('[multi-stop] deduct_commission failed after 3 attempts:', commErr.message, '— order_id:', order_id);
-        // Notify client
+        // Notify client with accurate counts
         const { data: ord } = await db.from('orders').select('client_email').eq('id', order_id).single();
         if (ord?.client_email) {
-          emitNotification(ord.client_email, 'status_change', 'Todos los envíos entregados', '¡Todos tus paquetes fueron entregados!', { order_id, status: 'delivered' }, { priority: 'urgent', groupKey: `order:${order_id}:delivered` });
+          const title = failedCount === 0
+            ? 'Todos los envíos entregados'
+            : failedCount === totalCount
+              ? 'No se pudo entregar'
+              : `${deliveredCount} de ${totalCount} paradas entregadas`;
+          const body = failedCount === 0
+            ? '¡Todos tus paquetes fueron entregados!'
+            : failedCount === totalCount
+              ? 'No se pudo completar ninguna entrega.'
+              : `✅ ${deliveredCount} entregadas · ❌ ${failedCount} fallidas`;
+          emitNotification(ord.client_email, 'status_change', title, body, { order_id, status: finalStatus }, { priority: 'urgent', groupKey: `order:${order_id}:done` });
         }
       }
-      return NextResponse.json({ success: true, order_status: 'delivered', all_stops_done: true });
+      return NextResponse.json({ success: true, order_status: finalStatus, all_stops_done: true, delivered_count: deliveredCount, failed_count: failedCount });
     }
 
     return NextResponse.json({ success: true, stop_status, pending_stops: remaining.length });

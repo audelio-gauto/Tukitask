@@ -189,7 +189,10 @@ export default function ActivoPage() {
         // If all stops done, the API auto-transitions order to delivered
         if (json?.all_stops_done) {
           setOrders(prev => prev.filter(o => o.id !== orderId));
-          showToast('🏁 ¡Todos los paquetes entregados!');
+          const finalMsg = json.failed_count > 0
+            ? `🏁 ${json.delivered_count} entregados · ${json.failed_count} fallidos`
+            : '🏁 ¡Todos los paquetes entregados!';
+          showToast(finalMsg);
         } else {
           // Refresh to reflect updated stop status
           setOrders(prev => prev.map(o => {
