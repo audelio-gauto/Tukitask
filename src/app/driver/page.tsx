@@ -102,9 +102,15 @@ export default function DriverDashboard() {
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const isLoadingOrdersRef = useRef(false);  // A-2: prevent concurrent mutations
+  const activeOrderCountRef = useRef(0);     // always-fresh copy for loadPendingOrders
 
   const loadPendingOrders = useCallback(() => {
     if (isLoadingOrdersRef.current) return;  // skip if already in-flight
+    // InDrive-style: don't show new requests when driver already has an active order
+    if (activeOrderCountRef.current > 0) {
+      setPendingOrders([]);
+      return;
+    }
     isLoadingOrdersRef.current = true;
     authFetch('/api/orders')
       .then(async r => {
@@ -258,6 +264,9 @@ export default function DriverDashboard() {
           setFailedCount(failedToday.length);
           setTotalShipments(totalToday.length);
           setActiveOrderCount(activeOrders.length);
+          activeOrderCountRef.current = activeOrders.length;
+          // InDrive-style: clear pending feed immediately when driver goes active
+          if (activeOrders.length > 0) setPendingOrders([]);
           const total = delivered.length + failed.length;
           setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
 
@@ -395,7 +404,7 @@ export default function DriverDashboard() {
     { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
   ];
 
-  const feedVisible = available && !walletBlocked && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
+  const feedVisible = available && !walletBlocked && activeOrderCount === 0 && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
 
   // Pre-filter orders by service type preferences before passing to feed
   const VEHICLE_FILTER_MAP: Record<string, string> = {
