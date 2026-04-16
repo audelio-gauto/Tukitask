@@ -7,38 +7,34 @@
 }
 .tuki-back-btn:hover { background: rgba(245,197,24,0.22); }
 
-/* Tecnico sheet gets a slightly warmer dark */
+/* Tecnico sheet — uses global --sheet-bg token, plus gold shadow accent */
 .tuki-sheet {
-  background: #1C1C2E;
-  box-shadow: 0 -4px 40px rgba(0,0,0,0.55), 0 -1px 0 rgba(245,197,24,0.08);
+  background: var(--sheet-bg);
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.45), 0 -1px 0 var(--border-gold);
 }
 
 /* Stat icon uses yellow for tecnico */
 .tuki-stat-icon { color: #F5C518; }
 
-/* Normal header: slightly warmer dark for tecnico */
+/* Tecnico header and content use global theme tokens */
 .tuki-normal-header {
-  background: #1C1C2E;
-  border-bottom: 1px solid rgba(245,197,24,0.1);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-gold);
 }
-
-/* Normal content background */
-.tuki-normal-content { background: #13131F; }
-
-/* Heading color */
-.tuki-heading { color: #f1f5f9; }
+.tuki-normal-content { background: var(--content-bg); }
+.tuki-heading { color: var(--text-primary); }
 
 /* Online availability glow — yellow for tecnico */
 .tuki-availability:has(input:checked) {
   border-color: rgba(245,197,24,0.45);
-  box-shadow: 0 0 0 4px rgba(245,197,24,0.08), 0 4px 20px rgba(245,197,24,0.2);
+  box-shadow: 0 0 0 4px rgba(245,197,24,0.08), 0 4px 20px rgba(245,197,24,0.20);
 }
 
 /* Status badge online — yellow for tecnico */
 .tuki-status-online {
   background: rgba(245,197,24,0.12);
   color: #F5C518;
-  box-shadow: 0 0 0 1.5px rgba(245,197,24,0.3);
+  box-shadow: 0 0 0 1.5px rgba(245,197,24,0.30);
 }
 
 /* Toggle: yellow for tecnico */

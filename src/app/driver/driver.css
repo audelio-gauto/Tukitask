@@ -1,18 +1,19 @@
 /* TukiTask Driver Panel - Modern CSS (Bolt-style) */
 :root {
-  --tuki-primary: #F5C518;
-  --tuki-primary-dark: #E6A800;
+  --tuki-primary:       #F5C518;
+  --tuki-primary-dark:  #E6A800;
   --tuki-primary-light: #F7D060;
-  --tuki-nav-h: 64px;
-  --tuki-success: #10b981;
-  --tuki-success-dark: #059669;
-  --tuki-danger: #ef4444;
-  --tuki-warning: #f59e0b;
-  --tuki-background: #f3f4f6;
-  --tuki-surface: #ffffff;
-  --tuki-text-main: #111827;
-  --tuki-text-secondary: #6b7280;
-  --tuki-border: #e5e7eb;
+  --tuki-nav-h:         64px;
+  --tuki-success:       #10b981;
+  --tuki-success-dark:  #059669;
+  --tuki-danger:        #ef4444;
+  --tuki-warning:       #f59e0b;
+  /* Wire tuki-* aliases to global theme tokens so they respond automatically */
+  --tuki-background:    var(--content-bg);
+  --tuki-surface:       var(--surface-1);
+  --tuki-text-main:     var(--text-primary);
+  --tuki-text-secondary: var(--text-secondary);
+  --tuki-border:        var(--border-subtle);
   --tuki-radius-sm: 0.5rem;
   --tuki-radius-md: 0.75rem;
   --tuki-radius-lg: 1rem;
@@ -58,20 +59,20 @@
   z-index: 100;
   width: 48px; height: 48px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(10,14,26,0.82);
+  border: 1px solid var(--float-btn-border);
+  background: var(--float-btn-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  color: #e2e8f0;
+  color: var(--float-btn-color);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s;
 }
-.tuki-float-btn:hover { background: rgba(10,14,26,0.95); box-shadow: 0 8px 28px rgba(0,0,0,0.55); transform: scale(1.06); }
+.tuki-float-btn:hover { background: var(--ghost-btn-hover); box-shadow: 0 8px 28px rgba(0,0,0,0.45); transform: scale(1.06); }
 .tuki-float-btn:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 .tuki-float-btn.menu { top: 16px; right: 16px; }
 .tuki-float-btn.locate { bottom: calc(50vh + 72px); right: 16px; }
@@ -120,7 +121,7 @@
   position: fixed;
   top: 0; left: 0;
   height: 100%; width: 300px;
-  background: #fff;
+  background: var(--drawer-bg);
   z-index: 99999;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -162,7 +163,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1.5rem;
-  color: #374151;
+  color: var(--drawer-text);
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
@@ -173,13 +174,13 @@
   width: 100%;
   text-align: left;
 }
-.tuki-drawer-link svg { width: 20px; height: 20px; color: #6b7280; flex-shrink: 0; }
+.tuki-drawer-link svg { width: 20px; height: 20px; color: var(--text-muted); flex-shrink: 0; }
 .tuki-drawer-link:hover,
 .tuki-drawer-link.active { background: rgba(245,197,24,0.10); color: #C8960A; }
 .tuki-drawer-link:hover svg,
 .tuki-drawer-link.active svg { color: #C8960A; }
 
-.tuki-drawer-footer { border-top: 1px solid #e5e7eb; padding: 0.5rem 0; }
+.tuki-drawer-footer { border-top: 1px solid var(--drawer-border); padding: 0.5rem 0; }
 
 /* Overlay */
 .tuki-overlay {
@@ -199,9 +200,9 @@
   position: absolute;
   left: 0; right: 0; bottom: var(--tuki-nav-h);
   z-index: 50;
-  background: #1a1a2e;
+  background: var(--sheet-bg);
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -4px 40px rgba(0,0,0,0.55), 0 -1px 0 rgba(255,255,255,0.07);
+  box-shadow: 0 -4px 40px rgba(0,0,0,0.40), 0 -1px 0 var(--border-subtle);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -220,7 +221,7 @@
   flex-shrink: 0;
   user-select: none;
 }
-.tuki-sheet-bar { width: 40px; height: 5px; background: rgba(255,255,255,0.22); border-radius: 999px; }
+.tuki-sheet-bar { width: 40px; height: 5px; background: var(--sheet-handle); border-radius: 999px; }
 
 .tuki-sheet-content {
   flex: 1;
@@ -232,7 +233,7 @@
 
 /* Availability Toggle — premium redesign */
 .tuki-availability {
-  background: rgba(255,255,255,0.06);
+  background: var(--avail-bg);
   border-radius: 18px;
   padding: 1rem 1.25rem;
   margin-top: 0.5rem;
@@ -240,7 +241,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1.5px solid rgba(255,255,255,0.1);
+  border: 1.5px solid var(--avail-border);
   transition: border-color 0.22s ease, box-shadow 0.22s ease;
 }
 /* Glow when online — uses :has() (supported in all modern browsers) */
@@ -316,11 +317,11 @@ input:checked + .tuki-toggle-slider:before {
   margin-top: 1rem;
 }
 .tuki-stat-card {
-  background: rgba(255,255,255,0.06);
+  background: var(--glass-card);
   border-radius: 16px;
   padding: 1rem;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  border: 1px solid var(--glass-card-border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s;
   text-align: center;
   text-decoration: none;
@@ -332,16 +333,16 @@ input:checked + .tuki-toggle-slider:before {
   cursor: pointer;
   color: inherit;
 }
-.tuki-stat-card:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
+.tuki-stat-card:hover { background: var(--glass-card-hover); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
 .tuki-stat-card:active { transform: scale(0.97); }
 .tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: #c8ff00; }
-.tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.5rem; }
-.tuki-stat-label { color: rgba(255,255,255,0.52); font-size: 0.875rem; font-weight: 500; }
+.tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 0.5rem; }
+.tuki-stat-label { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
 
 /* Heading */
 .tuki-heading {
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 1.15rem;
   margin-top: 0.5rem;
@@ -442,11 +443,12 @@ input:checked + .tuki-toggle-slider:before {
 .tuki-form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; color: var(--tuki-text-secondary); }
 .tuki-form-input {
   width: 100%; padding: 0.75rem;
-  border: 1px solid var(--tuki-border);
+  border: 1px solid var(--input-border);
   border-radius: var(--tuki-radius-sm);
   font-size: 1rem; transition: border 0.2s;
   outline: none;
-  background: white;
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 .tuki-form-input:focus { border-color: var(--tuki-primary); }
 
@@ -456,8 +458,8 @@ input:checked + .tuki-toggle-slider:before {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #1a1a2e;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -466,31 +468,31 @@ input:checked + .tuki-toggle-slider:before {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,0.08);
+  background: var(--ghost-btn);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: rgba(255,255,255,0.8);
+  color: var(--ghost-btn-color);
   transition: background 0.15s;
 }
-.tuki-normal-header .menu-btn:hover { background: rgba(255,255,255,0.14); }
-.tuki-screen-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
+.tuki-normal-header .menu-btn:hover { background: var(--ghost-btn-hover); }
+.tuki-screen-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
 .tuki-back-btn {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(200,255,0,0.12);
+  background: var(--back-btn-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #c8ff00;
+  color: var(--back-btn-color);
   text-decoration: none;
   transition: background 0.15s;
 }
-.tuki-back-btn:hover { background: rgba(200,255,0,0.2); }
-.tuki-normal-content { padding: 1rem 1rem calc(1rem + var(--tuki-nav-h, 64px)); overflow-y: auto; height: calc(100vh - 72px); -webkit-overflow-scrolling: touch; background: #111827; }
+.tuki-back-btn:hover { background: var(--back-btn-hover); }
+.tuki-normal-content { padding: 1rem 1rem calc(1rem + var(--tuki-nav-h, 64px)); overflow-y: auto; height: calc(100vh - 72px); -webkit-overflow-scrolling: touch; background: var(--content-bg); }
 
 /* Loading spinner */
 .tuki-spinner {
@@ -579,12 +581,12 @@ input:checked + .tuki-toggle-slider:before {
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 301;
-  background: #fff;
+  background: var(--modal-bg);
   border-radius: 20px;
   width: 92vw;
   max-width: 380px;
   padding: 1.25rem 1.25rem 1rem;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.30);
   animation: dfModalIn 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 @keyframes dfModalIn {
@@ -606,13 +608,13 @@ input:checked + .tuki-toggle-slider:before {
 }
 .driver-filter-close {
   width: 36px; height: 36px;
-  border: none; background: #f1f5f9;
+  border: none; background: var(--ghost-btn);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #64748b;
+  cursor: pointer; color: var(--text-secondary);
   transition: background 0.15s;
 }
-.driver-filter-close:hover { background: #e2e8f0; }
+.driver-filter-close:hover { background: var(--ghost-btn-hover); }
 
 .driver-filter-subtitle {
   font-size: 0.82rem;
@@ -631,9 +633,9 @@ input:checked + .tuki-toggle-slider:before {
   align-items: center;
   gap: 0.75rem;
   padding: 0.7rem 0.85rem;
-  border: 1.5px solid var(--tuki-border);
+  border: 1.5px solid var(--modal-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--modal-bg);
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: left;
@@ -710,12 +712,12 @@ input:checked + .tuki-toggle-slider:before {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: var(--tuki-nav-h, 64px);
-  background: #111827;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
   display: flex;
   align-items: stretch;
   z-index: 200;
-  box-shadow: 0 -1px 0 rgba(255,255,255,0.05), 0 -8px 32px rgba(0,0,0,0.45);
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.30);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -731,12 +733,12 @@ input:checked + .tuki-toggle-slider:before {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s;
 }
-.tuki-bottom-nav-item:active { background: rgba(255,255,255,0.06); }
+.tuki-bottom-nav-item:active { background: var(--nav-tap-active); }
 
 .tuki-bottom-nav-icon {
   font-size: 1.4rem;
   line-height: 1;
-  color: rgba(255,255,255,0.35);
+  color: var(--nav-icon-inactive);
   transition: color 0.15s, transform 0.2s cubic-bezier(.34,1.56,.64,1);
 }
 .tuki-bottom-nav-item.active .tuki-bottom-nav-icon {
@@ -746,7 +748,7 @@ input:checked + .tuki-toggle-slider:before {
 .tuki-bottom-nav-label {
   font-size: 0.62rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.35);
+  color: var(--nav-icon-inactive);
   letter-spacing: 0.01em;
   transition: color 0.15s;
   line-height: 1;
@@ -768,7 +770,7 @@ input:checked + .tuki-toggle-slider:before {
 
 /* Skeleton loader */
 .tuki-skeleton {
-  background: linear-gradient(90deg, rgba(255,255,255,0.07) 25%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.07) 75%);
+  background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-through) 50%, var(--skeleton-from) 75%);
   background-size: 200% 100%;
   animation: tuki-shimmer 1.4s infinite;
   border-radius: 8px;

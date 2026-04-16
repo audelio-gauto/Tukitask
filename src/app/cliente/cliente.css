@@ -1,21 +1,22 @@
 /* TukiTask Client Panel CSS */
 :root {
-  --client-primary: #F5C518;
-  --client-primary-dark: #E6A800;
+  /* Brand + status colors — never change with theme */
+  --client-primary:       #F5C518;
+  --client-primary-dark:  #E6A800;
   --client-primary-light: #F7D060;
-  --client-success: #10b981;
-  --client-success-dark: #059669;
-  --client-danger: #ef4444;
-  --client-warning: #f59e0b;
-  --client-blue: #3B82F6;
-  --client-bg: #f8f9fc;
-  --client-surface: #ffffff;
-  --client-text: #1f2937;
-  --client-text-secondary: #6b7280;
-  --client-border: #e5e7eb;
-  --client-radius: 16px;
+  --client-success:       #10b981;
+  --client-success-dark:  #059669;
+  --client-danger:        #ef4444;
+  --client-warning:       #f59e0b;
+  --client-blue:          #3B82F6;
+  --client-radius:    16px;
   --client-radius-sm: 10px;
   --client-radius-lg: 20px;
+  /*
+   * Structural colors (--client-bg, --client-surface, --client-text, etc.)
+   * are defined in globals.css :root (dark defaults) and
+   * [data-theme="light"] overrides. Do NOT redefine them here.
+   */
 }
 
 /* App container */
@@ -32,13 +33,13 @@
   position: fixed;
   top: 0; left: 0;
   height: 100%; width: 300px;
-  background: #fff;
+  background: var(--drawer-bg);
   z-index: 99999;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.20);
 }
 .client-sidebar.open { transform: translateX(0); }
 
@@ -73,7 +74,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1.5rem;
-  color: #374151;
+  color: var(--drawer-text);
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
@@ -81,13 +82,13 @@
   cursor: pointer;
   border: none; background: none; width: 100%; text-align: left;
 }
-.client-sidebar-link svg { width: 20px; height: 20px; color: #6b7280; flex-shrink: 0; }
+.client-sidebar-link svg { width: 20px; height: 20px; color: var(--text-muted); flex-shrink: 0; }
 .client-sidebar-link:hover,
 .client-sidebar-link.active { background: rgba(245,197,24,0.10); color: var(--client-primary); }
 .client-sidebar-link:hover svg,
 .client-sidebar-link.active svg { color: var(--client-primary); }
 
-.client-sidebar-footer { border-top: 1px solid #e5e7eb; padding: 0.5rem 0; }
+.client-sidebar-footer { border-top: 1px solid var(--drawer-border); padding: 0.5rem 0; }
 
 /* Overlay */
 .client-overlay {
@@ -108,8 +109,8 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: #fff;
-  border-bottom: 1px solid #f1f5f9;
+  background: var(--client-header-bg);
+  border-bottom: 1px solid var(--client-header-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -118,15 +119,15 @@
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: #f1f5f9;
+  background: var(--client-header-btn-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #1e293b;
+  color: var(--client-header-btn-color);
   transition: background 0.15s;
 }
-.client-header-btn:hover { background: #e2e8f0; }
+.client-header-btn:hover { background: var(--client-header-btn-hover); }
 .client-header-title { flex: 1; font-size: 1.15rem; font-weight: 700; color: var(--client-text); }
 
 /* Content area */
@@ -178,7 +179,7 @@
 }
 .client-greeting-hi {
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-weight: 500;
 }
 .client-greeting-name {
@@ -193,8 +194,8 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #fff;
-  border: 1.5px solid #e5e7eb;
+  background: var(--client-action-bar-bg);
+  border: 1.5px solid var(--client-action-bar-border);
   border-radius: 50px;
   padding: 10px 14px 10px 10px;
   margin-bottom: 1.4rem;
@@ -225,7 +226,7 @@
 .client-action-bar-placeholder {
   flex: 1;
   font-size: 0.95rem;
-  color: #9ca3af;
+  color: var(--client-placeholder);
   font-weight: 500;
 }
 .client-action-bar-pill {
@@ -256,7 +257,7 @@
 }
 .client-modal {
   width: 100%;
-  background: #fff;
+  background: var(--modal-bg);
   border-radius: 24px 24px 0 0;
   padding: 0 0 1.5rem;
   animation: modal-slide-up 0.28s cubic-bezier(0.34,1.06,0.64,1);
@@ -290,25 +291,25 @@
   flex: 1;
   font-size: 1rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--client-text);
 }
 .client-modal-close {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: #f3f4f6;
+  background: var(--client-close-btn);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #374151;
+  color: var(--client-close-color);
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
-.client-modal-close:active { background: #e5e7eb; }
+.client-modal-close:active { background: var(--client-close-active); }
 .client-modal-divider {
   height: 1px;
-  background: #f0f0f0;
+  background: var(--modal-divider);
   margin: 0 0 0.25rem;
 }
 .client-modal-body {
@@ -324,14 +325,14 @@
   padding: 1rem 0.25rem;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--modal-divider);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
   border-radius: 12px;
 }
 .client-modal-action:last-child { border-bottom: none; }
-.client-modal-action:active { background: #fafafa; }
+.client-modal-action:active { background: var(--client-action-active); }
 .client-modal-action-icon {
   width: 52px; height: 52px;
   border-radius: 16px;
@@ -349,11 +350,11 @@
 .client-modal-action-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--client-text);
 }
 .client-modal-action-sub {
   font-size: 0.82rem;
-  color: #9ca3af;
+  color: var(--client-text-secondary);
   font-weight: 400;
 }
 .client-modal-action-arrow {
@@ -391,7 +392,7 @@
   gap: 0.75rem;
 }
 .client-quick-card {
-  background: white;
+  background: var(--client-surface);
   border-radius: var(--client-radius);
   padding: 1.25rem;
   text-decoration: none;
@@ -483,7 +484,7 @@
   box-shadow: 0 4px 12px rgba(245,197,24,0.3);
 }
 .client-delivery-btn.btn-envios {
-  background: white;
+  background: var(--client-surface);
   color: var(--client-text);
   border: 1px solid var(--client-border);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -508,7 +509,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: white;
+  background: var(--client-surface);
   border-radius: var(--client-radius);
   text-decoration: none;
   color: var(--client-text);
@@ -525,7 +526,7 @@
 
 /* Solicitar envío form */
 .client-form-card {
-  background: white;
+  background: var(--client-surface);
   border-radius: var(--client-radius);
   padding: 1.5rem;
   border: 1px solid var(--client-border);
@@ -564,7 +565,8 @@
   font-size: 0.95rem;
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
-  background: white;
+  background: var(--client-input-bg);
+  color: var(--client-text);
 }
 .client-form-input:focus {
   border-color: var(--client-primary);
@@ -580,6 +582,8 @@
   resize: vertical;
   min-height: 80px;
   transition: border 0.2s, box-shadow 0.2s;
+  background: var(--client-input-bg);
+  color: var(--client-text);
 }
 .client-form-textarea:focus {
   border-color: var(--client-primary);
@@ -592,7 +596,8 @@
   border-radius: var(--client-radius-sm);
   font-size: 0.95rem;
   outline: none;
-  background: white;
+  background: var(--client-input-bg);
+  color: var(--client-text);
   transition: border 0.2s;
   cursor: pointer;
 }
@@ -634,7 +639,7 @@
 .client-btn-success:hover { transform: translateY(-1px); }
 
 .client-tracking-card {
-  background: white;
+  background: var(--client-surface);
   border-radius: var(--client-radius);
   border: 1px solid var(--client-border);
   overflow: hidden;
@@ -651,7 +656,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--client-tracking-divider);
 }
 .client-tracking-id { font-weight: 700; font-size: 1rem; }
 .client-tracking-badge {
@@ -711,7 +716,7 @@
 
 .client-tracking-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--client-tracking-divider);
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -1,78 +1,241 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════
+   TUKI DESIGN TOKEN SYSTEM — Dark theme (default)
+   All structural colors are defined here as CSS custom properties.
+   [data-theme="light"] block below overrides them for light mode.
+   ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: #13131F;
-  --foreground: #ffffff;
+  /* ── Brand ──────────────────────────────────────────────── */
   --brand-primary: #F5C518;
-  --brand-accent: #F58A07;
-  --brand-dark: #E6A800;
-  /* App surfaces */
-  --surface-1: #1C1C2E;
-  --surface-2: #1E1E2E;
-  --surface-3: #252538;
-  /* Text */
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255,255,255,0.6);
-  --text-muted: rgba(255,255,255,0.35);
-  /* Borders */
+  --brand-accent:  #F58A07;
+  --brand-dark:    #E6A800;
+
+  /* ── Global surface colors (dark defaults) ──────────────── */
+  --background:  #13131F;
+  --foreground:  #ffffff;
+  --surface-1:   #1C1C2E;
+  --surface-2:   #1E1E2E;
+  --surface-3:   #252538;
+
+  /* ── Global text colors (dark) ─────────────────────────── */
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255,255,255,0.60);
+  --text-muted:     rgba(255,255,255,0.35);
+
+  /* ── Global borders (dark) ──────────────────────────────── */
   --border-subtle: rgba(255,255,255,0.07);
-  --border-gold: rgba(245,197,24,0.2);
-  /* Radius scale */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --border-strong: rgba(255,255,255,0.12);
+  --border-gold:   rgba(245,197,24,0.20);
+
+  /* ── Navigation bar ─────────────────────────────────────── */
+  --nav-bg:             #111827;
+  --nav-border:         rgba(255,255,255,0.07);
+  --nav-icon-inactive:  rgba(255,255,255,0.35);
+  --nav-tap-active:     rgba(255,255,255,0.06);
+
+  /* ── Screen header (DriverScreenLayout / ClientScreenLayout) */
+  --header-bg:     #1a1a2e;
+  --header-border: rgba(255,255,255,0.07);
+
+  /* ── Content area background ────────────────────────────── */
+  --content-bg: #111827;
+
+  /* ── Bottom sheet ──────────────────────────────────────── */
+  --sheet-bg:     #1a1a2e;
+  --sheet-handle: rgba(255,255,255,0.22);
+
+  /* ── Glass / frosted stat cards ─────────────────────────── */
+  --glass-card:        rgba(255,255,255,0.06);
+  --glass-card-hover:  rgba(255,255,255,0.10);
+  --glass-card-border: rgba(255,255,255,0.10);
+
+  /* ── Availability widget ─────────────────────────────────── */
+  --avail-bg:     rgba(255,255,255,0.06);
+  --avail-border: rgba(255,255,255,0.10);
+
+  /* ── Ghost icon-buttons (menu btn, header actions) ──────── */
+  --ghost-btn:       rgba(255,255,255,0.08);
+  --ghost-btn-hover: rgba(255,255,255,0.14);
+  --ghost-btn-color: rgba(255,255,255,0.82);
+
+  /* ── Floating map buttons ────────────────────────────────── */
+  --float-btn-bg:     rgba(10,14,26,0.82);
+  --float-btn-border: rgba(255,255,255,0.12);
+  --float-btn-color:  #e2e8f0;
+
+  /* ── Drawer / sidebar ────────────────────────────────────── */
+  --drawer-bg:     #1f2937;
+  --drawer-text:   #d1d5db;
+  --drawer-border: rgba(255,255,255,0.08);
+
+  /* ── Modal / popover ─────────────────────────────────────── */
+  --modal-bg:           #1f2937;
+  --modal-border:       rgba(255,255,255,0.10);
+  --modal-divider:      rgba(255,255,255,0.06);
+  --modal-action-active: rgba(255,255,255,0.05);
+
+  /* ── Form inputs ─────────────────────────────────────────── */
+  --input-bg:          #111827;
+  --input-border:      rgba(255,255,255,0.12);
+  --input-text:        #f1f5f9;
+  --input-placeholder: rgba(255,255,255,0.38);
+
+  /* ── Back-navigation button ─────────────────────────────── */
+  --back-btn-bg:    rgba(200,255,0,0.12);
+  --back-btn-color: #c8ff00;
+  --back-btn-hover: rgba(200,255,0,0.20);
+
+  /* ── Skeleton loader ────────────────────────────────────── */
+  --skeleton-from:    rgba(255,255,255,0.07);
+  --skeleton-through: rgba(255,255,255,0.13);
+
+  /* ── Generic divider ─────────────────────────────────────── */
+  --divider: rgba(255,255,255,0.06);
+
+  /* ── Client panel tokens (dark defaults) ────────────────── */
+  --client-bg:              #111827;
+  --client-surface:         #1f2937;
+  --client-text:            #f1f5f9;
+  --client-text-secondary:  #94a3b8;
+  --client-border:          rgba(255,255,255,0.08);
+  --client-input-bg:        #111827;
+  --client-header-bg:       #1a1a2e;
+  --client-header-border:   rgba(255,255,255,0.07);
+  --client-header-btn-bg:   rgba(255,255,255,0.08);
+  --client-header-btn-hover: rgba(255,255,255,0.14);
+  --client-header-btn-color: rgba(255,255,255,0.82);
+  --client-action-bar-bg:    #1f2937;
+  --client-action-bar-border: rgba(255,255,255,0.10);
+  --client-placeholder:      rgba(255,255,255,0.40);
+  --client-tracking-divider: rgba(255,255,255,0.06);
+  --client-close-btn:        rgba(255,255,255,0.10);
+  --client-close-color:      #d1d5db;
+  --client-close-active:     rgba(255,255,255,0.15);
+  --client-action-active:    rgba(255,255,255,0.05);
+
+  /* ── Radius scale ────────────────────────────────────────── */
+  --radius-xs:   6px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
   --radius-full: 9999px;
-  /* Safe-area insets (for iOS notch / home indicator) */
+
+  /* ── Safe-area insets ────────────────────────────────────── */
   --sat: env(safe-area-inset-top,    0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left,   0px);
   --sar: env(safe-area-inset-right,  0px);
 }
 
-/* ── Light theme overrides ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+   Applied when <html data-theme="light"> (set by useTheme hook)
+   ═══════════════════════════════════════════════════════════════════════ */
 [data-theme="light"] {
+  /* Global surfaces */
   --background: #f5f5f0;
   --foreground: #111827;
-  --surface-1: #ffffff;
-  --surface-2: #f9fafb;
-  --surface-3: #f0f0eb;
-  --text-primary: #111827;
-  --text-secondary: rgba(17,24,39,0.65);
-  --text-muted: rgba(17,24,39,0.38);
+  --surface-1:  #ffffff;
+  --surface-2:  #f9fafb;
+  --surface-3:  #f0f0eb;
+
+  /* Global text */
+  --text-primary:   #111827;
+  --text-secondary: rgba(17,24,39,0.62);
+  --text-muted:     rgba(17,24,39,0.38);
+
+  /* Global borders */
   --border-subtle: rgba(0,0,0,0.08);
-  --border-gold: rgba(245,197,24,0.35);
-}
+  --border-strong: rgba(0,0,0,0.12);
+  --border-gold:   rgba(245,197,24,0.35);
 
-[data-theme="light"] body {
-  background: var(--background);
-  color: var(--foreground);
-}
+  /* Navigation */
+  --nav-bg:            #ffffff;
+  --nav-border:        rgba(0,0,0,0.08);
+  --nav-icon-inactive: #9ca3af;
+  --nav-tap-active:    rgba(245,197,24,0.07);
 
-/* Tuki bottom nav — light mode */
-[data-theme="light"] .tuki-bottom-nav {
-  background: #ffffff;
-  border-top: 1px solid rgba(0,0,0,0.08);
-}
-[data-theme="light"] .tuki-bottom-nav-label {
-  color: #6b7280;
-}
-[data-theme="light"] .tuki-bottom-nav-icon {
-  color: #6b7280;
-}
-[data-theme="light"] .tuki-bottom-nav-item.active .tuki-bottom-nav-label,
-[data-theme="light"] .tuki-bottom-nav-item.active .tuki-bottom-nav-icon {
-  color: #F5C518;
-}
+  /* Screen headers */
+  --header-bg:     #ffffff;
+  --header-border: rgba(0,0,0,0.08);
 
-/* Tuki sheet — light mode */
-[data-theme="light"] .tuki-sheet {
-  background: #ffffff;
-  box-shadow: 0 -2px 20px rgba(0,0,0,0.10);
-}
-[data-theme="light"] .tuki-sheet-handle::before {
-  background: rgba(0,0,0,0.18);
+  /* Content */
+  --content-bg: #f5f5f0;
+
+  /* Bottom sheet */
+  --sheet-bg:     #ffffff;
+  --sheet-handle: rgba(0,0,0,0.14);
+
+  /* Glass cards (become solid white in light) */
+  --glass-card:        #ffffff;
+  --glass-card-hover:  #f9fafb;
+  --glass-card-border: rgba(0,0,0,0.08);
+
+  /* Availability widget */
+  --avail-bg:     rgba(0,0,0,0.03);
+  --avail-border: rgba(0,0,0,0.08);
+
+  /* Ghost buttons */
+  --ghost-btn:       #f1f5f9;
+  --ghost-btn-hover: #e2e8f0;
+  --ghost-btn-color: #374151;
+
+  /* Floating map buttons */
+  --float-btn-bg:     rgba(255,255,255,0.92);
+  --float-btn-border: rgba(0,0,0,0.10);
+  --float-btn-color:  #374151;
+
+  /* Drawer */
+  --drawer-bg:     #ffffff;
+  --drawer-text:   #374151;
+  --drawer-border: #e5e7eb;
+
+  /* Modals */
+  --modal-bg:            #ffffff;
+  --modal-border:        #e5e7eb;
+  --modal-divider:       #f0f0f0;
+  --modal-action-active: #fafafa;
+
+  /* Inputs */
+  --input-bg:          #ffffff;
+  --input-border:      #e5e7eb;
+  --input-text:        #111827;
+  --input-placeholder: #9ca3af;
+
+  /* Back button (warm amber instead of lime) */
+  --back-btn-bg:    rgba(245,197,24,0.12);
+  --back-btn-color: #b45309;
+  --back-btn-hover: rgba(245,197,24,0.22);
+
+  /* Skeleton */
+  --skeleton-from:    rgba(0,0,0,0.04);
+  --skeleton-through: rgba(0,0,0,0.08);
+
+  /* Divider */
+  --divider: #f3f4f6;
+
+  /* Client panel — light values */
+  --client-bg:              #f8f9fc;
+  --client-surface:         #ffffff;
+  --client-text:            #1f2937;
+  --client-text-secondary:  #6b7280;
+  --client-border:          #e5e7eb;
+  --client-input-bg:        #ffffff;
+  --client-header-bg:       #ffffff;
+  --client-header-border:   rgba(0,0,0,0.07);
+  --client-header-btn-bg:   #f1f5f9;
+  --client-header-btn-hover: #e2e8f0;
+  --client-header-btn-color: #1e293b;
+  --client-action-bar-bg:   #ffffff;
+  --client-action-bar-border: #e5e7eb;
+  --client-placeholder:     #9ca3af;
+  --client-tracking-divider: #f3f4f6;
+  --client-close-btn:       #f3f4f6;
+  --client-close-color:     #374151;
+  --client-close-active:    #e5e7eb;
+  --client-action-active:   #fafafa;
 }
 
 @theme inline {
@@ -80,13 +243,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #13131F;
-    --foreground: #ffffff;
-  }
 }
 
 /* ── Prevent overscroll / rubber-band on iOS (native-like) ─────────────── */
