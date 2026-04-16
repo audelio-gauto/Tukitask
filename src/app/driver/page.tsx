@@ -406,6 +406,10 @@ export default function DriverDashboard() {
 
   const feedVisible = available && !walletBlocked && activeOrderCount === 0 && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
 
+  // Aviso GPS: si hay pedidos pendientes pero sin posición, mostrar badge
+  const gpsNeeded = !driverPos && available && !walletBlocked && activeOrderCount === 0 &&
+    pendingOrders.some(o => o.pickup_lat != null);
+
   // Pre-filter orders by service type preferences before passing to feed
   const VEHICLE_FILTER_MAP: Record<string, string> = {
     moto: 'moto_envios',
@@ -420,23 +424,26 @@ export default function DriverDashboard() {
       if (key && serviceFilters[key] === false) return false;
 
       // ── Filtro 2: rango de recogida y entrega ───────────────────────────
-      // Solo filtrar si ya tenemos posición GPS. Si no hay GPS, mostrar todo
-      // para no bloquear al conductor que no dio permisos de ubicación aún.
-      if (driverPos) {
-        const dLat = driverPos.lat;
-        const dLng = driverPos.lng;
+      // Sin GPS: no mostrar ninguna solicitud con coordenadas (rango no calculable)
+      if (!driverPos) {
+        // Solo mostrar pedidos que no tienen coordenadas de recogida (raro, pero seguro)
+        if (o.pickup_lat != null && o.pickup_lng != null) return false;
+        return true;
+      }
 
-        // Rango de recogida: distancia del conductor al punto A
-        if (o.pickup_lat != null && o.pickup_lng != null) {
-          const distPickup = haversineKm(dLat, dLng, Number(o.pickup_lat), Number(o.pickup_lng));
-          if (distPickup > pickupRangeKm) return false;
-        }
+      const dLat = driverPos.lat;
+      const dLng = driverPos.lng;
 
-        // Rango de entrega: distancia del conductor al punto B
-        if (o.delivery_lat != null && o.delivery_lng != null) {
-          const distDelivery = haversineKm(dLat, dLng, Number(o.delivery_lat), Number(o.delivery_lng));
-          if (distDelivery > deliveryRangeKm) return false;
-        }
+      // Rango de recogida: distancia del conductor al punto A
+      if (o.pickup_lat != null && o.pickup_lng != null) {
+        const distPickup = haversineKm(dLat, dLng, Number(o.pickup_lat), Number(o.pickup_lng));
+        if (distPickup > pickupRangeKm) return false;
+      }
+
+      // Rango de entrega: distancia del conductor al punto B
+      if (o.delivery_lat != null && o.delivery_lng != null) {
+        const distDelivery = haversineKm(dLat, dLng, Number(o.delivery_lat), Number(o.delivery_lng));
+        if (distDelivery > deliveryRangeKm) return false;
       }
 
       return true;
@@ -679,6 +686,15 @@ export default function DriverDashboard() {
       )}
 
       {/* ── Solicitudes overlay (floating over map) ── */}
+      {gpsNeeded && (
+        <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: '#1e293b', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.4rem' }}>📍</span>
+          <div>
+            <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de recogida ({pickupRangeKm} km) y entrega ({deliveryRangeKm} km) requieren tu ubicación</div>
+          </div>
+        </div>
+      )}
       <RequestsFeed
         mode="driver"
         available={available}

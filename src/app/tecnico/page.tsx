@@ -468,14 +468,20 @@ export default function TecnicoDashboard() {
   ];
 
   // ── Filtrar por rango de trabajo ─────────────────────────────────────────
-  // Solo muestra trabajos cuya ubicación del cliente esté dentro de rangoKm.
-  // Si no hay GPS aún, se muestran todos para no bloquear al técnico.
+  // Sin GPS: no mostrar trabajos con coordenadas (rango no calculable)
   const filteredJobs = pendingJobs.filter(j => {
-    if (!driverPos) return true;
+    if (!driverPos) {
+      // Si el trabajo tiene coordenadas, no pueden mostrarse sin GPS
+      if (j.lat != null && j.lng != null) return false;
+      return true;
+    }
     if (j.lat == null || j.lng == null) return true;
     const dist = haversineKm(driverPos.lat, driverPos.lng, Number(j.lat), Number(j.lng));
     return dist <= rangoKm;
   });
+
+  const gpsNeeded = !driverPos && available && !walletBlocked &&
+    pendingJobs.some(j => j.lat != null);
 
   const feedVisible = available && !walletBlocked && filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
 
@@ -624,6 +630,16 @@ export default function TecnicoDashboard() {
         </>
       )}
 
+      {/* ── Aviso GPS ── */}
+      {gpsNeeded && (
+        <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: '#1e293b', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.4rem' }}>📍</span>
+          <div>
+            <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de trabajo ({rangoKm} km) requiere tu ubicación</div>
+          </div>
+        </div>
+      )}
       {/* ── Solicitudes overlay (floating over map) ── */}
       <RequestsFeed
         mode="tecnico"
@@ -645,7 +661,11 @@ export default function TecnicoDashboard() {
         }))}
         dismissed={dismissedHome}
         onAccept={sendTecnicoOffer}
-        onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+        onDismiss={(id) => {
+          setDismissedHome(prev => new Set([...prev, id]));
+          // Registrar en matching stats (fire-and-forget)
+          authFetch('/api/driver-match/dismiss', { method: 'POST' }).catch(() => {});
+        }}
         sendingId={sendingJobId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}
