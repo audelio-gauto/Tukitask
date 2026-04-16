@@ -300,9 +300,6 @@ export default function RutaPage() {
       if (u.en_route) {
         const dest = u.delivery || u.job_dest;
         if (dest) {
-          const start: [number, number] = [u.lat, u.lng];
-          const end: [number, number] = [dest.lat, dest.lng];
-
           // Pin A (origin)
           if (u.pickup) {
             const pinA = L.divIcon({
@@ -332,13 +329,68 @@ export default function RutaPage() {
             html: `<div style="background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">B</div>`,
             iconSize: [24, 24], iconAnchor: [12, 24],
           });
-          linesRef.current.push(L.marker(end, { icon: pinB }).addTo(map));
+          linesRef.current.push(L.marker([dest.lat, dest.lng], { icon: pinB }).addTo(map));
 
-          // Dashed line
-          const line = L.polyline([start, end], {
-            color, weight: 2, dashArray: '6 4', opacity: 0.8,
-          }).addTo(map);
-          linesRef.current.push(line);
+          // Real road route: driver → pending stops → destination
+          const routeWaypoints: Array<{ lat: number; lng: number }> = [
+            { lat: u.lat, lng: u.lng },
+            ...pendingStops.map(s => ({ lat: s.lat, lng: s.lng })),
+            { lat: dest.lat, lng: dest.lng },
+          ];
+
+          // Fetch real road segments asynchronously (same pattern as client tracking)
+          ;(async () => {
+            try {
+              const token = await getToken();
+              const segmentCoords: Array<[number, number]> = [];
+              let apiSuccess = false;
+
+              for (let i = 0; i < routeWaypoints.length - 1; i++) {
+                try {
+                  const r = await fetch('/api/maps/directions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ from: routeWaypoints[i], to: routeWaypoints[i + 1] }),
+                  });
+                  if (!r.ok) throw new Error('segment failed');
+                  const json = await r.json();
+                  if (json?.coords?.length > 1) {
+                    const pts: Array<[number, number]> = json.coords.map((c: { lat: number; lng: number }) => [c.lat, c.lng] as [number, number]);
+                    if (segmentCoords.length > 0) pts.shift(); // avoid duplicate junction point
+                    segmentCoords.push(...pts);
+                    apiSuccess = true;
+                  } else {
+                    if (segmentCoords.length === 0) segmentCoords.push([routeWaypoints[i].lat, routeWaypoints[i].lng]);
+                    segmentCoords.push([routeWaypoints[i + 1].lat, routeWaypoints[i + 1].lng]);
+                  }
+                } catch {
+                  if (segmentCoords.length === 0) segmentCoords.push([routeWaypoints[i].lat, routeWaypoints[i].lng]);
+                  segmentCoords.push([routeWaypoints[i + 1].lat, routeWaypoints[i + 1].lng]);
+                }
+              }
+
+              if (segmentCoords.length > 1 && mapInst.current) {
+                const polyline = L.polyline(segmentCoords, {
+                  color,
+                  weight: apiSuccess ? 4 : 2,
+                  opacity: apiSuccess ? 0.85 : 0.7,
+                  dashArray: apiSuccess ? undefined : '6 4',
+                  lineJoin: 'round',
+                  lineCap: 'round',
+                }).addTo(mapInst.current);
+                linesRef.current.push(polyline);
+              }
+            } catch {
+              // Fallback: straight dashed line if fetch fails
+              if (mapInst.current) {
+                const fallback = L.polyline(
+                  routeWaypoints.map(w => [w.lat, w.lng] as [number, number]),
+                  { color, weight: 2, dashArray: '6 4', opacity: 0.7 }
+                ).addTo(mapInst.current);
+                linesRef.current.push(fallback);
+              }
+            }
+          })();
         }
       }
     });
@@ -347,7 +399,7 @@ export default function RutaPage() {
     markersRef.current.forEach((m, id) => {
       if (!seen.has(id)) { map.removeLayer(m); markersRef.current.delete(id); }
     });
-  }, []);
+  }, [getToken]);
 
   // ── Polling ─────────────────────────────────────────────────────────────────
 
