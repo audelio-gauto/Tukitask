@@ -421,45 +421,98 @@ export default function SeguimientoPage() {
           .bindPopup(`<b>${name}</b>`);
       }
 
-      // ── Route: real roads via /api/maps/directions, fallback straight line ──
+      // ── Route: optimized multi-stop via /api/maps/directions segments ──
       if (destLat != null && destLng != null) {
         const nDestLat = Number(destLat);
         const nDestLng = Number(destLng);
-        const routeKey = `${dLat.toFixed(4)},${dLng.toFixed(4)}->${nDestLat.toFixed(4)},${nDestLng.toFixed(4)}`;
+
+        // Build ordered waypoints: driver → pending stops (by sequence) → final destination
+        const pendingStops = order.order_stops
+          ? [...order.order_stops]
+              .filter(s => s.status !== 'delivered' && s.lat != null && s.lng != null)
+              .sort((a, b) => a.sequence - b.sequence)
+          : [];
+
+        const waypoints: Array<{ lat: number; lng: number }> = [
+          { lat: dLat, lng: dLng },
+          ...pendingStops.map(s => ({ lat: Number(s.lat), lng: Number(s.lng) })),
+          { lat: nDestLat, lng: nDestLng },
+        ];
+
+        // Route key: driver position (low-res) + stop statuses + dest
+        const routeKey = waypoints.map(w => `${w.lat.toFixed(3)},${w.lng.toFixed(3)}`).join('|');
         if (routeKey !== lastRouteKey.current) {
           lastRouteKey.current = routeKey;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          getToken().then(token => fetch('/api/maps/directions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ from: { lat: dLat, lng: dLng }, to: { lat: nDestLat, lng: nDestLng } }),
-          })).then(r => r.ok ? r.json() : null).then((json: any) => {
+
+          getToken().then(async token => {
+            // Fetch each segment in sequence, collect all coord arrays
+            const segmentCoords: Array<[number, number]> = [];
+            let totalDurationSec = 0;
+            let totalDistanceM = 0;
+            let apiSuccess = false;
+
+            for (let i = 0; i < waypoints.length - 1; i++) {
+              try {
+                const r = await fetch('/api/maps/directions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ from: waypoints[i], to: waypoints[i + 1] }),
+                });
+                if (!r.ok) throw new Error('segment failed');
+                const json = await r.json();
+                if (json?.coords?.length > 1) {
+                  // Avoid duplicating the junction point between segments
+                  const pts: Array<[number, number]> = json.coords.map((c: { lat: number; lng: number }) => [Number(c.lat), Number(c.lng)] as [number, number]);
+                  if (segmentCoords.length > 0) pts.shift(); // remove overlap
+                  segmentCoords.push(...pts);
+                  if (json.duration_seconds) totalDurationSec += Number(json.duration_seconds);
+                  if (json.distance_meters) totalDistanceM += Number(json.distance_meters);
+                  apiSuccess = true;
+                } else {
+                  // Straight line segment fallback
+                  if (segmentCoords.length > 0) {
+                    segmentCoords.push([waypoints[i + 1].lat, waypoints[i + 1].lng]);
+                  } else {
+                    segmentCoords.push([waypoints[i].lat, waypoints[i].lng]);
+                    segmentCoords.push([waypoints[i + 1].lat, waypoints[i + 1].lng]);
+                  }
+                }
+              } catch {
+                // Straight line segment on error
+                if (segmentCoords.length > 0) {
+                  segmentCoords.push([waypoints[i + 1].lat, waypoints[i + 1].lng]);
+                } else {
+                  segmentCoords.push([waypoints[i].lat, waypoints[i].lng]);
+                  segmentCoords.push([waypoints[i + 1].lat, waypoints[i + 1].lng]);
+                }
+              }
+            }
+
+            // Draw combined polyline
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
-            if (json?.coords?.length > 1) {
-              routeLineRef.current = L.polyline(
-                json.coords.map((c: { lat: number; lng: number }) => [Number(c.lat), Number(c.lng)] as [number, number]),
-                { color, weight: 4, opacity: 0.85, lineJoin: 'round', lineCap: 'round' }
-              ).addTo(map);
-              if (json.duration_seconds) {
-                const etaMin = Math.max(1, Math.round(Number(json.duration_seconds) / 60));
-                const distKm = json.distance_meters ? Number(json.distance_meters) / 1000 : haversineKm(dLat, dLng, nDestLat, nDestLng);
-                etaFromApiRef.current = true;
-                setEta({ distKm, etaMin, fromApi: true });
-              }
-            } else {
-              routeLineRef.current = L.polyline(
-                [[dLat, dLng], [nDestLat, nDestLng]],
-                { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
-              ).addTo(map);
-              if (!etaFromApiRef.current) {
-                const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
-                setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
-              }
+            if (segmentCoords.length > 1) {
+              routeLineRef.current = L.polyline(segmentCoords, {
+                color, weight: apiSuccess ? 4 : 2.5,
+                opacity: apiSuccess ? 0.88 : 0.7,
+                dashArray: apiSuccess ? undefined : '8 5',
+                lineJoin: 'round', lineCap: 'round',
+              }).addTo(map);
+            }
+
+            // ETA = total across all segments (driver → next undelivered stop)
+            if (apiSuccess && totalDurationSec > 0) {
+              const etaMin = Math.max(1, Math.round(totalDurationSec / 60));
+              const distKm = totalDistanceM > 0 ? totalDistanceM / 1000 : haversineKm(dLat, dLng, nDestLat, nDestLng);
+              etaFromApiRef.current = true;
+              setEta({ distKm, etaMin, fromApi: true });
+            } else if (!etaFromApiRef.current) {
+              const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
+              setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
             }
           }).catch(() => {
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             routeLineRef.current = L.polyline(
-              [[dLat, dLng], [nDestLat, nDestLng]],
+              waypoints.map(w => [w.lat, w.lng] as [number, number]),
               { color, weight: 2.5, dashArray: '8 5', opacity: 0.75 }
             ).addTo(map);
             if (!etaFromApiRef.current) {
