@@ -25,6 +25,7 @@ interface Order {
   tip_amount: number | null;
   created_at: string;
   completed_at: string | null;
+  order_stops?: Array<{ sequence: number; address: string; status?: string; fail_reason?: string | null }> | null;
 }
 
 interface Job {
@@ -83,6 +84,7 @@ export default function ClienteHistorialPage() {
     reportedName: string | null; referenceType: 'order' | 'job'; referenceId: string;
   } | null>(null);
   const [chatModal, setChatModal] = useState<{ orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null } | null>(null);
+  const [orderStopsOpen, setOrderStopsOpen] = useState<Record<string, boolean>>({});
 
   const loadHistory = useCallback(async () => {
     if (!email) return;
@@ -296,7 +298,7 @@ export default function ClienteHistorialPage() {
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
-                      {/* Route A → B */}
+                      {/* Route A → stops → B — active order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
                         <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -310,6 +312,32 @@ export default function ClienteHistorialPage() {
                                 <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>Punto A</div>
                                 <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).pickup_address || '—'}</div>
                               </div>
+                              {(item.data as Order).order_stops && (item.data as Order).order_stops!.length > 0 && (
+                                <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
+                                  <button onClick={() => setOrderStopsOpen(p => ({ ...p, [item.data.id]: !p[item.data.id] }))}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.1)', padding: '4px 8px', cursor: 'pointer', border: 'none' }}>
+                                    <span style={{ fontSize: '0.72rem' }}>📦</span>
+                                    <span style={{ flex: 1, fontSize: '0.7rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{(item.data as Order).order_stops!.length} paradas</span>
+                                    <span style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 700 }}>{orderStopsOpen[item.data.id] ? '▲' : '▼'}</span>
+                                  </button>
+                                  {orderStopsOpen[item.data.id] && (
+                                    <div style={{ maxHeight: 160, overflowY: 'auto', padding: '4px 8px 6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      {[...(item.data as Order).order_stops!].sort((a, b) => a.sequence - b.sequence).map((s, si) => {
+                                        const done = s.status === 'delivered'; const fail = s.status === 'failed';
+                                        return (
+                                          <div key={si} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                            <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: done ? 'rgba(34,197,94,0.2)' : fail ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)', border: `1px solid ${done ? '#22c55e' : fail ? '#ef4444' : 'rgba(245,158,11,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: done ? '#22c55e' : fail ? '#ef4444' : '#fbbf24', marginTop: 1 }}>{done ? '✓' : fail ? '✗' : s.sequence}</div>
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontSize: '0.71rem', color: done ? '#4ade80' : fail ? '#f87171' : '#fde68a', wordBreak: 'break-word', lineHeight: 1.3 }}>{s.address}</div>
+                                              {fail && s.fail_reason && <div style={{ fontSize: '0.63rem', color: '#fca5a5', marginTop: 1 }}>⚠️ {s.fail_reason}</div>}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <div>
                                 <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>Punto B</div>
                                 <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).delivery_address || '—'}</div>
@@ -402,7 +430,7 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
-                      {/* Route A → B */}
+                      {/* Route A → stops → B — completed order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
                         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -416,6 +444,44 @@ export default function ClienteHistorialPage() {
                                 <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
                                 <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).pickup_address || '—'}</div>
                               </div>
+                              {(item.data as Order).order_stops && (item.data as Order).order_stops!.length > 0 && (
+                                <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
+                                  <button onClick={() => setOrderStopsOpen(p => ({ ...p, [item.data.id]: !p[item.data.id] }))}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.08)', padding: '4px 8px', cursor: 'pointer', border: 'none' }}>
+                                    <span style={{ fontSize: '0.7rem' }}>📦</span>
+                                    <span style={{ flex: 1, fontSize: '0.68rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{(item.data as Order).order_stops!.length} paradas de entrega</span>
+                                    <span style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700 }}>{orderStopsOpen[item.data.id] ? '▲' : '▼ ver todas'}</span>
+                                  </button>
+                                  {orderStopsOpen[item.data.id] && (
+                                    <div style={{ maxHeight: 200, overflowY: 'auto', padding: '5px 8px 7px', display: 'flex', flexDirection: 'column', gap: 5, WebkitOverflowScrolling: 'touch' as never }}>
+                                      {[...(item.data as Order).order_stops!].sort((a, b) => a.sequence - b.sequence).map((s, si) => {
+                                        const done = s.status === 'delivered'; const fail = s.status === 'failed';
+                                        return (
+                                          <div key={si} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                            <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', background: done ? 'rgba(34,197,94,0.2)' : fail ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)', border: `1px solid ${done ? '#22c55e' : fail ? '#ef4444' : 'rgba(245,158,11,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: done ? '#22c55e' : fail ? '#ef4444' : '#fbbf24', marginTop: 1 }}>{done ? '✓' : fail ? '✗' : s.sequence}</div>
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontSize: '0.73rem', color: done ? '#4ade80' : fail ? '#f87171' : '#fde68a', wordBreak: 'break-word', lineHeight: 1.35, fontWeight: done || fail ? 600 : 400 }}>{s.address}</div>
+                                              {done && <div style={{ fontSize: '0.6rem', color: '#4ade80', marginTop: 1, fontWeight: 700 }}>✓ Entregado</div>}
+                                              {fail && <div style={{ fontSize: '0.6rem', color: '#f87171', marginTop: 1, fontWeight: 700 }}>✗ Fallido{s.fail_reason ? ` — ${s.fail_reason}` : ''}</div>}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                      {/* Summary counts */}
+                                      {(() => {
+                                        const deliveredCount = (item.data as Order).order_stops!.filter(s => s.status === 'delivered').length;
+                                        const failedCount = (item.data as Order).order_stops!.filter(s => s.status === 'failed').length;
+                                        return deliveredCount > 0 || failedCount > 0 ? (
+                                          <div style={{ display: 'flex', gap: 10, fontSize: '0.65rem', paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 2 }}>
+                                            {deliveredCount > 0 && <span style={{ color: '#4ade80', fontWeight: 700 }}>✓ {deliveredCount} entregada{deliveredCount !== 1 ? 's' : ''}</span>}
+                                            {failedCount > 0 && <span style={{ color: '#f87171', fontWeight: 700 }}>✗ {failedCount} fallida{failedCount !== 1 ? 's' : ''}</span>}
+                                          </div>
+                                        ) : null;
+                                      })()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <div>
                                 <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
                                 <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).delivery_address || '—'}</div>
