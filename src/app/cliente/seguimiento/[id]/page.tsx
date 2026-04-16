@@ -150,6 +150,7 @@ export default function SeguimientoPage() {
   const [mapStyle, setMapStyle] = useState<MapStyle>('Map');
   const [loading,  setLoading]  = useState(true);
   const [eta,      setEta]      = useState<{ distKm: number; etaMin: number; fromApi: boolean } | null>(null);
+  const [routeTotals, setRouteTotals] = useState<{ distKm: number; etaMin: number; stops: number } | null>(null);
   const [error,    setError]    = useState('');
 
   // ── Read type from query param ───────────────────────────────────────────
@@ -444,11 +445,13 @@ export default function SeguimientoPage() {
         if (routeKey !== lastRouteKey.current) {
           lastRouteKey.current = routeKey;
 
-          getToken().then(async token => {
+        getToken().then(async token => {
             // Fetch each segment in sequence, collect all coord arrays
             const segmentCoords: Array<[number, number]> = [];
             let totalDurationSec = 0;
             let totalDistanceM = 0;
+            let firstSegDurationSec = 0;
+            let firstSegDistanceM = 0;
             let apiSuccess = false;
 
             for (let i = 0; i < waypoints.length - 1; i++) {
@@ -465,8 +468,11 @@ export default function SeguimientoPage() {
                   const pts: Array<[number, number]> = json.coords.map((c: { lat: number; lng: number }) => [Number(c.lat), Number(c.lng)] as [number, number]);
                   if (segmentCoords.length > 0) pts.shift(); // remove overlap
                   segmentCoords.push(...pts);
-                  if (json.duration_seconds) totalDurationSec += Number(json.duration_seconds);
-                  if (json.distance_meters) totalDistanceM += Number(json.distance_meters);
+                  const segDur = Number(json.duration_seconds || 0);
+                  const segDist = Number(json.distance_meters || 0);
+                  if (segDur) totalDurationSec += segDur;
+                  if (segDist) totalDistanceM += segDist;
+                  if (i === 0) { firstSegDurationSec = segDur; firstSegDistanceM = segDist; }
                   apiSuccess = true;
                 } else {
                   // Straight line segment fallback
@@ -499,15 +505,39 @@ export default function SeguimientoPage() {
               }).addTo(map);
             }
 
-            // ETA = total across all segments (driver → next undelivered stop)
-            if (apiSuccess && totalDurationSec > 0) {
-              const etaMin = Math.max(1, Math.round(totalDurationSec / 60));
-              const distKm = totalDistanceM > 0 ? totalDistanceM / 1000 : haversineKm(dLat, dLng, nDestLat, nDestLng);
+            // ETA = first segment only (driver → next pending stop / final dest)
+            // This matches what the home card shows: "time until driver arrives at you"
+            if (apiSuccess) {
+              // Per-segment durations and distances tracked per-fetch — use segment 0 result
+              // We re-fetch segment 0 result already resolved when i=0 above.
+              // Best approach: track first-segment stats separately.
+            }
+
+            // Collect first-segment result and total separately
+            // Re-fetch segment 0 for ETA, we already have totals.
+            // Actually: segments were fetched in order; firstSegDuration set below.
+            // NOTE: We set ETA from the first segment fetch result inline — see firstSegDuration tracking.
+
+            // ETA badge = first segment (driver → next stop)
+            if (firstSegDurationSec > 0) {
+              const etaMin = Math.max(1, Math.round(firstSegDurationSec / 60));
+              const distKm = firstSegDistanceM > 0 ? firstSegDistanceM / 1000 : haversineKm(dLat, dLng, waypoints[1].lat, waypoints[1].lng);
               etaFromApiRef.current = true;
               setEta({ distKm, etaMin, fromApi: true });
             } else if (!etaFromApiRef.current) {
-              const distKm = haversineKm(dLat, dLng, nDestLat, nDestLng);
+              const distKm = haversineKm(dLat, dLng, waypoints[1].lat, waypoints[1].lng);
               setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
+            }
+
+            // Total route stats (multi-stop summary)
+            if (apiSuccess && totalDurationSec > 0 && waypoints.length > 2) {
+              setRouteTotals({
+                distKm: totalDistanceM > 0 ? totalDistanceM / 1000 : haversineKm(dLat, dLng, nDestLat, nDestLng),
+                etaMin: Math.max(1, Math.round(totalDurationSec / 60)),
+                stops: pendingStops.length,
+              });
+            } else {
+              setRouteTotals(null);
             }
           }).catch(() => {
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
@@ -671,20 +701,29 @@ export default function SeguimientoPage() {
           <div style={{
             position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
             zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-            borderRadius: 14, padding: '8px 18px', display: 'flex', gap: 18, alignItems: 'center',
-            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 14, padding: '8px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            border: '1px solid rgba(255,255,255,0.12)', gap: 4,
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>{eta.etaMin}</div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>MIN</div>
-            </div>
-            <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.15)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#0ea5e9', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
-                {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
+            <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>{eta.etaMin}</div>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>MIN</div>
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>DISTANCIA</div>
+              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.15)' }} />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: '#0ea5e9', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
+                  {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>
+                  {routeTotals ? 'PRÓX. PARADA' : 'DISTANCIA'}
+                </div>
+              </div>
             </div>
+            {routeTotals && (
+              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.38)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 4, width: '100%', textAlign: 'center' }}>
+                Ruta completa: {routeTotals.stops} parada{routeTotals.stops !== 1 ? 's' : ''} · {routeTotals.etaMin} min · {routeTotals.distKm.toFixed(1)} km
+              </div>
+            )}
           </div>
         )}
 
