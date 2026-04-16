@@ -16,6 +16,7 @@ interface OrderRow {
   origin?: string;
   destination?: string;
   id?: string;
+  order_stops?: Array<{ sequence: number; address: string }> | null;
 }
 
 function orderPrice(o: OrderRow) {
@@ -55,6 +56,7 @@ export default function GananciasPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [stopsOpen, setStopsOpen] = useState<Record<string, boolean>>({});
 
   const handleExportPDF = () => {
     window.print();
@@ -271,6 +273,24 @@ export default function GananciasPage() {
                     <div style={{ fontSize: '0.82rem', color: '#d1d5db', fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.origin || 'Origen'} → {o.destination || 'Destino'}
                     </div>
+                    {o.order_stops && o.order_stops.length > 0 && (
+                      <div style={{ marginTop: 3, marginBottom: 2 }}>
+                        <button
+                          onClick={() => setStopsOpen(prev => ({ ...prev, [o.id!]: !prev[o.id!] }))}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+                        >
+                          <span style={{ fontSize: '0.67rem', fontWeight: 800, color: '#fbbf24' }}>+{o.order_stops.length} paradas</span>
+                          <span style={{ fontSize: '0.72rem', display: 'inline-block', transform: stopsOpen[o.id!] ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>⬇️</span>
+                        </button>
+                        {stopsOpen[o.id!] && [
+                          ...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => (
+                          <div key={si} style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2 }}>
+                            <span style={{ fontSize: '0.63rem', fontWeight: 800, color: '#f59e0b', minWidth: 18 }}>P{s.sequence}</span>
+                            <span style={{ fontSize: '0.68rem', color: '#fde68a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.address}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmtDate(o.created_at)}</div>
                     <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#10b981', marginTop: 2 }}>{STATUS_HUMAN[o.status] ?? o.status}</div>
                   </div>

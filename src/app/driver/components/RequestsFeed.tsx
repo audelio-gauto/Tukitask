@@ -115,6 +115,7 @@ export default function RequestsFeed({
   const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
   const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
   const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
+  const [stopsOpen, setStopsOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 1000);
@@ -206,14 +207,22 @@ export default function RequestsFeed({
                   </div>
                 )}
                 {item.stops && item.stops.length > 0 && (
-                  [...item.stops]
-                    .sort((a, b) => a.sequence - b.sequence)
-                    .map((s, i) => (
+                  <>
+                    <button
+                      onClick={() => setStopsOpen(o => ({ ...o, [item.id]: !o[item.id] }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '3px 9px', cursor: 'pointer', width: 'fit-content' }}
+                    >
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24' }}>+{item.stops.length} paradas</span>
+                      <span style={{ fontSize: '0.8rem', transition: 'transform 0.2s', display: 'inline-block', transform: stopsOpen[item.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}>⬇️</span>
+                    </button>
+                    {stopsOpen[item.id] && [
+                      ...item.stops].sort((a, b) => a.sequence - b.sequence).map((s, i) => (
                       <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <span style={{ color: '#f59e0b', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, minWidth: 16, textAlign: 'center' }}>P{s.sequence}</span>
+                        <span style={{ color: '#f59e0b', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, minWidth: 18, textAlign: 'center' }}>P{s.sequence}</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: '#fde68a' }}>{s.address}</span>
                       </div>
-                    ))
+                    ))}
+                  </>
                 )}
                 {item.to && (
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
