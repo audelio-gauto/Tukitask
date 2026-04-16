@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const CARD_TIMER = 100;
 function getRemaining(createdAt: string): number {
@@ -120,6 +120,79 @@ export default function RequestsFeed({
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(iv);
+  }, []);
+
+  // ── Sound: motivating chime (C5→E5→G5 xylophone arpeggio) ─────────────────
+  const audioCtxRef  = useRef<AudioContext | null>(null);
+  const soundIvRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevIdsRef   = useRef<Set<string>>(new Set());
+  const itemsRef     = useRef(items);
+  const dismissedRef = useRef(dismissed);
+  itemsRef.current     = items;
+  dismissedRef.current = dismissed;
+
+  const playChime = () => {
+    try {
+      if (!audioCtxRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      // C5=523Hz, E5=659Hz, G5=784Hz — ascending major arpeggio = positive, motivating
+      ([[523.25, 0], [659.25, 0.18], [783.99, 0.36]] as const).forEach(([freq, delay]) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + delay;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.16, t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+        osc.start(t);
+        osc.stop(t + 1.1);
+      });
+    } catch { /* browser blocked audio — silently skip */ }
+  };
+
+  useEffect(() => {
+    const visibleLive = items.filter(i => !dismissed.has(i.id));
+    const hasNew = visibleLive.some(i => !prevIdsRef.current.has(i.id));
+    prevIdsRef.current = new Set(items.map(i => i.id));
+
+    if (hasNew && visibleLive.length > 0) {
+      // Play immediately on new request
+      playChime();
+      // Clear any existing interval and start fresh
+      if (soundIvRef.current) clearInterval(soundIvRef.current);
+      soundIvRef.current = setInterval(() => {
+        // Re-check freshness inside interval using refs (avoid stale closure)
+        const stillAlive = itemsRef.current.filter(
+          i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0
+        );
+        if (stillAlive.length > 0) {
+          playChime();
+        } else {
+          clearInterval(soundIvRef.current!);
+          soundIvRef.current = null;
+        }
+      }, 7000);
+    }
+
+    // Stop immediately when all items gone
+    if (visibleLive.length === 0 && soundIvRef.current) {
+      clearInterval(soundIvRef.current);
+      soundIvRef.current = null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, dismissed]);
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    if (soundIvRef.current) clearInterval(soundIvRef.current);
+    audioCtxRef.current?.close();
   }, []);
 
   const visible = items.filter(i => !dismissed.has(i.id));
