@@ -452,6 +452,9 @@ export default function DriverDashboard() {
       dateScheduled: o.date_scheduled ?? null,
       shoppingList: o.shopping_list ?? null,
       maxBudget: o.max_budget ?? null,
+      stops: Array.isArray(o.order_stops) && o.order_stops.length > 0
+        ? o.order_stops.map((s: any) => ({ sequence: s.sequence, address: s.address }))
+        : null,
     }));
 
   return (

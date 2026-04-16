@@ -84,6 +84,8 @@ export type FeedItem = {
   shoppingList?: string | null;
   /** Max budget in Gs for mandadito orders */
   maxBudget?: number | null;
+  /** Multi-stop intermediate stops */
+  stops?: Array<{ sequence: number; address: string }> | null;
 };
 
 type Props = {
@@ -202,6 +204,16 @@ export default function RequestsFeed({
                     <span style={{ color: '#10b981', flexShrink: 0 }}>🟢</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.from}</span>
                   </div>
+                )}
+                {item.stops && item.stops.length > 0 && (
+                  [...item.stops]
+                    .sort((a, b) => a.sequence - b.sequence)
+                    .map((s, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <span style={{ color: '#f59e0b', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, minWidth: 16, textAlign: 'center' }}>P{s.sequence}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: '#fde68a' }}>{s.address}</span>
+                      </div>
+                    ))
                 )}
                 {item.to && (
                   <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
