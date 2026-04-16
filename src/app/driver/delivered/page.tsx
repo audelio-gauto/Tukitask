@@ -130,28 +130,65 @@ export default function DeliveredPage() {
             <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem' }}>₲{price}</div>
           </div>
 
-          {/* Addresses A → B */}
-          {(order.pickup_address || order.delivery_address) && (
-            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                  <span style={{ width: 2, height: 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div>
+          {/* Addresses A → stops → B */}
+          {(order.pickup_address || order.delivery_address) && (() => {
+            const stops: Array<{ sequence: number; address: string; status: string; fail_reason?: string | null }> =
+              Array.isArray(order.order_stops) && order.order_stops.length > 0
+                ? [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence)
+                : [];
+            const hasStops = stops.length > 0;
+            return (
+              <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
+                {/* Pickup A */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: hasStops ? 8 : 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
+                    <span style={{ width: 2, height: hasStops ? 14 : 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.pickup_address || '—'}</div>
                   </div>
-                  <div>
+                </div>
+                {/* Intermediate stops */}
+                {stops.map((s, idx) => {
+                  const isDelivered = s.status === 'delivered';
+                  const isFailed = s.status === 'failed';
+                  const dotColor = isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#8b5cf6';
+                  const labelColor = isDelivered ? '#6ee7b7' : isFailed ? '#fca5a5' : '#c4b5fd';
+                  const icon = isDelivered ? '✓' : isFailed ? '✗' : String(s.sequence);
+                  const isLast = idx === stops.length - 1;
+                  return (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: isLast ? 8 : 4 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
+                        <span style={{ width: 16, height: 16, borderRadius: '50%', background: `${dotColor}22`, border: `1.5px solid ${dotColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.5rem', fontWeight: 900, color: dotColor }}>
+                          {icon}
+                        </span>
+                        <span style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.62rem', fontWeight: 700, color: dotColor, textTransform: 'uppercase', letterSpacing: 1 }}>P{s.sequence}</div>
+                        <div style={{ fontSize: '0.78rem', color: labelColor, lineHeight: 1.3 }}>{s.address}</div>
+                        {isFailed && s.fail_reason && (
+                          <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 2 }}>✗ {s.fail_reason}</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Destination B */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.delivery_address || '—'}</div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Chat — solo disponible las primeras 24h */}
           {chatAvailable && (
