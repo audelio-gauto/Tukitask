@@ -238,8 +238,10 @@ export default function RequestsFeed({
           const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
 
           return (
-            <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : '#1e293b'}`, padding: '12px 14px' }}>
-              {/* Row 1: photo + label + client + price + timer + dismiss */}
+            <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : '#1e293b'}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(82dvh - var(--tuki-nav-h, 64px))', overflow: 'hidden' }}>
+              {/* Scrollable content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 8px', WebkitOverflowScrolling: 'touch' as never }}>
+              {/* Row 1: photo + label + client + price + timer + dismiss */
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 {item.clientPhoto
                   ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
@@ -394,21 +396,13 @@ export default function RequestsFeed({
                   rows={2}
                   style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
                 />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
-                    disabled={isSending}
-                    style={{ flex: 1, padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}
-                  >
-                    Aceptar · ₲{clientPrice.toLocaleString()}
-                  </button>
-                  <button
-                    onClick={() => onDismiss(item.id)}
-                    style={{ flexShrink: 0, padding: '11px 14px', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, background: 'rgba(255,255,255,0.04)', color: '#64748b', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-                  >
-                    🚫 Ignorar
-                  </button>
-                </div>
+                <button
+                  onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
+                  disabled={isSending}
+                  style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}
+                >
+                  Aceptar · ₲{clientPrice.toLocaleString()}
+                </button>
 
                 {/* OFRECE TU OFERTA — below accept */}
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Ofrece tu oferta</div>
@@ -464,6 +458,16 @@ export default function RequestsFeed({
                     </button>
                   </div>
                 )}
+              </div>
+              </div>
+              {/* Ignorar — fijo al pie, siempre visible (estilo InDrive) */}
+              <div style={{ flexShrink: 0, padding: '10px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <button
+                  onClick={() => onDismiss(item.id)}
+                  style={{ width: '100%', padding: '11px 0', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, background: 'transparent', color: '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', letterSpacing: '0.01em' }}
+                >
+                  🚫 Ignorar esta solicitud
+                </button>
               </div>
             </div>
           );
