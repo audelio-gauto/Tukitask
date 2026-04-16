@@ -228,9 +228,7 @@ export default function DriverDashboard() {
     if (!email) return;
     const fetchStats = () => {
       // cache-busting param so browsers never serve a stale cached response
-      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`, {
-        cache: 'no-store',
-      })
+      authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`)
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) { setStatsLoading(false); return; }
