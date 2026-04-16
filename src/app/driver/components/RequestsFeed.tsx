@@ -241,7 +241,7 @@ export default function RequestsFeed({
             <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : '#1e293b'}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(82dvh - var(--tuki-nav-h, 64px))', overflow: 'hidden' }}>
               {/* Scrollable content */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 8px', WebkitOverflowScrolling: 'touch' as never }}>
-              {/* Row 1: photo + label + client + price + timer + dismiss */
+              {/* Row 1: photo + label + client + price + timer + dismiss */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 {item.clientPhoto
                   ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />

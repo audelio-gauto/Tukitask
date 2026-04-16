@@ -87,6 +87,10 @@ interface UnifiedOffer {
   vehicleModel: string | null;
   status: string; // pending, accepted, rejected, cancelled, expired
   createdAt: string;
+  /** Matching score (0..100) — server-computed */
+  matchScore: number | null;
+  matchLabel: string | null;
+  matchColor: string | null;
 }
 
 /* unified active request (delivery or service) */
@@ -295,6 +299,21 @@ function OfferCard({
             {offer.vehicleModel && (
               <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 2 }}>
                 {offer.vehicleModel}
+              </div>
+            )}
+            {/* Match score badge */}
+            {offer.matchScore != null && isPending && (
+              <div style={{ marginTop: 4 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: `${offer.matchColor ?? '#6b7280'}22`,
+                  border: `1px solid ${offer.matchColor ?? '#6b7280'}55`,
+                  borderRadius: 6, padding: '2px 8px',
+                  fontSize: '0.72rem', fontWeight: 800,
+                  color: offer.matchColor ?? '#9ca3af',
+                }}>
+                  ⚡ {offer.matchScore}/100 · {offer.matchLabel}
+                </span>
               </div>
             )}
           </div>
@@ -632,7 +651,7 @@ export default function ClienteHomePage() {
 
   /* ─── Derived state ─────────────────────────────────────────────────────── */
   const allDriverOffers: UnifiedOffer[] = orders.flatMap(o =>
-    (driverOffers[o.id] ?? []).map((off: DriverOffer & { created_at?: string }) => ({
+    (driverOffers[o.id] ?? []).map((off: DriverOffer & { created_at?: string; match_score?: number | null; match_label?: string | null; match_color?: string | null }) => ({
       id: off.id, requestId: o.id, requestType: 'delivery' as const,
       name: off.driver_name, photo: off.driver_photo,
       rating: off.driver_avg_rating ?? null,
@@ -643,6 +662,9 @@ export default function ClienteHomePage() {
       totalJobs: off.driver_total_ratings ?? null,
       vehicleModel: off.driver_vehicle_model ?? null,
       status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
+      matchScore: off.match_score ?? null,
+      matchLabel: off.match_label ?? null,
+      matchColor: off.match_color ?? null,
     }))
   );
   const allJobOffers: UnifiedOffer[] = jobs.flatMap(j =>
@@ -654,14 +676,24 @@ export default function ClienteHomePage() {
       note: off.note, distanceKm: off.distance_km, totalJobs: off.total_services,
       vehicleModel: null,
       status: off.status, createdAt: off.created_at ?? new Date().toISOString(),
+      matchScore: null, matchLabel: null, matchColor: null,
     }))
   );
 
   // Pagination for offers
   const [offersPage, setOffersPage] = useState(1);
   const OFFERS_PER_PAGE = 10;
-  // Sort by price ascending (cheapest first), like inDrive
-  const allOffers = [...allDriverOffers, ...allJobOffers].sort((a, b) => a.price - b.price);
+  // Sort pending offers by match_score desc (best driver first); accepted/rejected last
+  const allOffers = [...allDriverOffers, ...allJobOffers].sort((a, b) => {
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (b.status === 'pending' && a.status !== 'pending') return 1;
+    if (a.status === 'pending' && b.status === 'pending') {
+      const sa = a.matchScore ?? 50;
+      const sb = b.matchScore ?? 50;
+      return sb - sa; // highest score first
+    }
+    return a.price - b.price;
+  });
   const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
   const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];

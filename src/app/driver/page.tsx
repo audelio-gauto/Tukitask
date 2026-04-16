@@ -685,7 +685,11 @@ export default function DriverDashboard() {
         items={filteredFeedItems}
         dismissed={dismissedHome}
         onAccept={sendDriverOffer}
-        onDismiss={(id) => setDismissedHome(prev => new Set([...prev, id]))}
+        onDismiss={(id) => {
+          setDismissedHome(prev => new Set([...prev, id]));
+          // Registrar en matching stats (fire-and-forget, sin bloquear UI)
+          authFetch('/api/driver-match/dismiss', { method: 'POST' }).catch(() => {});
+        }}
         sendingId={sendingOfferId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}

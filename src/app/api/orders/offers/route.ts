@@ -27,13 +27,13 @@ export async function GET(req: Request) {
 
     // Enrich with driver_profiles (avg_rating, total_ratings, vehicle info)
     const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
-    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null }> = {};
+    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }> = {};
     if (driverEmails.length > 0) {
       const { data: profiles } = await supabaseServer
         .from('driver_profiles')
-        .select('email, avg_rating, total_ratings, vehicle_type, transport_mode')
+        .select('email, avg_rating, total_ratings, vehicle_type, transport_mode, acceptance_rate, avg_response_seconds')
         .in('email', driverEmails);
-      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null }) => {
+      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }) => {
         let vbrand: string | null = null;
         let vmodel: string | null = null;
         try {
@@ -42,19 +42,32 @@ export async function GET(req: Request) {
           vbrand = vd[mode]?.marca || null;
           vmodel = vd[mode]?.modelo || null;
         } catch { /* noop */ }
-        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel };
+        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel, acceptance_rate: p.acceptance_rate ?? null, avg_response_seconds: p.avg_response_seconds ?? null };
       });
     }
 
     // Group by order_id
     const grouped: Record<string, unknown[]> = {};
     for (const offer of data ?? []) {
+      const prof = profileMap[offer.driver_email];
+      const { computeMatchScore } = await import('@/lib/matchScore');
+      const matchResult = computeMatchScore({
+        avgRating:          prof?.avg_rating          ?? null,
+        distanceKm:         offer.distance_km         ?? null,
+        acceptanceRate:     prof?.acceptance_rate     ?? null,
+        avgResponseSeconds: prof?.avg_response_seconds ?? null,
+      });
       const enriched = {
         ...offer,
-        driver_avg_rating:    profileMap[offer.driver_email]?.avg_rating    ?? null,
-        driver_total_ratings: profileMap[offer.driver_email]?.total_ratings ?? null,
-        driver_vehicle_brand: profileMap[offer.driver_email]?.vehicle_brand ?? null,
-        driver_vehicle_model: profileMap[offer.driver_email]?.vehicle_model ?? null,
+        driver_avg_rating:         prof?.avg_rating          ?? null,
+        driver_total_ratings:      prof?.total_ratings       ?? null,
+        driver_vehicle_brand:      prof?.vehicle_brand       ?? null,
+        driver_vehicle_model:      prof?.vehicle_model       ?? null,
+        driver_acceptance_rate:    prof?.acceptance_rate     ?? null,
+        driver_avg_response_secs:  prof?.avg_response_seconds ?? null,
+        match_score:               matchResult.score,
+        match_label:               matchResult.label,
+        match_color:               matchResult.color,
       };
       if (!grouped[offer.order_id]) grouped[offer.order_id] = [];
       grouped[offer.order_id].push(enriched);
@@ -126,7 +139,7 @@ export async function POST(req: Request) {
 
   const { data: order } = await supabaseServer
     .from('orders')
-    .select('status')
+    .select('status, created_at')
     .eq('id', order_id)
     .single();
 
@@ -195,6 +208,17 @@ export async function POST(req: Request) {
     .update({ status: 'negotiating' })
     .eq('id', order_id)
     .eq('status', 'pending');
+
+  // ── Matching stats: track response time for this driver (fire-and-forget) ──
+  try {
+    const responseSecs = order?.created_at
+      ? Math.max(0, Math.round((Date.now() - new Date(order.created_at).getTime()) / 1000))
+      : 60;
+    await supabaseServer.rpc('record_driver_offer', {
+      p_driver_email: driverEmail,
+      p_response_seconds: responseSecs,
+    });
+  } catch { /* migration may not be applied yet — safe to ignore */ }
 
   // Notify the client about the new offer
   const { data: orderInfo } = await supabaseServer
