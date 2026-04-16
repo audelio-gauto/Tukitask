@@ -392,8 +392,8 @@ export default function ActivoPage() {
             </div>
           )}
 
-          {/* ── Multi-stop paradas ── */}
-          {order.is_multi_stop && Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
+          {/* ── Paradas (multi-stop) ── */}
+          {Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
                 📍 Paradas ({order.order_stops.length})
