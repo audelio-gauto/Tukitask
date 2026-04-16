@@ -6,6 +6,7 @@ import type { ServiceFilters } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './driver.css';
+import { initTheme } from '@/lib/useTheme';
 import { DriverDrawer } from './components/DriverDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
@@ -35,6 +36,9 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
   usePushNotifications(email || undefined);
+
+  // Apply saved theme on mount
+  useEffect(() => { initTheme(); }, []);
 
   // ── GPS broadcast: always-on while driver app is open ──────────────────────
   // 1. Broadcasts via Supabase Realtime (0 DB writes, < 1s latency for clients)

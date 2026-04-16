@@ -31,6 +31,50 @@
   --sar: env(safe-area-inset-right,  0px);
 }
 
+/* ── Light theme overrides ─────────────────────────────────────────────── */
+[data-theme="light"] {
+  --background: #f5f5f0;
+  --foreground: #111827;
+  --surface-1: #ffffff;
+  --surface-2: #f9fafb;
+  --surface-3: #f0f0eb;
+  --text-primary: #111827;
+  --text-secondary: rgba(17,24,39,0.65);
+  --text-muted: rgba(17,24,39,0.38);
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-gold: rgba(245,197,24,0.35);
+}
+
+[data-theme="light"] body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Tuki bottom nav — light mode */
+[data-theme="light"] .tuki-bottom-nav {
+  background: #ffffff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .tuki-bottom-nav-label {
+  color: #6b7280;
+}
+[data-theme="light"] .tuki-bottom-nav-icon {
+  color: #6b7280;
+}
+[data-theme="light"] .tuki-bottom-nav-item.active .tuki-bottom-nav-label,
+[data-theme="light"] .tuki-bottom-nav-item.active .tuki-bottom-nav-icon {
+  color: #F5C518;
+}
+
+/* Tuki sheet — light mode */
+[data-theme="light"] .tuki-sheet {
+  background: #ffffff;
+  box-shadow: 0 -2px 20px rgba(0,0,0,0.10);
+}
+[data-theme="light"] .tuki-sheet-handle::before {
+  background: rgba(0,0,0,0.18);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

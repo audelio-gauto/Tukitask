@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useTheme } from '@/lib/useTheme';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { useDriverContext } from '../context';
@@ -40,6 +41,8 @@ export default function DriverSettingsPage() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { theme: themeMode, setTheme: setThemeMode } = useTheme();
 
   const [vehicleType, setVehicleType] = useState('moto');
   const [vehicleDetails, setVehicleDetails] = useState<Record<string, { marca: string; matricula: string }>>({});
@@ -548,6 +551,43 @@ export default function DriverSettingsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── SECCIÓN: TEMA ── */}
+        <div style={{
+          background: '#fff', borderRadius: 18, padding: '1.25rem',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fdf4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '1rem' }}>🎨</span>
+            </div>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Tema de la app</h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {([{ value: 'dark', label: '🌙 Oscuro', bg: '#1e1b4b', border: '#6366f1' }, { value: 'light', label: '☀️ Claro', bg: '#fafaf9', border: '#f59e0b' }] as const).map(opt => {
+              const active = themeMode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setThemeMode(opt.value)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '0.85rem 1rem', borderRadius: 12,
+                    border: active ? `2px solid ${opt.border}` : '2px solid #e5e7eb',
+                    background: active ? opt.bg : '#fafafa',
+                    cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
+                  }}
+                >
+                  <span style={{ fontWeight: active ? 700 : 500, color: active ? (opt.value === 'dark' ? '#a5b4fc' : '#92400e') : '#374151', fontSize: '0.92rem' }}>
+                    {opt.label}
+                  </span>
+                  {active && <svg style={{ flexShrink: 0 }} width="14" height="14" fill="none" stroke={opt.border} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                 </button>
               );
             })}

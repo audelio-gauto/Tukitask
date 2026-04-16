@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import '../driver/driver.css';
 import './tecnico.css';
+import { initTheme } from '@/lib/useTheme';
 import { DriverDrawer } from '../driver/components/DriverDrawer';
 import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -32,6 +33,9 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   usePushNotifications(email || undefined);
+
+  // Apply saved theme on mount
+  useEffect(() => { initTheme(); }, []);
 
   useEffect(() => {
     let mounted = true;

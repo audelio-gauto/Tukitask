@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTheme } from '@/lib/useTheme';
 import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
@@ -16,6 +17,36 @@ function StarDisplay({ rating, total }: { rating: number; total: number }) {
       </div>
       <span style={{ fontWeight: 700, color: '#111827', fontSize: '0.92rem' }}>{Number(rating).toFixed(1)}</span>
       <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>({total} {total === 1 ? 'calificación' : 'calificaciones'})</span>
+    </div>
+  );
+}
+
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {([{ value: 'dark', label: '🌙 Oscuro', bg: '#1e1b4b', border: '#6366f1', textColor: '#a5b4fc' }, { value: 'light', label: '☀️ Claro', bg: '#fefce8', border: '#f59e0b', textColor: '#92400e' }] as const).map(opt => {
+        const active = theme === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setTheme(opt.value)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '0.85rem 1rem', borderRadius: 12,
+              border: active ? `2px solid ${opt.border}` : '2px solid #e5e7eb',
+              background: active ? opt.bg : '#fafafa',
+              cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+            }}
+          >
+            <span style={{ fontWeight: active ? 700 : 500, color: active ? opt.textColor : '#374151', fontSize: '0.92rem' }}>
+              {opt.label}
+            </span>
+            {active && <svg style={{ flexShrink: 0 }} width="14" height="14" fill="none" stroke={opt.border} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -335,6 +366,12 @@ export default function ClientSettingsPage() {
       </form>
 
       {toast && <div className="client-toast">{toast}</div>}
+
+      {/* ── Tema de la app ── */}
+      <div className="client-form-card">
+        <h3 className="client-form-title">🎨 Tema de la app</h3>
+        <ThemeSelector />
+      </div>
     </ClientScreenLayout>
   );
 }

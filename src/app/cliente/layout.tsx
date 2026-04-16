@@ -5,6 +5,7 @@ import { ClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './cliente.css';
+import { initTheme } from '@/lib/useTheme';
 import { ClientDrawer } from './components/ClientDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { usePushNotifications } from '@/lib/usePushNotifications';
@@ -20,6 +21,9 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const [totalRatings, setTotalRatings] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   usePushNotifications(email || undefined);
+
+  // Apply saved theme on mount
+  useEffect(() => { initTheme(); }, []);
 
   useEffect(() => {
     (async () => {

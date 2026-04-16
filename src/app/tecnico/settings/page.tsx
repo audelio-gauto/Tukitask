@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from '@/lib/useTheme';
 import { useDriverContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -34,7 +35,7 @@ export default function TecnicoSettings() {
   const [localMode, setLocalMode] = useState(false);
 
   // extended fields (mirror driver settings)
-  const [themeMode, setThemeMode] = useState('light');
+  const { theme: themeMode, setTheme: setThemeMode } = useTheme();
   const [transportMode, setTransportMode] = useState('moto');
   const [vehicleType, setVehicleType] = useState('');
   const [licensePlate, setLicensePlate] = useState('');
@@ -63,7 +64,7 @@ export default function TecnicoSettings() {
           const s = json.settings;
           setGender(s.gender || '');
           // try populate extended fields if present
-          setThemeMode(s.theme_mode || 'light');
+          setThemeMode((s.theme_mode === 'dark' ? 'dark' : 'light'));
           setTransportMode(s.transport_mode || 'moto');
           setVehicleType(s.vehicle_type || '');
           setLicensePlate(s.license_plate || '');
@@ -91,7 +92,7 @@ export default function TecnicoSettings() {
         if (raw) {
           const obj = JSON.parse(raw);
           if (obj.gender) setGender(obj.gender as 'hombre' | 'mujer');
-          if (obj.themeMode) setThemeMode(obj.themeMode);
+          if (obj.themeMode) setThemeMode(obj.themeMode === 'dark' ? 'dark' : 'light');
           if (obj.transportMode) setTransportMode(obj.transportMode);
           if (obj.vehicleType) setVehicleType(obj.vehicleType);
           if (obj.licensePlate) setLicensePlate(obj.licensePlate);
@@ -441,7 +442,7 @@ export default function TecnicoSettings() {
             <input type="email" value={email || ''} readOnly style={{ ...inputStyle, background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }} />
           </Field>
           <Field label="Tema de la app">
-            <select value={themeMode} onChange={e => setThemeMode(e.target.value)} style={inputStyle}>
+            <select value={themeMode} onChange={e => setThemeMode(e.target.value === 'dark' ? 'dark' : 'light')} style={inputStyle}>
               <option value="light">☀️ Claro</option>
               <option value="dark">🌙 Oscuro</option>
             </select>
