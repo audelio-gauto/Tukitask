@@ -394,13 +394,21 @@ export default function RequestsFeed({
                   rows={2}
                   style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
                 />
-                <button
-                  onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
-                  disabled={isSending}
-                  style={{ width: '100%', padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}
-                >
-                  Aceptar · ₲{clientPrice.toLocaleString()}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
+                    disabled={isSending}
+                    style={{ flex: 1, padding: '11px 0', border: 'none', borderRadius: 12, cursor: 'pointer', background: '#c8ff00', color: '#111', fontWeight: 800, fontSize: '1rem', opacity: isSending ? 0.6 : 1 }}
+                  >
+                    Aceptar · ₲{clientPrice.toLocaleString()}
+                  </button>
+                  <button
+                    onClick={() => onDismiss(item.id)}
+                    style={{ flexShrink: 0, padding: '11px 14px', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, background: 'rgba(255,255,255,0.04)', color: '#64748b', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    🚫 Ignorar
+                  </button>
+                </div>
 
                 {/* OFRECE TU OFERTA — below accept */}
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Ofrece tu oferta</div>
