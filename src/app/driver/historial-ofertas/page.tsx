@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import type { DriverOffer } from '@/types';
@@ -19,7 +19,7 @@ function fmt(dateStr: string) {
 }
 
 export default function HistorialOfertasDriver() {
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'accepted' | 'rejected'>('all');

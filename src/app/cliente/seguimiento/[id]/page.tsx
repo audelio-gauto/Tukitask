@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { haversineKm } from '@/lib/geo';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,13 +83,6 @@ const STATUS_ACTIVE = new Set([
 ]);
 
 const POLL_INTERVAL = 8_000; // 8s for client tracking (faster than admin 15s)
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function fmtGs(n: number | null) {
   return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';

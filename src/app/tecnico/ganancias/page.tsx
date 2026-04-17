@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 
 interface Job {
@@ -59,7 +59,7 @@ function fmtDate(s: string | null) {
 
 export default function TecnicoGananciasPage() {
   const router = useRouter();
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('mes');

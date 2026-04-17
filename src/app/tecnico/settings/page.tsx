@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/useTheme';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
@@ -14,7 +14,7 @@ const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: stri
 ];
 
 export default function TecnicoSettings() {
-  const { email, displayName, profilePhoto: ctxPhoto, setProfilePhoto: setCtxPhoto } = useDriverContext();
+  const { email, displayName, profilePhoto: ctxPhoto, setProfilePhoto: setCtxPhoto } = useWorkerContext();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const docsRef = useRef<HTMLDivElement>(null);

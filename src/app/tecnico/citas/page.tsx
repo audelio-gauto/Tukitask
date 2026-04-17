@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import ChatModal from '@/components/ChatModal';
@@ -56,7 +56,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function CitasPage() {
   const router = useRouter();
-  const { email, displayName } = useDriverContext();
+  const { email, displayName } = useWorkerContext();
   const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);

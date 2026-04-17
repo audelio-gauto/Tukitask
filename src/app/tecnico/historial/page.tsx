@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
@@ -75,7 +75,7 @@ interface Job {
 }
 
 export default function TecnicoHistorialPage() {
-  const { email, displayName } = useDriverContext();
+  const { email, displayName } = useWorkerContext();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);

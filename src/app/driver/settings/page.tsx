@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/useTheme';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 
 const VEHICLE_TYPES = [
@@ -34,7 +34,7 @@ const VEHICLE_DOCS: DocEntry[] = [
 ];
 
 export default function DriverSettingsPage() {
-  const { setProfilePhoto: setCtxPhoto } = useDriverContext();
+  const { setProfilePhoto: setCtxPhoto } = useWorkerContext();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');

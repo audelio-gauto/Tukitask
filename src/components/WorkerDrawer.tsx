@@ -44,7 +44,7 @@ interface DriverDrawerProps {
   role?: string | null;
 }
 
-export function DriverDrawer({ open, onClose, email, displayName, profilePhoto, role = null }: DriverDrawerProps) {
+export function WorkerDrawer({ open, onClose, email, displayName, profilePhoto, role = null }: DriverDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
 

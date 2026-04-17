@@ -6,12 +6,12 @@ import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import '../driver/driver.css';
 import './tecnico.css';
 import { initTheme } from '@/lib/useTheme';
-import { DriverDrawer } from '../driver/components/DriverDrawer';
-import { DriverContext, DEFAULT_FILTERS } from '../driver/context';
+import { WorkerDrawer } from '@/components/WorkerDrawer';
+import { WorkerContext, DEFAULT_FILTERS } from '../driver/context';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
-import { BottomNav } from '../driver/components/BottomNav';
+import { BottomNav } from '@/components/BottomNav';
 
 const TECNICO_TABS = [
   { href: '/tecnico',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -130,7 +130,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="tuki-driver-app">
-      <DriverDrawer
+      <WorkerDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         email={email}
@@ -140,12 +140,12 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/tecnico/citas" scope="job" />
-      <DriverContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
+      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
         <main>
           {children}
         </main>
         <BottomNav tabs={TECNICO_TABS} accent="#F5C518" />
-      </DriverContext.Provider>
+      </WorkerContext.Provider>
     </div>
   );
 }

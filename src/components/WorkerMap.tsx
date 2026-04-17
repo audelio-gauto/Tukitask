@@ -15,7 +15,7 @@ function createMarkerEl(label: string, color: string) {
   return el;
 }
 
-export default function DriverMap({
+export default function WorkerMap({
   onLocate,
   pickup,
   delivery,

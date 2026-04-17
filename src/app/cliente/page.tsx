@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { useClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { haversineKm } from '@/lib/geo';
+import { getGreeting } from '@/lib/greeting';
 import ChatModal from '@/components/ChatModal';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
@@ -132,13 +134,6 @@ const TRACKING_STATUS_INFO: Record<string, { emoji: string; text: string; color:
   commission_charged:  { emoji: '✅', text: '¡Entregado y completado!', color: '#22c55e' },
   client_confirmed:    { emoji: '✅', text: 'Entrega confirmada', color: '#22c55e' },
 };
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 13) return 'Buen día';
-  if (h >= 13 && h < 20) return 'Buenas tardes';
-  return 'Buenas noches';
-}
 
 function fmtGs(n: number | null) {
   return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
@@ -519,13 +514,6 @@ export default function ClienteHomePage() {
   // ── ETA polling: fetch driver location for active tracking orders every 15s ──
   useEffect(() => {
     const TRACKING_FOR_ETA = ['accepted', 'picking_up', 'in_transit'];
-    const R = 6371;
-    const toRad = (d: number) => d * Math.PI / 180;
-    function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-      const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
 
     const trackingOrders = orders.filter(o => TRACKING_FOR_ETA.includes(o.status));
     if (!trackingOrders.length) { setDriverEta({}); return; }

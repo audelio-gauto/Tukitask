@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
@@ -61,7 +61,7 @@ function openMaps(address: string) {
 }
 
 export default function TecnicoActivoPage() {
-  const { email, displayName } = useDriverContext();
+  const { email, displayName } = useWorkerContext();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);

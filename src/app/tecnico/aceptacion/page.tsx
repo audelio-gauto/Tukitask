@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDriverContext } from '../../driver/context';
+import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 
 export default function AceptacionPage() {
   const router = useRouter();
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [history, setHistory] = useState<{ status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 

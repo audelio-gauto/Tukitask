@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import DriverScreenLayout from '../components/DriverScreenLayout';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
@@ -24,7 +24,7 @@ function StarRow({ rating }: { rating: number | null }) {
 }
 
 export default function DeliveredPage() {
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);

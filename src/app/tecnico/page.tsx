@@ -1,23 +1,16 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useDriverContext } from '../driver/context';
+import { useWorkerContext } from '../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import RequestsFeed, { type FeedItem } from '../driver/components/RequestsFeed';
+import { haversineKm } from '@/lib/geo';
+import { getGreeting } from '@/lib/greeting';
+import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
 
-// ── Haversine distance ──────────────────────────────────────────────────────
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const toRad = (d: number) => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-const DriverMap = dynamic(() => import('../driver/components/DriverMap'), { ssr: false });
+const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
 // ── Service catalogue (must mirror servicio/page.tsx) ─────────────────────────
 const SERVICES_MUJER = [
@@ -60,15 +53,8 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
   return f;
 }
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 13) return 'Buen día';
-  if (h >= 13 && h < 20) return 'Buenas tardes';
-  return 'Buenas noches';
-}
-
 export default function TecnicoDashboard() {
-  const { openDrawer, email, profilePhoto, displayName, avgRating } = useDriverContext();
+  const { openDrawer, email, profilePhoto, displayName, avgRating } = useWorkerContext();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -488,7 +474,7 @@ export default function TecnicoDashboard() {
   return (
     <>
       <div className="tuki-map">
-        <DriverMap onLocate={() => {}} />
+        <WorkerMap onLocate={() => {}} />
       </div>
 
       {/* Profile pill — top left */}

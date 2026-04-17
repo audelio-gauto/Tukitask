@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
 import DriverScreenLayout from '../components/DriverScreenLayout';
@@ -34,7 +34,7 @@ function openMaps(navApp: string, address: string) {
 }
 
 export default function ActivoPage() {
-  const { email, navApp, displayName } = useDriverContext();
+  const { email, navApp, displayName } = useWorkerContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);

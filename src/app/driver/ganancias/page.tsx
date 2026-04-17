@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 
 type Period = 'dia' | 'semana' | 'mes' | 'año';
@@ -51,7 +51,7 @@ const STATUS_HUMAN: Record<string, string> = {
 };
 
 export default function GananciasPage() {
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [period, setPeriod] = useState<Period>('semana');
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderRow[]>([]);

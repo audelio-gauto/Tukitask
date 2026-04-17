@@ -1,32 +1,19 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useDriverContext } from './context';
+import { useWorkerContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
-import RequestsFeed, { type FeedItem } from './components/RequestsFeed';
+import { haversineKm } from '@/lib/geo';
+import { getGreeting } from '@/lib/greeting';
+import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
 
 // Mapbox GL must be loaded client-side only (no SSR)
-const DriverMap = dynamic(() => import('./components/DriverMap'), { ssr: false });
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const toRad = (d: number) => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1); const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 13) return 'Buen día';
-  if (h >= 13 && h < 20) return 'Buenas tardes';
-  return 'Buenas noches';
-}
+const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
 export default function DriverDashboard() {
-  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings } = useDriverContext();
+  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings } = useWorkerContext();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -475,7 +462,7 @@ export default function DriverDashboard() {
     <>
       {/* Mapbox Map */}
       <div className="tuki-map">
-        <DriverMap onLocate={(fn) => { locateFnRef.current = fn; }} />
+        <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} />
       </div>
 
       {/* Profile pill — top left */}

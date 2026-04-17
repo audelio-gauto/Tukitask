@@ -18,7 +18,7 @@ export const DEFAULT_FILTERS: ServiceFilters = {
   camion_fletes: true,
 };
 
-interface DriverCtx {
+interface WorkerCtx {
   openDrawer: () => void;
   email: string;
   displayName: string;
@@ -35,7 +35,7 @@ interface DriverCtx {
   setDeliveryRangeKm: (v: number) => void;
 }
 
-export const DriverContext = createContext<DriverCtx>({
+export const WorkerContext = createContext<WorkerCtx>({
   openDrawer: () => {},
   email: '',
   displayName: '',
@@ -52,6 +52,6 @@ export const DriverContext = createContext<DriverCtx>({
   setDeliveryRangeKm: () => {},
 });
 
-export function useDriverContext() {
-  return useContext(DriverContext);
+export function useWorkerContext() {
+  return useContext(WorkerContext);
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import DriverScreenLayout from '../components/DriverScreenLayout';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 
 interface BankAlias {
@@ -36,7 +36,7 @@ const TX_CONFIG: Record<string, { label: string; color: string; bg: string; icon
 };
 
 export default function DriverBilleteraPage() {
-  const { email, displayName, profilePhoto } = useDriverContext();
+  const { email, displayName, profilePhoto } = useWorkerContext();
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

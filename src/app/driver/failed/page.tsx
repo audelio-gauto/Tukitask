@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
@@ -35,7 +35,7 @@ function genTrackingCode(id: string) {
 }
 
 export default function FailedPage() {
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDriverContext } from '../context';
+import { useWorkerContext } from '../context';
 
 export default function DriverAceptacionPage() {
   const router = useRouter();
-  const { email } = useDriverContext();
+  const { email } = useWorkerContext();
   const [history, setHistory] = useState<{ status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
