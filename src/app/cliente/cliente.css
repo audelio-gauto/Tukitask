@@ -779,20 +779,10 @@
 @keyframes client-toast-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
 /* =========================================
-   ENVIAR PAQUETE — Map + Bottom Sheet
+   ENVIAR PAQUETE — Clean Form Layout
    ========================================= */
 
-/* Full screen map */
-.enviar-map {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 1;
-  background: #e5e7eb;
-}
-.enviar-map .mapboxgl-ctrl-bottom-left,
-.enviar-map .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib { display: none !important; }
-
-/* Client map marker */
+/* Client map marker (used by ClientMap component) */
 .client-map-marker {
   width: 16px; height: 16px;
   background: var(--client-primary);
@@ -801,65 +791,58 @@
   box-shadow: 0 0 0 4px rgba(245,197,24,0.25), 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* Floating buttons */
-.enviar-float-btn {
-  position: fixed;
-  z-index: 200;
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-  cursor: pointer;
+/* Full-page form container */
+.enviar-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f8f9fc;
+}
+
+/* Sticky header */
+.enviar-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.enviar-page-menu {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1e293b;
-  transition: transform 0.2s, box-shadow 0.2s;
-  text-decoration: none;
-}
-.enviar-float-btn:active { transform: scale(0.92); }
-.enviar-float-btn.menu { top: 16px; left: 16px; }
-.enviar-float-btn.back { top: 16px; left: 76px; }
-
-/* Bottom Sheet */
-.enviar-sheet {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  z-index: 50;
-  background: #fff;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-  touch-action: pan-y;
-  overscroll-behavior-x: none;
-}
-.enviar-sheet.collapsed { transform: translateY(85%); }
-.enviar-sheet.half { transform: translateY(calc(100% - 70vh)); }
-.enviar-sheet.full { transform: translateY(0); }
-
-.enviar-sheet-handle {
-  display: flex;
-  justify-content: center;
-  padding: 12px 0 8px;
-  cursor: grab;
+  cursor: pointer;
+  color: #374151;
   flex-shrink: 0;
-  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
 }
-.enviar-sheet-bar { width: 40px; height: 5px; background: #d1d5db; border-radius: 999px; }
+.enviar-page-menu:active { background: #f1f5f9; }
+.enviar-page-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1.3;
+}
 
-.enviar-sheet-content {
+/* Scrollable form body */
+.enviar-page-body {
   flex: 1;
-  overflow-y: auto;
-  padding: 0 1.15rem 2rem;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
+  padding: 20px 16px 2rem;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* Address section */
@@ -1882,25 +1865,12 @@
 @media (min-width: 768px) {
   .client-content { padding: 1.5rem 2rem 2rem; }
 
-  /* Desktop: side panel for enviar */
-  .enviar-sheet {
-    position: absolute;
-    top: 0; bottom: 0; right: 0;
-    left: auto;
-    width: 420px;
-    border-radius: 0;
-    max-height: 100vh;
-    transform: none !important;
-  }
-  .enviar-sheet-handle { display: none; }
-  .enviar-sheet-content { padding-top: 1.5rem; }
-  .enviar-map { right: 420px; }
-  .enviar-float-btn.menu { top: 16px; left: 16px; }
-  .enviar-float-btn.back { top: 16px; left: 76px; }
+  /* Desktop: wider form body */
+  .enviar-page-body { padding: 2rem; max-width: 640px; }
+  .enviar-page-header { padding: 16px 2rem; }
 }
 @media (min-width: 1024px) {
-  .enviar-sheet { width: 460px; }
-  .enviar-map { right: 460px; }
+  .enviar-page-body { max-width: 680px; }
 }
 
 /* =========================================

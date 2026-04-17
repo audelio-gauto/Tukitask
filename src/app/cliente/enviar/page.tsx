@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -7,7 +7,6 @@ import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 
-const ClientMap = dynamic(() => import('../components/ClientMap'), { ssr: false });
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
@@ -53,8 +52,6 @@ export default function EnviarPaquetePage() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
-  const sheetRef = useRef<HTMLDivElement>(null);
 
   // Address search overlay state — now also handles stop index
   const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
@@ -264,115 +261,6 @@ export default function EnviarPaquetePage() {
     }
   }, [suggestedPrice]);
 
-  // Drag state
-  const isDragging = useRef(false);
-  const startY = useRef(0);
-  const startX = useRef(0);
-  const startTranslate = useRef(0);
-
-  const isDesktop = useCallback(() => window.matchMedia('(min-width: 768px)').matches, []);
-
-  const getTranslateY = useCallback(() => {
-    if (!sheetRef.current) return 0;
-    const st = window.getComputedStyle(sheetRef.current);
-    const matrix = new DOMMatrix(st.transform);
-    return matrix.m42;
-  }, []);
-
-  const setSheet = useCallback((state: 'collapsed' | 'half' | 'full') => {
-    if (isDesktop()) return;
-    setSheetState(state);
-  }, [isDesktop]);
-
-  useEffect(() => {
-    const sheet = sheetRef.current;
-    if (!sheet) return;
-
-    function onStart(e: TouchEvent | MouseEvent) {
-      if (isDesktop()) return;
-      const tag = ((e.target as HTMLElement)?.tagName || '').toLowerCase();
-      if (['button', 'input', 'textarea', 'select', 'a', 'label'].includes(tag)) return;
-      isDragging.current = true;
-      startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      startX.current = 0;
-      startTranslate.current = getTranslateY();
-      sheet!.style.transition = 'none';
-    }
-
-    function onMove(e: TouchEvent | MouseEvent) {
-      if (!isDragging.current) return;
-      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      // Block if horizontal swipe is dominant
-      if (!startX.current) startX.current = currentX;
-      const deltaX = Math.abs(currentX - startX.current);
-      const deltaY = Math.abs(currentY - startY.current);
-      if (deltaX > deltaY + 5) { isDragging.current = false; return; }
-      if (e.cancelable) e.preventDefault();
-      const delta = currentY - startY.current;
-      const maxTranslate = sheet!.offsetHeight * 0.8;
-      const newTranslate = Math.min(maxTranslate, Math.max(0, startTranslate.current + delta));
-      sheet!.style.transform = `translateY(${newTranslate}px)`;
-    }
-
-    function onEnd() {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-      startX.current = 0;
-      sheet!.style.transition = '';
-      const finalTranslate = getTranslateY();
-      const viewH = window.innerHeight;
-      if (finalTranslate > viewH * 0.55) setSheet('collapsed');
-      else if (finalTranslate > viewH * 0.25) setSheet('half');
-      else setSheet('full');
-    }
-
-    sheet.addEventListener('touchstart', onStart, { passive: true });
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
-    sheet.addEventListener('mousedown', onStart);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-
-    const handleResize = () => {
-      if (isDesktop()) {
-        sheet.style.transform = '';
-      } else {
-        setSheet('half');
-      }
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      sheet.removeEventListener('touchstart', onStart);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-      sheet.removeEventListener('mousedown', onStart);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [getTranslateY, isDesktop, setSheet]);
-
-  // Auto-expand sheet and scroll to focused input/textarea
-  useEffect(() => {
-    const sheet = sheetRef.current;
-    if (!sheet) return;
-    function onFocusIn(e: FocusEvent) {
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (!['input', 'textarea', 'select'].includes(tag || '')) return;
-      if (isDesktop()) return;
-      setSheet('full');
-      // Wait for sheet transition then scroll element into view
-      setTimeout(() => {
-        (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 380);
-    }
-    sheet.addEventListener('focusin', onFocusIn);
-    return () => sheet.removeEventListener('focusin', onFocusIn);
-  }, [isDesktop, setSheet]);
-
-
   // When pickup + first stop coordinates change, request a routed path via backend proxy
   // For multi-stop we compute per-segment then concatenate into one polyline
   useEffect(() => {
@@ -580,23 +468,6 @@ export default function EnviarPaquetePage() {
 
   return (
     <>
-      {/* Full screen map */}
-      <div className="enviar-map">
-        <ClientMap
-          pickup={form.pickupLat && form.pickupLng ? { lat: Number(form.pickupLat), lng: Number(form.pickupLng) } : undefined}
-          delivery={deliveryLat && deliveryLng ? { lat: Number(deliveryLat), lng: Number(deliveryLng) } : undefined}
-          routeCoords={routeCoords && routeCoords.length > 0 ? routeCoords : undefined}
-          showMyLocationButton
-        />
-      </div>
-
-      {/* Floating menu button (fixed) */}
-      <button className="enviar-float-btn menu" onClick={openDrawer} aria-label="Menú">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
       {/* Address search fullscreen overlay */}
       {searchMode && (
         <div className="enviar-search-overlay" style={{ background: '#fff' }}>
@@ -649,11 +520,20 @@ export default function EnviarPaquetePage() {
         />
       )}
 
-      {/* Bottom Sheet */}
-      <div ref={sheetRef} className={`enviar-sheet ${sheetState}`}>
-        <div className="enviar-sheet-handle"><span className="enviar-sheet-bar" /></div>
+      {/* Clean form page */}
+      <div className="enviar-page">
+        <div className="enviar-page-header">
+          <button type="button" className="enviar-page-menu" onClick={openDrawer} aria-label="Menú">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h1 className="enviar-page-title">
+            {orderType === 'mandadito' ? '🛒 Nuevo Mandadito' : orderType === 'flete' ? '🚛 Nuevo Flete' : '📦 Nuevo Envío'}
+          </h1>
+        </div>
 
-        <div className="enviar-sheet-content">
+        <div className="enviar-page-body">
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 18, background: '#f1f5f9', borderRadius: 14, padding: 5 }}>
@@ -898,7 +778,7 @@ export default function EnviarPaquetePage() {
                   type="button"
                   className="enviar-next-btn"
                   disabled={!form.pickupLat || !firstStop.lat || (orderType === 'mandadito' && !shoppingList.trim())}
-                  onClick={() => { setStep(2); setSheet('full'); }}
+                  onClick={() => setStep(2)}
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1163,15 +1043,15 @@ export default function EnviarPaquetePage() {
                 </div>
 
                 {/* CTA */}
+                {submitError && (
+                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', fontSize: '0.84rem', fontWeight: 500, marginTop: '0.5rem' }}>
+                    ⚠️ {submitError}
+                  </div>
+                )}
                 <div className="enviar-step-actions">
                   <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                   </button>
-                  {submitError && (
-                    <div style={{ position: 'absolute', bottom: '88px', left: 16, right: 16, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5', fontSize: '0.84rem', fontWeight: 500, zIndex: 10 }}>
-                      ⚠️ {submitError}
-                    </div>
-                  )}
                   <button
                     type="submit"
                     form="enviar-form"
