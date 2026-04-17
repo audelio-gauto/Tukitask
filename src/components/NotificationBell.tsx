@@ -114,7 +114,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
         soundEnabled={soundEnabled}
       />
 
-      <div ref={panelRef} className={className} style={{ position: 'relative', zIndex: 900 }}>
+      <div ref={panelRef} className={className} style={{ position: 'fixed', top: 16, right: 70, zIndex: 900 }}>
         {/* Bell button */}
         <button
           onClick={() => setOpen((v) => !v)}
@@ -123,16 +123,18 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
             position: 'relative',
             background: 'rgba(28,28,46,0.85)',
             border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 12,
-            width: 40,
-            height: 40,
+            borderRadius: '50%',
+            width: 48,
+            height: 48,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)',
             animation: bellAnim ? 'bellShake 0.5s ease' : undefined,
+            transition: 'transform 0.18s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s',
           }}
         >
           <svg width="20" height="20" fill="none" stroke="#fff" viewBox="0 0 24 24">
@@ -156,7 +158,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
               fontSize: '0.65rem',
               fontWeight: 700,
               padding: '0 4px',
-              border: '2px solid #1c1c2e',
+              border: '2px solid rgba(28,28,46,0.85)',
               animation: 'badgePop 0.3s ease',
             }}>
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -168,9 +170,9 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
         {open && (
           <div style={{
             position: 'absolute',
-            top: 48,
+            top: 56,
             right: 0,
-            width: 340,
+            width: Math.min(340, typeof window !== 'undefined' ? window.innerWidth - 32 : 340),
             maxHeight: 440,
             background: '#1c1c2e',
             border: '1px solid rgba(255,255,255,0.1)',
