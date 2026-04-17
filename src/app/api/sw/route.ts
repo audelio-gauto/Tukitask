@@ -37,7 +37,7 @@ self.addEventListener('install', function(event) {
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll([
         '/offline.html',
-        '/icons/icon-192x192.png',
+        '/api/logo',
         '/manifest.json',
       ]);
     })

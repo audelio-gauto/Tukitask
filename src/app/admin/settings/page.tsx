@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('');
 
   // ── Logo / Branding ──────────────────────────────────────────────────────
-  const [logoUrl, setLogoUrl]       = useState('/icons/icon-192x192.png');
+  const [logoUrl, setLogoUrl]       = useState('/api/logo');
   const [logoSize, setLogoSize]     = useState(90);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);

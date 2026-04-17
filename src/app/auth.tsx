@@ -45,10 +45,10 @@ export default function Auth() {
     fetch('/api/admin/config')
       .then(r => r.json())
       .then(cfg => {
-        setLogoUrl(cfg.logo_url || '/icons/icon-192x192.png');
+        setLogoUrl(cfg.logo_url || '/api/logo');
         if (cfg.logo_size) setLogoSize(Number(cfg.logo_size));
       })
-      .catch(() => { setLogoUrl('/icons/icon-192x192.png'); });
+      .catch(() => { setLogoUrl('/api/logo'); });
   }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
