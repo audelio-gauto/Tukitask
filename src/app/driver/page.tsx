@@ -687,7 +687,7 @@ export default function DriverDashboard() {
 
       {/* ── Solicitudes overlay (floating over map) ── */}
       {gpsNeeded && (
-        <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: '#1e293b', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: 'var(--surface-2)', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: '1.4rem' }}>📍</span>
           <div>
             <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>

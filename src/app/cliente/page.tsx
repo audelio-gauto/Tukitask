@@ -905,7 +905,7 @@ export default function ClienteHomePage() {
       {noTaskerMsg && (
         <div style={{
           position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9999, background: '#1e293b', border: '1px solid rgba(239,68,68,0.5)',
+          zIndex: 9999, background: 'var(--surface-2)', border: '1px solid rgba(239,68,68,0.5)',
           borderRadius: 16, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
           maxWidth: 320, width: 'calc(100% - 32px)', textAlign: 'center',
           animation: 'fadeInDown 0.3s ease',
@@ -963,7 +963,7 @@ export default function ClienteHomePage() {
 
         {/* ── SEARCHING ────────────────────────────────────────────────────── */}
         {mode === 'searching' && (
-          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
+          <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
             {/* Handle */}
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
@@ -1100,7 +1100,7 @@ export default function ClienteHomePage() {
 
         {/* ── TRACKING ─────────────────────────────────────────────────── */}
         {mode === 'tracking' && (
-          <div style={{ background: '#0f172a', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
             </div>
@@ -1152,13 +1152,13 @@ export default function ClienteHomePage() {
                           {item.photo ? (
                             <img src={item.photo} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${info.color}` }} />
                           ) : (
-                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg,${info.color},#1e293b)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: `3px solid ${info.color}40` }}>
+                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg,${info.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: `3px solid ${info.color}40` }}>
                               {item.type === 'delivery' ? '🚗' : '👷'}
                             </div>
                           )}
                           {/* Badge de tipo */}
                           {item.vehicle_label && (
-                            <div style={{ position: 'absolute', bottom: -4, right: -4, background: '#0f172a', borderRadius: 99, padding: '2px 5px', fontSize: '0.7rem', border: `1px solid ${info.color}50`, whiteSpace: 'nowrap' }}>
+                            <div style={{ position: 'absolute', bottom: -4, right: -4, background: 'var(--content-bg)', borderRadius: 99, padding: '2px 5px', fontSize: '0.7rem', border: `1px solid ${info.color}50`, whiteSpace: 'nowrap' }}>
                               {item.vehicle_label.split(' ')[0]}
                             </div>
                           )}

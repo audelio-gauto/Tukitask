@@ -12,7 +12,7 @@ function CountdownRing({ seconds }: { seconds: number }) {
   const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
   return (
     <svg width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r={r} fill="none" stroke="#1e293b" strokeWidth="3"/>
+      <circle cx="18" cy="18" r={r} fill="none" stroke="var(--surface-3)" strokeWidth="3"/>
       <circle cx="18" cy="18" r={r} fill="none" stroke={c} strokeWidth="3"
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
         transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
@@ -245,7 +245,7 @@ export default function RequestsFeed({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 {item.clientPhoto
                   ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
-                  : <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
+                  : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0, border: '1.5px solid #334155' }}>👤</div>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
