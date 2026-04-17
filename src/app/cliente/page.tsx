@@ -215,9 +215,9 @@ function OfferCard({
 
   return (
     <div style={{
-      background: '#1a1a2e',
+      background: 'var(--sheet-bg)',
       borderRadius: 14,
-      border: '1px solid rgba(255,255,255,0.07)',
+      border: '1px solid var(--border-subtle)',
       overflow: 'hidden',
       boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
     }}>
@@ -227,7 +227,7 @@ function OfferCard({
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             {/* Price */}
-            <span style={{ fontSize: '1.7rem', fontWeight: 900, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>
+            <span style={{ fontSize: '1.7rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-1px', lineHeight: 1 }}>
               ₲{Number(offer.price).toLocaleString()}
             </span>
             {/* ETA */}
@@ -279,7 +279,7 @@ function OfferCard({
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Name */}
-            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
             </div>
             {/* Rating + trips on same line */}
@@ -937,11 +937,11 @@ export default function ClienteHomePage() {
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{getGreeting()}</div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Cliente'}</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{getGreeting()}</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Cliente'}</div>
           </div>
-          <button onClick={openDrawer} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, width: 42, height: 42, color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 16, height: 2, background: '#fff', borderRadius: 2 }} />)}
+          <button onClick={openDrawer} style={{ background: 'var(--ghost-btn)', border: '1px solid var(--border-subtle)', borderRadius: 12, width: 42, height: 42, color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 16, height: 2, background: 'var(--text-primary)', borderRadius: 2 }} />)}
           </button>
         </div>
       </div>
@@ -974,7 +974,7 @@ export default function ClienteHomePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                 <RadarPulse />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '1.05rem', marginBottom: 4 }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: 4 }}>
                     Buscando cerca de ti…
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
@@ -1005,11 +1005,11 @@ export default function ClienteHomePage() {
                 const pct = countdown / REQUEST_TIMEOUT_SEC;
                 const barColor = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
                 return (
-                  <div key={req.id} style={{ background: '#1e293b', borderRadius: 16, padding: '10px 14px 8px', marginBottom: 10, border: '1px solid #334155' }}>
+                  <div key={req.id} style={{ background: 'var(--surface-2)', borderRadius: 16, padding: '10px 14px 8px', marginBottom: 10, border: '1px solid var(--border-strong)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontSize: '1.4rem' }}>{req.icon}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>{req.label}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{req.label}</div>
                         <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
                       </div>
                       <button
@@ -1036,7 +1036,7 @@ export default function ClienteHomePage() {
           <div style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             {/* Count header */}
             <div style={{ padding: '6px 14px 2px', flexShrink: 0 }}>
-              <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.9rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
+              <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
                 {allOffers.length} oferta{allOffers.length !== 1 ? 's' : ''} recibida{allOffers.length !== 1 ? 's' : ''}
               </div>
             </div>
@@ -1164,7 +1164,7 @@ export default function ClienteHomePage() {
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 900, color: '#fff', fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {item.name || (item.type === 'delivery' ? 'Conductor' : 'Técnico')}
                           </div>
                           {item.rating != null && (
@@ -1333,8 +1333,8 @@ export default function ClienteHomePage() {
           </div>
 
           <div style={{ textAlign: 'center', marginBottom: 26 }}>
-            <div style={{ fontWeight: 800, fontSize: '1.22rem', color: '#fff', marginBottom: 6, letterSpacing: '-0.01em' }}>¿Qué necesitás hoy?</div>
-            <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.42)' }}>Elegí un servicio para empezar</div>
+            <div style={{ fontWeight: 800, fontSize: '1.22rem', color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>¿Qué necesitás hoy?</div>
+            <div style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>Elegí un servicio para empezar</div>
           </div>
 
           {/* Direct service cards — no modal needed */}
@@ -1359,7 +1359,7 @@ export default function ClienteHomePage() {
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#fff', marginBottom: 3 }}>Mandaditos / Envíos</div>
+                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Mandaditos / Envíos</div>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Delivery rápido a domicilio</div>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,197,24,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1384,7 +1384,7 @@ export default function ClienteHomePage() {
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: '#fff', marginBottom: 3 }}>Contratar un Tasker</div>
+                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Contratar un Tasker</div>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Servicios en tu hogar</div>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(139,92,246,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1408,15 +1408,15 @@ export default function ClienteHomePage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', background: '#0f172a',
+              width: '100%', background: 'var(--modal-bg)',
               borderRadius: '24px 24px 0 0',
               border: '1px solid rgba(245,197,24,0.2)',
               padding: '20px 20px max(20px, env(safe-area-inset-bottom))',
             }}
           >
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2, margin: '0 auto 16px' }} />
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#fff' }}>¿Qué necesitás?</div>
+              <div style={{ width: 40, height: 4, background: 'var(--border-strong)', borderRadius: 2, margin: '0 auto 16px' }} />
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>¿Qué necesitás?</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Link
@@ -1426,8 +1426,8 @@ export default function ClienteHomePage() {
               >
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>📦</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Mandaditos/Envíos/Fletes</div>
-                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Delivery rápido a domicilio</div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Mandaditos/Envíos/Fletes</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 3 }}>Delivery rápido a domicilio</div>
                 </div>
               </Link>
               <Link
@@ -1437,8 +1437,8 @@ export default function ClienteHomePage() {
               >
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>🛠️</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>Contratar un Tasker</div>
-                  <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Servicios en tu hogar</div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>Contratar un Tasker</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 3 }}>Servicios en tu hogar</div>
                 </div>
               </Link>
             </div>
@@ -1504,9 +1504,9 @@ export default function ClienteHomePage() {
       {cancelConfirm && (
         <>
           <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#0f172a', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.25)' }}>
-            <p style={{ margin: '0 0 6px', fontWeight: 800, color: '#fff', fontSize: '1.05rem' }}>Cancelar solicitud</p>
-            <p style={{ margin: '0 0 20px', color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem' }}>Esta acción no se puede deshacer. ¿Deseás cancelar?</p>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <p style={{ margin: '0 0 6px', fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Cancelar solicitud</p>
+            <p style={{ margin: '0 0 20px', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Esta acción no se puede deshacer. ¿Deseás cancelar?</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => { cancelConfirm.type === 'delivery' ? cancelOrder(cancelConfirm.id) : cancelJob(cancelConfirm.id); setCancelConfirm(null); }}
@@ -1529,8 +1529,8 @@ export default function ClienteHomePage() {
       {cancelConfirm && (
         <>
           <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1C1C2E', borderRadius: '20px 20px 0 0', padding: '24px 18px 40px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <p style={{ margin: '0 0 20px', fontWeight: 700, color: '#fff', fontSize: '1rem', lineHeight: 1.4 }}>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 40px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid var(--modal-border)' }}>
+            <p style={{ margin: '0 0 20px', fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', lineHeight: 1.4 }}>
               ¿Cancelar esta solicitud? Esta acción no se puede deshacer.
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1542,7 +1542,7 @@ export default function ClienteHomePage() {
               </button>
               <button
                 onClick={() => setCancelConfirm(null)}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--ghost-btn)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
               >
                 Volver
               </button>
@@ -1591,7 +1591,7 @@ export default function ClienteHomePage() {
             <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>
               NUEVO MENSAJE · {chatToast.isJob ? 'TÉCNICO' : 'CONDUCTOR'}
             </div>
-            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
             </div>
           </div>

@@ -15,8 +15,8 @@ function StarDisplay({ rating, total }: { rating: number; total: number }) {
           <span key={s} style={{ fontSize: '1.05rem', color: rating >= s ? '#f59e0b' : '#d1d5db' }}>★</span>
         ))}
       </div>
-      <span style={{ fontWeight: 700, color: '#111827', fontSize: '0.92rem' }}>{Number(rating).toFixed(1)}</span>
-      <span style={{ color: '#9ca3af', fontSize: '0.78rem' }}>({total} {total === 1 ? 'calificación' : 'calificaciones'})</span>
+      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{Number(rating).toFixed(1)}</span>
+      <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>({total} {total === 1 ? 'calificación' : 'calificaciones'})</span>
     </div>
   );
 }
@@ -24,30 +24,19 @@ function StarDisplay({ rating, total }: { rating: number; total: number }) {
 function ThemeSelector() {
   const { theme, setTheme } = useTheme();
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-      {([{ value: 'dark', label: '🌙 Oscuro', bg: '#1e1b4b', border: '#6366f1', textColor: '#a5b4fc' }, { value: 'light', label: '☀️ Claro', bg: '#fefce8', border: '#f59e0b', textColor: '#92400e' }] as const).map(opt => {
-        const active = theme === opt.value;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setTheme(opt.value)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '0.85rem 1rem', borderRadius: 12,
-              border: active ? `2px solid ${opt.border}` : '2px solid #e5e7eb',
-              background: active ? opt.bg : '#fafafa',
-              cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
-            }}
-          >
-            <span style={{ fontWeight: active ? 700 : 500, color: active ? opt.textColor : '#374151', fontSize: '0.92rem' }}>
-              {opt.label}
-            </span>
-            {active && <svg style={{ flexShrink: 0 }} width="14" height="14" fill="none" stroke={opt.border} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
-          </button>
-        );
-      })}
-    </div>
+    <select
+      value={theme}
+      onChange={e => setTheme(e.target.value === 'dark' ? 'dark' : 'light')}
+      style={{
+        width: '100%', padding: '0.7rem 0.85rem', borderRadius: 10,
+        border: '1.5px solid var(--input-border)', background: 'var(--input-bg)',
+        fontSize: '0.92rem', color: 'var(--input-text)', outline: 'none',
+        boxSizing: 'border-box',
+      }}
+    >
+      <option value="light">☀️ Claro</option>
+      <option value="dark">🌙 Oscuro</option>
+    </select>
   );
 }
 
@@ -216,7 +205,7 @@ export default function ClientSettingsPage() {
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
             style={{ display: 'none' }} onChange={handlePhotoChange} />
           <div>
-            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#111827' }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
               {displayName || email?.split('@')[0]}
             </div>
             <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: 2 }}>{email}</div>
@@ -297,7 +286,7 @@ export default function ClientSettingsPage() {
                   const needsDate = doc.requiresExpiry && !idExpiries[doc.key];
                   return (
                     <div key={doc.key}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--input-bg)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
                         <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
@@ -325,7 +314,7 @@ export default function ClientSettingsPage() {
                       {doc.requiresExpiry && !isLocked && (
                         <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento cédula:</span>
-                          <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                          <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
                         </div>
                       )}
                     </div>
@@ -341,11 +330,11 @@ export default function ClientSettingsPage() {
         <h3 className="client-form-title">👤 Información de Cuenta</h3>        <div className="client-form-grid">
           <div>
             <label className="client-form-label">Email</label>
-            <input className="client-form-input" value={email} readOnly style={{ background: '#f9fafb' }} />
+            <input className="client-form-input" value={email} readOnly style={{ background: 'var(--input-bg)', opacity: 0.6 }} />
           </div>
           <div>
             <label className="client-form-label">Nombre de usuario</label>
-            <input className="client-form-input" value={displayName} readOnly style={{ background: '#f9fafb' }} />
+            <input className="client-form-input" value={displayName} readOnly style={{ background: 'var(--input-bg)', opacity: 0.6 }} />
           </div>
         </div>
       </div>

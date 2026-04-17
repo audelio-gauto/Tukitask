@@ -114,6 +114,12 @@
   --client-close-active:     rgba(255,255,255,0.15);
   --client-action-active:    rgba(255,255,255,0.05);
 
+  /* ── Settings page cards / hero ────────────────────────── */
+  --card-bg:      #1f2937;
+  --card-border:  rgba(255,255,255,0.08);
+  --label-color:  #9ca3af;
+  --card-section-border: rgba(255,255,255,0.06);
+
   /* ── Radius scale ────────────────────────────────────────── */
   --radius-xs:   6px;
   --radius-sm:   8px;
@@ -215,6 +221,12 @@
 
   /* Divider */
   --divider: #f3f4f6;
+
+  /* Settings page cards / hero */
+  --card-bg:      #ffffff;
+  --card-border:  #e5e7eb;
+  --label-color:  #374151;
+  --card-section-border: #f1f5f9;
 
   /* Client panel — light values */
   --client-bg:              #f8f9fc;

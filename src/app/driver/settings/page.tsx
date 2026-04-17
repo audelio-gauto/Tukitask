@@ -192,7 +192,7 @@ export default function DriverSettingsPage() {
 
         {/* ── HERO: Foto + identidad ── */}
         <div style={{
-          background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+          background: 'linear-gradient(135deg, var(--content-bg) 0%, var(--surface-3) 100%)',
           borderRadius: 20, margin: '1rem 0 1.25rem', padding: '1.5rem',
           display: 'flex', alignItems: 'center', gap: '1rem',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
@@ -216,7 +216,7 @@ export default function DriverSettingsPage() {
               style={{
                 position: 'absolute', bottom: 2, right: 2,
                 width: 26, height: 26, borderRadius: '50%',
-                background: '#10b981', border: '2px solid #111827',
+                background: '#10b981', border: '2px solid var(--content-bg)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
@@ -264,10 +264,10 @@ export default function DriverSettingsPage() {
           />
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', margin: 0, lineHeight: 1.2 }}>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: 0, lineHeight: 1.2 }}>
               {[firstName, lastName].filter(Boolean).join(' ') || 'Conductor'}
             </p>
-            <p style={{ color: '#6b7280', fontSize: '0.78rem', margin: '4px 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '4px 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {email}
             </p>
             {avgRating > 0 ? (
@@ -275,11 +275,11 @@ export default function DriverSettingsPage() {
                 <span style={{ color: '#f59e0b', fontSize: '0.95rem', letterSpacing: 1 }}>
                   {'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}
                 </span>
-                <span style={{ color: '#d1fae5', fontWeight: 700, fontSize: '0.9rem' }}>{Number(avgRating).toFixed(1)}</span>
-                <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>({totalRatings} reseñas)</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.9rem' }}>{Number(avgRating).toFixed(1)}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({totalRatings} reseñas)</span>
               </div>
             ) : (
-              <span style={{ color: '#6b7280', fontSize: '0.78rem' }}>Sin calificaciones aún</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Sin calificaciones aún</span>
             )}
             {selectedVehicle && (
               <div style={{
@@ -297,14 +297,14 @@ export default function DriverSettingsPage() {
 
         {/* ── SECCIÓN: TIPO DE VEHÍCULO ── */}
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '1.25rem',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem',
+          background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>
             </div>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Tipo de Vehículo</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Tipo de Vehículo</h3>
           </div>
 
           {/* Cards de selección */}
@@ -320,8 +320,8 @@ export default function DriverSettingsPage() {
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     gap: 4, padding: '0.7rem 0.25rem',
                     borderRadius: 14,
-                    border: active ? `2px solid ${v.color}` : '2px solid #e5e7eb',
-                    background: active ? `${v.color}18` : '#fafafa',
+                    border: active ? `2px solid ${v.color}` : '2px solid var(--input-border)',
+                    background: active ? `${v.color}18` : 'var(--input-bg)',
                     cursor: 'pointer', transition: 'all 0.15s',
                     outline: 'none',
                   }}
@@ -329,7 +329,7 @@ export default function DriverSettingsPage() {
                   <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{v.emoji}</span>
                   <span style={{
                     fontSize: '0.65rem', fontWeight: active ? 700 : 500,
-                    color: active ? v.color : '#6b7280',
+                    color: active ? v.color : 'var(--label-color)',
                   }}>{v.label}</span>
                 </button>
               );
@@ -339,7 +339,7 @@ export default function DriverSettingsPage() {
           {/* Detalles del vehículo */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
                 Marca
               </label>
               <input
@@ -349,14 +349,14 @@ export default function DriverSettingsPage() {
                 placeholder={vehicleType === 'moto' ? 'Ej. Honda CB 150' : vehicleType === 'auto' ? 'Ej. Toyota Corolla' : vehicleType === 'moto_carro' ? 'Ej. Piaggio Ape' : 'Ej. Mercedes Sprinter'}
                 style={{
                   width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
-                  border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
-                  outline: 'none', boxSizing: 'border-box', color: '#111827',
-                  background: '#fafafa',
+                  border: '1.5px solid var(--input-border)', fontSize: '0.88rem',
+                  outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)',
+                  background: 'var(--input-bg)',
                 }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
                 Matrícula / Placa
               </label>
               <input
@@ -367,9 +367,9 @@ export default function DriverSettingsPage() {
                 maxLength={10}
                 style={{
                   width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
-                  border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
-                  outline: 'none', boxSizing: 'border-box', color: '#111827',
-                  background: '#fafafa', textTransform: 'uppercase', letterSpacing: 1,
+                  border: '1.5px solid var(--input-border)', fontSize: '0.88rem',
+                  outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)',
+                  background: 'var(--input-bg)', textTransform: 'uppercase', letterSpacing: 1,
                 }}
               />
             </div>
@@ -517,14 +517,14 @@ export default function DriverSettingsPage() {
 
         {/* ── SECCIÓN: NAVEGACIÓN ── */}
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '1.25rem',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem',
+          background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" fill="none" stroke="#3b82f6" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
             </div>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>App de Navegación</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>App de Navegación</h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {NAV_APPS.map(app => {
@@ -537,13 +537,13 @@ export default function DriverSettingsPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '0.85rem 1rem', borderRadius: 12,
-                    border: active ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                    background: active ? '#eff6ff' : '#fafafa',
+                    border: active ? '2px solid #3b82f6' : '2px solid var(--input-border)',
+                    background: active ? 'rgba(59,130,246,0.1)' : 'var(--input-bg)',
                     cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
                   }}
                 >
                   <span style={{ fontSize: '1.4rem' }}>{app.logo}</span>
-                  <span style={{ fontWeight: active ? 700 : 500, color: active ? '#3b82f6' : '#374151', fontSize: '0.88rem' }}>
+                  <span style={{ fontWeight: active ? 700 : 500, color: active ? '#3b82f6' : 'var(--text-primary)', fontSize: '0.88rem' }}>
                     {app.label}
                   </span>
                   {active && (
@@ -559,51 +559,40 @@ export default function DriverSettingsPage() {
 
         {/* ── SECCIÓN: TEMA ── */}
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '1.25rem',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem',
+          background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fdf4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '1rem' }}>🎨</span>
             </div>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Tema de la app</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Tema de la app</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {([{ value: 'dark', label: '🌙 Oscuro', bg: '#1e1b4b', border: '#6366f1' }, { value: 'light', label: '☀️ Claro', bg: '#fafaf9', border: '#f59e0b' }] as const).map(opt => {
-              const active = themeMode === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setThemeMode(opt.value)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '0.85rem 1rem', borderRadius: 12,
-                    border: active ? `2px solid ${opt.border}` : '2px solid #e5e7eb',
-                    background: active ? opt.bg : '#fafafa',
-                    cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
-                  }}
-                >
-                  <span style={{ fontWeight: active ? 700 : 500, color: active ? (opt.value === 'dark' ? '#a5b4fc' : '#92400e') : '#374151', fontSize: '0.92rem' }}>
-                    {opt.label}
-                  </span>
-                  {active && <svg style={{ flexShrink: 0 }} width="14" height="14" fill="none" stroke={opt.border} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
-                </button>
-              );
-            })}
-          </div>
+          <select
+            value={themeMode}
+            onChange={e => setThemeMode(e.target.value === 'dark' ? 'dark' : 'light')}
+            style={{
+              width: '100%', padding: '0.7rem 0.85rem', borderRadius: 10,
+              border: '1.5px solid var(--input-border)', background: 'var(--input-bg)',
+              fontSize: '0.92rem', color: 'var(--input-text)', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          >
+            <option value="light">☀️ Claro</option>
+            <option value="dark">🌙 Oscuro</option>
+          </select>
         </div>
 
         {/* ── SECCIÓN: DATOS PERSONALES ── */}
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '1.25rem',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '1rem',
+          background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#fdf4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" fill="none" stroke="#8b5cf6" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
             </div>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', margin: 0 }}>Datos Personales</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Datos Personales</h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
             {[
@@ -611,7 +600,7 @@ export default function DriverSettingsPage() {
               { label: 'Apellido', value: lastName, set: setLastName, placeholder: 'Tu apellido' },
             ].map(field => (
               <div key={field.label}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
                   {field.label}
                 </label>
                 <input
@@ -621,15 +610,15 @@ export default function DriverSettingsPage() {
                   placeholder={field.placeholder}
                   style={{
                     width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
-                    border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
-                    outline: 'none', boxSizing: 'border-box', color: '#111827', background: '#fafafa',
+                    border: '1.5px solid var(--input-border)', fontSize: '0.88rem',
+                    outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)', background: 'var(--input-bg)',
                   }}
                 />
               </div>
             ))}
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
               Teléfono
             </label>
             <input
@@ -639,13 +628,13 @@ export default function DriverSettingsPage() {
               placeholder="+595 9xx xxxxxx"
               style={{
                 width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
-                border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
-                outline: 'none', boxSizing: 'border-box', color: '#111827', background: '#fafafa',
+                border: '1.5px solid var(--input-border)', fontSize: '0.88rem',
+                outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)', background: 'var(--input-bg)',
               }}
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
               Correo Electrónico
             </label>
             <input
@@ -654,9 +643,9 @@ export default function DriverSettingsPage() {
               readOnly
               style={{
                 width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
-                border: '1.5px solid #e5e7eb', fontSize: '0.88rem',
-                outline: 'none', boxSizing: 'border-box', color: '#9ca3af',
-                background: '#f3f4f6', cursor: 'not-allowed',
+                border: '1.5px solid var(--input-border)', fontSize: '0.88rem',
+                outline: 'none', boxSizing: 'border-box', color: 'var(--text-muted)',
+                background: 'var(--input-bg)', cursor: 'not-allowed', opacity: 0.6,
               }}
             />
           </div>

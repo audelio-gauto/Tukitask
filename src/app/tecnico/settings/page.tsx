@@ -439,7 +439,7 @@ export default function TecnicoSettings() {
         {/* ── SECCIÓN: Cuenta ── */}
         <Section icon="🔒" title="Cuenta">
           <Field label="Correo electrónico">
-            <input type="email" value={email || ''} readOnly style={{ ...inputStyle, background: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }} />
+            <input type="email" value={email || ''} readOnly style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
           </Field>
           <Field label="Tema de la app">
             <select value={themeMode} onChange={e => setThemeMode(e.target.value === 'dark' ? 'dark' : 'light')} style={inputStyle}>
@@ -499,13 +499,13 @@ export default function TecnicoSettings() {
 function Section({ icon, title, required, collapsible, children }: { icon: string; title: string; required?: boolean; collapsible?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(!collapsible);
   return (
-    <div style={{ marginBottom: '1rem', background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+    <div style={{ marginBottom: '1rem', background: 'var(--card-bg)', borderRadius: 16, border: '1px solid var(--card-border)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div
         onClick={collapsible ? () => setOpen(o => !o) : undefined}
-        style={{ padding: '0.75rem 1rem', borderBottom: open ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: collapsible ? 'pointer' : 'default' }}
+        style={{ padding: '0.75rem 1rem', borderBottom: open ? '1px solid var(--card-section-border)' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: collapsible ? 'pointer' : 'default' }}
       >
         <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#374151', flex: 1 }}>{title}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', flex: 1 }}>{title}</span>
         {required && <span style={{ color: '#ef4444', marginLeft: 2, fontSize: '0.85rem' }}>*</span>}
         {collapsible && <span style={{ fontSize: '0.85rem', color: '#9ca3af', transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>}
       </div>
@@ -522,7 +522,7 @@ function Field({ label, hint, required, children }: { label: string; hint?: stri
   return (
     <div>
       <div style={{ marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' }}>{label}</label>
+        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--label-color)' }}>{label}</label>
         {required && <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>*</span>}
         {hint && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>({hint})</span>}
       </div>
@@ -533,7 +533,7 @@ function Field({ label, hint, required, children }: { label: string; hint?: stri
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '0.7rem 0.85rem', borderRadius: 10,
-  border: '1.5px solid #e5e7eb', background: '#f9fafb',
-  fontSize: '0.92rem', color: '#111827', outline: 'none',
+  border: '1.5px solid var(--input-border)', background: 'var(--input-bg)',
+  fontSize: '0.92rem', color: 'var(--input-text)', outline: 'none',
   boxSizing: 'border-box',
 };

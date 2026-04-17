@@ -238,7 +238,7 @@ export default function RequestsFeed({
           const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
 
           return (
-            <div key={item.id} style={{ background: '#0f172a', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : '#1e293b'}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(82dvh - var(--tuki-nav-h, 64px))', overflow: 'hidden' }}>
+            <div key={item.id} style={{ background: 'var(--sheet-bg)', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : 'var(--border-strong)'}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(82dvh - var(--tuki-nav-h, 64px))', overflow: 'hidden' }}>
               {/* Scrollable content */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 8px', WebkitOverflowScrolling: 'touch' as never }}>
               {/* Row 1: photo + label + client + price + timer + dismiss */}
@@ -249,7 +249,7 @@ export default function RequestsFeed({
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
                     {item.orderType === 'mandadito' && (
                       <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '1px 7px', fontSize: '0.62rem', fontWeight: 800, flexShrink: 0 }}>🛒 Mandadito</span>
                     )}
@@ -394,7 +394,7 @@ export default function RequestsFeed({
                   placeholder="Mensaje opcional para el cliente..."
                   maxLength={300}
                   rows={2}
-                  style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '0.8rem', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
                 />
                 <button
                   onClick={() => onAccept(item.id, clientPrice, offerNotes[item.id] || '', distKm)}
@@ -444,7 +444,7 @@ export default function RequestsFeed({
                         const raw = e.target.value.replace(/\D/g, '');
                         setCustomPrices(p => ({ ...p, [item.id]: raw }));
                       }}
-                      style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid #818cf8', background: '#0f172a', color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid #818cf8', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '0.9rem', fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                     />
                     <button
                       onClick={() => {
