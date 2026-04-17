@@ -152,6 +152,8 @@ export async function geocodeSearch(
       : Promise.resolve([] as GeocodeResult[]),
   ])
 
+  console.log(`[geocodeSearch] q="${query}" google=${googleResults.length} nominatim=${nominatimResults.length} mapbox=${mapboxResults.length} googleKey=${keys.google ? 'yes' : 'no'}`)
+
   // Merge: Google Places first (best commercial data), then Nominatim, then Mapbox (streets)
   const merged = deduplicateResults([...googleResults, ...nominatimResults, ...mapboxResults], limit)
 

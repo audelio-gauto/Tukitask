@@ -40,13 +40,13 @@ export async function googlePlacesSearch(
   const url = `${PLACES_SEARCH_URL}?${params.toString()}`
   const res = await fetch(url)
   if (!res.ok) {
-    console.warn(`[googlePlacesSearch] API returned ${res.status}`)
+    console.warn(`[googlePlacesSearch] API returned ${res.status} for query="${query}"`)
     return []
   }
 
   const data = await res.json()
   if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    console.warn(`[googlePlacesSearch] status: ${data.status}`)
+    console.warn(`[googlePlacesSearch] status=${data.status} error="${data.error_message || ''}" query="${query}" keyPrefix="${apiKey.slice(0, 8)}"`)
     return []
   }
 
