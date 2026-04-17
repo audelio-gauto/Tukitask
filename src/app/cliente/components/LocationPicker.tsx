@@ -111,14 +111,16 @@ export default function LocationPicker({ mode, initialCenter, onConfirm, onClose
 
       // Reverse geocode on initial center
       map.on('load', () => {
-        const c = map.getCenter();
+        const container = map.getContainer();
+        const c = map.unproject([container.clientWidth / 2, container.clientHeight / 2]);
         reverseGeocode(c.lat, c.lng);
       });
 
-      // On map move end, reverse geocode the center
+      // On map move end, reverse geocode the visual center (where the pin is)
       map.on('moveend', () => {
         if (!mountedRef.current) return;
-        const c = map.getCenter();
+        const container = map.getContainer();
+        const c = map.unproject([container.clientWidth / 2, container.clientHeight / 2]);
         if (reverseTimer.current) clearTimeout(reverseTimer.current);
         reverseTimer.current = setTimeout(() => {
           reverseGeocode(c.lat, c.lng);
@@ -143,7 +145,13 @@ export default function LocationPicker({ mode, initialCenter, onConfirm, onClose
 
   const handleConfirm = () => {
     if (!mapRef.current) return;
-    const c = mapRef.current.getCenter();
+    // Use the visual center of the map container (where the pin is)
+    // instead of getCenter() to avoid any layout offset discrepancies
+    const container = mapRef.current.getContainer();
+    const c = mapRef.current.unproject([
+      container.clientWidth / 2,
+      container.clientHeight / 2,
+    ]);
     onConfirm(address, c.lat, c.lng);
   };
 

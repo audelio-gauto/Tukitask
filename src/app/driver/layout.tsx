@@ -92,8 +92,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      // DB write only every 60s — 6x fewer writes than before
-      dbIntervalId = setInterval(postToDB, 60_000);
+      // DB write every 15s — keeps driver_locations fresh for polling fallback
+      dbIntervalId = setInterval(postToDB, 15_000);
     }
 
     return () => {

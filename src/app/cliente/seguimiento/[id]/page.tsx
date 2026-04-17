@@ -598,13 +598,14 @@ export default function SeguimientoPage() {
     const isActive = STATUS_ACTIVE.has(order.status);
     if (!isActive) return;
 
-    // Only refresh order STATUS (not driver location — that comes via Broadcast)
+    // Only refresh order STATUS — also poll driver location as fallback for broadcast failures
     intervalRef.current = setInterval(() => {
       fetchOrder();
+      fetchDriverLoc();
     }, POLL_INTERVAL);
 
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [mapReady, order, fetchOrder]);
+  }, [mapReady, order, fetchOrder, fetchDriverLoc]);
 
   // ── Supabase Broadcast subscription for real-time driver location ─────────
   // Listens to the channel `loc:driver:<email>` that the driver app broadcasts to.
@@ -631,7 +632,12 @@ export default function SeguimientoPage() {
       if (payload?.lat != null && payload?.lng != null) {
         setDriverLoc({ lat: Number(payload.lat), lng: Number(payload.lng), updated_at: new Date().toISOString() });
       }
-    }).subscribe();
+    }).subscribe((status) => {
+      // Fetch location immediately when subscription is established
+      if (status === 'SUBSCRIBED') {
+        fetchDriverLoc();
+      }
+    });
 
     broadcastChRef.current = ch;
 
@@ -640,7 +646,7 @@ export default function SeguimientoPage() {
       broadcastChRef.current = null;
       subscribedDriverRef.current = '';
     };
-  }, [order?.accepted_by, order?.status]);
+  }, [order?.accepted_by, order?.status, fetchDriverLoc]);
 
   const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
