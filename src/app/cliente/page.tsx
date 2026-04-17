@@ -1500,31 +1500,6 @@ export default function ClienteHomePage() {
         </div>
       )}
 
-      {/* ── Cancel confirm modal ─────────────────────────────────────────── */}
-      {cancelConfirm && (
-        <>
-          <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.25)' }}>
-            <p style={{ margin: '0 0 6px', fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Cancelar solicitud</p>
-            <p style={{ margin: '0 0 20px', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Esta acción no se puede deshacer. ¿Deseás cancelar?</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => { cancelConfirm.type === 'delivery' ? cancelOrder(cancelConfirm.id) : cancelJob(cancelConfirm.id); setCancelConfirm(null); }}
-                style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}
-              >
-                Sí, cancelar
-              </button>
-              <button
-                onClick={() => setCancelConfirm(null)}
-                style={{ flex: 1, padding: '13px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
-              >
-                No, volver
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ── Cancel confirm modal ───────────────────────────────────────── */}
       {cancelConfirm && (
         <>
