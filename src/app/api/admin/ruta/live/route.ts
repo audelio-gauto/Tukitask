@@ -112,7 +112,7 @@ export async function GET(req: Request) {
         lat:        loc?.lat ?? null,
         lng:        loc?.lng ?? null,
         updated_at: loc?.updated_at ?? null,
-        online:     !!loc,
+        online:     !!loc || !!(order || job),
         en_route:   !!(order || job),
         // Route A → stops → B for driver
         pickup:      order && order.pickup_lat != null
