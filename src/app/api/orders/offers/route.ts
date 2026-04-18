@@ -139,7 +139,7 @@ export async function POST(req: Request) {
 
   const { data: order } = await supabaseServer
     .from('orders')
-    .select('status, created_at')
+    .select('status, created_at, vehicle_type, pickup_lat, pickup_lng, delivery_lat, delivery_lng')
     .eq('id', order_id)
     .single();
 
@@ -149,6 +149,43 @@ export async function POST(req: Request) {
 
   // Usar email del token — no del body
   const driverEmail = user.email;
+
+  // ── Validación: vehículo del driver vs tipo de orden ────────────────
+  {
+    const VT_MAP: Record<string, string> = { moto: 'moto', auto: 'auto', motocarro: 'moto_carro', camion2t: 'camion' };
+    const orderVt = VT_MAP[order.vehicle_type || ''];
+    if (orderVt) {
+      const { data: dProf } = await supabaseServer
+        .from('driver_profiles')
+        .select('service_filters, pickup_range, delivery_range')
+        .eq('email', driverEmail)
+        .maybeSingle();
+
+      // Verificar docs aprobados para este tipo de vehículo
+      const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];
+      const VEH_DOC_KEYS  = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
+      const neededDocs = [...PERSONAL_KEYS, ...VEH_DOC_KEYS.map(k => `${orderVt}_${k}`)];
+      const { data: docs } = await supabaseServer
+        .from('driver_documents')
+        .select('doc_type, status')
+        .eq('driver_email', driverEmail)
+        .in('doc_type', neededDocs);
+      const docMap: Record<string, string> = {};
+      for (const d of (docs || [])) docMap[d.doc_type] = d.status;
+      const allApproved = neededDocs.every(k => docMap[k] === 'approved');
+      if (!allApproved) {
+        return NextResponse.json({ error: 'No tenés documentos aprobados para este tipo de vehículo' }, { status: 403 });
+      }
+
+      // Verificar filtro de servicio activo
+      const FILTER_MAP: Record<string, string> = { moto: 'moto_envios', auto: 'auto_envios', moto_carro: 'moto_carro_fletes', camion: 'camion_fletes' };
+      const filterKey = FILTER_MAP[orderVt];
+      const sf = dProf?.service_filters as Record<string, boolean> | null;
+      if (sf && filterKey && sf[filterKey] === false) {
+        return NextResponse.json({ error: 'Este tipo de servicio no está activo en tus filtros' }, { status: 403 });
+      }
+    }
+  }
 
   const { data: existing } = await supabaseServer
     .from('driver_offers')

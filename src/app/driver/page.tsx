@@ -431,11 +431,21 @@ export default function DriverDashboard() {
     motocarro: 'moto_carro_fletes',
     camion2t: 'camion_fletes',
   };
+  // Inverse map: filter key → vehicle_type(s) the driver has docs approved for
+  const FILTER_TO_VT: Record<string, string> = {
+    moto_envios: 'moto',
+    auto_envios: 'auto',
+    moto_carro_fletes: 'moto_carro',
+    camion_fletes: 'camion',
+  };
+
   const filteredFeedItems: FeedItem[] = pendingOrders
     .filter(o => {
       // ── Filtro 1: tipo de vehículo ──────────────────────────────────────
       const key = VEHICLE_FILTER_MAP[o.vehicle_type as string || ''];
+      // Debe estar activo en filtros Y tener docs aprobados para ese vehículo
       if (key && serviceFilters[key] === false) return false;
+      if (key && !approvedVehicleTypes.has(FILTER_TO_VT[key] || '')) return false;
 
       // ── Filtro 2: rango de recogida y entrega ───────────────────────────
       // Sin GPS: no mostrar ninguna solicitud con coordenadas (rango no calculable)

@@ -91,12 +91,90 @@ export async function GET(req: Request) {
     if (balance < MIN_WALLET_BALANCE) {
       return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
     }
+
+    // Fetch driver profile + approved doc types for server-side filtering
+    const { data: dProf } = await db
+      .from('driver_profiles')
+      .select('service_filters, pickup_range, delivery_range')
+      .eq('email', user.email)
+      .maybeSingle();
+    const sf = (dProf?.service_filters as Record<string, boolean> | null) ?? {};
+    const dPickupRange   = Number(dProf?.pickup_range   ?? 10);
+    const dDeliveryRange = Number(dProf?.delivery_range  ?? 20);
+
+    // Compute which vehicle types the driver has fully approved docs for
+    const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];
+    const VEH_DOC_KEYS  = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
+    const ALL_VTS = ['moto', 'auto', 'moto_carro', 'camion'];
+    const allNeeded = [...PERSONAL_KEYS, ...ALL_VTS.flatMap(vt => VEH_DOC_KEYS.map(k => `${vt}_${k}`))];
+    const { data: driverDocs } = await db
+      .from('driver_documents')
+      .select('doc_type, status')
+      .eq('driver_email', user.email)
+      .in('doc_type', allNeeded);
+    const docMap: Record<string, string> = {};
+    for (const d of (driverDocs || [])) docMap[d.doc_type] = d.status;
+    const approvedVts = new Set<string>();
+    for (const vt of ALL_VTS) {
+      const needed = [...PERSONAL_KEYS, ...VEH_DOC_KEYS.map(k => `${vt}_${k}`)];
+      if (needed.every(k => docMap[k] === 'approved')) approvedVts.add(vt);
+    }
+
+    const FILTER_MAP: Record<string, string> = { moto: 'moto_envios', auto: 'auto_envios', moto_carro: 'moto_carro_fletes', camion: 'camion_fletes' };
+    const VT_MAP: Record<string, string> = { moto: 'moto', auto: 'auto', motocarro: 'moto_carro', camion2t: 'camion' };
+    // Compute the set of order vehicle_type values this driver can serve
+    const allowedOrderVts = new Set<string>();
+    for (const [orderVt, driverVt] of Object.entries(VT_MAP)) {
+      if (!approvedVts.has(driverVt)) continue;
+      const fk = FILTER_MAP[driverVt];
+      if (fk && sf[fk] === false) continue;
+      allowedOrderVts.add(orderVt);
+    }
+
     // Cache available orders for 2s (reduces race-condition window vs 5s)
     // v2 key: ensures old cache without client_is_verified is not served
-    const cachedOrders = await cacheGet<unknown[]>('orders:v2:available');
-    if (cachedOrders) return NextResponse.json(cachedOrders);
+    const cachedOrders = await cacheGet<Record<string, unknown>[]>('orders:v2:available');
+    let allOrders: Record<string, unknown>[];
+    if (cachedOrders) {
+      allOrders = cachedOrders;
+    } else {
+      query = query.in('status', ['pending', 'negotiating']).limit(100);
+      const { data: fetched, error: qErr } = await query;
+      if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
+      // Enrich with client profile info + cache
+      const raw = (fetched || []) as Record<string, unknown>[];
+      const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
+      let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
+      if (emails.length > 0) {
+        const { data: profiles, error: profileErr } = await db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails);
+        if (!profileErr) {
+          (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
+            profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
+          });
+        } else {
+          const { data: fallback } = await db.from('client_profiles').select('email, photo_url, avg_rating').in('email', emails);
+          (fallback ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
+            profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
+          });
+        }
+      }
+      allOrders = raw.map(o => ({
+        ...o,
+        client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
+        client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
+        client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
+      }));
+      await cacheSet('orders:v2:available', allOrders, 2);
+    }
 
-    query = query.in('status', ['pending', 'negotiating']).limit(100);
+    // Server-side filter: vehicle type + service_filters + docs
+    const filtered = allOrders.filter(o => {
+      const ovt = (o.vehicle_type as string) || '';
+      if (ovt && !allowedOrderVts.has(ovt)) return false;
+      return true;
+    });
+
+    return NextResponse.json(filtered);
   }
 
   const { data, error } = await query;
@@ -124,41 +202,6 @@ export async function GET(req: Request) {
       driver_name: (o.accepted_by && driverMap[o.accepted_by as string]?.name) ? driverMap[o.accepted_by as string].name : (o.driver_name ?? null),
       driver_photo: (o.accepted_by && driverMap[o.accepted_by as string]?.photo) ? driverMap[o.accepted_by as string].photo : (o.driver_photo ?? null),
     }));
-    return NextResponse.json(enriched);
-  }
-
-  // For the driver marketplace — enrich with live client_profiles (photo + avg_rating)
-  if (!clientEmail && !driverEmail && data) {
-    const emails = [...new Set(data.map((o: Record<string,unknown>) => o.client_email as string).filter(Boolean))];
-    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
-    if (emails.length > 0) {
-      // Try full query including is_verified (migration 039+). Fall back to photo/rating only if column not yet available.
-      const { data: profiles, error: profileErr } = await db
-        .from('client_profiles')
-        .select('email, photo_url, avg_rating, is_verified')
-        .in('email', emails);
-      if (!profileErr) {
-        (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
-          profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
-        });
-      } else {
-        // Fallback: migration 039 not yet run — fetch without is_verified
-        const { data: fallback } = await db
-          .from('client_profiles')
-          .select('email, photo_url, avg_rating')
-          .in('email', emails);
-        (fallback ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
-          profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
-        });
-      }
-    }
-    const enriched = data.map((o: Record<string,unknown>) => ({
-      ...o,
-      client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
-      client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
-      client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
-    }));
-    await cacheSet('orders:v2:available', enriched, 2);
     return NextResponse.json(enriched);
   }
 
