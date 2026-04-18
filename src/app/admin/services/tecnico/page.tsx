@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import SuspendUserModal, { SuspendTarget } from '../../components/SuspendUserModal';
 
 interface TecnicoItem {
   id: string;
@@ -29,6 +30,7 @@ export default function TecnicoListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState<string | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
   const LIMIT = 50;
 
   const getToken = async () => {
@@ -154,13 +156,14 @@ export default function TecnicoListPage() {
         ) : (
           <>
             {/* Table header */}
-            <div className="grid grid-cols-[36px_1fr_160px_120px_120px_140px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="grid grid-cols-[36px_1fr_160px_120px_120px_140px_80px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <div></div>
               <div>Email / Nombre</div>
               <div>Suscripción</div>
               <div>Registro</div>
               <div>Estado</div>
-              <div className="text-right">Acciones</div>
+              <div className="text-right">Verificación</div>
+              <div className="text-center">Cuenta</div>
             </div>
 
             {tecnicos.map(t => {
@@ -173,7 +176,7 @@ export default function TecnicoListPage() {
               return (
                 <div
                   key={t.id}
-                  className="grid grid-cols-[36px_1fr_160px_120px_120px_140px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-sky-50/30 transition-colors"
+                  className="grid grid-cols-[36px_1fr_160px_120px_120px_140px_80px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-sky-50/30 transition-colors"
                 >
                   {/* Avatar */}
                   <div className="flex items-center">
@@ -225,7 +228,7 @@ export default function TecnicoListPage() {
                     )}
                   </div>
 
-                  {/* Acciones */}
+                  {/* Verificación */}
                   <div className="flex items-center justify-end gap-2">
                     {!isVerified ? (
                       <button
@@ -244,6 +247,25 @@ export default function TecnicoListPage() {
                         {verifying === t.id ? '...' : 'Revocar'}
                       </button>
                     )}
+                  </div>
+
+                  {/* Cuenta */}
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={() => setSuspendTarget({
+                        user_id: t.id,
+                        email: t.email,
+                        role: 'tecnico',
+                        display_name: name,
+                        profile_photo: t.profile_photo || null,
+                      })}
+                      title="Gestionar cuenta"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               );
@@ -270,6 +292,15 @@ export default function TecnicoListPage() {
           </div>
         )}
       </div>
+
+      {/* Suspend modal */}
+      {suspendTarget && (
+        <SuspendUserModal
+          target={suspendTarget}
+          onClose={() => setSuspendTarget(null)}
+          onComplete={() => fetchTecnicos(page, query)}
+        />
+      )}
     </div>
   );
 }

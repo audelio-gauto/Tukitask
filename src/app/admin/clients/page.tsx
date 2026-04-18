@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import SuspendUserModal, { SuspendTarget } from '../components/SuspendUserModal';
 
 interface Client {
   id: string;
@@ -21,6 +22,7 @@ export default function ClientsPage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
   const LIMIT = 50;
 
   const fetchClients = useCallback(async (pg: number, q: string) => {
@@ -113,12 +115,12 @@ export default function ClientsPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[36px_1fr_1fr_130px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <div></div><div>Email</div><div>Nombre</div><div className="text-right">Registro</div>
+            <div className="grid grid-cols-[36px_1fr_1fr_130px_80px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div></div><div>Email</div><div>Nombre</div><div className="text-right">Registro</div><div className="text-center">Cuenta</div>
             </div>
             {clients.map(c => (
               <div key={c.id}
-                className="grid grid-cols-[36px_1fr_1fr_130px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                className="grid grid-cols-[36px_1fr_1fr_130px_80px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
                 onClick={() => router.push(`/admin/clients/${c.id}`)}
               >
                 <div className="flex items-center">
@@ -138,6 +140,23 @@ export default function ClientsPage() {
                 </div>
                 <div className="flex items-center justify-end">
                   <span className="text-xs text-gray-400">{fmtDate(c.created_at)}</span>
+                </div>
+                <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => setSuspendTarget({
+                      user_id: c.id,
+                      email: c.email,
+                      role: 'cliente',
+                      display_name: c.display_name || null,
+                      profile_photo: c.photo_url || null,
+                    })}
+                    title="Gestionar cuenta"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             ))}
@@ -171,6 +190,15 @@ export default function ClientsPage() {
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 text-gray-700">Siguiente →</button>
           </div>
         </div>
+      )}
+
+      {/* Suspend modal */}
+      {suspendTarget && (
+        <SuspendUserModal
+          target={suspendTarget}
+          onClose={() => setSuspendTarget(null)}
+          onComplete={() => fetchClients(page, query)}
+        />
       )}
     </div>
   );

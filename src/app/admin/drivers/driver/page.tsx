@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import SuspendUserModal, { SuspendTarget } from '../../components/SuspendUserModal';
 
 interface DriverItem {
   id: string;
@@ -32,6 +33,7 @@ export default function DriverListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState<string | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
   const LIMIT = 50;
 
   const getToken = async () => {
@@ -156,8 +158,8 @@ export default function DriverListPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[36px_1fr_140px_110px_180px_110px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <div></div><div>Conductor</div><div>Vehículo</div><div className="text-center">Rating</div><div className="text-center">Verificación</div><div className="text-right">Registro</div>
+            <div className="grid grid-cols-[36px_1fr_140px_110px_180px_110px_80px] gap-3 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div></div><div>Conductor</div><div>Vehículo</div><div className="text-center">Rating</div><div className="text-center">Verificación</div><div className="text-right">Registro</div><div className="text-center">Acción</div>
             </div>
             {drivers.map(d => {
               const name = fullName(d);
@@ -167,7 +169,7 @@ export default function DriverListPage() {
               const isBusy = verifying === d.id;
               return (
                 <div key={d.id}
-                  className="grid grid-cols-[36px_1fr_140px_110px_180px_110px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-yellow-50/40 transition-colors cursor-pointer"
+                  className="grid grid-cols-[36px_1fr_140px_110px_180px_110px_80px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-yellow-50/40 transition-colors cursor-pointer"
                   onClick={() => router.push(`/admin/drivers/${d.id}`)}
                 >
                   <div className="flex items-center">
@@ -222,6 +224,23 @@ export default function DriverListPage() {
                   <div className="flex items-center justify-end">
                     <span className="text-xs text-gray-400">{fmtDate(d.created_at)}</span>
                   </div>
+                  <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => setSuspendTarget({
+                        user_id: d.id,
+                        email: d.email,
+                        role: 'driver',
+                        display_name: name,
+                        profile_photo: d.profile_photo || null,
+                      })}
+                      title="Gestionar cuenta"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -255,6 +274,15 @@ export default function DriverListPage() {
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 text-gray-700">Siguiente →</button>
           </div>
         </div>
+      )}
+
+      {/* Suspend modal */}
+      {suspendTarget && (
+        <SuspendUserModal
+          target={suspendTarget}
+          onClose={() => setSuspendTarget(null)}
+          onComplete={() => fetchDrivers(page, query)}
+        />
       )}
     </div>
   );

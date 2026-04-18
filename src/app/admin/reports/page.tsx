@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import SuspendUserModal, { SuspendTarget } from '../components/SuspendUserModal';
 
 interface Report {
   id: string;
@@ -57,6 +58,8 @@ export default function AdminReportsPage() {
   const [adminNote, setAdminNote] = useState('');
   const [saving, setSaving]       = useState(false);
   const [saveMsg, setSaveMsg]     = useState('');
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -98,6 +101,30 @@ export default function AdminReportsPage() {
     }
     setSaving(false);
     setTimeout(() => setSaveMsg(''), 3000);
+  };
+
+  const lookupAndSuspend = async (email: string, role: string) => {
+    setLookingUp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const res = await fetch(`/api/admin/users/lookup?email=${encodeURIComponent(email)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { alert('Usuario no encontrado'); return; }
+      const user = await res.json();
+      setSuspendTarget({
+        user_id: user.id,
+        email: user.email,
+        role: user.role || role,
+        display_name: user.display_name || null,
+        profile_photo: user.profile_photo || null,
+      });
+    } catch (err) {
+      alert('Error: ' + String(err));
+    } finally {
+      setLookingUp(false);
+    }
   };
 
   const fmtDate = (s: string) =>
@@ -165,10 +192,18 @@ export default function AdminReportsPage() {
 
                     <div className="text-xs text-gray-500 space-y-0.5">
                       <div>
-                        <span className="font-medium">Reportó:</span> {ROLE_LABELS[r.reporter_role]} — {r.reporter_email}
+                        <span className="font-medium">Reportó:</span> {ROLE_LABELS[r.reporter_role]} —{' '}
+                        <button
+                          onClick={e => { e.stopPropagation(); lookupAndSuspend(r.reporter_email, r.reporter_role); }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >{r.reporter_email}</button>
                       </div>
                       <div>
-                        <span className="font-medium">Reportado:</span> {ROLE_LABELS[r.reported_role]} — {r.reported_email}
+                        <span className="font-medium">Reportado:</span> {ROLE_LABELS[r.reported_role]} —{' '}
+                        <button
+                          onClick={e => { e.stopPropagation(); lookupAndSuspend(r.reported_email, r.reported_role); }}
+                          className="text-red-600 hover:text-red-800 hover:underline font-medium"
+                        >{r.reported_email}</button>
                       </div>
                       <div>
                         <span className="font-medium">Ref:</span>{' '}
@@ -228,8 +263,14 @@ export default function AdminReportsPage() {
                   {STATUS_CONFIG[selected.status].label}
                 </span>
               </div>
-              <div><span className="font-semibold">Reportó:</span> {ROLE_LABELS[selected.reporter_role]} — {selected.reporter_email}</div>
-              <div><span className="font-semibold">Reportado:</span> {ROLE_LABELS[selected.reported_role]} — {selected.reported_email}</div>
+              <div><span className=\"font-semibold\">Reportó:</span> {ROLE_LABELS[selected.reporter_role]} —{' '}
+                <button onClick={() => lookupAndSuspend(selected.reporter_email, selected.reporter_role)}
+                  className=\"text-blue-600 hover:text-blue-800 hover:underline font-medium\">{selected.reporter_email}</button>
+              </div>
+              <div><span className=\"font-semibold\">Reportado:</span> {ROLE_LABELS[selected.reported_role]} —{' '}
+                <button onClick={() => lookupAndSuspend(selected.reported_email, selected.reported_role)}
+                  className=\"text-red-600 hover:text-red-800 hover:underline font-medium\">{selected.reported_email}</button>
+              </div>
               <div>
                 <span className="font-semibold">Referencia:</span>{' '}
                 <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{selected.reference_type.toUpperCase()}</span>{' '}
@@ -300,6 +341,25 @@ export default function AdminReportsPage() {
           </div>
         )}
       </div>
+
+      {/* Loading overlay for user lookup */}
+      {lookingUp && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-xl p-6 flex items-center gap-3 shadow-xl">
+            <div className="w-5 h-5 border-2 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-gray-700 font-medium">Buscando usuario…</span>
+          </div>
+        </div>
+      )}
+
+      {/* Suspend modal */}
+      {suspendTarget && (
+        <SuspendUserModal
+          target={suspendTarget}
+          onClose={() => setSuspendTarget(null)}
+          onComplete={() => fetchReports()}
+        />
+      )}
     </div>
   );
 }
