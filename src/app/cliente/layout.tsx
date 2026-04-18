@@ -9,6 +9,7 @@ import { initTheme } from '@/lib/useTheme';
 import { ClientDrawer } from './components/ClientDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { usePushNotifications } from '@/lib/usePushNotifications';
+import SuspendedScreen from '@/components/SuspendedScreen';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
@@ -62,6 +64,13 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       }
       setChecking(false);
 
+      // Check suspension status
+      fetch('/api/me/suspension', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }).then(r => r.json()).then(s => {
+        if (s?.suspended) setSuspended({ active: true, reason: s.reason, until: s.until || s.banned_until, permanent: s.permanent });
+      }).catch(() => {});
+
       // Load client profile in background — updates state and refreshes cache
       fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
@@ -100,6 +109,10 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         </div>
       </div>
     );
+  }
+
+  if (suspended.active) {
+    return <SuspendedScreen reason={suspended.reason} until={suspended.until} permanent={suspended.permanent} />;
   }
 
   return (

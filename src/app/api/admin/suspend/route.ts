@@ -3,33 +3,23 @@ import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
-const DURATION_MAP: Record<string, string> = {
-  '1d':        '24h',
-  '1m':        '720h',
-  '1y':        '8760h',
-  'permanent': '876000h',
-};
-
-const DURATION_LABELS: Record<string, string> = {
-  '1d':        '1 día',
-  '1m':        '1 mes',
-  '1y':        '1 año',
-  'permanent': 'Permanente',
-};
-
-/** POST — suspend or reactivate a user */
+/** POST — suspend or reactivate a user
+ *  body: { user_id, action: 'suspend'|'reactivate', days?: number, reason?: string }
+ *  days = 0 means permanent
+ */
 export async function POST(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
-  let body: { user_id?: string; action?: string; duration?: string; reason?: string };
+  let body: { user_id?: string; action?: string; days?: number; reason?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const { user_id, action, duration, reason } = body;
+  const { user_id, action, reason } = body;
+  const days = typeof body.days === 'number' ? body.days : -1;
 
   if (!user_id || typeof user_id !== 'string' || user_id.length > 100) {
     return NextResponse.json({ error: 'user_id requerido' }, { status: 400 });
@@ -61,7 +51,7 @@ export async function POST(req: Request) {
           suspended: false,
           blocked: false,
           suspension_reason: null,
-          suspension_duration: null,
+          suspension_days: null,
           suspended_by: null,
           suspended_at: null,
           suspended_until: null,
@@ -71,25 +61,23 @@ export async function POST(req: Request) {
     }
 
     // action === 'suspend'
-    if (!duration || !DURATION_MAP[duration]) {
-      return NextResponse.json({ error: `duration debe ser: ${Object.keys(DURATION_MAP).join(', ')}` }, { status: 400 });
+    if (days < 0) {
+      return NextResponse.json({ error: 'days requerido (0 = permanente, >0 = días)' }, { status: 400 });
     }
 
+    const permanent = days === 0;
+    const banHours = permanent ? '876000h' : `${days * 24}h`;
     const now = new Date();
-    let suspendedUntil: string | null = null;
-    if (duration !== 'permanent') {
-      const hours = parseInt(DURATION_MAP[duration]);
-      suspendedUntil = new Date(now.getTime() + hours * 3600_000).toISOString();
-    }
+    const suspendedUntil = permanent ? null : new Date(now.getTime() + days * 24 * 3600_000).toISOString();
+    const label = permanent ? 'Permanente' : `${days} día${days !== 1 ? 's' : ''}`;
 
     await db.auth.admin.updateUserById(user_id, {
-      ban_duration: DURATION_MAP[duration],
+      ban_duration: banHours,
       app_metadata: {
-        suspended: duration !== 'permanent',
-        blocked: duration === 'permanent',
+        suspended: !permanent,
+        blocked: permanent,
         suspension_reason: reason || 'Suspendido por administrador',
-        suspension_duration: duration,
-        suspension_label: DURATION_LABELS[duration],
+        suspension_days: days,
         suspended_by: admin.email,
         suspended_at: now.toISOString(),
         suspended_until: suspendedUntil,
@@ -99,8 +87,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       action: 'suspend',
-      duration,
-      label: DURATION_LABELS[duration],
+      days,
+      label,
       email: targetUser.email,
       suspended_until: suspendedUntil,
     });

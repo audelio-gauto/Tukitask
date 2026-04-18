@@ -16,31 +16,19 @@ interface SuspensionStatus {
   is_blocked: boolean;
   is_active: boolean;
   suspension_reason: string | null;
-  suspension_duration: string | null;
-  suspension_label: string | null;
   suspended_by: string | null;
   suspended_at: string | null;
   banned_until: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  cliente: 'Cliente',
-  driver: 'Conductor',
-  tecnico: 'Técnico',
+  cliente: 'Cliente', driver: 'Conductor', tecnico: 'Técnico',
 };
-
 const ROLE_COLORS: Record<string, string> = {
   cliente: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   driver: 'bg-amber-50 text-amber-700 border-amber-200',
   tecnico: 'bg-sky-50 text-sky-700 border-sky-200',
 };
-
-const DURATIONS = [
-  { key: '1d', label: '1 Día', desc: '24 horas' },
-  { key: '1m', label: '1 Mes', desc: '30 días' },
-  { key: '1y', label: '1 Año', desc: '365 días' },
-  { key: 'permanent', label: 'Permanente', desc: 'Sin fecha de fin' },
-] as const;
 
 interface Props {
   target: SuspendTarget;
@@ -51,9 +39,9 @@ interface Props {
 export default function SuspendUserModal({ target, onClose, onComplete }: Props) {
   const [status, setStatus] = useState<SuspensionStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [selectedDuration, setSelectedDuration] = useState<string>('1d');
+  const [days, setDays] = useState('');
+  const [permanent, setPermanent] = useState(false);
   const [reason, setReason] = useState('');
-  const [step, setStep] = useState<'main' | 'confirm-suspend' | 'confirm-reactivate'>('main');
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -69,10 +57,7 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
       const res = await fetch(`/api/admin/suspend?user_id=${target.user_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const json = await res.json();
-        setStatus(json);
-      }
+      if (res.ok) setStatus(await res.json());
     } catch { /* ignore */ }
     setLoadingStatus(false);
   }, [target.user_id]);
@@ -80,6 +65,8 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
   const handleSuspend = async () => {
+    const numDays = permanent ? 0 : parseInt(days);
+    if (!permanent && (!numDays || numDays < 1)) return;
     setSaving(true);
     setResult(null);
     try {
@@ -90,7 +77,7 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
         body: JSON.stringify({
           user_id: target.user_id,
           action: 'suspend',
-          duration: selectedDuration,
+          days: numDays,
           reason: reason.trim() || undefined,
         }),
       });
@@ -98,10 +85,9 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
       if (res.ok && json.ok) {
         setResult({ ok: true, msg: `Cuenta suspendida — ${json.label}` });
         await fetchStatus();
-        setStep('main');
         onComplete?.();
       } else {
-        setResult({ ok: false, msg: json.error || 'Error al suspender' });
+        setResult({ ok: false, msg: json.error || 'Error' });
       }
     } catch (err) {
       setResult({ ok: false, msg: String(err) });
@@ -117,19 +103,15 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
       const res = await fetch('/api/admin/suspend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          user_id: target.user_id,
-          action: 'reactivate',
-        }),
+        body: JSON.stringify({ user_id: target.user_id, action: 'reactivate' }),
       });
       const json = await res.json();
       if (res.ok && json.ok) {
-        setResult({ ok: true, msg: 'Cuenta reactivada exitosamente' });
+        setResult({ ok: true, msg: 'Cuenta reactivada' });
         await fetchStatus();
-        setStep('main');
         onComplete?.();
       } else {
-        setResult({ ok: false, msg: json.error || 'Error al reactivar' });
+        setResult({ ok: false, msg: json.error || 'Error' });
       }
     } catch (err) {
       setResult({ ok: false, msg: String(err) });
@@ -140,48 +122,31 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
   const isSuspended = status?.is_suspended || status?.is_blocked;
   const initials = (target.display_name?.[0] || target.email[0])?.toUpperCase() || '?';
   const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('es-PY', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   }) : null;
+  const canSuspend = permanent || (parseInt(days) > 0);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
 
-      {/* Modal */}
-      <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95"
-        onClick={e => e.stopPropagation()}
-      >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Gestión de Cuenta</h2>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <div className="px-5 pt-5 pb-3 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-gray-900">Gestión de Cuenta</h2>
+            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm">✕</button>
           </div>
-
-          {/* User card */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
             {target.profile_photo ? (
-              <img src={target.profile_photo} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow" />
+              <img src={target.profile_photo} alt="" className="w-10 h-10 rounded-full object-cover" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-600 font-bold text-lg ring-2 ring-white shadow">
-                {initials}
-              </div>
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold">{initials}</div>
             )}
             <div className="flex-1 min-w-0">
-              {target.display_name && (
-                <p className="text-sm font-semibold text-gray-900 truncate">{target.display_name}</p>
-              )}
+              {target.display_name && <p className="text-sm font-semibold text-gray-900 truncate">{target.display_name}</p>}
               <p className="text-xs text-gray-500 truncate">{target.email}</p>
-              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${ROLE_COLORS[target.role] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+              <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${ROLE_COLORS[target.role] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
                 {ROLE_LABELS[target.role] || target.role}
               </span>
             </div>
@@ -189,241 +154,103 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4">
-          {/* Loading */}
+        <div className="px-5 py-4 space-y-3">
           {loadingStatus && (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
+            <div className="flex justify-center py-6">
+              <div className="w-5 h-5 border-2 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
             </div>
           )}
 
-          {/* Status banner */}
+          {/* Current status */}
           {!loadingStatus && status && (
-            <>
-              {isSuspended ? (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-sm font-bold text-red-800">
-                      {status.is_blocked ? 'Bloqueado Permanentemente' : 'Cuenta Suspendida'}
-                    </span>
-                  </div>
-                  {status.suspension_label && (
-                    <p className="text-xs text-red-600 ml-[18px]">Duración: {status.suspension_label}</p>
-                  )}
-                  {status.suspension_reason && (
-                    <p className="text-xs text-red-600 ml-[18px]">Motivo: {status.suspension_reason}</p>
-                  )}
-                  {status.banned_until && !status.is_blocked && (
-                    <p className="text-xs text-red-600 ml-[18px]">Hasta: {fmtDate(status.banned_until)}</p>
-                  )}
-                  {status.suspended_by && (
-                    <p className="text-xs text-red-400 ml-[18px] mt-1">Por: {status.suspended_by}</p>
-                  )}
-                  {status.suspended_at && (
-                    <p className="text-xs text-red-400 ml-[18px]">Fecha: {fmtDate(status.suspended_at)}</p>
-                  )}
+            isSuspended ? (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-sm font-bold text-red-800">
+                    {status.is_blocked ? 'Bloqueado Permanente' : 'Suspendido'}
+                  </span>
                 </div>
-              ) : (
-                <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-sm font-bold text-emerald-800">Cuenta Activa</span>
-                  </div>
-                </div>
-              )}
-            </>
+                {status.suspension_reason && <p className="text-xs text-red-600 ml-4">Motivo: {status.suspension_reason}</p>}
+                {status.banned_until && !status.is_blocked && <p className="text-xs text-red-600 ml-4">Hasta: {fmtDate(status.banned_until)}</p>}
+                {status.suspended_by && <p className="text-xs text-red-400 ml-4 mt-0.5">Por: {status.suspended_by}</p>}
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-sm font-bold text-emerald-800">Cuenta Activa</span>
+              </div>
+            )
           )}
 
-          {/* Result message */}
+          {/* Result */}
           {result && (
-            <div className={`mb-4 p-3 rounded-xl text-sm font-semibold ${
-              result.ok
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
+            <div className={`p-2.5 rounded-xl text-sm font-semibold ${result.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
               {result.msg}
             </div>
           )}
 
-          {/* Main view */}
-          {!loadingStatus && step === 'main' && (
-            <div className="space-y-3">
-              {/* Suspend button */}
-              <button
-                onClick={() => { setStep('confirm-suspend'); setResult(null); }}
-                className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-red-200 bg-white hover:bg-red-50 transition-all group"
-              >
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 group-hover:bg-red-200 transition-colors">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900">Suspender Cuenta</p>
-                  <p className="text-xs text-gray-500">Bloquear acceso por tiempo definido</p>
-                </div>
-                <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Reactivate button — only when suspended */}
-              {isSuspended && (
-                <button
-                  onClick={() => { setStep('confirm-reactivate'); setResult(null); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-emerald-200 bg-white hover:bg-emerald-50 transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
-                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+          {/* Suspend controls */}
+          {!loadingStatus && (
+            <>
+              <div className="border-t border-gray-100 pt-3">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Suspender</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="9999"
+                      value={days}
+                      onChange={e => { setDays(e.target.value); setPermanent(false); }}
+                      placeholder="Ej: 180"
+                      disabled={permanent}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">días</span>
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-gray-900">Reactivar Cuenta</p>
-                    <p className="text-xs text-gray-500">Levantar la suspensión actual</p>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Confirm suspend step */}
-          {step === 'confirm-suspend' && (
-            <div className="space-y-4">
-              <button
-                onClick={() => setStep('main')}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Volver
-              </button>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
-                  Duración de la suspensión
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {DURATIONS.map(d => (
-                    <button
-                      key={d.key}
-                      onClick={() => setSelectedDuration(d.key)}
-                      className={`p-3 rounded-xl border-2 text-left transition-all ${
-                        selectedDuration === d.key
-                          ? d.key === 'permanent'
-                            ? 'border-red-500 bg-red-50'
-                            : 'border-[#F5C518] bg-yellow-50'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                    >
-                      <p className={`text-sm font-bold ${
-                        selectedDuration === d.key
-                          ? d.key === 'permanent' ? 'text-red-700' : 'text-gray-900'
-                          : 'text-gray-700'
-                      }`}>
-                        {d.label}
-                      </p>
-                      <p className="text-[11px] text-gray-500">{d.desc}</p>
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => { setPermanent(!permanent); if (!permanent) setDays(''); }}
+                    className={`px-3 py-2 rounded-lg text-sm font-bold border-2 transition-all whitespace-nowrap ${
+                      permanent ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    Permanente
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
-                  Motivo (opcional)
-                </label>
-                <textarea
+                <input
+                  type="text"
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  placeholder="Describe el motivo de la suspensión..."
-                  maxLength={500}
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] focus:outline-none text-gray-800 placeholder:text-gray-400"
+                  placeholder="Motivo (opcional)"
+                  maxLength={200}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] focus:outline-none mb-2"
                 />
+                <button
+                  onClick={handleSuspend}
+                  disabled={saving || !canSuspend}
+                  className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-40 ${
+                    permanent ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-[#F5C518] text-[#1d2327] hover:bg-yellow-400'
+                  }`}
+                >
+                  {saving ? 'Procesando...' : permanent ? 'Suspender Permanente' : `Suspender ${days ? days + ' días' : ''}`}
+                </button>
               </div>
 
-              {selectedDuration === 'permanent' && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                  <p className="text-xs text-red-700 font-semibold">
-                    ⚠️ Esta acción bloqueará permanentemente el acceso del usuario. Solo podrá revertirse manualmente.
-                  </p>
+              {/* Reactivate */}
+              {isSuspended && (
+                <div className="border-t border-gray-100 pt-3">
+                  <button
+                    onClick={handleReactivate}
+                    disabled={saving}
+                    className="w-full py-2.5 rounded-lg text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all disabled:opacity-40"
+                  >
+                    {saving ? 'Procesando...' : 'Revertir Suspensión'}
+                  </button>
                 </div>
               )}
-
-              <button
-                onClick={handleSuspend}
-                disabled={saving}
-                className={`w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${
-                  selectedDuration === 'permanent'
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-[#F5C518] text-[#1d2327] hover:bg-yellow-400'
-                }`}
-              >
-                {saving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Procesando...
-                  </span>
-                ) : (
-                  `Confirmar Suspensión — ${DURATIONS.find(d => d.key === selectedDuration)?.label}`
-                )}
-              </button>
-            </div>
+            </>
           )}
-
-          {/* Confirm reactivate step */}
-          {step === 'confirm-reactivate' && (
-            <div className="space-y-4">
-              <button
-                onClick={() => setStep('main')}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Volver
-              </button>
-
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
-                <svg className="w-12 h-12 mx-auto mb-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm font-semibold text-emerald-800 mb-1">¿Reactivar esta cuenta?</p>
-                <p className="text-xs text-emerald-600">
-                  Se levantará la suspensión y el usuario podrá acceder nuevamente.
-                </p>
-              </div>
-
-              <button
-                onClick={handleReactivate}
-                disabled={saving}
-                className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all disabled:opacity-50"
-              >
-                {saving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Procesando...
-                  </span>
-                ) : 'Confirmar Reactivación'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            className="w-full py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
-          >
-            Cerrar
-          </button>
         </div>
       </div>
     </div>

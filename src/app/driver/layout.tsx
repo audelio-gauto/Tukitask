@@ -12,6 +12,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '@/components/BottomNav';
+import SuspendedScreen from '@/components/SuspendedScreen';
 
 const DRIVER_TABS = [
   { href: '/driver',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -32,6 +33,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [navApp, setNavApp] = useState('google_maps');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
+  const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
@@ -140,6 +142,13 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       }
       setChecking(false); // show content BEFORE profile load
 
+      // Check suspension status
+      fetch('/api/me/suspension', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }).then(r => r.json()).then(s => {
+        if (s?.suspended) setSuspended({ active: true, reason: s.reason, until: s.until || s.banned_until, permanent: s.permanent });
+      }).catch(() => {});
+
       // Load profile in background — updates state and refreshes cache
       fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
@@ -182,6 +191,10 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         </div>
       </div>
     );
+  }
+
+  if (suspended.active) {
+    return <SuspendedScreen reason={suspended.reason} until={suspended.until} permanent={suspended.permanent} />;
   }
 
   return (
