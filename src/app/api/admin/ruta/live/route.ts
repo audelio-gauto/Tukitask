@@ -10,11 +10,11 @@ export async function GET(req: Request) {
   try {
     const db = sbAdmin();
 
-    // Get all drivers and technicians
+    // Get all drivers and technicians (role can be 'servicio' or 'tecnico')
     const { data: users, error: usersErr } = await db
       .from('users')
       .select('id, email, role')
-      .in('role', ['driver', 'tecnico']);
+      .in('role', ['driver', 'tecnico', 'servicio']);
 
     if (usersErr) return NextResponse.json({ error: usersErr.message }, { status: 500 });
     if (!users || users.length === 0) return NextResponse.json({ data: [] });
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 
     // Active orders — accepted_by is the driver email
     const driverEmails = users.filter((u: any) => u.role === 'driver').map((u: any) => u.email as string);
-    const tecnicoEmails = users.filter((u: any) => u.role === 'tecnico').map((u: any) => u.email as string);
+    const tecnicoEmails = users.filter((u: any) => u.role === 'tecnico' || u.role === 'servicio').map((u: any) => u.email as string);
 
     const orderMap = new Map<string, any>();
     if (driverEmails.length > 0) {
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
       return {
         id:             u.id,
         email:          u.email,
-        role:           u.role,
+        role:           (u.role === 'servicio' ? 'tecnico' : u.role) as string,
         name:           [profile.first_name, profile.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
         transport_mode: profile.transport_mode ?? null,
         profile_photo:  profile.profile_photo ?? null,
