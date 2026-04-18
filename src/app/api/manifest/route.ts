@@ -44,7 +44,7 @@ export async function GET() {
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
-    background_color: '#0f0f1a',
+    background_color: '#000000',
     theme_color: '#F5C518',
     orientation: 'portrait-primary',
     lang: 'es',

@@ -17,7 +17,7 @@ const svgPath  = join(root, 'public', 'logo.svg');
 
 if (!existsSync(iconsDir)) mkdirSync(iconsDir, { recursive: true });
 
-const DARK_BG = { r: 15, g: 15, b: 26, alpha: 1 };
+const DARK_BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 const sizes = [48, 72, 96, 128, 144, 152, 180, 192, 384, 512];
 

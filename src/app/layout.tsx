@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#0f0f1a",
+    "msapplication-TileColor": "#000000",
     "msapplication-TileImage": "/api/pwa-icon/192",
     "msapplication-config": "none",
   },
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)",  color: "#0f0f1a" },
+    { media: "(prefers-color-scheme: dark)",  color: "#000000" },
     { media: "(prefers-color-scheme: light)", color: "#F5C518" },
   ],
   width: "device-width",
