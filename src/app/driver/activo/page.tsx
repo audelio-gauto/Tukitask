@@ -230,7 +230,7 @@ export default function ActivoPage() {
 
     return (
       <div key={order.id} style={{
-        background: 'rgba(255,255,255,0.04)',
+        background: 'var(--glass-card)',
         border: `1.5px solid ${statusInfo.color}40`,
         borderRadius: 18,
         marginBottom: 16,
@@ -248,7 +248,7 @@ export default function ActivoPage() {
           <span style={{ color: statusInfo.color, fontWeight: 700, fontSize: '0.9rem' }}>
             {statusInfo.icon} {statusInfo.label}
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>#{track}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>#{track}</span>
         </div>
 
         <div style={{ padding: '14px 16px' }}>
@@ -261,12 +261,12 @@ export default function ActivoPage() {
                 : 'linear-gradient(135deg, #F5C518, #F58A07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#1C1C2E', fontWeight: 700, fontSize: '1.2rem',
-              border: '2px solid rgba(255,255,255,0.12)',
+              border: '2px solid var(--border-strong)',
             }}>
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>{clientName}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
               {phone && (
                 <a href={`tel:${phone}`} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none' }}>
                   📞 {phone}
@@ -275,7 +275,7 @@ export default function ActivoPage() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1.15rem' }}>₲{price}</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem' }}>acordado</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>acordado</div>
             </div>
           </div>
 
@@ -324,7 +324,7 @@ export default function ActivoPage() {
           {/* Addresses */}
           {(order.pickup_address || order.delivery_address) && (
             <div style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--surface-3)',
               borderRadius: 12,
               padding: '12px 14px',
               marginBottom: 14,
@@ -335,20 +335,20 @@ export default function ActivoPage() {
                   paddingTop: 4, gap: 3, flexShrink: 0,
                 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block' }} />
-                  <span style={{ width: 2, height: 22, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                  <span style={{ width: 2, height: 22, background: 'var(--border-subtle)', display: 'block' }} />
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#4ade80', display: 'block' }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   {order.pickup_address && (
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>Recogida</div>
-                      <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.35 }}>{order.pickup_address}</div>
+                      <div style={{ fontSize: '0.83rem', color: 'var(--text-primary)', lineHeight: 1.35 }}>{order.pickup_address}</div>
                     </div>
                   )}
                   {order.delivery_address && (
                     <div>
                       <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>Entrega</div>
-                      <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.35 }}>{order.delivery_address}</div>
+                      <div style={{ fontSize: '0.83rem', color: 'var(--text-primary)', lineHeight: 1.35 }}>{order.delivery_address}</div>
                     </div>
                   )}
                 </div>
@@ -387,10 +387,10 @@ export default function ActivoPage() {
           {/* Package description */}
           {order.package_description && (
             <div style={{
-              background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '9px 13px',
-              marginBottom: 14, fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)',
+              background: 'var(--surface-3)', borderRadius: 10, padding: '9px 13px',
+              marginBottom: 14, fontSize: '0.82rem', color: 'var(--text-secondary)',
             }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Paquete: </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Paquete: </span>
               {order.package_description}
             </div>
           )}
@@ -398,7 +398,7 @@ export default function ActivoPage() {
           {/* ── Paradas (multi-stop) ── */}
           {Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
                 📍 Paradas ({order.order_stops.length})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -413,7 +413,7 @@ export default function ActivoPage() {
                   return (
                     <div key={stop.id} style={{
                       background: isDone ? 'rgba(74,222,128,0.07)' : isFailed ? 'rgba(239,68,68,0.07)' : 'rgba(0,0,0,0.25)',
-                      border: `1.5px solid ${isDone ? 'rgba(74,222,128,0.3)' : isFailed ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                      border: `1.5px solid ${isDone ? 'rgba(74,222,128,0.3)' : isFailed ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
                       borderRadius: 12, padding: '10px 12px',
                     }}>
                       {/* Stop header */}
@@ -431,7 +431,7 @@ export default function ActivoPage() {
                             {stop.address}
                           </div>
                           {stop.receiver_contact && (
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                               👤 {stop.receiver_contact}
                               {stop.receiver_phone && (
                                 <a href={`tel:${stop.receiver_phone}`} style={{ color: '#60a5fa', marginLeft: 6, textDecoration: 'none' }}>
@@ -441,7 +441,7 @@ export default function ActivoPage() {
                             </div>
                           )}
                           {stop.description && (
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                               📝 {stop.description}
                             </div>
                           )}
@@ -455,8 +455,8 @@ export default function ActivoPage() {
                         <button
                           onClick={() => openMaps(navApp, stop.address)}
                           style={{
-                            padding: '5px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
-                            background: 'rgba(255,255,255,0.06)', color: '#94a3b8',
+                            padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border-strong)',
+                            background: 'var(--glass-card)', color: '#94a3b8',
                             fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0,
                           }}
                         >🗺️</button>
@@ -503,7 +503,7 @@ export default function ActivoPage() {
                             rows={2}
                             style={{
                               width: '100%', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
-                              background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: '0.8rem',
+                              background: 'var(--surface-3)', color: 'var(--text-primary)', fontSize: '0.8rem',
                               padding: '7px 9px', resize: 'none', boxSizing: 'border-box',
                               outline: 'none', fontFamily: 'inherit',
                             }}
@@ -515,7 +515,7 @@ export default function ActivoPage() {
                                 setStopFailReason(prev => { const n = { ...prev }; delete n[stop.id]; return n; });
                               }}
                               style={{
-                                flex: 1, padding: '7px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)',
+                                flex: 1, padding: '7px', borderRadius: 9, border: '1px solid var(--border-subtle)',
                                 background: 'transparent', color: '#6b7280', cursor: 'pointer', fontSize: '0.78rem',
                               }}
                             >Cancelar</button>
@@ -545,10 +545,10 @@ export default function ActivoPage() {
           {/* Note */}
           {order.note && (
             <div style={{
-              background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '9px 13px',
-              marginBottom: 14, fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)',
+              background: 'var(--surface-3)', borderRadius: 10, padding: '9px 13px',
+              marginBottom: 14, fontSize: '0.82rem', color: 'var(--text-secondary)',
             }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Nota: </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Nota: </span>
               {order.note}
             </div>
           )}
@@ -674,7 +674,7 @@ export default function ActivoPage() {
                   setConfirmDelivery(prev => { const n = new Set(prev); n.delete(order.id); return n; });
                 }}
                 style={{
-                  background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
                   fontSize: '0.78rem', cursor: 'pointer', padding: '4px',
                 }}
               >
@@ -693,8 +693,8 @@ export default function ActivoPage() {
       {toasts.map((t, i) => (
         <div key={t.id} style={{
           position: 'fixed', top: 80 + i * 48, left: '50%', transform: 'translateX(-50%)',
-          background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: 12, padding: '10px 20px', color: '#fff',
+          background: 'var(--surface-1)', border: '1px solid var(--border-strong)',
+          borderRadius: 12, padding: '10px 20px', color: 'var(--text-primary)',
           fontSize: '0.88rem', fontWeight: 600, zIndex: 9999,
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           whiteSpace: 'nowrap', transition: 'top 0.2s',
@@ -720,8 +720,8 @@ export default function ActivoPage() {
           }}>
             <div style={{
               width: 80, height: 80, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.04)',
-              border: '2px solid rgba(255,255,255,0.08)',
+              background: 'var(--glass-card)',
+              border: '2px solid var(--border-subtle)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '2rem',
             }}>
@@ -750,14 +750,14 @@ export default function ActivoPage() {
           padding: '0 24px',
         }}>
           <div style={{
-            background: '#1e293b',
+            background: 'var(--surface-1)',
             border: '1.5px solid rgba(16,185,129,0.4)',
             borderRadius: 20, padding: '28px 24px',
             width: '100%', maxWidth: 360, textAlign: 'center',
             boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
-            <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
+            <h3 style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
               ¿Confirmar entrega?
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
@@ -766,8 +766,8 @@ export default function ActivoPage() {
             {/* Optional delivery proof photo */}
             <label style={{
               display: 'block', cursor: 'pointer', marginBottom: 18,
-              background: 'rgba(255,255,255,0.05)', borderRadius: 12,
-              border: '1.5px dashed rgba(255,255,255,0.15)', padding: '12px',
+              background: 'var(--glass-card)', borderRadius: 12,
+              border: '1.5px dashed var(--border-strong)', padding: '12px',
               color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600,
             }}>
               {photoEntry
@@ -796,8 +796,8 @@ export default function ActivoPage() {
                 }}
                 style={{
                   flex: 1, padding: '13px', borderRadius: 12,
-                  border: '1.5px solid rgba(255,255,255,0.15)',
-                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
+                  border: '1.5px solid var(--border-strong)',
+                  background: 'var(--glass-card)', color: 'var(--text-secondary)',
                   fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
                 }}
               >

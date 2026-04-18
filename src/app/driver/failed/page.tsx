@@ -173,12 +173,12 @@ export default function FailedPage() {
               <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
-                  <div style={{ width: 2, flex: 1, background: '#444', margin: '3px 0', minHeight: 14 }} />
+                  <div style={{ width: 2, flex: 1, background: 'var(--border-subtle)', margin: '3px 0', minHeight: 14 }} />
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', color: '#d1d5db', marginBottom: 8, lineHeight: 1.3 }}>{order.pickup_address}</div>
-                  <div style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.3 }}>{order.delivery_address}</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.3 }}>{order.pickup_address}</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{order.delivery_address}</div>
                 </div>
               </div>
 
@@ -218,7 +218,7 @@ export default function FailedPage() {
               {/* ── Return reason form ── */}
               {showReturnForm ? (
                 <div>
-                  <p style={{ color: '#d1d5db', fontSize: '0.85rem', marginBottom: 8, fontWeight: 600 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 8, fontWeight: 600 }}>
                     ¿Por qué solicitás la devolución?
                   </p>
                   <textarea
@@ -227,8 +227,8 @@ export default function FailedPage() {
                     placeholder="Ej: Cliente no estaba, dirección incorrecta..."
                     style={{
                       width: '100%', padding: '0.7rem', borderRadius: 12,
-                      border: '1.5px solid #374151', background: '#0f172a',
-                      color: '#fff', fontSize: '0.85rem', resize: 'none',
+                      border: '1.5px solid var(--border-strong)', background: 'var(--input-bg)',
+                      color: 'var(--input-text)', fontSize: '0.85rem', resize: 'none',
                       minHeight: 76, boxSizing: 'border-box', marginBottom: 8,
                       fontFamily: 'inherit', outline: 'none',
                     }}

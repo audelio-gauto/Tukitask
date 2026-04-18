@@ -174,8 +174,8 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
             right: 0,
             width: Math.min(340, typeof window !== 'undefined' ? window.innerWidth - 32 : 340),
             maxHeight: 440,
-            background: '#1c1c2e',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--modal-bg)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 14,
             boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
             overflow: 'hidden',
@@ -189,9 +189,9 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid var(--border-subtle)',
             }}>
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.9rem' }}>
                 Notificaciones {unreadCount > 0 && `(${unreadCount})`}
               </span>
               {unreadCount > 0 && (
@@ -235,7 +235,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
                         background: n.read ? 'transparent' : `${ts.accent}08`,
                         border: 'none',
                         borderLeft: `3px solid ${n.read ? 'transparent' : borderColor}`,
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        borderBottom: '1px solid var(--border-subtle)',
                         cursor: 'pointer',
                         textAlign: 'left',
                         animation: i === 0 && !n.read ? 'notifSlideIn 0.3s ease' : undefined,
@@ -258,7 +258,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          color: '#fff',
+                          color: 'var(--text-primary)',
                           fontSize: '0.8rem',
                           fontWeight: n.read ? 500 : 700,
                           lineHeight: 1.3,

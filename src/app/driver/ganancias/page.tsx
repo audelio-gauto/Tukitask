@@ -135,7 +135,7 @@ export default function GananciasPage() {
               flex: 1, padding: '0.55rem 0',
               borderRadius: 12, border: 'none', cursor: 'pointer',
               fontWeight: 700, fontSize: '0.82rem',
-              background: period === p ? '#c8ff00' : 'rgba(255,255,255,0.08)',
+              background: period === p ? '#c8ff00' : 'var(--glass-card)',
               color: period === p ? '#111' : '#9ca3af',
               transition: 'all 0.18s',
             }}
@@ -179,10 +179,10 @@ export default function GananciasPage() {
         <>
           {/* Main earnings card */}
           <div style={{
-            background: 'linear-gradient(135deg, #1a1a2e, #0f172a)',
+            background: 'var(--surface-1)',
             borderRadius: 18, padding: '1.5rem 1.25rem',
             marginBottom: '1rem', textAlign: 'center',
-            border: '1.5px solid rgba(200,255,0,0.2)',
+            border: '1.5px solid var(--border-strong)',
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
           }}>
             <div style={{ color: '#9ca3af', fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>
@@ -223,8 +223,8 @@ export default function GananciasPage() {
 
           {/* Summary by all periods */}
           <div style={{
-            background: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: '0.85rem 1rem',
-            marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--glass-card)', borderRadius: 16, padding: '0.85rem 1rem',
+            marginBottom: '1.25rem', border: '1px solid var(--glass-card-border)',
           }}>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Resumen
@@ -233,12 +233,12 @@ export default function GananciasPage() {
               <div key={p} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '0.4rem 0',
-                borderBottom: p !== 'año' ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                borderBottom: p !== 'año' ? '1px solid var(--border-subtle)' : 'none',
               }}>
                 <span style={{ color: p === period ? '#c8ff00' : '#9ca3af', fontWeight: p === period ? 700 : 500, fontSize: '0.88rem' }}>
                   {PERIOD_LABELS[p]}
                 </span>
-                <span style={{ color: p === period ? '#c8ff00' : '#d1d5db', fontWeight: 800, fontSize: '0.95rem' }}>
+                <span style={{ color: p === period ? '#c8ff00' : 'var(--text-secondary)', fontWeight: 800, fontSize: '0.95rem' }}>
                   {fmtGs(amount)} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280' }}>Gs</span>
                 </span>
               </div>
@@ -253,8 +253,8 @@ export default function GananciasPage() {
             {delivered.length === 0 ? (
               <div style={{
                 textAlign: 'center', padding: '2rem 1rem',
-                background: 'rgba(255,255,255,0.04)', borderRadius: 16,
-                border: '1px dashed rgba(255,255,255,0.1)',
+                background: 'var(--glass-card)', borderRadius: 16,
+                border: '1px dashed var(--border-subtle)',
               }}>
                 <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
                 <p style={{ color: '#6b7280', margin: 0, fontSize: '0.88rem' }}>
@@ -264,13 +264,13 @@ export default function GananciasPage() {
             ) : (
               delivered.slice(0, 20).map((o, idx) => (
                 <div key={o.id ?? idx} style={{
-                  background: 'rgba(255,255,255,0.05)', borderRadius: 14,
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--glass-card)', borderRadius: 14,
+                  border: '1px solid var(--glass-card-border)',
                   padding: '0.75rem 1rem', marginBottom: 8,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', color: '#d1d5db', fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.origin || 'Origen'} → {o.destination || 'Destino'}
                     </div>
                     {o.order_stops && o.order_stops.length > 0 && (

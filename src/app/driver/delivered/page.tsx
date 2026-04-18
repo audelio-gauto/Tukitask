@@ -97,8 +97,8 @@ export default function DeliveredPage() {
 
     return (
       <div key={order.id} style={{
-        background: 'rgba(255,255,255,0.04)', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--glass-card)', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+        border: '1px solid var(--glass-card-border)',
       }}>
         {/* Header */}
         <div style={{
@@ -107,7 +107,7 @@ export default function DeliveredPage() {
           padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.85rem' }}>✅ Entregado #{track}</span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>{date}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{date}</span>
         </div>
 
         {/* Body */}
@@ -119,12 +119,12 @@ export default function DeliveredPage() {
               background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#1C1C2E', fontWeight: 700, fontSize: '1.1rem',
-              border: '2px solid rgba(255,255,255,0.12)',
+              border: '2px solid var(--border-strong)',
             }}>
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>{clientName}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{clientName}</div>
               <StarRow rating={existingRating} />
             </div>
             <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem' }}>₲{price}</div>
@@ -138,16 +138,16 @@ export default function DeliveredPage() {
                 : [];
             const hasStops = stops.length > 0;
             return (
-              <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
+              <div style={{ background: 'var(--surface-3)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
                 {/* Pickup A */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: hasStops ? 8 : 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                     <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                    <span style={{ width: 2, height: hasStops ? 14 : 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                    <span style={{ width: 2, height: hasStops ? 14 : 18, background: 'var(--border-subtle)', display: 'block' }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.pickup_address || '—'}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{order.pickup_address || '—'}</div>
                   </div>
                 </div>
                 {/* Intermediate stops */}
@@ -164,7 +164,7 @@ export default function DeliveredPage() {
                         <span style={{ width: 16, height: 16, borderRadius: '50%', background: `${dotColor}22`, border: `1.5px solid ${dotColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.5rem', fontWeight: 900, color: dotColor }}>
                           {icon}
                         </span>
-                        <span style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                        <span style={{ width: 2, height: 14, background: 'var(--border-subtle)', display: 'block' }} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.62rem', fontWeight: 700, color: dotColor, textTransform: 'uppercase', letterSpacing: 1 }}>P{s.sequence}</div>
@@ -183,7 +183,7 @@ export default function DeliveredPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.3 }}>{order.delivery_address || '—'}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{order.delivery_address || '—'}</div>
                   </div>
                 </div>
               </div>

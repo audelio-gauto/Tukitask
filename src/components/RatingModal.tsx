@@ -40,10 +40,10 @@ export default function RatingModal({
       alignItems: 'center', justifyContent: 'center', padding: '1rem',
     }}>
       <div style={{
-        background: '#0f172a', borderRadius: 24, padding: '1.75rem 1.5rem',
+        background: 'var(--modal-bg)', borderRadius: 24, padding: '1.75rem 1.5rem',
         width: '100%', maxWidth: 340, textAlign: 'center',
         boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--border-subtle)',
         animation: 'ratingSlideUp 0.25s ease',
       }}>
         {/* Avatar */}
@@ -59,7 +59,7 @@ export default function RatingModal({
           </div>
         )}
 
-        <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: '#f1f5f9', margin: '0 0 4px' }}>{title}</h3>
+        <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', margin: '0 0 4px' }}>{title}</h3>
         {subtitle && (
           <p style={{ color: '#94a3b8', fontSize: '0.88rem', marginBottom: '1.25rem' }}>{subtitle}</p>
         )}
@@ -99,10 +99,10 @@ export default function RatingModal({
           onChange={e => setNote(e.target.value)}
           rows={2}
           style={{
-            width: '100%', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)',
+            width: '100%', borderRadius: 10, border: '1.5px solid var(--input-border)',
             padding: '0.6rem 0.75rem', fontSize: '0.9rem', resize: 'none',
-            fontFamily: 'inherit', marginBottom: '0.75rem', background: 'rgba(255,255,255,0.06)',
-            outline: 'none', boxSizing: 'border-box', color: '#f1f5f9',
+            fontFamily: 'inherit', marginBottom: '0.75rem', background: 'var(--input-bg)',
+            outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)',
           }}
         />
 
@@ -113,7 +113,7 @@ export default function RatingModal({
             onClick={onClose}
             style={{
               flex: 1, padding: '0.7rem', borderRadius: 10,
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+              background: 'var(--glass-card)', border: '1px solid var(--border-subtle)', cursor: 'pointer',
               fontWeight: 600, color: '#94a3b8', fontSize: '0.9rem',
             }}
           >

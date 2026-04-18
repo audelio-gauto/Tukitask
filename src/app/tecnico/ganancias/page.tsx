@@ -105,12 +105,12 @@ export default function TecnicoGananciasPage() {
   }));
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#13131F', color: '#fff' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--content-bg)', color: 'var(--text-primary)' }}>
 
       {/* ── Header ── */}
       <div style={{
-        background: '#1C1C2E',
-        borderBottom: '1px solid rgba(245,197,24,0.12)',
+        background: 'var(--header-bg)',
+        borderBottom: '1px solid var(--header-border)',
         padding: '14px 16px',
         display: 'flex', alignItems: 'center', gap: 12,
         position: 'sticky', top: 0, zIndex: 10,
@@ -119,7 +119,7 @@ export default function TecnicoGananciasPage() {
           onClick={() => router.back()}
           style={{
             width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.06)', color: '#fff',
+            background: 'var(--glass-card)', color: 'var(--text-primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}
         >
@@ -128,8 +128,8 @@ export default function TecnicoGananciasPage() {
           </svg>
         </button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>Ganancias</h1>
-          <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Tus ingresos por servicios</p>
+          <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Ganancias</h1>
+          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>Tus ingresos por servicios</p>
         </div>
         <button
           onClick={fetchJobs}
@@ -160,8 +160,8 @@ export default function TecnicoGananciasPage() {
                 fontWeight: 700, fontSize: '0.82rem',
                 background: period === p
                   ? 'linear-gradient(135deg, #F5C518, #F58A07)'
-                  : 'rgba(255,255,255,0.06)',
-                color: period === p ? '#1C1C2E' : 'rgba(255,255,255,0.5)',
+                  : 'var(--glass-card)',
+                color: period === p ? '#1C1C2E' : 'var(--text-muted)',
                 transition: 'all 0.18s',
               }}
             >
@@ -187,19 +187,19 @@ export default function TecnicoGananciasPage() {
           <>
             {/* ── Main earnings card ── */}
             <div style={{
-              background: 'linear-gradient(135deg, #1a1a2e, #0f172a)',
+              background: 'var(--surface-1)',
               borderRadius: 18, padding: '1.5rem 1.25rem',
               marginBottom: '1rem', textAlign: 'center',
-              border: '1.5px solid rgba(245,197,24,0.2)',
+              border: '1.5px solid var(--border-strong)',
               boxShadow: '0 4px 24px rgba(245,197,24,0.08)',
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>
                 Ganancias · {PERIOD_LABELS[period]}
               </div>
               <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#F5C518', lineHeight: 1 }}>
                 {fmtGs(earnings)}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', marginTop: 6 }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 6 }}>
                 Guaraníes · {filtered.length} {filtered.length === 1 ? 'servicio' : 'servicios'}
               </div>
             </div>
@@ -211,43 +211,43 @@ export default function TecnicoGananciasPage() {
                 borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
               }}>
                 <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1.5rem' }}>{filtered.length}</div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginTop: 2 }}>Completados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 2 }}>Completados</div>
               </div>
               <div style={{
                 background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)',
                 borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
               }}>
                 <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.5rem' }}>{jobs.length}</div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', marginTop: 2 }}>Total histórico</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 2 }}>Total histórico</div>
               </div>
             </div>
 
             {/* ── Summary by all periods ── */}
             <div style={{
-              background: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: '0.85rem 1rem',
-              marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--glass-card)', borderRadius: 16, padding: '0.85rem 1rem',
+              marginBottom: '1.25rem', border: '1px solid var(--glass-card-border)',
             }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Resumen
               </div>
               {allPeriodEarnings.map(({ period: p, amount }) => (
                 <div key={p} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '0.4rem 0',
-                  borderBottom: p !== 'año' ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  borderBottom: p !== 'año' ? '1px solid var(--border-subtle)' : 'none',
                 }}>
                   <span style={{
-                    color: p === period ? '#F5C518' : 'rgba(255,255,255,0.45)',
+                    color: p === period ? '#F5C518' : 'var(--text-muted)',
                     fontWeight: p === period ? 700 : 500, fontSize: '0.88rem',
                   }}>
                     {PERIOD_LABELS[p]}
                   </span>
                   <span style={{
-                    color: p === period ? '#F5C518' : 'rgba(255,255,255,0.8)',
+                    color: p === period ? '#F5C518' : 'var(--text-secondary)',
                     fontWeight: 800, fontSize: '0.95rem',
                   }}>
                     {fmtGs(amount)}{' '}
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(255,255,255,0.3)' }}>Gs</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Gs</span>
                   </span>
                 </div>
               ))}
@@ -255,37 +255,37 @@ export default function TecnicoGananciasPage() {
 
             {/* ── Services list ── */}
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Servicios recientes
               </div>
 
               {filtered.length === 0 ? (
                 <div style={{
                   textAlign: 'center', padding: '2.5rem 1rem',
-                  background: 'rgba(255,255,255,0.03)', borderRadius: 16,
-                  border: '1px dashed rgba(255,255,255,0.07)',
+                  background: 'var(--glass-card)', borderRadius: 16,
+                  border: '1px dashed var(--border-subtle)',
                 }}>
                   <svg style={{ width: 40, height: 40, marginBottom: 10, opacity: 0.3 }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                   </svg>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', margin: 0, fontSize: '0.88rem' }}>
+                  <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.88rem' }}>
                     Sin servicios completados en este período
                   </p>
                 </div>
               ) : (
                 filtered.slice(0, 30).map((job) => (
                   <div key={job.id} style={{
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'var(--glass-card)',
                     borderRadius: 14,
-                    border: '1px solid rgba(255,255,255,0.07)',
+                    border: '1px solid var(--glass-card-border)',
                     padding: '0.8rem 1rem', marginBottom: 8,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
-                        <div style={{ fontSize: '0.88rem', color: '#fff', fontWeight: 700, marginBottom: 2 }}>
+                        <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: 2 }}>
                           {SERVICE_LABELS[job.service_type] ?? job.service_type}
                         </div>
-                        <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.35)' }}>
+                        <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
                           {job.client_name && `${job.client_name} · `}{fmtDate(job.completed_at)}
                         </div>
                       </div>

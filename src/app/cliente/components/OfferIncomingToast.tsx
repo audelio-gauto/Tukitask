@@ -273,7 +273,7 @@ export default function OfferIncomingToast({ email }: Props) {
       {/* ── Bottom sheet popup ────────────────────────────────────────────── */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 8001,
-        background: '#111827',
+        background: 'var(--sheet-bg)',
         borderRadius: '24px 24px 0 0',
         boxShadow: '0 -8px 48px rgba(0,0,0,0.7)',
         animation: '_oit_slideUp 0.35s cubic-bezier(0.32,0.72,0,1), _oit_pulse 2s ease-in-out 0.4s infinite',
@@ -297,7 +297,7 @@ export default function OfferIncomingToast({ email }: Props) {
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#c8ff00', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {typeLabel} · Nueva oferta
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
               ¡Recibiste una oferta!
             </div>
           </div>
@@ -316,7 +316,7 @@ export default function OfferIncomingToast({ email }: Props) {
         {/* Driver / Técnico card */}
         <div style={{
           marginInline: 16, marginBottom: 16,
-          background: '#1f2937',
+          background: 'var(--card-bg)',
           borderRadius: 16,
           padding: '14px 16px',
           display: 'flex', alignItems: 'center', gap: 14,
@@ -336,7 +336,7 @@ export default function OfferIncomingToast({ email }: Props) {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', marginBottom: 2 }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: 2 }}>
               {currentOffer.driverName ?? (isService ? 'Técnico' : 'Conductor')}
             </div>
             {currentOffer.address && (

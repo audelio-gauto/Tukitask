@@ -164,9 +164,9 @@ export default function ChatModal({
       <div style={{
         width: '100%', maxWidth: 480,
         height: '85vh', maxHeight: 700,
-        background: '#0f172a',
+        background: 'var(--sheet-bg)',
         borderRadius: '24px 24px 0 0',
-        border: '1px solid rgba(34,197,94,0.2)',
+        border: '1px solid var(--border-subtle)',
         boxShadow: '0 -12px 60px rgba(0,0,0,0.8)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -176,8 +176,8 @@ export default function ChatModal({
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '14px 16px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--glass-card)',
           flexShrink: 0,
         }}>
           {/* Drag handle */}
@@ -191,7 +191,7 @@ export default function ChatModal({
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {otherName || (orderId ? 'Conductor' : 'Técnico')}
             </div>
             <div style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -206,7 +206,7 @@ export default function ChatModal({
           )}
           <button
             onClick={onClose}
-            style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--glass-card)', color: 'var(--text-muted)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >✕</button>
         </div>
 
@@ -241,8 +241,8 @@ export default function ChatModal({
                   borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                   background: isMe
                     ? 'linear-gradient(135deg,#22c55e,#16a34a)'
-                    : 'rgba(255,255,255,0.08)',
-                  color: isMe ? '#fff' : 'rgba(255,255,255,0.9)',
+                    : 'var(--glass-card)',
+                  color: isMe ? '#fff' : 'var(--text-primary)',
                   fontSize: '0.9rem',
                   lineHeight: 1.45,
                   wordBreak: 'break-word',
@@ -264,8 +264,8 @@ export default function ChatModal({
         {/* ── Input ── */}
         <div style={{
           padding: '10px 12px 16px',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          background: 'rgba(0,0,0,0.3)',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--surface-3)',
           flexShrink: 0,
           display: 'flex', gap: 8, alignItems: 'flex-end',
         }}>
@@ -278,11 +278,11 @@ export default function ChatModal({
             rows={1}
             style={{
               flex: 1,
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
               borderRadius: 20,
               padding: '10px 14px',
-              color: '#fff',
+              color: 'var(--input-text)',
               fontSize: '0.9rem',
               resize: 'none',
               outline: 'none',

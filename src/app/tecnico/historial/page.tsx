@@ -134,11 +134,11 @@ export default function TecnicoHistorialPage() {
 
     return (
       <div key={job.id} style={{
-        background: 'rgba(255,255,255,0.04)',
+        background: 'var(--glass-card)',
         borderRadius: 16,
         marginBottom: 12,
         overflow: 'hidden',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--glass-card-border)',
       }}>
         {/* Header */}
         <div style={{
@@ -156,7 +156,7 @@ export default function TecnicoHistorialPage() {
           <span style={{ color: st.color, fontWeight: 700, fontSize: '0.85rem' }}>
             {st.label} · {serviceLabel}
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>{date}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{date}</span>
         </div>
 
         {/* Body */}
@@ -169,12 +169,12 @@ export default function TecnicoHistorialPage() {
               backgroundSize: 'cover',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#1C1C2E', fontWeight: 700, fontSize: '1.1rem',
-              border: '2px solid rgba(255,255,255,0.12)',
+              border: '2px solid var(--border-strong)',
             }}>
               {!clientPhoto && (clientName[0]?.toUpperCase() || '?')}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>{clientName}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{clientName}</div>
               <StarRow rating={existingRating} />
             </div>
             {totalPrice > 0 && (
@@ -187,9 +187,9 @@ export default function TecnicoHistorialPage() {
           {/* Address */}
           {job.address && (
             <div style={{
-              background: 'rgba(0,0,0,0.25)', borderRadius: 10,
+              background: 'var(--surface-3)', borderRadius: 10,
               padding: '8px 12px', marginBottom: 10,
-              fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)',
+              fontSize: '0.78rem', color: 'var(--text-secondary)',
             }}>
               📍 {job.address}
             </div>
@@ -198,9 +198,9 @@ export default function TecnicoHistorialPage() {
           {/* Description */}
           {job.description && (
             <div style={{
-              background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+              background: 'var(--glass-card)', borderRadius: 8,
               padding: '7px 10px', marginBottom: 10,
-              fontSize: '0.77rem', color: 'rgba(255,255,255,0.55)',
+              fontSize: '0.77rem', color: 'var(--text-secondary)',
               fontStyle: 'italic',
             }}>
               "{job.description}"
@@ -212,7 +212,7 @@ export default function TecnicoHistorialPage() {
             <div style={{
               background: 'rgba(245,197,24,0.08)', borderRadius: 8,
               padding: '6px 10px', marginBottom: 10,
-              fontSize: '0.77rem', color: 'rgba(255,255,255,0.5)',
+              fontSize: '0.77rem', color: 'var(--text-muted)',
             }}>
               Base: ₲{Number(job.agreed_price ?? 0).toLocaleString('es-PY')}
               {' + '}Extra: ₲{Number(job.extra_charge).toLocaleString('es-PY')}
@@ -291,8 +291,8 @@ export default function TecnicoHistorialPage() {
               fontWeight: 700,
               fontSize: '0.8rem',
               cursor: 'pointer',
-              background: filter === f ? '#F5C518' : '#f1f5f9',
-              color: filter === f ? '#1C1C2E' : '#64748b',
+              background: filter === f ? '#F5C518' : 'var(--glass-card)',
+              color: filter === f ? '#1C1C2E' : 'var(--text-secondary)',
               transition: 'all 0.15s',
             }}
           >
@@ -313,7 +313,7 @@ export default function TecnicoHistorialPage() {
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>📋</div>
-          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.7)' }}>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-secondary)' }}>
             Sin trabajos en el historial
           </div>
           <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: 6 }}>

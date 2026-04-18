@@ -53,8 +53,8 @@ export default function HistorialOfertasDriver() {
               fontWeight: 700,
               fontSize: '0.8rem',
               cursor: 'pointer',
-              background: filter === f ? '#10b981' : '#f1f5f9',
-              color: filter === f ? '#fff' : '#64748b',
+              background: filter === f ? '#10b981' : 'var(--glass-card)',
+              color: filter === f ? '#fff' : 'var(--text-secondary)',
               transition: 'all 0.15s',
             }}
           >
@@ -87,11 +87,11 @@ export default function HistorialOfertasDriver() {
           <div
             key={of.id}
             style={{
-              background: '#fff',
+              background: 'var(--card-bg)',
               borderRadius: 14,
               padding: '0.85rem 1rem',
               marginBottom: 10,
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--glass-card-border)',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               display: 'flex',
               alignItems: 'center',
@@ -100,10 +100,10 @@ export default function HistorialOfertasDriver() {
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827', marginBottom: 2 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', marginBottom: 2 }}>
                 Pedido #{String(of.order_id).slice(-6).toUpperCase()}
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 {of.created_at ? fmt(of.created_at) : '—'}
               </div>
             </div>

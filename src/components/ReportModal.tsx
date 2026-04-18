@@ -94,7 +94,7 @@ export default function ReportModal({
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 520, margin: '0 auto',
-          background: '#1C1C2E',
+          background: 'var(--sheet-bg)',
           borderRadius: '24px 24px 0 0',
           padding: '0 0 max(24px, env(safe-area-inset-bottom))',
           fontFamily: "'Inter', -apple-system, sans-serif",
@@ -102,25 +102,25 @@ export default function ReportModal({
       >
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }} />
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border-strong)' }} />
         </div>
 
         {/* Header */}
-        <div style={{ padding: '8px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ padding: '8px 20px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h2 style={{ margin: 0, color: '#fff', fontSize: '1.1rem', fontWeight: 800 }}>
+              <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 800 }}>
                 🚨 Reportar
               </h2>
               {reportedName && (
-                <p style={{ margin: '2px 0 0', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+                <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                   {reportedName}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '1rem', cursor: 'pointer' }}
+              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'var(--glass-card)', color: 'var(--text-primary)', fontSize: '1rem', cursor: 'pointer' }}
             >
               ✕
             </button>
@@ -134,7 +134,7 @@ export default function ReportModal({
             <h3 style={{ color: '#4ade80', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
               Reporte enviado
             </h3>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.88rem', margin: '0 0 24px' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 24px' }}>
               Nuestro equipo revisará tu caso en las próximas 24 h.
             </p>
             <button
@@ -147,7 +147,7 @@ export default function ReportModal({
         ) : (
           <div style={{ padding: '16px 20px 8px' }}>
             {/* Reason grid */}
-            <p style={{ margin: '0 0 10px', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <p style={{ margin: '0 0 10px', color: 'var(--text-secondary)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
               Motivo del reporte
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
@@ -158,9 +158,9 @@ export default function ReportModal({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-                    border: reason === r.key ? '1.5px solid #F5C518' : '1px solid rgba(255,255,255,0.1)',
-                    background: reason === r.key ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.04)',
-                    color: reason === r.key ? '#F5C518' : 'rgba(255,255,255,0.75)',
+                    border: reason === r.key ? '1.5px solid #F5C518' : '1px solid var(--border-subtle)',
+                    background: reason === r.key ? 'rgba(245,197,24,0.12)' : 'var(--glass-card)',
+                    color: reason === r.key ? '#F5C518' : 'var(--text-secondary)',
                     fontWeight: reason === r.key ? 700 : 400,
                     fontSize: '0.88rem',
                     transition: 'all 0.15s',
@@ -174,7 +174,7 @@ export default function ReportModal({
             </div>
 
             {/* Comment */}
-            <p style={{ margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <p style={{ margin: '0 0 6px', color: 'var(--text-secondary)', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
               Comentario adicional (opcional)
             </p>
             <textarea
@@ -185,13 +185,13 @@ export default function ReportModal({
               rows={3}
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 12, color: '#fff', padding: '10px 12px',
+                background: 'var(--input-bg)', border: '1px solid var(--input-border)',
+                borderRadius: 12, color: 'var(--input-text)', padding: '10px 12px',
                 fontSize: '0.88rem', resize: 'none', outline: 'none',
                 fontFamily: 'inherit',
               }}
             />
-            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', marginBottom: 12 }}>
+            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12 }}>
               {comment.length}/500
             </div>
 

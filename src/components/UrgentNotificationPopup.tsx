@@ -162,7 +162,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
         left: '50%',
         transform: 'translateX(-50%)',
         width: 'min(360px, calc(100vw - 32px))',
-        background: '#1c1c2e',
+        background: 'var(--modal-bg)',
         border: `1.5px solid ${cfg.color}40`,
         borderRadius: 16,
         boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${cfg.color}20`,
@@ -199,9 +199,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
           {/* Text content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              color: '#fff',
-              fontSize: '0.85rem',
-              fontWeight: 700,
+              color: 'var(--text-primary)',
               lineHeight: 1.3,
               marginBottom: 2,
             }}>
@@ -220,9 +218,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
           <button
             onClick={dismiss}
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: 'none',
-              borderRadius: 8,
+              background: 'var(--glass-card)',
               width: 28,
               height: 28,
               display: 'flex',

@@ -241,7 +241,7 @@ export default function TecnicoActivoPage() {
 
     return (
       <div key={job.id} style={{
-        background: 'rgba(255,255,255,0.04)',
+        background: 'var(--glass-card)',
         border: `1.5px solid ${statusInfo.color}40`,
         borderRadius: 18,
         marginBottom: 16,
@@ -257,7 +257,7 @@ export default function TecnicoActivoPage() {
           <span style={{ color: statusInfo.color, fontWeight: 700, fontSize: '0.9rem' }}>
             {statusInfo.icon} {statusInfo.label}
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
             {SERVICE_LABELS[job.service_type] ?? job.service_type}
           </span>
         </div>
@@ -272,12 +272,12 @@ export default function TecnicoActivoPage() {
                 : 'linear-gradient(135deg, #F5C518, #F58A07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#1C1C2E', fontWeight: 700, fontSize: '1.2rem',
-              border: '2px solid rgba(255,255,255,0.12)',
+              border: '2px solid var(--border-strong)',
             }}>
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>{clientName}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
               {job.client_rating != null && job.client_rating > 0 && (
                 <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>⭐ {Number(job.client_rating).toFixed(1)}</div>
               )}
@@ -286,7 +286,7 @@ export default function TecnicoActivoPage() {
               <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1.15rem' }}>
                 {fmtGs(job.total_price ?? job.agreed_price)}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem' }}>acordado</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>acordado</div>
             </div>
           </div>
 
@@ -313,9 +313,9 @@ export default function TecnicoActivoPage() {
 
           {/* Address */}
           {job.address && (
-            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
+            <div style={{ background: 'var(--surface-3)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
               <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Dirección</div>
-              <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.35, marginBottom: 10 }}>{job.address}</div>
+              <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.35, marginBottom: 10 }}>{job.address}</div>
               {job.lat && job.lng && (
                 <button
                   onClick={() => openMaps(job.address!)}
@@ -336,8 +336,8 @@ export default function TecnicoActivoPage() {
 
           {/* Description */}
           {job.description && (
-            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '9px 13px', marginBottom: 14, fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)' }}>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Descripción: </span>
+            <div style={{ background: 'var(--surface-3)', borderRadius: 10, padding: '9px 13px', marginBottom: 14, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Descripción: </span>
               {job.description}
             </div>
           )}
@@ -353,11 +353,11 @@ export default function TecnicoActivoPage() {
           {/* Photos */}
           {job.photos && job.photos.length > 0 && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Fotos</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Fotos</div>
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never }}>
                 {job.photos.map((url, i) => (
                   <img key={i} src={url} alt={`foto ${i + 1}`} onClick={() => window.open(url, '_blank')}
-                    style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }} />
+                    style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-subtle)', cursor: 'pointer' }} />
                 ))}
               </div>
             </div>
@@ -435,7 +435,7 @@ export default function TecnicoActivoPage() {
             <button
               disabled={busy}
               onClick={() => doConfirm(job.id, 'cancel', '¿Cancelar este trabajo? Esta acción no se puede deshacer.')}
-              style={{ marginTop: 10, width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: '0.8rem', cursor: busy ? 'not-allowed' : 'pointer' }}
+              style={{ marginTop: 10, width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem', cursor: busy ? 'not-allowed' : 'pointer' }}
             >
               Cancelar trabajo
             </button>
@@ -451,8 +451,8 @@ export default function TecnicoActivoPage() {
       {toasts.map((t, i) => (
         <div key={t.id} style={{
           position: 'fixed', top: 80 + i * 48, left: '50%', transform: 'translateX(-50%)',
-          background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: 12, padding: '10px 20px', color: '#fff',
+          background: 'var(--surface-1)', border: '1px solid var(--border-strong)',
+          borderRadius: 12, padding: '10px 20px', color: 'var(--text-primary)',
           fontSize: '0.88rem', fontWeight: 600, zIndex: 9999,
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           whiteSpace: 'nowrap',
@@ -464,7 +464,7 @@ export default function TecnicoActivoPage() {
       {loading ? (
         <div style={{ padding: 24 }}>
           {[1, 2].map(i => (
-            <div key={i} style={{ background: '#1E1E2E', borderRadius: 18, padding: 18, marginBottom: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div key={i} style={{ background: 'var(--surface-2)', borderRadius: 18, padding: 18, marginBottom: 16, border: '1px solid var(--border-subtle)' }}>
               <div style={{ height: 16, width: 120, borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 14, animation: 'pulse 1.5s ease-in-out infinite' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -477,9 +477,9 @@ export default function TecnicoActivoPage() {
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <div style={{ textAlign: 'center', paddingTop: 80, color: 'rgba(255,255,255,0.35)', padding: 24 }}>
+        <div style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)', padding: 24 }}>
           <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>🔧</div>
-          <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.6)', fontSize: '1.05rem', marginBottom: 8 }}>Sin trabajos activos</p>
+          <p style={{ fontWeight: 700, color: 'var(--text-secondary)', fontSize: '1.05rem', marginBottom: 8 }}>Sin trabajos activos</p>
           <p style={{ fontSize: '0.85rem', marginBottom: 0, lineHeight: 1.5 }}>
             Cuando aceptes un trabajo y esté en curso, aparecerá acá.
           </p>

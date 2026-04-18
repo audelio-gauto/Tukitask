@@ -228,10 +228,10 @@ export default function CitasPage() {
   const fmtGs = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs.` : '—';
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#13131F', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--content-bg)', paddingBottom: 80 }}>
       {/* Header */}
-      <div style={{ background: '#1C1C2E', borderBottom: '1px solid rgba(245,197,24,0.15)', color: '#fff', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
+      <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', color: 'var(--text-primary)', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>📅 Citas Activas</h1>
           <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85 }}>Tus trabajos en curso</p>
@@ -259,7 +259,7 @@ export default function CitasPage() {
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[1, 2].map(i => (
-              <div key={i} style={{ background: '#1E1E2E', borderRadius: 16, padding: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={i} style={{ background: 'var(--surface-2)', borderRadius: 16, padding: 16, border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ height: 16, width: 120, borderRadius: 6, background: 'rgba(255,255,255,0.08)', animation: 'pulse 1.5s ease-in-out infinite' }} />
                   <div style={{ height: 24, width: 80, borderRadius: 8, background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -276,9 +276,9 @@ export default function CitasPage() {
             ))}
           </div>
         ) : jobs.length === 0 ? (
-          <div style={{ textAlign: 'center', paddingTop: 60, color: 'rgba(255,255,255,0.35)' }}>
+          <div style={{ textAlign: 'center', paddingTop: 60, color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📭</div>
-            <p style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Sin citas activas</p>
+            <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Sin citas activas</p>
             <p style={{ fontSize: '0.85rem' }}>Envía una oferta para que aparezca acá.</p>
             <button onClick={() => router.push('/tecnico/ofertas')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, border: 'none', background: '#F5C518', color: '#1C1C2E', fontWeight: 700, cursor: 'pointer' }}>
               Ver ofertas
@@ -290,10 +290,10 @@ export default function CitasPage() {
               const st = STATUS_CONFIG[job.status] ?? { label: job.status, color: '#64748b', bg: '#f1f5f9' };
               const busy = !!actionId;
               return (
-                <div key={job.id} style={{ background: '#1E1E2E', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div key={job.id} style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)' }}>
                   {/* Title row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {SERVICE_LABELS[job.service_type] ?? job.service_type}
                     </span>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: '3px 10px' }}>
@@ -313,8 +313,8 @@ export default function CitasPage() {
                       ? <img src={job.client_photo} alt={job.client_name ?? 'Cliente'} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
                       : <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👤</div>
                     }
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                      {job.client_name && <span style={{ fontWeight: 600, color: '#fff' }}>{job.client_name}</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {job.client_name && <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{job.client_name}</span>}
                       {job.address && <span>📍 {job.address}</span>}
                       {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
                     </div>
@@ -337,7 +337,7 @@ export default function CitasPage() {
                       <span style={{ fontWeight: 700, color: '#f59e0b' }}>➕ Extra: {fmtGs(job.extra_charge)}</span>
                     )}
                     {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
-                      <span style={{ fontWeight: 800, color: '#1e293b' }}>= {fmtGs(job.total_price)}</span>
+                      <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>= {fmtGs(job.total_price)}</span>
                     )}
                   </div>
 
@@ -406,7 +406,7 @@ export default function CitasPage() {
                   {/* Cancel option for early statuses */}
                   {['accepted', 'en_camino'].includes(job.status) && (
                     <button onClick={() => doActionConfirmed(job.id, 'cancel', '¿Cancelar este trabajo? Esta acción no se puede deshacer.')} disabled={busy}
-                      style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: '0.8rem', cursor: busy ? 'default' : 'pointer' }}>
+                      style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem', cursor: busy ? 'default' : 'pointer' }}>
                       Cancelar trabajo
                     </button>
                   )}
@@ -432,21 +432,21 @@ export default function CitasPage() {
       {extraModal && (
         <>
           <div onClick={() => setExtraModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9998 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1C1C2E', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: '#fff' }}>💰 Agregar cobro extra</h3>
-            <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: 4 }}>Monto extra (Gs.)</label>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: 'var(--text-primary)' }}>💰 Agregar cobro extra</h3>
+            <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Monto extra (Gs.)</label>
             <input type="number" value={extraAmount || ''} onChange={e => setExtraAmount(Number(e.target.value))} placeholder="Ej: 20000"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '1rem', marginBottom: 12, boxSizing: 'border-box', outline: 'none' }} />
-            <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: 4 }}>Motivo</label>
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1rem', marginBottom: 12, boxSizing: 'border-box', outline: 'none' }} />
+            <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Motivo</label>
             <input type="text" value={extraReason} onChange={e => setExtraReason(e.target.value)} placeholder="Ej: Material adicional"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '0.93rem', marginBottom: 16, boxSizing: 'border-box', outline: 'none' }} />
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '0.93rem', marginBottom: 16, boxSizing: 'border-box', outline: 'none' }} />
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={submitExtra} disabled={extraSending || extraAmount <= 0}
                 style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: extraSending || extraAmount <= 0 ? 'rgba(5,150,105,0.4)' : '#059669', color: '#fff', fontWeight: 700, cursor: extraSending || extraAmount <= 0 ? 'default' : 'pointer' }}>
                 {extraSending ? 'Guardando…' : 'Confirmar'}
               </button>
               <button onClick={() => setExtraModal(null)}
-                style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
@@ -457,8 +457,8 @@ export default function CitasPage() {
       {confirmModal && (
         <>
           <div onClick={() => setConfirmModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9998 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1C1C2E', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <p style={{ margin: '0 0 20px', fontWeight: 700, color: '#fff', fontSize: '1rem', lineHeight: 1.4 }}>{confirmModal.message}</p>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)' }}>
+            <p style={{ margin: '0 0 20px', fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', lineHeight: 1.4 }}>{confirmModal.message}</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => { doAction(confirmModal.jobId, confirmModal.action); setConfirmModal(null); }}
@@ -468,7 +468,7 @@ export default function CitasPage() {
               </button>
               <button
                 onClick={() => setConfirmModal(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancelar
               </button>
