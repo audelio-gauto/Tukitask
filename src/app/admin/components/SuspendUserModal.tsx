@@ -57,8 +57,18 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
       const res = await fetch(`/api/admin/suspend?user_id=${target.user_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setStatus(await res.json());
-    } catch { /* ignore */ }
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[SuspendModal] status:', data);
+        setStatus(data);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error('[SuspendModal] status error:', res.status, err);
+        setResult({ ok: false, msg: err.error || `Error ${res.status}` });
+      }
+    } catch (e) {
+      console.error('[SuspendModal] fetch error:', e);
+    }
     setLoadingStatus(false);
   }, [target.user_id]);
 
@@ -82,12 +92,13 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
         }),
       });
       const json = await res.json();
+      console.log('[SuspendModal] suspend result:', res.status, json);
       if (res.ok && json.ok) {
         setResult({ ok: true, msg: `Cuenta suspendida — ${json.label}` });
         await fetchStatus();
         onComplete?.();
       } else {
-        setResult({ ok: false, msg: json.error || 'Error' });
+        setResult({ ok: false, msg: json.error || `Error ${res.status}` });
       }
     } catch (err) {
       setResult({ ok: false, msg: String(err) });
@@ -106,12 +117,13 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
         body: JSON.stringify({ user_id: target.user_id, action: 'reactivate' }),
       });
       const json = await res.json();
+      console.log('[SuspendModal] reactivate result:', res.status, json);
       if (res.ok && json.ok) {
         setResult({ ok: true, msg: 'Cuenta reactivada' });
         await fetchStatus();
         onComplete?.();
       } else {
-        setResult({ ok: false, msg: json.error || 'Error' });
+        setResult({ ok: false, msg: json.error || `Error ${res.status}` });
       }
     } catch (err) {
       setResult({ ok: false, msg: String(err) });
@@ -119,7 +131,7 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
     setSaving(false);
   };
 
-  const isSuspended = status?.is_suspended || status?.is_blocked;
+  const isSuspended = status?.is_suspended || status?.is_blocked || (status && !status.is_active);
   const initials = (target.display_name?.[0] || target.email[0])?.toUpperCase() || '?';
   const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('es-PY', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',

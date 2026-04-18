@@ -3,6 +3,22 @@ import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
+/** Find auth.users id by email (uses GoTrue admin API) */
+async function getAuthUidByEmail(db: ReturnType<typeof sbAdmin>, email: string): Promise<string | null> {
+  const target = email.toLowerCase();
+  let page = 1;
+  while (page <= 20) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 100 });
+    if (error || !data?.users?.length) break;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const found = data.users.find((u: any) => u.email?.toLowerCase() === target);
+    if (found) return found.id;
+    if (data.users.length < 100) break;
+    page++;
+  }
+  return null;
+}
+
 /** POST — suspend or reactivate a user
  *  body: { user_id, action: 'suspend'|'reactivate', days?: number, reason?: string }
  *  days = 0 means permanent
@@ -44,8 +60,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No se puede suspender un administrador' }, { status: 403 });
     }
 
+    // Resolve auth.users id (may differ from users.id)
+    const authUid = await getAuthUidByEmail(db, targetUser.email);
+    if (!authUid) {
+      return NextResponse.json({ error: 'Usuario no encontrado en auth' }, { status: 404 });
+    }
+
     if (action === 'reactivate') {
-      await db.auth.admin.updateUserById(user_id, {
+      const { error: updateErr } = await db.auth.admin.updateUserById(authUid, {
         ban_duration: 'none',
         app_metadata: {
           suspended: false,
@@ -57,6 +79,10 @@ export async function POST(req: Request) {
           suspended_until: null,
         },
       });
+      if (updateErr) {
+        console.error('[admin/suspend] reactivate error:', updateErr);
+        return NextResponse.json({ error: 'Error al reactivar: ' + updateErr.message }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, action: 'reactivate', email: targetUser.email });
     }
 
@@ -71,7 +97,7 @@ export async function POST(req: Request) {
     const suspendedUntil = permanent ? null : new Date(now.getTime() + days * 24 * 3600_000).toISOString();
     const label = permanent ? 'Permanente' : `${days} día${days !== 1 ? 's' : ''}`;
 
-    await db.auth.admin.updateUserById(user_id, {
+    const { error: updateErr } = await db.auth.admin.updateUserById(authUid, {
       ban_duration: banHours,
       app_metadata: {
         suspended: !permanent,
@@ -83,6 +109,11 @@ export async function POST(req: Request) {
         suspended_until: suspendedUntil,
       },
     });
+
+    if (updateErr) {
+      console.error('[admin/suspend] suspend error:', updateErr);
+      return NextResponse.json({ error: 'Error al suspender: ' + updateErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -113,9 +144,25 @@ export async function GET(req: Request) {
   try {
     const db = sbAdmin();
 
-    const { data: authUser, error: authErr } = await db.auth.admin.getUserById(userId);
-    if (authErr || !authUser?.user) {
+    // Look up user email from users table, then find auth user by email
+    const { data: targetUser } = await db
+      .from('users')
+      .select('id, email, role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!targetUser) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    const authUid = await getAuthUidByEmail(db, targetUser.email);
+    if (!authUid) {
+      return NextResponse.json({ error: 'Usuario no encontrado en auth' }, { status: 404 });
+    }
+
+    const { data: authUser, error: authErr } = await db.auth.admin.getUserById(authUid);
+    if (authErr || !authUser?.user) {
+      return NextResponse.json({ error: 'Error auth' }, { status: 404 });
     }
 
     const meta = authUser.user.app_metadata || {};
@@ -128,12 +175,11 @@ export async function GET(req: Request) {
       is_suspended: !!(meta.suspended && banned),
       is_blocked: !!(meta.blocked && banned),
       is_active: !banned,
-      suspension_reason: meta.suspension_reason || meta.block_reason || null,
-      suspension_duration: meta.suspension_duration || null,
-      suspension_label: meta.suspension_label || null,
-      suspended_by: meta.suspended_by || meta.blocked_by || null,
-      suspended_at: meta.suspended_at || meta.blocked_at || null,
-      suspended_until: meta.suspended_until || (meta.blocked ? null : null),
+      suspension_reason: meta.suspension_reason || null,
+      suspension_days: meta.suspension_days ?? null,
+      suspended_by: meta.suspended_by || null,
+      suspended_at: meta.suspended_at || null,
+      suspended_until: meta.suspended_until || null,
       banned_until: authUser.user.banned_until || null,
     });
   } catch (err) {

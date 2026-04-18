@@ -64,10 +64,11 @@ export async function getAuthAdmin(req: Request): Promise<AuthUser | null> {
   const user = await getAuthUser(req);
   if (!user) return null;
   try {
+    // Query by email (users.id may differ from auth.users.id)
     const { data } = await sbAdmin()
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('email', user.email)
       .maybeSingle();
     const role = (data as unknown as { role?: string } | null)?.role ?? '';
     if (!ADMIN_ROLES.includes(role)) return null;
