@@ -146,6 +146,7 @@ export default function Auth() {
     if (m.includes('user already registered') || m.includes('already been registered')) return 'Este email ya está registrado. Intentá iniciar sesión.';
     if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 8 caracteres.';
     if (m.includes('rate limit') || m.includes('too many requests') || m.includes('429')) return 'Demasiados intentos. Esperá unos minutos.';
+    if (m.includes('banned') || m.includes('user is banned')) return 'Tu cuenta está suspendida. Contactá con soporte si creés que es un error.';
     if (m.includes('network') || m.includes('fetch')) return 'Error de conexión. Verificá tu internet.';
     if (m.includes('email')) return 'El correo ingresado no es válido.';
     return msg;
