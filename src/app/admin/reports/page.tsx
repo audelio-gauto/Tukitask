@@ -263,13 +263,13 @@ export default function AdminReportsPage() {
                   {STATUS_CONFIG[selected.status].label}
                 </span>
               </div>
-              <div><span className=\"font-semibold\">Reportó:</span> {ROLE_LABELS[selected.reporter_role]} —{' '}
+              <div><span className="font-semibold">Reportó:</span> {ROLE_LABELS[selected.reporter_role]} —{' '}
                 <button onClick={() => lookupAndSuspend(selected.reporter_email, selected.reporter_role)}
-                  className=\"text-blue-600 hover:text-blue-800 hover:underline font-medium\">{selected.reporter_email}</button>
+                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium">{selected.reporter_email}</button>
               </div>
-              <div><span className=\"font-semibold\">Reportado:</span> {ROLE_LABELS[selected.reported_role]} —{' '}
+              <div><span className="font-semibold">Reportado:</span> {ROLE_LABELS[selected.reported_role]} —{' '}
                 <button onClick={() => lookupAndSuspend(selected.reported_email, selected.reported_role)}
-                  className=\"text-red-600 hover:text-red-800 hover:underline font-medium\">{selected.reported_email}</button>
+                  className="text-red-600 hover:text-red-800 hover:underline font-medium">{selected.reported_email}</button>
               </div>
               <div>
                 <span className="font-semibold">Referencia:</span>{' '}
