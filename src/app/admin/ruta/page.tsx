@@ -472,7 +472,7 @@ export default function RutaPage() {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 88px)' }}>
+    <div className="flex flex-col bg-[#1d2327] -m-6 p-6 rounded-2xl" style={{ height: 'calc(100vh - 88px)' }}>
 
       {/* ── Page title ── */}
       <div className="flex-shrink-0 flex items-center justify-between mb-4">

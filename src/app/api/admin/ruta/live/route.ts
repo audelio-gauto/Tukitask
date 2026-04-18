@@ -41,6 +41,18 @@ export async function GET(req: Request) {
     const profileMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => profileMap.set(p.email, p));
 
+    // Tecnico profiles from tecnico_settings
+    const { data: tecProfiles } = await db
+      .from('tecnico_settings')
+      .select('email, first_name, last_name, profile_photo')
+      .in('email', emails);
+
+    (tecProfiles || []).forEach((p: any) => {
+      if (!profileMap.has(p.email)) {
+        profileMap.set(p.email, { ...p, transport_mode: null, verified: true });
+      }
+    });
+
     // Active orders — accepted_by is the driver email
     const driverEmails = users.filter((u: any) => u.role === 'driver').map((u: any) => u.email as string);
     const tecnicoEmails = users.filter((u: any) => u.role === 'tecnico').map((u: any) => u.email as string);
