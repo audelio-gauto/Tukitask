@@ -51,7 +51,6 @@ export default function ClientSettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [newPass, setNewPass] = useState('');
-  const [savingPass, setSavingPass] = useState(false);
 
   const [toast, setToast] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -146,7 +145,7 @@ export default function ClientSettingsPage() {
     setUploading(false);
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingProfile(true);
     try {
@@ -156,211 +155,222 @@ export default function ClientSettingsPage() {
         body: JSON.stringify({ email, display_name: nameInput, phone: phoneInput }),
       });
       const json = await res.json();
-      if (json.error) showToast('Error: ' + json.error);
-      else { setPhone(phoneInput); showToast('Perfil actualizado ✓'); }
-    } catch { showToast('Error de conexión'); }
-    setSavingProfile(false);
-  };
+      if (json.error) { showToast('Error: ' + json.error); setSavingProfile(false); return; }
+      setPhone(phoneInput);
+    } catch { showToast('Error de conexión'); setSavingProfile(false); return; }
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPass.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres'); return; }
-    setSavingPass(true);
-    const { error } = await supabase.auth.updateUser({ password: newPass });
-    setSavingPass(false);
-    if (error) showToast('Error: ' + error.message);
-    else { showToast('Contraseña actualizada ✓'); setNewPass(''); }
+    if (newPass) {
+      if (newPass.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres'); setSavingProfile(false); return; }
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) { showToast('Error: ' + error.message); setSavingProfile(false); return; }
+      setNewPass('');
+    }
+
+    setSavingProfile(false);
+    showToast('Configuración guardada ✓');
   };
 
   return (
     <ClientScreenLayout title="Configuración">
+      <form onSubmit={handleSaveAll}>
 
-      <form className="client-form-card" onSubmit={handleSaveProfile}>
-        <h3 className="client-form-title">🧑 Mi Perfil</h3>
+        {/* ── Perfil ── */}
+        <div className="client-form-card">
+          <h3 className="client-form-title">🧑 Mi Perfil</h3>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: 82, height: 82, borderRadius: '50%', flexShrink: 0,
-              backgroundColor: '#f3f4f6',
-              backgroundImage: profilePhoto ? `url(${profilePhoto})` : 'none',
-              backgroundSize: 'cover', backgroundPosition: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', position: 'relative', overflow: 'hidden',
-              border: '3px solid #10b981',
-            }}
-          >
-            {!profilePhoto && (
-              <span style={{ fontSize: '2rem' }}>{displayName?.[0]?.toUpperCase() || '👤'}</span>
-            )}
-            <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'rgba(0,0,0,0.5)', color: '#fff',
-              fontSize: '0.6rem', textAlign: 'center', padding: '3px 0',
-            }}>
-              {uploading ? '...' : '📷 Cambiar'}
-            </div>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
-            style={{ display: 'none' }} onChange={handlePhotoChange} />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
-              {displayName || email?.split('@')[0]}
-            </div>
-            <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: 2 }}>{email}</div>
-            {isVerified && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, padding: '2px 10px', borderRadius: 99, background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700 }}>
-                ✅ Identidad verificada
-              </span>
-            )}
-            <StarDisplay rating={avgRating} total={totalRatings} />
-          </div>
-        </div>
-
-        <div className="client-form-grid">
-          <div>
-            <label className="client-form-label">Nombre para mostrar</label>
-            <input className="client-form-input" value={nameInput}
-              onChange={e => setNameInput(e.target.value)} placeholder="Tu nombre" />
-          </div>
-          <div>
-            <label className="client-form-label">Teléfono / WhatsApp</label>
-            <input className="client-form-input" value={phoneInput} type="tel"
-              onChange={e => setPhoneInput(e.target.value)} placeholder="+595 9xx xxx xxx" />
-          </div>
-        </div>
-
-        <button type="submit" className="client-btn client-btn-primary" disabled={savingProfile}
-          style={{ marginTop: '0.75rem' }}>
-          {savingProfile ? 'Guardando...' : 'Guardar Perfil'}
-        </button>
-      </form>
-
-      {/* ── Verificar identidad ── */}
-      {(() => {
-        const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
-        const hasRejected   = ID_DOCS.some(d => idDocs[d.key]?.status === 'rejected');
-        const allApproved   = approvedCount === ID_DOCS.length;
-        const bgCol    = isVerified ? '#f0fdf4' : hasRejected ? '#fef2f2' : approvedCount > 0 ? '#fefce8' : '#f8fafc';
-        const bdCol    = isVerified ? '#bbf7d0' : hasRejected ? '#fca5a5' : approvedCount > 0 ? '#fcd34d' : '#e2e8f0';
-        const headerIcon = isVerified ? '✅' : hasRejected ? '❌' : approvedCount > 0 ? '⏳' : '🪪';
-        return (
-          <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <button
-              type="button"
-              onClick={() => setIdOpen(p => !p)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div
+              onClick={() => fileInputRef.current?.click()}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '1rem 1.25rem', border: 'none', background: bgCol, cursor: 'pointer', outline: 'none',
-                borderBottom: idOpen ? `1.5px solid ${bdCol}` : 'none',
+                width: 82, height: 82, borderRadius: '50%', flexShrink: 0,
+                backgroundColor: '#f3f4f6',
+                backgroundImage: profilePhoto ? `url(${profilePhoto})` : 'none',
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                border: '3px solid #10b981',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: '1.4rem' }}>{headerIcon}</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Verificar tu identidad</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
-                    {isVerified ? 'Identidad verificada — badge ✅ activo en tu perfil'
-                      : allApproved ? 'Documentos enviados — en revisión'
-                      : hasRejected ? `${approvedCount}/${ID_DOCS.length} aprobados · documentos rechazados`
-                      : approvedCount > 0 ? `${approvedCount}/${ID_DOCS.length} aprobados · opcional`
-                      : 'Opcional · obtené el badge Verificado'}
-                  </p>
-                </div>
+              {!profilePhoto && (
+                <span style={{ fontSize: '2rem' }}>{displayName?.[0]?.toUpperCase() || '👤'}</span>
+              )}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                background: 'rgba(0,0,0,0.5)', color: '#fff',
+                fontSize: '0.6rem', textAlign: 'center', padding: '3px 0',
+              }}>
+                {uploading ? '...' : '📷 Cambiar'}
               </div>
-              <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{idOpen ? '∧' : '∨'}</span>
-            </button>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }} onChange={handlePhotoChange} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                {displayName || email?.split('@')[0]}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: 2 }}>{email}</div>
+              {isVerified && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, padding: '2px 10px', borderRadius: 99, background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700 }}>
+                  ✅ Identidad verificada
+                </span>
+              )}
+              <StarDisplay rating={avgRating} total={totalRatings} />
+            </div>
+          </div>
 
-            {idOpen && (
-              <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
-                  Subí los dos documentos para obtener el <strong>badge ✅ Verificado</strong> en tu perfil.
-                  Es completamente opcional — el admin lo revisará y te avisará por email.
-                </p>
+          <div className="client-form-grid">
+            <div>
+              <label className="client-form-label">Nombre para mostrar</label>
+              <input className="client-form-input" value={nameInput}
+                onChange={e => setNameInput(e.target.value)} placeholder="Tu nombre" />
+            </div>
+            <div>
+              <label className="client-form-label">Teléfono / WhatsApp</label>
+              <input className="client-form-input" value={phoneInput} type="tel"
+                onChange={e => setPhoneInput(e.target.value)} placeholder="+595 9xx xxx xxx" />
+            </div>
+          </div>
+        </div>
 
-                {ID_DOCS.map(doc => {
-                  const ds        = idDocs[doc.key];
-                  const isUp      = idUploading[doc.key];
-                  const isLocked  = ds?.status === 'approved';
-                  const needsDate = doc.requiresExpiry && !idExpiries[doc.key];
-                  return (
-                    <div key={doc.key}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--input-bg)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
-                        <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                          <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>
-                          {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+        {/* ── Verificar identidad ── */}
+        {(() => {
+          const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
+          const hasRejected   = ID_DOCS.some(d => idDocs[d.key]?.status === 'rejected');
+          const allApproved   = approvedCount === ID_DOCS.length;
+          const bgCol    = isVerified ? '#f0fdf4' : hasRejected ? '#fef2f2' : approvedCount > 0 ? '#fefce8' : '#f8fafc';
+          const bdCol    = isVerified ? '#bbf7d0' : hasRejected ? '#fca5a5' : approvedCount > 0 ? '#fcd34d' : '#e2e8f0';
+          const headerIcon = isVerified ? '✅' : hasRejected ? '❌' : approvedCount > 0 ? '⏳' : '🪪';
+          return (
+            <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setIdOpen(p => !p)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '1rem 1.25rem', border: 'none', background: bgCol, cursor: 'pointer', outline: 'none',
+                  borderBottom: idOpen ? `1.5px solid ${bdCol}` : 'none',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: '1.4rem' }}>{headerIcon}</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Verificar tu identidad</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                      {isVerified ? 'Identidad verificada — badge ✅ activo en tu perfil'
+                        : allApproved ? 'Documentos enviados — en revisión'
+                        : hasRejected ? `${approvedCount}/${ID_DOCS.length} aprobados · documentos rechazados`
+                        : approvedCount > 0 ? `${approvedCount}/${ID_DOCS.length} aprobados · opcional`
+                        : 'Opcional · obtené el badge Verificado'}
+                    </p>
+                  </div>
+                </div>
+                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{idOpen ? '∧' : '∨'}</span>
+              </button>
+
+              {idOpen && (
+                <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+                    Subí los dos documentos para obtener el <strong>badge ✅ Verificado</strong> en tu perfil.
+                    Es completamente opcional — el admin lo revisará y te avisará por email.
+                  </p>
+
+                  {ID_DOCS.map(doc => {
+                    const ds        = idDocs[doc.key];
+                    const isUp      = idUploading[doc.key];
+                    const isLocked  = ds?.status === 'approved';
+                    const needsDate = doc.requiresExpiry && !idExpiries[doc.key];
+                    return (
+                      <div key={doc.key}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--input-bg)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                          <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
+                            <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>
+                            {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                          </div>
+                          {ds && (
+                            <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>
+                              {ds.status === 'approved' ? '✅ Aprobado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                            </span>
+                          )}
+                          {isUp ? (
+                            <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                          ) : isLocked ? (
+                            <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Ok</span>
+                          ) : needsDate ? (
+                            <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                          ) : (
+                            <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'rejected' ? '#fff7f7' : '#f0f9ff', color: ds?.status === 'rejected' ? '#dc2626' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'rejected' ? '#fca5a5' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              {ds ? '↑ Re-subir' : '↑ Subir'}
+                              <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadIdDoc(doc.key, f); e.target.value = ''; }} />
+                            </label>
+                          )}
                         </div>
-                        {ds && (
-                          <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>
-                            {ds.status === 'approved' ? '✅ Aprobado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
-                          </span>
-                        )}
-                        {isUp ? (
-                          <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
-                        ) : isLocked ? (
-                          <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Ok</span>
-                        ) : needsDate ? (
-                          <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
-                        ) : (
-                          <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'rejected' ? '#fff7f7' : '#f0f9ff', color: ds?.status === 'rejected' ? '#dc2626' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'rejected' ? '#fca5a5' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                            {ds ? '↑ Re-subir' : '↑ Subir'}
-                            <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadIdDoc(doc.key, f); e.target.value = ''; }} />
-                          </label>
+                        {doc.requiresExpiry && !isLocked && (
+                          <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento cédula:</span>
+                            <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
+                          </div>
                         )}
                       </div>
-                      {doc.requiresExpiry && !isLocked && (
-                        <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento cédula:</span>
-                          <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
-      <div className="client-form-card">
-        <h3 className="client-form-title">👤 Información de Cuenta</h3>        <div className="client-form-grid">
-          <div>
-            <label className="client-form-label">Email</label>
-            <input className="client-form-input" value={email} readOnly style={{ background: 'var(--input-bg)', opacity: 0.6 }} />
-          </div>
-          <div>
-            <label className="client-form-label">Nombre de usuario</label>
-            <input className="client-form-input" value={displayName} readOnly style={{ background: 'var(--input-bg)', opacity: 0.6 }} />
+        {/* ── Cuenta ── */}
+        <div className="client-form-card">
+          <h3 className="client-form-title">🔒 Cuenta</h3>
+          <div className="client-form-grid">
+            <div>
+              <label className="client-form-label">Email</label>
+              <input className="client-form-input" value={email} readOnly style={{ opacity: 0.6 }} />
+            </div>
+            <div>
+              <label className="client-form-label">Nueva contraseña <span style={{ color: '#9ca3af', fontWeight: 400 }}>(opcional)</span></label>
+              <input className="client-form-input" type="password" placeholder="Mínimo 6 caracteres"
+                value={newPass} onChange={e => setNewPass(e.target.value)} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <form className="client-form-card" onSubmit={handleChangePassword}>
-        <h3 className="client-form-title">🔒 Cambiar Contraseña</h3>
-        <div className="client-form-grid">
-          <div>
-            <label className="client-form-label">Nueva contraseña</label>
-            <input className="client-form-input" type="password" placeholder="Mínimo 6 caracteres"
-              value={newPass} onChange={e => setNewPass(e.target.value)} />
-          </div>
-          <button type="submit" className="client-btn client-btn-primary" disabled={savingPass}
-            style={{ alignSelf: 'end' }}>
-            {savingPass ? 'Guardando...' : 'Actualizar Contraseña'}
-          </button>
+        {/* ── Tema ── */}
+        <div className="client-form-card">
+          <h3 className="client-form-title">🎨 Tema de la app</h3>
+          <ThemeSelector />
         </div>
+
+        {/* ── Toast ── */}
+        {toast && <div className="client-toast">{toast}</div>}
+
+        {/* ── Botón único guardar ── */}
+        <button
+          type="submit"
+          disabled={savingProfile}
+          style={{
+            width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
+            background: savingProfile ? '#f0e68c' : 'linear-gradient(135deg, #10b981, #059669)',
+            color: savingProfile ? '#888' : '#fff', fontWeight: 800, fontSize: '1rem',
+            cursor: savingProfile ? 'not-allowed' : 'pointer',
+            boxShadow: savingProfile ? 'none' : '0 6px 20px rgba(16,185,129,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all 0.18s', marginBottom: '1rem',
+          }}
+        >
+          {savingProfile ? (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="animate-spin">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+              </svg>
+              Guardando...
+            </>
+          ) : '💾 Guardar configuración'}
+        </button>
+
       </form>
-
-      {toast && <div className="client-toast">{toast}</div>}
-
-      {/* ── Tema de la app ── */}
-      <div className="client-form-card">
-        <h3 className="client-form-title">🎨 Tema de la app</h3>
-        <ThemeSelector />
-      </div>
     </ClientScreenLayout>
   );
 }
