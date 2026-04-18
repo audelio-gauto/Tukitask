@@ -31,7 +31,9 @@ export default function DriverDashboard() {
 
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
-  const DRIVER_TOTAL_DOCS = 7; // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
+  const DRIVER_TOTAL_DOCS = 7;
+  /** Vehicle types with ALL required docs approved */
+  const [approvedVehicleTypes, setApprovedVehicleTypes] = useState<Set<string>>(new Set()); // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
 
   // Stats state
   const [statsLoading, setStatsLoading] = useState(true);
@@ -218,6 +220,17 @@ export default function DriverDashboard() {
         }
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, DRIVER_TOTAL_DOCS - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
+        // Compute per-vehicle-type approval status
+        const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];
+        const VEH_DOC_KEYS  = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
+        const statusMap: Record<string, string> = {};
+        for (const d of docs) statusMap[d.doc_type] = d.status;
+        const approved = new Set<string>();
+        for (const vt of ['moto', 'auto', 'moto_carro', 'camion']) {
+          const needed = [...PERSONAL_KEYS, ...VEH_DOC_KEYS.map(k => `${vt}_${k}`)];
+          if (needed.every(k => statusMap[k] === 'approved')) approved.add(vt);
+        }
+        setApprovedVehicleTypes(approved);
         // Si hay docs vencidos, no aprobados o faltantes, forzar offline
         const missing = Math.max(0, DRIVER_TOTAL_DOCS - docs.length);
         if (expired.length > 0 || notApproved.length > 0 || missing > 0) {
@@ -556,11 +569,11 @@ export default function DriverDashboard() {
             <p className="driver-filter-subtitle">Elegí qué tipo de solicitudes querés recibir</p>
             <div className="driver-filter-list">
               {[
-                { key: 'moto_envios', label: 'Moto Envíos', icon: '🏍️', desc: 'Paquetes pequeños en moto' },
-                { key: 'auto_envios', label: 'Auto Envíos', icon: '🚗', desc: 'Paquetes medianos en auto' },
-                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', desc: 'Fletes en moto o carro' },
-                { key: 'camion_fletes', label: 'Camión Fletes', icon: '🚛', desc: 'Fletes grandes en camión' },
-              ].map(item => (
+                { key: 'moto_envios',       label: 'Moto Envíos',       icon: '🏍️', desc: 'Paquetes pequeños en moto',   vt: 'moto'       },
+                { key: 'auto_envios',       label: 'Auto Envíos',       icon: '🚗', desc: 'Paquetes medianos en auto',   vt: 'auto'       },
+                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', desc: 'Fletes en moto o carro',      vt: 'moto_carro' },
+                { key: 'camion_fletes',     label: 'Camión Fletes',     icon: '🚛', desc: 'Fletes grandes en camión',    vt: 'camion'     },
+              ].filter(item => approvedVehicleTypes.has(item.vt)).map(item => (
                 <button
                   key={item.key}
                   type="button"
@@ -577,6 +590,11 @@ export default function DriverDashboard() {
                   </span>
                 </button>
               ))}
+              {approvedVehicleTypes.size === 0 && (
+                <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#9ca3af', padding: '1rem 0' }}>
+                  📋 Completá y aprobá los documentos de cada vehículo para activar sus servicios.
+                </p>
+              )}
             </div>
 
             {/* Rango de km */}
@@ -894,11 +912,11 @@ export default function DriverDashboard() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {([
-                  { key: 'moto_envios',       label: 'Moto Envíos',      icon: '🏍️' },
-                  { key: 'auto_envios',       label: 'Auto Envíos',      icon: '🚗' },
-                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes',icon: '🛵' },
-                  { key: 'camion_fletes',     label: 'Camión Fletes',    icon: '🚛' },
-                ] as { key: string; label: string; icon: string }[]).filter(s => serviceFilters[s.key]).map(s => (
+                  { key: 'moto_envios',       label: 'Moto Envíos',       icon: '🏍️', vt: 'moto'       },
+                  { key: 'auto_envios',       label: 'Auto Envíos',       icon: '🚗', vt: 'auto'       },
+                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', vt: 'moto_carro' },
+                  { key: 'camion_fletes',     label: 'Camión Fletes',     icon: '🚛', vt: 'camion'     },
+                ] as { key: string; label: string; icon: string; vt: string }[]).filter(s => serviceFilters[s.key] && approvedVehicleTypes.has(s.vt)).map(s => (
                   <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
                     {s.icon} {s.label}
                   </span>
