@@ -163,7 +163,12 @@ export default function TecnicoDashboard() {
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
   const [sendingJobId, setSendingJobId] = useState<string | null>(null);
-  const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
+  const [dismissedHome, setDismissedHome] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem('tecnico_dismissed_ids');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
   const knownJobIdsRef = useRef<Set<string>>(new Set());
 
@@ -200,6 +205,15 @@ export default function TecnicoDashboard() {
           }, 9_000);
         }
         setPendingJobs(arr);
+        // Prune dismissed IDs that are no longer in the feed (keep sessionStorage lean)
+        setDismissedHome(prev => {
+          const liveIds = new Set((arr as { id: string }[]).map(j => j.id));
+          const pruned = new Set([...prev].filter(id => liveIds.has(id)));
+          if (pruned.size !== prev.size) {
+            try { sessionStorage.setItem('tecnico_dismissed_ids', JSON.stringify([...pruned])); } catch {}
+          }
+          return pruned;
+        });
       })
       .catch(() => {});
   }, [email]);
@@ -648,7 +662,11 @@ export default function TecnicoDashboard() {
         dismissed={dismissedHome}
         onAccept={sendTecnicoOffer}
         onDismiss={(id) => {
-          setDismissedHome(prev => new Set([...prev, id]));
+          setDismissedHome(prev => {
+            const next = new Set([...prev, id]);
+            try { sessionStorage.setItem('tecnico_dismissed_ids', JSON.stringify([...next])); } catch {}
+            return next;
+          });
           // Registrar en matching stats (fire-and-forget)
           authFetch('/api/driver-match/dismiss', { method: 'POST' }).catch(() => {});
         }}

@@ -111,8 +111,17 @@ export default function RequestsFeed({
   const [stopsOpen, setStopsOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    const iv = setInterval(() => {
+      setTick(t => t + 1);
+      // Auto-dismiss any card whose countdown just hit 0
+      itemsRef.current.forEach(item => {
+        if (!dismissedRef.current.has(item.id) && getRemaining(item.createdAt) === 0) {
+          onDismiss(item.id);
+        }
+      });
+    }, 1000);
     return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Sound: motivating chime (C5→E5→G5 xylophone arpeggio) ─────────────────

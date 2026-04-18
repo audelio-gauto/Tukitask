@@ -85,7 +85,12 @@ export default function DriverDashboard() {
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
-  const [dismissedHome, setDismissedHome] = useState<Set<string>>(new Set());
+  const [dismissedHome, setDismissedHome] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem('driver_dismissed_ids');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const isLoadingOrdersRef = useRef(false);  // A-2: prevent concurrent mutations
@@ -132,6 +137,15 @@ export default function DriverDashboard() {
           }, 9_000);
         }
         setPendingOrders(data);
+        // Prune dismissed IDs that are no longer in the feed (keep sessionStorage lean)
+        setDismissedHome(prev => {
+          const liveIds = new Set((data as { id: string }[]).map(o => o.id));
+          const pruned = new Set([...prev].filter(id => liveIds.has(id)));
+          if (pruned.size !== prev.size) {
+            try { sessionStorage.setItem('driver_dismissed_ids', JSON.stringify([...pruned])); } catch {}
+          }
+          return pruned;
+        });
       })
       .catch(() => {})
       .finally(() => { isLoadingOrdersRef.current = false; });
@@ -689,7 +703,11 @@ export default function DriverDashboard() {
         dismissed={dismissedHome}
         onAccept={sendDriverOffer}
         onDismiss={(id) => {
-          setDismissedHome(prev => new Set([...prev, id]));
+          setDismissedHome(prev => {
+            const next = new Set([...prev, id]);
+            try { sessionStorage.setItem('driver_dismissed_ids', JSON.stringify([...next])); } catch {}
+            return next;
+          });
           // Registrar en matching stats (fire-and-forget, sin bloquear UI)
           authFetch('/api/driver-match/dismiss', { method: 'POST' }).catch(() => {});
         }}
