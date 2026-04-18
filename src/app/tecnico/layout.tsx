@@ -39,6 +39,55 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
 
+  // ── GPS broadcast: always-on while tecnico app is open ─────────────────────
+  useEffect(() => {
+    if (!email) return;
+    let lastLat: number | null = null;
+    let lastLng: number | null = null;
+    let watchId: number | null = null;
+    let dbIntervalId: ReturnType<typeof setInterval> | null = null;
+
+    const broadcastCh = supabase.channel(`loc:tecnico:${email}`, {
+      config: { broadcast: { self: false } },
+    });
+    broadcastCh.subscribe();
+
+    const broadcastLocation = (lat: number, lng: number) => {
+      broadcastCh.send({ type: 'broadcast', event: 'location', payload: { lat, lng } }).catch(() => {});
+    };
+
+    const postToDB = () => {
+      if (lastLat == null || lastLng == null) return;
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.access_token) return;
+        fetch('/api/driver-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ lat: lastLat, lng: lastLng }),
+        }).catch(() => {});
+      });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          lastLat = pos.coords.latitude;
+          lastLng = pos.coords.longitude;
+          broadcastLocation(lastLat, lastLng);
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
+      );
+      dbIntervalId = setInterval(postToDB, 15_000);
+    }
+
+    return () => {
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      if (dbIntervalId != null) clearInterval(dbIntervalId);
+      supabase.removeChannel(broadcastCh);
+    };
+  }, [email]);
+
   useEffect(() => {
     let mounted = true;
 
