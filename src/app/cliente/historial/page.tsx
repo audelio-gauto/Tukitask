@@ -588,7 +588,7 @@ export default function ClienteHistorialPage() {
       }}>
         {([
           { icon: '🏠', label: 'Home', path: '/cliente', active: false },
-          { icon: '➕', label: 'Publicar', path: '/cliente', active: false },
+          { icon: '➕', label: 'Solicitar', path: '/cliente', active: false },
           { icon: '📋', label: 'Historial', path: '/cliente/historial', active: true },
           { icon: '👤', label: 'Cuenta', path: '/cliente/settings', active: false },
         ] as { icon: string; label: string; path: string; active: boolean }[]).map(item => (
