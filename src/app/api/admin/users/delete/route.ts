@@ -37,14 +37,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
-    // Try to delete from Supabase Auth (by email lookup)
+    // Try to delete from Supabase Auth by querying auth.users directly
     if (userRow.email) {
-      const { data: authUsers } = await db.auth.admin.listUsers();
-      const authUser = authUsers?.users?.find(
-        (u: { email?: string }) => u.email?.toLowerCase() === userRow.email.toLowerCase()
-      );
-      if (authUser) {
-        await db.auth.admin.deleteUser(authUser.id);
+      const { data: authUserData } = await db
+        .schema('auth')
+        .from('users')
+        .select('id')
+        .eq('email', userRow.email.toLowerCase())
+        .maybeSingle();
+      if (authUserData?.id) {
+        await db.auth.admin.deleteUser(authUserData.id);
       }
     }
 
