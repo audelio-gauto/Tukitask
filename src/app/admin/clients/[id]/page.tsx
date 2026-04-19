@@ -41,6 +41,10 @@ export default function ClientDetailPage() {
   const [data, setData] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ display_name: '', phone: '' });
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -62,6 +66,47 @@ export default function ClientDetailPage() {
     })();
   }, [id]);
 
+  const handleEdit = () => {
+    setEditForm({
+      display_name: data?.profile?.display_name || '',
+      phone: data?.profile?.phone || '',
+    });
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/clients/${id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Error al guardar');
+      }
+      // Update local state
+      setData(prev => prev ? {
+        ...prev,
+        profile: { ...prev.profile, display_name: editForm.display_name, phone: editForm.phone },
+      } : prev);
+      setEditing(false);
+      setToast({ msg: 'Cliente actualizado', ok: true });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToast({ msg, ok: false });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
@@ -79,6 +124,13 @@ export default function ClientDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
+          {toast.ok ? '✅' : '❌'} {toast.msg}
+        </div>
+      )}
+
       {/* Back */}
       <button onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
@@ -118,6 +170,48 @@ export default function ClientDetailPage() {
             <p className="text-xs text-gray-400 text-center mt-3">
               Registrado {new Date(user.created_at).toLocaleDateString('es-PY', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
+
+            {/* Edit section */}
+            {!editing ? (
+              <button onClick={handleEdit}
+                className="mt-4 w-full py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                ✏️ Editar datos
+              </button>
+            ) : (
+              <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={editForm.display_name}
+                    onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] text-gray-800"
+                    placeholder="Nombre del cliente"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Teléfono</label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] text-gray-800"
+                    placeholder="+595 9XX XXX XXX"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex-1 py-2 rounded-lg text-sm font-bold text-[#1C1C2E] disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#F5C518,#f59e0b)' }}>
+                    {saving ? 'Guardando...' : 'Guardar'}
+                  </button>
+                  <button onClick={() => setEditing(false)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 border border-gray-200 hover:bg-gray-50">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

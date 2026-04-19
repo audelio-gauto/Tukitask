@@ -133,11 +133,14 @@ function ActiveDot({ active }: { active: boolean }) {
 }
 
 // ── Order detail drawer ────────────────────────────────────────────────────────
-function OrderDrawer({ row, onClose }: { row: Row | null; onClose: () => void }) {
+function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () => void; onCancel: (id: string, type: 'order' | 'tecnico') => void }) {
   if (!row) return null;
   const isOrder = row._type === 'order';
   const o = row as Order;
   const j = row as TecnicoJob;
+
+  const terminalStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned', 'completado', 'rechazado'];
+  const canCancel = !terminalStatuses.includes(row.status);
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
@@ -236,6 +239,16 @@ function OrderDrawer({ row, onClose }: { row: Row | null; onClose: () => void })
         {!isOrder && j.description && (
           <AddrField label="📝 Descripción" value={j.description} />
         )}
+
+        {/* Cancel button */}
+        {canCancel && (
+          <button
+            onClick={() => onCancel(row.id, row._type)}
+            className="mt-auto w-full py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
+          >
+            ✕ Cancelar pedido
+          </button>
+        )}
       </div>
     </div>
   );
@@ -286,6 +299,7 @@ export default function AdminOrdersPage() {
   const [selected, setSelected] = useState<Row | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -348,11 +362,45 @@ export default function AdminOrdersPage() {
     setPage(1);
   };
 
+  const handleCancel = async (id: string, type: 'order' | 'tecnico') => {
+    if (!confirm(`¿Cancelar este ${type === 'order' ? 'envío' : 'servicio'} permanentemente?`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, type, action: 'cancel' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Error al cancelar');
+      }
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
+      setSelected(null);
+      setToast({ msg: 'Pedido cancelado', ok: true });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToast({ msg, ok: false });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
   const statusKeys = tab === 'tecnico' ? ALL_TECNICO_STATUS_KEYS : ALL_ORDER_STATUS_KEYS;
   const statusMap  = tab === 'tecnico' ? TECNICO_STATUSES : ORDER_STATUSES;
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
+          {toast.ok ? '✅' : '❌'} {toast.msg}
+        </div>
+      )}
+
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -561,7 +609,7 @@ export default function AdminOrdersPage() {
       )}
 
       {/* ── Drawer ───────────────────────────────────────────────────────── */}
-      <OrderDrawer row={selected} onClose={() => setSelected(null)} />
+      <OrderDrawer row={selected} onClose={() => setSelected(null)} onCancel={handleCancel} />
     </div>
   );
 }
