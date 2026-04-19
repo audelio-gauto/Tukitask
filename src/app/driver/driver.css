@@ -198,8 +198,8 @@
 /* ── Radar overlay ─────────────────────────────────────── */
 .tuki-radar {
   position: absolute;
-  /* just below the wallet pill (top:16px + ~65px pill height) */
-  top: 88px;
+  /* text just below wallet pill, rings expand from center */
+  top: 82px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
@@ -207,12 +207,30 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+}
+.tuki-radar-label {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.95), 0 0 24px rgba(16,185,129,0.7);
+  letter-spacing: 0.02em;
+  text-align: center;
+  background: rgba(0,0,0,0.5);
+  padding: 6px 20px;
+  border-radius: 22px;
+  border: 1.5px solid rgba(16,185,129,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 5;
 }
 .tuki-radar-rings {
+  /* rings centered on the dot, which sits 20px below label */
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: 20px;
+  height: 20px;
+  margin-top: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,46 +238,32 @@
 .tuki-radar-ring {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid rgba(16,185,129,0.75);
-  background: rgba(16,185,129,0.06);
-  animation: radarPulse 1.8s ease-out infinite;
+  border: 3.5px solid rgba(16,185,129,0.8);
+  background: transparent;
+  animation: radarPulse 2s ease-out infinite;
 }
-.tuki-radar-ring:nth-child(1) { width: 60px;  height: 60px;  animation-delay: 0s; }
-.tuki-radar-ring:nth-child(2) { width: 120px; height: 120px; animation-delay: 0.55s; }
-.tuki-radar-ring:nth-child(3) { width: 200px; height: 200px; animation-delay: 1.1s; }
+/* rings expand to 90vw max so they fill the screen width */
+.tuki-radar-ring:nth-child(1) { width: 80px;  height: 80px;  animation-delay: 0s; }
+.tuki-radar-ring:nth-child(2) { width: 180px; height: 180px; animation-delay: 0.62s; }
+.tuki-radar-ring:nth-child(3) { width: 90vw;  height: 90vw;  max-width: 420px; max-height: 420px; animation-delay: 1.24s; }
 .tuki-radar-dot {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16,185,129,0.35), 0 0 18px 6px rgba(16,185,129,0.75);
+  box-shadow: 0 0 0 5px rgba(16,185,129,0.35), 0 0 22px 8px rgba(16,185,129,0.8);
   position: relative;
   z-index: 2;
-  animation: radarDotPulse 1.8s ease-in-out infinite;
-}
-.tuki-radar-label {
-  margin-top: 8px;
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(16,185,129,0.6);
-  letter-spacing: 0.01em;
-  text-align: center;
-  background: rgba(0,0,0,0.45);
-  padding: 5px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(16,185,129,0.4);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  animation: radarDotPulse 2s ease-in-out infinite;
 }
 @keyframes radarPulse {
-  0%   { transform: scale(0.2); opacity: 1; }
-  80%  { opacity: 0.5; }
+  0%   { transform: scale(0); opacity: 1; }
+  75%  { opacity: 0.55; }
   100% { transform: scale(1); opacity: 0; }
 }
 @keyframes radarDotPulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(16,185,129,0.35), 0 0 18px 6px rgba(16,185,129,0.75); }
-  50%       { box-shadow: 0 0 0 8px rgba(16,185,129,0.15), 0 0 30px 10px rgba(16,185,129,0.9); }
+  0%, 100% { box-shadow: 0 0 0 5px rgba(16,185,129,0.35), 0 0 22px 8px rgba(16,185,129,0.8); }
+  50%       { box-shadow: 0 0 0 10px rgba(16,185,129,0.15), 0 0 36px 14px rgba(16,185,129,0.95); }
 }
 
 /* Bottom Sheet */

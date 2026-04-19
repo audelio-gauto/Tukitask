@@ -507,13 +507,13 @@ export default function TecnicoDashboard() {
       {/* Radar overlay — visible only when online and no active feed */}
       {available && !walletBlocked && !feedVisible && (
         <div className="tuki-radar">
+          <div className="tuki-radar-label">Money en camino… atento 👀</div>
           <div className="tuki-radar-rings">
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-dot" />
           </div>
-          <div className="tuki-radar-label">Money en camino… atento 👀</div>
         </div>
       )}
 
