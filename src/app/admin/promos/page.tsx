@@ -84,6 +84,18 @@ export default function AdminPromosPage() {
     }
   };
 
+  const handleDelete = async (id: string, code: string) => {
+    if (!confirm(`¿Eliminar el código "${code}" permanentemente?`)) return;
+    const res = await authFetch(`/api/admin/promos?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setPromos(prev => prev.filter(p => p.id !== id));
+      showToast('Código eliminado');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || 'Error al eliminar', false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#13131F] text-white p-6">
       {toast && (
@@ -171,9 +183,14 @@ export default function AdminPromosPage() {
                   {p.description && ` · ${p.description}`}
                 </div>
               </div>
-              <button onClick={() => toggleActive(p.id, p.is_active)} style={{ padding: '7px 14px', borderRadius: 9, border: `1px solid ${p.is_active ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}`, background: p.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: p.is_active ? '#f87171' : '#4ade80', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                {p.is_active ? 'Desactivar' : 'Activar'}
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button onClick={() => toggleActive(p.id, p.is_active)} style={{ padding: '7px 14px', borderRadius: 9, border: `1px solid ${p.is_active ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}`, background: p.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: p.is_active ? '#f87171' : '#4ade80', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {p.is_active ? 'Desactivar' : 'Activar'}
+                </button>
+                <button onClick={() => handleDelete(p.id, p.code)} style={{ padding: '7px 10px', borderRadius: 9, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }} title="Eliminar">
+                  🗑
+                </button>
+              </div>
             </div>
           ))}
         </div>
