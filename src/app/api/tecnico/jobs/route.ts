@@ -617,6 +617,7 @@ export async function POST(req: Request) {
       if (data?.tecnico_email) {
         const tecnicoEmail = data.tecnico_email as string;
         const totalPrice   = Number(data.total_price ?? data.agreed_price ?? 0);
+        console.log(`[accept_completion] jobId=${jobId} tecnico=${tecnicoEmail} total_price=${data.total_price} agreed_price=${data.agreed_price} → totalPrice=${totalPrice} service_type=${data.service_type}`);
 
         if (totalPrice > 0) {
           // Resolve commission rate: custom override (per tecnico) > service pricing (per service_type) > default 10%
@@ -633,13 +634,15 @@ export async function POST(req: Request) {
           if (settings?.custom_commission_pct != null) {
             commissionPct   = Number(settings.custom_commission_pct);
             commissionFixed = Number(settings.custom_commission_fixed ?? 0);
+            console.log(`[accept_completion] Using custom tecnico rate: ${commissionPct}% + ${commissionFixed} fixed`);
           } else {
             // Priority 2: Service pricing by service_type (admin sets per service)
-            const { data: pricing } = await sb
+            const { data: pricing, error: pricingErr } = await sb
               .from('service_pricing')
               .select('commission_pct, commission_fixed')
               .eq('service_type', data.service_type)
               .maybeSingle();
+            console.log(`[accept_completion] service_pricing lookup: type=${data.service_type} pricing=${JSON.stringify(pricing)} err=${pricingErr?.message ?? 'none'}`);
             if (pricing) {
               commissionPct   = Number(pricing.commission_pct ?? 10);
               commissionFixed = Number(pricing.commission_fixed ?? 0);
@@ -647,6 +650,7 @@ export async function POST(req: Request) {
           }
 
           const commissionAmount = Math.round(totalPrice * commissionPct / 100 + commissionFixed);
+          console.log(`[accept_completion] Commission: ${commissionPct}% + ${commissionFixed}Gs fixed = ${commissionAmount}Gs (of ${totalPrice}Gs)`);
           if (commissionAmount > 0) {
             let rpcErr: { message: string } | null = null;
             for (let attempt = 1; attempt <= 3; attempt++) {
@@ -656,14 +660,24 @@ export async function POST(req: Request) {
                 p_amount: commissionAmount,
               });
               rpcErr = error as { message: string } | null;
-              if (!rpcErr) break;
+              if (!rpcErr) {
+                console.log(`[accept_completion] Commission deducted OK on attempt ${attempt}: ${commissionAmount}Gs from ${tecnicoEmail}`);
+                break;
+              }
+              console.error(`[accept_completion] RPC attempt ${attempt} failed:`, rpcErr.message);
               if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
             }
             if (rpcErr) {
               console.error('[accept_completion] deduct_tecnico_commission failed after 3 attempts:', rpcErr.message);
             }
+          } else {
+            console.log(`[accept_completion] Commission amount is 0, skipping deduction`);
           }
+        } else {
+          console.log(`[accept_completion] totalPrice is 0 or negative, skipping commission`);
         }
+      } else {
+        console.log(`[accept_completion] No tecnico_email on job data, skipping commission. data=${JSON.stringify(data)}`);
       }
 
       // Notify tecnico that client confirmed completion
