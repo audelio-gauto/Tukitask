@@ -369,9 +369,9 @@ export default function RequestsFeed({
 
               {/* Mandadito: shopping list + budget */}
               {item.orderType === 'mandadito' && item.shoppingList && (
-                <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginBottom: 6, padding: '7px 10px', background: 'rgba(245,158,11,0.1)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <div style={{ fontWeight: 700, marginBottom: 3 }}>🛒 Lista de compras</div>
-                  <div style={{ whiteSpace: 'pre-wrap', color: '#fde68a' }}>{item.shoppingList}</div>
+                <div style={{ fontSize: '0.82rem', color: '#92400e', marginBottom: 6, padding: '7px 10px', background: 'rgba(245,158,11,0.12)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.35)' }}>
+                  <div style={{ fontWeight: 700, marginBottom: 3, color: '#78350f' }}>🛒 Lista de compras</div>
+                  <div style={{ whiteSpace: 'pre-wrap', color: '#92400e', fontSize: '0.8rem' }}>{item.shoppingList}</div>
                 </div>
               )}
               {item.orderType === 'mandadito' && item.maxBudget != null && (
