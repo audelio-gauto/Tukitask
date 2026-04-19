@@ -504,8 +504,8 @@ export default function TecnicoDashboard() {
         <WorkerMap onLocate={() => {}} />
       </div>
 
-      {/* Radar overlay — visible only when online */}
-      {available && !walletBlocked && (
+      {/* Radar overlay — visible only when online and no active feed */}
+      {available && !walletBlocked && !feedVisible && (
         <div className="tuki-radar">
           <div className="tuki-radar-rings">
             <div className="tuki-radar-ring" />

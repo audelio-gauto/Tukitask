@@ -7,13 +7,23 @@
 }
 .tuki-back-btn:hover { background: rgba(245,197,24,0.22); }
 
-/* ── Radar overlay (tecnico — gold tones) ──────────────── */
+/* ── Radar overlay (tecnico — gold tones) ────────────────── */
 .tuki-radar-ring {
-  border-color: rgba(245,197,24,0.55);
+  border-color: rgba(245,197,24,0.75);
+  background: rgba(245,197,24,0.05);
 }
 .tuki-radar-dot {
   background: #F5C518;
-  box-shadow: 0 0 8px 3px rgba(245,197,24,0.7);
+  box-shadow: 0 0 0 4px rgba(245,197,24,0.35), 0 0 18px 6px rgba(245,197,24,0.75);
+  animation: radarDotPulseGold 1.8s ease-in-out infinite;
+}
+.tuki-radar-label {
+  border-color: rgba(245,197,24,0.4);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(245,197,24,0.6);
+}
+@keyframes radarDotPulseGold {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(245,197,24,0.35), 0 0 18px 6px rgba(245,197,24,0.75); }
+  50%       { box-shadow: 0 0 0 8px rgba(245,197,24,0.15), 0 0 30px 10px rgba(245,197,24,0.9); }
 }
 
 /* Tecnico sheet — uses global --sheet-bg token, plus gold shadow accent */
