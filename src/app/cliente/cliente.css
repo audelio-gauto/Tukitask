@@ -992,8 +992,14 @@
   resize: vertical;
   min-height: 60px;
   transition: border-color 0.2s;
+  color: #1C1C2E;
+  background: #ffffff;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
-.enviar-field-textarea:focus { border-color: var(--client-primary); }
+.enviar-field-textarea::placeholder { color: #9ca3af; }
+.enviar-field-textarea:focus { border-color: var(--client-primary); outline: none; }
 
 /* Payment method */
 .enviar-payment-grid {

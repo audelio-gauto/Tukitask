@@ -380,7 +380,7 @@ export default function RequestsFeed({
                 </div>
               )}
               {item.instructions && (
-                <div style={{ fontSize: '0.72rem', color: '#C8960A', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>📝 {item.instructions}</div>
+                <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 8, padding: '7px 10px', background: 'rgba(245,197,24,0.08)', borderRadius: 8, border: '1px solid rgba(245,197,24,0.2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: '1.5' }}>📝 {item.instructions}</div>
               )}
               {item.dateScheduled && (
                 <div style={{ fontSize: '0.72rem', color: '#818cf8', marginBottom: 8, padding: '5px 8px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.25)' }}>
