@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
+import { initTheme } from '@/lib/useTheme';
+import './admin.css';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    initTheme();
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) { router.replace('/auth'); return; }
@@ -32,21 +35,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="adm-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Verificando permisos...</p>
+          <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.875rem' }}>Verificando permisos...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f0f1]">
+    <div className="adm-root">
       <AdminSidebar />
       <div className="ml-64 transition-all duration-300">
         <AdminHeader />
-        <main className="p-6">
+        <main className="adm-content">
           {children}
         </main>
       </div>

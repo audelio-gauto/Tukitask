@@ -202,7 +202,7 @@ export default function AdminSidebar() {
 
   return (
     <aside
-      className={`${collapsed ? 'w-16' : 'w-64'} h-screen bg-[#1d2327] flex flex-col transition-all duration-300 fixed left-0 top-0 z-40`}
+      className={`adm-sidebar ${collapsed ? 'w-16' : 'w-64'} h-screen flex flex-col transition-all duration-300 fixed left-0 top-0 z-40`}
     >
       {/* Logo */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-white/10">

@@ -1,0 +1,151 @@
+/* ── Admin Panel Theme Variables ─────────────────────────── */
+
+/* Light (default) */
+:root,
+[data-theme="light"] {
+  --adm-bg:           #f0f0f1;
+  --adm-surface:      #ffffff;
+  --adm-surface-2:    #f7f7f8;
+  --adm-border:       #e2e4e7;
+  --adm-text-primary: #1d2327;
+  --adm-text-secondary: #50575e;
+  --adm-text-muted:   #8c8f94;
+  --adm-header-bg:    #ffffff;
+  --adm-header-border:#e2e4e7;
+  --adm-sidebar-bg:   #1d2327;
+  --adm-accent:       #F5C518;
+  --adm-accent-text:  #1d2327;
+  --adm-input-bg:     #ffffff;
+  --adm-input-border: #d0d5dd;
+  --adm-badge-bg:     #f0f0f1;
+  --adm-row-hover:    #f7f7f8;
+  --adm-danger:       #dc2626;
+  --adm-danger-bg:    #fef2f2;
+}
+
+/* Dark */
+[data-theme="dark"] {
+  --adm-bg:           #0f1117;
+  --adm-surface:      #1a1d27;
+  --adm-surface-2:    #222535;
+  --adm-border:       #2e3347;
+  --adm-text-primary: #f0f2f5;
+  --adm-text-secondary: #a8b0c0;
+  --adm-text-muted:   #6b7590;
+  --adm-header-bg:    #1a1d27;
+  --adm-header-border:#2e3347;
+  --adm-sidebar-bg:   #111318;
+  --adm-accent:       #F5C518;
+  --adm-accent-text:  #111318;
+  --adm-input-bg:     #222535;
+  --adm-input-border: #2e3347;
+  --adm-badge-bg:     #222535;
+  --adm-row-hover:    #222535;
+  --adm-danger:       #f87171;
+  --adm-danger-bg:    rgba(239,68,68,0.1);
+}
+
+/* ── Layout ────────────────────────────────────────────── */
+.adm-root {
+  min-height: 100vh;
+  background: var(--adm-bg);
+  color: var(--adm-text-primary);
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.adm-header {
+  height: 56px;
+  background: var(--adm-header-bg);
+  border-bottom: 1px solid var(--adm-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.adm-header-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--adm-text-secondary);
+}
+.adm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Theme toggle button */
+.adm-theme-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-2);
+  color: var(--adm-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.adm-theme-btn:hover {
+  background: var(--adm-accent);
+  color: var(--adm-accent-text);
+  border-color: var(--adm-accent);
+}
+
+/* Profile chip */
+.adm-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adm-profile-avatar {
+  width: 30px;
+  height: 30px;
+  background: var(--adm-accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--adm-accent-text);
+  flex-shrink: 0;
+}
+.adm-profile-email {
+  font-size: 0.875rem;
+  color: var(--adm-text-primary);
+}
+.adm-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  color: var(--adm-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.adm-logout-btn:hover {
+  color: var(--adm-danger);
+  background: var(--adm-danger-bg);
+}
+
+/* ── Main content area ─────────────────────────────────── */
+.adm-content {
+  background: var(--adm-bg);
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+  transition: background 0.2s;
+}
+
+/* ── Sidebar ───────────────────────────────────────────── */
+.adm-sidebar {
+  background: var(--adm-sidebar-bg) !important;
+  transition: background 0.2s;
+}
