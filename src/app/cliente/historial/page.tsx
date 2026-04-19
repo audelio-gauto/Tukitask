@@ -540,27 +540,11 @@ export default function ClienteHistorialPage() {
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_email && (
                         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                           {/* Tip */}
-                          {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount ?? 0) > 0 ? (
+                          {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount ?? 0) > 0 && (
                             <div style={{ flex: 1, padding: '8px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#4ade80', fontSize: '0.78rem', fontWeight: 700, textAlign: 'center' }}>
                               💰 Propina: {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount!).toLocaleString('es-PY')} Gs
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => { setTipModal({ orderId: (item.data as Order).id, driverName: (item.data as Order).driver_name }); setTipInput(''); }}
-                              style={{ flex: 1, padding: '8px', borderRadius: 10, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#4ade80', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-                            >
-                              💰 Dar propina
-                            </button>
                           )}
-                          {/* Favourite */}
-                          <button
-                            onClick={() => toggleFavorite((item.data as Order).driver_email!)}
-                            disabled={favLoading[(item.data as Order).driver_email!]}
-                            style={{ width: 44, height: 44, borderRadius: 10, border: favorites.has((item.data as Order).driver_email!) ? '1px solid #F5C518' : '1px solid rgba(255,255,255,0.15)', background: favorites.has((item.data as Order).driver_email!) ? 'rgba(245,197,24,0.2)' : 'rgba(255,255,255,0.05)', color: favorites.has((item.data as Order).driver_email!) ? '#F5C518' : 'rgba(255,255,255,0.4)', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800 }}
-                            title={favorites.has((item.data as Order).driver_email!) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-                          >
-                            {favorites.has((item.data as Order).driver_email!) ? '★' : '☆'}
-                          </button>
                         </div>
                       )}
                     </div>
