@@ -103,9 +103,25 @@ export default function UsersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (window.confirm('¿Seguro que deseas eliminar este usuario?')) {
-      await supabase.from('users').delete().eq('id', id);
+    if (!window.confirm('¿Seguro que deseas eliminar este usuario?')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId: id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'Error al eliminar usuario');
+        return;
+      }
       fetchUsers(page, query, filter);
+    } catch {
+      alert('Error de conexión al eliminar usuario');
     }
   }
 
