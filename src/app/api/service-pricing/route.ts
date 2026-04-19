@@ -8,6 +8,7 @@ export async function GET() {
   const { data, error } = await supabaseServer
     .from('service_pricing')
     .select('service_type, suggested_price')
+    .neq('is_active', false)
     .order('sort_order');
 
   if (error) return NextResponse.json({ pricing: {} }, { status: 200 });

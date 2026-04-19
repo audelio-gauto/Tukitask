@@ -9,5 +9,6 @@ UPDATE public.service_pricing SET gender = 'hombre' WHERE service_type IN ('aire
 -- limpieza, cuidado_mascotas, cuidado_adultos, gestor, otros → ambos (default)
 
 -- Allow public read for the service_pricing table (categories are public info)
-CREATE POLICY IF NOT EXISTS "sp_anon_read" ON public.service_pricing
+DROP POLICY IF EXISTS "sp_anon_read" ON public.service_pricing;
+CREATE POLICY "sp_anon_read" ON public.service_pricing
   FOR SELECT TO anon USING (TRUE);

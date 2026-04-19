@@ -68,7 +68,11 @@ export default function ServiceCommissionPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setTecnicos(json.tecnicos || []);
-      setServicePricing(json.service_pricing || []);
+      setServicePricing((json.service_pricing || []).map((s: ServicePricing) => ({
+        ...s,
+        gender: s.gender || 'ambos',
+        is_active: s.is_active !== undefined ? s.is_active : true,
+      })));
     } catch (err) {
       setError(String(err));
     } finally {
