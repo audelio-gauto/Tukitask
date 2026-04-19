@@ -12,39 +12,24 @@ import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
 
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
-// ── Service catalogue (must mirror servicio/page.tsx) ─────────────────────────
-const SERVICES_MUJER = [
-  { key: 'limpieza',         label: 'Limpieza',          icon: '🧹' },
-  { key: 'niera',            label: 'Niñera',            icon: '👶' },
-  { key: 'cocina',           label: 'Cocina',            icon: '🍳' },
-  { key: 'eventos',          label: 'Eventos',           icon: '🎉' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
-  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
-  { key: 'otros',            label: 'Otros',             icon: '✨' },
-];
-const SERVICES_HOMBRE = [
-  { key: 'aire_split',       label: 'Tec Aire Split',    icon: '❄️' },
-  { key: 'electrico',        label: 'Serv. Eléctrico',   icon: '⚡' },
-  { key: 'plomeria',         label: 'Serv. Plomería',    icon: '🔧' },
-  { key: 'cerrajeria',       label: 'Serv. Cerrajería',  icon: '🔑' },
-  { key: 'limpieza',         label: 'Limpieza',          icon: '🧹' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
-  { key: 'gestor',           label: 'Gestor',            icon: '📋' },
-  { key: 'otros',            label: 'Otros',             icon: '✨' },
-];
+// ── Service catalogue (loaded dynamically from DB) ────────────────────────────
+interface ServiceCategory {
+  service_type: string;
+  label: string;
+  emoji: string;
+  gender: string;
+  suggested_price: number | null;
+  sort_order: number;
+}
 
-function getCatalogueForGender(gender: string) {
-  if (gender === 'mujer')  return SERVICES_MUJER;
-  if (gender === 'hombre') return SERVICES_HOMBRE;
-  // No gender set: show all unique services
-  const seen = new Set<string>();
-  return [...SERVICES_MUJER, ...SERVICES_HOMBRE].filter(s => {
-    if (seen.has(s.key)) return false;
-    seen.add(s.key);
-    return true;
-  });
+function toUI(c: ServiceCategory): { key: string; label: string; icon: string } {
+  return { key: c.service_type, label: c.label, icon: c.emoji };
+}
+
+function filterCatsByGender(cats: ServiceCategory[], gender: string) {
+  if (gender === 'mujer')  return cats.filter(c => c.gender === 'mujer' || c.gender === 'ambos');
+  if (gender === 'hombre') return cats.filter(c => c.gender === 'hombre' || c.gender === 'ambos');
+  return cats;
 }
 
 function buildDefaultFilters(catalogue: { key: string }[]) {
@@ -133,6 +118,16 @@ export default function TecnicoDashboard() {
     gananciasHoy:     0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+
+  // ── Dynamic categories from DB ─────────────────────────────────────────────
+  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
+  useEffect(() => {
+    fetch('/api/service-categories')
+      .then(r => r.json())
+      .then((cats: ServiceCategory[]) => { if (Array.isArray(cats)) setAllCategories(cats); })
+      .catch(() => {});
+  }, []);
+  const getCatalogueForGender = (g: string) => filterCatsByGender(allCategories, g).map(toUI);
 
   // ── Filter state ───────────────────────────────────────────────────────────
   const [filterOpen, setFilterOpen]     = useState(false);
@@ -388,14 +383,15 @@ export default function TecnicoDashboard() {
 
   // When gender resolves, ensure filter keys exist for the new catalogue
   useEffect(() => {
-    if (!gender) return;
+    if (!gender || allCategories.length === 0) return;
     const catalogue = getCatalogueForGender(gender);
     setServiceFilters(prev => {
       const defaults = buildDefaultFilters(catalogue);
       Object.keys(defaults).forEach(k => { if (prev[k] !== undefined) defaults[k] = prev[k]; });
       return defaults;
     });
-  }, [gender]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gender, allCategories]);
 
   const toggleFilter = (key: string) => {
     setServiceFilters(prev => {

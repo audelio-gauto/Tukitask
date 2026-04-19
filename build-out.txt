@@ -3,14 +3,14 @@
 - Environments: .env.local
 
   Creating an optimized production build ...
-Ô£ô Compiled successfully in 5.8min
+Ô£ô Compiled successfully in 6.0min
   Running TypeScript ...
   Collecting page data using 1 worker ...
-  Generating static pages using 1 worker (0/109) ...
-  Generating static pages using 1 worker (27/109) 
-  Generating static pages using 1 worker (54/109) 
-  Generating static pages using 1 worker (81/109) 
-Ô£ô Generating static pages using 1 worker (109/109) in 37.7s
+  Generating static pages using 1 worker (0/116) ...
+  Generating static pages using 1 worker (29/116) 
+  Generating static pages using 1 worker (58/116) 
+  Generating static pages using 1 worker (87/116) 
+Ô£ô Generating static pages using 1 worker (116/116) in 46s
   Finalizing page optimization ...
 
 Route (app)
@@ -18,6 +18,7 @@ Route (app)
 Ôö£ Ôùï /_not-found
 Ôö£ Ôùï /admin
 Ôö£ Ôùï /admin/bank-alias
+Ôö£ Ôùï /admin/billetera
 Ôö£ Ôùï /admin/billetera/historial
 Ôö£ Ôùï /admin/clients
 Ôö£ ãÆ /admin/clients/[id]
@@ -34,6 +35,7 @@ Route (app)
 Ôö£ Ôùï /admin/orders
 Ôö£ Ôùï /admin/promos
 Ôö£ Ôùï /admin/reports
+Ôö£ Ôùï /admin/ruta
 Ôö£ Ôùï /admin/services
 Ôö£ Ôùï /admin/services/commission
 Ôö£ Ôùï /admin/services/tecnico
@@ -56,11 +58,18 @@ Route (app)
 Ôö£ ãÆ /api/admin/pricing
 Ôö£ ãÆ /api/admin/promos
 Ôö£ ãÆ /api/admin/recharge-history
+Ôö£ ãÆ /api/admin/ruta/action
+Ôö£ ãÆ /api/admin/ruta/live
+Ôö£ ãÆ /api/admin/ruta/mapkey
 Ôö£ ãÆ /api/admin/services/commissions
 Ôö£ ãÆ /api/admin/services/tecnico
+Ôö£ ãÆ /api/admin/suspend
+Ôö£ ãÆ /api/admin/test-google-key
 Ôö£ ãÆ /api/admin/upload-logo
 Ôö£ ãÆ /api/admin/upload-pwa-icon
 Ôö£ ãÆ /api/admin/users
+Ôö£ ãÆ /api/admin/users/delete
+Ôö£ ãÆ /api/admin/users/lookup
 Ôö£ ãÆ /api/admin/wallets
 Ôö£ ãÆ /api/auth/forgot-password
 Ôö£ ãÆ /api/chat
@@ -70,12 +79,15 @@ Route (app)
 Ôö£ ãÆ /api/create-user
 Ôö£ ãÆ /api/debug-env
 Ôö£ ãÆ /api/driver-location
+Ôö£ ãÆ /api/driver-match/dismiss
 Ôö£ ãÆ /api/driver-profile
 Ôö£ ãÆ /api/favorites
 Ôö£ ãÆ /api/firebase-sw
+Ôö£ ãÆ /api/logo
 Ôö£ ãÆ /api/manifest
 Ôö£ ãÆ /api/maps/directions
 Ôö£ ãÆ /api/maps/geocode
+Ôö£ ãÆ /api/me/suspension
 Ôö£ ãÆ /api/notifications
 Ôö£ ãÆ /api/orders
 Ôö£ ãÆ /api/orders/offers
@@ -86,6 +98,7 @@ Route (app)
 Ôö£ ãÆ /api/pwa-icon/[size]
 Ôö£ ãÆ /api/register
 Ôö£ ãÆ /api/reports
+Ôö£ ãÆ /api/service-categories
 Ôö£ ãÆ /api/service-pricing
 Ôö£ ãÆ /api/sw
 Ôö£ ãÆ /api/tecnico/jobs
@@ -108,6 +121,7 @@ Route (app)
 Ôö£ Ôùï /cliente/mis-envios
 Ôö£ Ôùï /cliente/mis-servicios
 Ôö£ Ôùï /cliente/pedidos
+Ôö£ ãÆ /cliente/seguimiento/[id]
 Ôö£ Ôùï /cliente/servicio
 Ôö£ Ôùï /cliente/settings
 Ôö£ Ôùï /driver

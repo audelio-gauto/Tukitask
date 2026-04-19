@@ -10,39 +10,25 @@ import { authFetch } from '@/lib/authFetch';
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
-const CATEGORIES_MUJER = [
-  { key: 'limpieza',         label: 'Limpieza',           icon: '🧹' },
-  { key: 'niera',            label: 'Niñera',             icon: '👶' },
-  { key: 'cocina',           label: 'Cocina',             icon: '🍳' },
-  { key: 'eventos',          label: 'Eventos',            icon: '🎉' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
-  { key: 'gestor',           label: 'Gestor',             icon: '📋' },
-  { key: 'otros',            label: 'Otros',              icon: '✨' },
-];
+// Category type from API
+interface ServiceCategory {
+  service_type: string;
+  label: string;
+  emoji: string;
+  gender: string;
+  suggested_price: number | null;
+  sort_order: number;
+}
 
-const CATEGORIES_HOMBRE = [
-  { key: 'aire_split',       label: 'Tec Aire Split',     icon: '❄️' },
-  { key: 'electrico',        label: 'Servicio Eléctrico', icon: '⚡' },
-  { key: 'plomeria',         label: 'Servicio Plomería',  icon: '🔧' },
-  { key: 'cerrajeria',       label: 'Servicio Cerrajería',icon: '🔑' },
-  { key: 'limpieza',         label: 'Limpieza',           icon: '🧹' },
-  { key: 'cuidado_adultos',  label: 'Cuidado adultos',   icon: '👴' },
-  { key: 'cuidado_mascotas', label: 'Cuidado Mascotas',  icon: '🐾' },
-  { key: 'gestor',           label: 'Gestor',             icon: '📋' },
-  { key: 'otros',            label: 'Otros',              icon: '✨' },
-];
+// Adapt API data to the { key, label, icon } shape used in the UI
+function toUICategory(c: ServiceCategory) {
+  return { key: c.service_type, label: c.label, icon: c.emoji };
+}
 
-function getCategoriesForGender(gender: string) {
-  if (gender === 'mujer')  return CATEGORIES_MUJER;
-  if (gender === 'hombre') return CATEGORIES_HOMBRE;
-  // indiferente: combined unique by key
-  const seen = new Set<string>();
-  return [...CATEGORIES_MUJER, ...CATEGORIES_HOMBRE].filter(c => {
-    if (seen.has(c.key)) return false;
-    seen.add(c.key);
-    return true;
-  });
+function filterByGender(cats: ServiceCategory[], gender: string) {
+  if (gender === 'mujer')  return cats.filter(c => c.gender === 'mujer' || c.gender === 'ambos');
+  if (gender === 'hombre') return cats.filter(c => c.gender === 'hombre' || c.gender === 'ambos');
+  return cats; // indiferente: all
 }
 
 const paymentMethods = [
@@ -50,9 +36,7 @@ const paymentMethods = [
   { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
 ];
 
-// Service pricing: loaded from admin config (service_pricing table)
-// Falls back to empty object — when no suggested_price, client enters their own price
-const EMPTY_PRICES: Record<string, number | null> = {};
+// Service pricing: loaded dynamically from /api/service-categories
 
 export default function SolicitarServicioPage() {
   const { openDrawer, email, displayName, profilePhoto, avgRating } = useClientContext();
@@ -66,14 +50,25 @@ export default function SolicitarServicioPage() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
-  // Service pricing from admin panel
-  const [servicePrices, setServicePrices] = useState<Record<string, number | null>>(EMPTY_PRICES);
+  // Dynamic categories from DB
+  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
+  const [servicePrices, setServicePrices] = useState<Record<string, number | null>>({});
   useEffect(() => {
-    fetch('/api/service-pricing')
+    fetch('/api/service-categories')
       .then(r => r.json())
-      .then(d => { if (d.pricing) setServicePrices(d.pricing); })
+      .then((cats: ServiceCategory[]) => {
+        if (Array.isArray(cats)) {
+          setAllCategories(cats);
+          const prices: Record<string, number | null> = {};
+          cats.forEach(c => { prices[c.service_type] = c.suggested_price; });
+          setServicePrices(prices);
+        }
+      })
       .catch(() => {});
   }, []);
+
+  // Helper to get categories filtered by current gender preference
+  const getCategoriesForGender = (g: string) => filterByGender(allCategories, g).map(toUICategory);
 
   // Location state (same pattern as enviar)
   const [locationAddress, setLocationAddress] = useState('');

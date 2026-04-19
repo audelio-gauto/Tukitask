@@ -20,6 +20,8 @@ interface ServicePricing {
   service_type: string;
   label: string;
   emoji: string;
+  gender: string;
+  is_active: boolean;
   suggested_price: number | null;
   commission_pct: number;
   commission_fixed: number;
@@ -48,6 +50,9 @@ export default function ServiceCommissionPage() {
   const [search, setSearch] = useState('');
   const [savingPricing, setSavingPricing] = useState(false);
   const [tab, setTab] = useState<'pricing' | 'tecnicos'>('pricing');
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCat, setNewCat] = useState({ service_type: '', label: '', emoji: '', gender: 'ambos', sort_order: '99' });
+  const [creatingCat, setCreatingCat] = useState(false);
 
   const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -93,8 +98,50 @@ export default function ServiceCommissionPage() {
 
   const updatePricing = (id: string, field: keyof ServicePricing, value: string) => {
     setServicePricing(prev => prev.map(s => s.id === id
-      ? { ...s, [field]: value === '' ? null : (field === 'label' || field === 'emoji' ? value : parseFloat(value) || 0) }
+      ? { ...s, [field]: value === '' ? null : (field === 'label' || field === 'emoji' || field === 'gender' ? value : field === 'is_active' ? value === 'true' : parseFloat(value) || 0) }
       : s));
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCat.service_type.trim() || !newCat.label.trim() || !newCat.emoji.trim()) {
+      setError('Completá tipo, nombre y emoji'); return;
+    }
+    setCreatingCat(true); setError('');
+    try {
+      const res = await fetch('/api/admin/services/commissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getToken()}` },
+        body: JSON.stringify(newCat),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSuccess('Categoría creada correctamente');
+      setNewCat({ service_type: '', label: '', emoji: '', gender: 'ambos', sort_order: '99' });
+      setShowNewCat(false);
+      setTimeout(() => setSuccess(''), 3000);
+      fetchData();
+    } catch (err) { setError(String(err)); }
+    finally { setCreatingCat(false); }
+  };
+
+  const handleDeleteCategory = async (id: string, label: string) => {
+    if (!confirm(`¿Eliminar la categoría "${label}"? Esto no se puede deshacer.`)) return;
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/services/commissions?id=${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSuccess('Categoría eliminada');
+      setTimeout(() => setSuccess(''), 3000);
+      fetchData();
+    } catch (err) { setError(String(err)); }
+  };
+
+  const toggleActive = (id: string) => {
+    setServicePricing(prev => prev.map(s => s.id === id ? { ...s, is_active: !s.is_active } : s));
   };
 
   const openEdit = (t: Tecnico) => {
@@ -186,65 +233,183 @@ export default function ServiceCommissionPage() {
       {tab === 'pricing' && (
         <div>
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-            <strong>ℹ️ Cómo funciona la comisión:</strong> Para técnicos <em>sin suscripción</em> se aplica
-            el % de comisión configurado aquí por tipo de servicio. Con suscripción activa se aplica
-            su comisión personalizada (más baja).
+            <strong>ℹ️ Cómo funciona:</strong> Desde aquí gestionás las categorías de servicio que ven clientes y técnicos.
+            Podés agregar, editar, desactivar o eliminar categorías. El género determina a quién se muestra cada categoría.
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-5">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Tipos de Servicio</h2>
-              <button
-                onClick={handleSavePricing}
-                disabled={savingPricing}
-                className="px-4 py-1.5 bg-[#F5C518] text-[#1C1C2E] text-sm font-semibold rounded-lg hover:bg-[#E6A800] disabled:opacity-50"
-              >
-                {savingPricing ? 'Guardando...' : '💾 Guardar'}
-              </button>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+              <h2 className="font-semibold text-gray-800">Categorías de Servicio</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowNewCat(!showNewCat)}
+                  className="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600"
+                >
+                  ➕ Nueva Categoría
+                </button>
+                <button
+                  onClick={handleSavePricing}
+                  disabled={savingPricing}
+                  className="px-4 py-1.5 bg-[#F5C518] text-[#1C1C2E] text-sm font-semibold rounded-lg hover:bg-[#E6A800] disabled:opacity-50"
+                >
+                  {savingPricing ? 'Guardando...' : '💾 Guardar'}
+                </button>
+              </div>
             </div>
-            <div className="divide-y divide-gray-50">
-              {servicePricing.map(s => (
-                <div key={s.id} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 items-start hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{s.emoji}</span>
-                    <span className="font-medium text-sm text-gray-700">{s.label}</span>
-                  </div>
+
+            {/* New category form */}
+            {showNewCat && (
+              <div className="p-4 bg-green-50 border-b border-green-100">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end">
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Precio Sugerido (Gs)</label>
+                    <label className="block text-[11px] text-gray-500 mb-1">Tipo (clave)</label>
                     <input
-                      type="number" min="0" step="1000"
-                      value={s.suggested_price ?? ''}
-                      placeholder="Opcional"
-                      onChange={e => updatePricing(s.id, 'suggested_price', e.target.value)}
-                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#F5C518] placeholder:text-gray-300"
+                      type="text" placeholder="ej: pintura"
+                      value={newCat.service_type}
+                      onChange={e => setNewCat(p => ({ ...p, service_type: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Comisión %</label>
-                    <div className="relative">
+                    <label className="block text-[11px] text-gray-500 mb-1">Nombre</label>
+                    <input
+                      type="text" placeholder="ej: Pintura"
+                      value={newCat.label}
+                      onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-500 mb-1">Emoji</label>
+                    <input
+                      type="text" placeholder="🎨"
+                      value={newCat.emoji}
+                      onChange={e => setNewCat(p => ({ ...p, emoji: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-500 mb-1">Género</label>
+                    <select
+                      value={newCat.gender}
+                      onChange={e => setNewCat(p => ({ ...p, gender: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                    >
+                      <option value="ambos">Ambos</option>
+                      <option value="mujer">Mujer</option>
+                      <option value="hombre">Hombre</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-500 mb-1">Orden</label>
+                    <input
+                      type="number" min="0"
+                      value={newCat.sort_order}
+                      onChange={e => setNewCat(p => ({ ...p, sort_order: e.target.value }))}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateCategory}
+                    disabled={creatingCat}
+                    className="px-3 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {creatingCat ? '...' : 'Crear'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="divide-y divide-gray-50">
+              {servicePricing.map(s => (
+                <div key={s.id} className={`p-4 hover:bg-gray-50 transition-colors ${!s.is_active ? 'opacity-50' : ''}`}>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 items-start">
+                    {/* Name + emoji */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text" value={s.emoji}
+                        onChange={e => updatePricing(s.id, 'emoji', e.target.value)}
+                        className="w-10 text-center text-xl border-0 bg-transparent p-0"
+                        title="Emoji"
+                      />
+                      <div className="flex-1">
+                        <input
+                          type="text" value={s.label}
+                          onChange={e => updatePricing(s.id, 'label', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-medium"
+                        />
+                        <span className="text-[10px] text-gray-400">{s.service_type}</span>
+                      </div>
+                    </div>
+                    {/* Gender */}
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Género</label>
+                      <select
+                        value={s.gender || 'ambos'}
+                        onChange={e => updatePricing(s.id, 'gender', e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+                      >
+                        <option value="ambos">Ambos</option>
+                        <option value="mujer">Mujer</option>
+                        <option value="hombre">Hombre</option>
+                      </select>
+                    </div>
+                    {/* Suggested price */}
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Precio Sugerido</label>
+                      <input
+                        type="number" min="0" step="1000"
+                        value={s.suggested_price ?? ''}
+                        placeholder="Opcional"
+                        onChange={e => updatePricing(s.id, 'suggested_price', e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm placeholder:text-gray-300"
+                      />
+                    </div>
+                    {/* Commission % */}
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Comisión %</label>
                       <input
                         type="number" min="0" max="100" step="0.1"
                         value={s.commission_pct}
                         onChange={e => updatePricing(s.id, 'commission_pct', e.target.value)}
-                        className="w-full px-3 py-1.5 pr-7 border border-orange-200 bg-orange-50 rounded-lg text-sm focus:ring-2 focus:ring-orange-400"
+                        className="w-full px-2 py-1.5 border border-orange-200 bg-orange-50 rounded-lg text-sm"
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Comisión Fija (Gs)</label>
-                    <input
-                      type="number" min="0" step="1"
-                      value={s.commission_fixed}
-                      onChange={e => updatePricing(s.id, 'commission_fixed', e.target.value)}
-                      className="w-full px-3 py-1.5 border border-orange-200 bg-orange-50 rounded-lg text-sm focus:ring-2 focus:ring-orange-400"
-                    />
+                    {/* Commission fixed */}
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Com. Fija (Gs)</label>
+                      <input
+                        type="number" min="0" step="1"
+                        value={s.commission_fixed}
+                        onChange={e => updatePricing(s.id, 'commission_fixed', e.target.value)}
+                        className="w-full px-2 py-1.5 border border-orange-200 bg-orange-50 rounded-lg text-sm"
+                      />
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(s.id)}
+                        title={s.is_active ? 'Desactivar' : 'Activar'}
+                        className={`px-2 py-1 rounded text-xs font-semibold ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}
+                      >
+                        {s.is_active ? '✅ Activo' : '⏸ Inactivo'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(s.id, s.label)}
+                        className="px-2 py-1 rounded text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100"
+                        title="Eliminar categoría"
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
               {servicePricing.length === 0 && (
                 <div className="p-8 text-center text-gray-400 text-sm">
-                  Ejecuta la migración <strong>021_tecnico_commissions.sql</strong> en Supabase para crear los tipos de servicio.
+                  No hay categorías. Usá &quot;Nueva Categoría&quot; para crear la primera.
                 </div>
               )}
             </div>
