@@ -502,6 +502,19 @@ export default function DriverDashboard() {
         <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} />
       </div>
 
+      {/* Radar overlay — visible only when online */}
+      {available && !walletBlocked && (
+        <div className="tuki-radar">
+          <div className="tuki-radar-rings">
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-dot" />
+          </div>
+          <div className="tuki-radar-label">Money en camino… atento 👀</div>
+        </div>
+      )}
+
       {/* Profile pill — top left */}
       <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>

@@ -7,6 +7,15 @@
 }
 .tuki-back-btn:hover { background: rgba(245,197,24,0.22); }
 
+/* ── Radar overlay (tecnico — gold tones) ──────────────── */
+.tuki-radar-ring {
+  border-color: rgba(245,197,24,0.55);
+}
+.tuki-radar-dot {
+  background: #F5C518;
+  box-shadow: 0 0 8px 3px rgba(245,197,24,0.7);
+}
+
 /* Tecnico sheet — uses global --sheet-bg token, plus gold shadow accent */
 .tuki-sheet {
   background: var(--sheet-bg);

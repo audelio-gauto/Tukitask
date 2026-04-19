@@ -439,6 +439,19 @@ export default function TecnicoDashboard() {
     return () => { cancelled = true; clearInterval(iv); };
   }, [email]);
 
+  // ── Wake Lock: prevent screen sleep while available ──────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    if (available && !walletBlocked) {
+      (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock
+        .request('screen')
+        .then(l => { lock = l; })
+        .catch(() => {});
+    }
+    return () => { lock?.release().catch(() => {}); };
+  }, [available, walletBlocked]);
+
   const catalogue      = getCatalogueForGender(gender);
   const hasActiveFilter = Object.values(serviceFilters).some(v => !v);
   const enabledCount   = catalogue.filter(s => serviceFilters[s.key]).length;
@@ -490,6 +503,19 @@ export default function TecnicoDashboard() {
       <div className="tuki-map">
         <WorkerMap onLocate={() => {}} />
       </div>
+
+      {/* Radar overlay — visible only when online */}
+      {available && !walletBlocked && (
+        <div className="tuki-radar">
+          <div className="tuki-radar-rings">
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-ring" />
+            <div className="tuki-radar-dot" />
+          </div>
+          <div className="tuki-radar-label">Money en camino… atento 👀</div>
+        </div>
+      )}
 
       {/* Profile pill — top left */}
       <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>

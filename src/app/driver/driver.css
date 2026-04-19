@@ -195,6 +195,68 @@
 }
 .tuki-overlay.active { opacity: 1; pointer-events: auto; }
 
+/* ── Radar overlay ─────────────────────────────────────── */
+.tuki-radar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  /* sits above map, below sheet and floating buttons */
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* bottom edge aligns roughly with sheet top when half */
+  bottom: calc(var(--tuki-nav-h) + 220px);
+  overflow: hidden;
+}
+.tuki-radar-rings {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tuki-radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(16,185,129,0.55);
+  background: transparent;
+  animation: radarPulse 2.4s ease-out infinite;
+}
+.tuki-radar-ring:nth-child(1) { width: 60px;  height: 60px;  animation-delay: 0s; }
+.tuki-radar-ring:nth-child(2) { width: 110px; height: 110px; animation-delay: 0.7s; }
+.tuki-radar-ring:nth-child(3) { width: 160px; height: 160px; animation-delay: 1.4s; }
+.tuki-radar-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px 3px rgba(16,185,129,0.7);
+  position: relative;
+  z-index: 2;
+}
+.tuki-radar-label {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  letter-spacing: 0.01em;
+  text-align: center;
+  background: rgba(0,0,0,0.32);
+  padding: 4px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+@keyframes radarPulse {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  70%  { opacity: 0.4; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
 /* Bottom Sheet */
 .tuki-sheet {
   position: absolute;
