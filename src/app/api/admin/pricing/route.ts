@@ -140,36 +140,14 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Update app settings (string values)
+    // Update app settings (string values) — upsert by key
     if (Array.isArray(app_settings) && app_settings.length > 0) {
       for (const item of app_settings) {
         const value = item.value === null || item.value === undefined ? '' : String(item.value)
-        const hasValidId = item.id && UUID_RE.test(item.id)
-        if (hasValidId) {
-          const { error } = await supabaseServer
-            .from('app_settings')
-            .update({ value, updated_at: new Date().toISOString() })
-            .eq('id', item.id)
-          if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
-        } else {
-          const { data: existing } = await supabaseServer
-            .from('app_settings')
-            .select('id')
-            .eq('key', item.key)
-            .maybeSingle()
-          if (existing) {
-            const { error } = await supabaseServer
-              .from('app_settings')
-              .update({ value, updated_at: new Date().toISOString() })
-              .eq('id', existing.id)
-            if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
-          } else {
-            const { error } = await supabaseServer
-              .from('app_settings')
-              .insert({ key: item.key, value })
-            if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
-          }
-        }
+        const { error } = await supabaseServer
+          .from('app_settings')
+          .upsert({ key: item.key, value }, { onConflict: 'key' })
+        if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
       }
     }
 
