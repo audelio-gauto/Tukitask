@@ -166,7 +166,7 @@ export async function PUT(req: Request) {
           } else {
             const { error } = await supabaseServer
               .from('app_settings')
-              .insert({ key: item.key, value, label: item.label || item.key })
+              .insert({ key: item.key, value })
             if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
           }
         }
