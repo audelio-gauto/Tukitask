@@ -31,7 +31,8 @@ export default function LocationPicker({ mode, initialCenter, onConfirm, onClose
       });
       const data = await res.json();
       if (mountedRef.current) {
-        setAddress(data?.name || data?.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        const r = data?.result || data;
+        setAddress(r?.display_name || r?.name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
       }
     } catch {
       if (mountedRef.current) setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
