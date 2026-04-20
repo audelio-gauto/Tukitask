@@ -32,6 +32,8 @@ const SERVICE_LABELS: Record<string, string> = {
   otros: '✨ Otros',
 };
 
+interface ExtraItem { amount: number; reason: string }
+
 interface Job {
   id: string;
   created_at: string;
@@ -47,6 +49,7 @@ interface Job {
   scheduled_at: string | null;
   agreed_price: number | null;
   extra_charge: number | null;
+  extra_items: ExtraItem[] | null;
   total_price: number | null;
   description: string | null;
   audio_url: string | null;
@@ -73,6 +76,18 @@ export default function TecnicoActivoPage() {
   // Chat
   const [chatModal, setChatModal] = useState<{ jobId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+
+  // Extra charge modal
+  interface ExtraModalState {
+    jobId: string;
+    items: ExtraItem[];
+    editIndex: number | null;
+    formAmount: number;
+    formAmountDisplay: string;
+    formReason: string;
+  }
+  const [extraModal, setExtraModal] = useState<ExtraModalState | null>(null);
+  const [extraSending, setExtraSending] = useState(false);
 
   // GPS
   const watchIdRef = useRef<number | null>(null);
@@ -198,6 +213,47 @@ export default function TecnicoActivoPage() {
     };
   }, [jobs, email]);
 
+  const openExtraModal = (job: Job) => {
+    const items: ExtraItem[] = Array.isArray(job.extra_items) ? job.extra_items : [];
+    setExtraModal({ jobId: job.id, items, editIndex: null, formAmount: 0, formAmountDisplay: '', formReason: '' });
+  };
+
+  const extraFormConfirm = () => {
+    if (!extraModal || extraModal.formAmount <= 0) return;
+    const newItem: ExtraItem = { amount: extraModal.formAmount, reason: extraModal.formReason };
+    const newItems = extraModal.editIndex !== null
+      ? extraModal.items.map((it, i) => i === extraModal.editIndex ? newItem : it)
+      : [...extraModal.items, newItem];
+    setExtraModal(prev => prev ? { ...prev, items: newItems, editIndex: null, formAmount: 0, formAmountDisplay: '', formReason: '' } : null);
+  };
+
+  const extraItemDelete = (index: number) => {
+    if (!extraModal) return;
+    setExtraModal(prev => prev ? { ...prev, items: prev.items.filter((_, i) => i !== index), editIndex: null } : null);
+  };
+
+  const extraItemEdit = (index: number) => {
+    if (!extraModal) return;
+    const item = extraModal.items[index];
+    setExtraModal(prev => prev ? { ...prev, editIndex: index, formAmount: item.amount, formAmountDisplay: Number(item.amount).toLocaleString('es-PY'), formReason: item.reason } : null);
+  };
+
+  const submitExtra = async () => {
+    if (!extraModal || !email || extraSending) return;
+    setExtraSending(true);
+    try {
+      const res = await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_extra', jobId: extraModal.jobId, tecnicoEmail: email, extraItems: extraModal.items }),
+      });
+      const json = await res.json();
+      if (json.job) setJobs(prev => prev.map(j => j.id === extraModal!.jobId ? { ...j, ...json.job } : j));
+    } catch {}
+    setExtraSending(false);
+    setExtraModal(null);
+  };
+
   const doAction = async (jobId: string, action: string, extraBody?: Record<string, unknown>) => {
     const key = jobId + action;
     setActing(key);
@@ -286,9 +342,22 @@ export default function TecnicoActivoPage() {
               <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1.15rem' }}>
                 {fmtGs(job.total_price ?? job.agreed_price)}
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>acordado</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                {job.extra_charge != null && job.extra_charge > 0 ? 'total' : 'acordado'}
+              </div>
             </div>
           </div>
+          {/* Extras list */}
+          {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
+            <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(245,158,11,0.08)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.2)', fontSize: '0.8rem' }}>
+              {job.agreed_price != null && (
+                <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 4 }}>💰 Acordado: {fmtGs(job.agreed_price)}</div>
+              )}
+              {job.extra_items.map((it, i) => (
+                <div key={i} style={{ color: '#f59e0b', fontWeight: 600, marginBottom: 2 }}>➕ {it.reason || 'Extra'}: {fmtGs(it.amount)}</div>
+              ))}
+            </div>
+          )}
 
           {/* Chat button */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -415,18 +484,34 @@ export default function TecnicoActivoPage() {
           )}
 
           {status === 'en_proceso' && (
-            <button
-              disabled={busy}
-              onClick={() => doConfirm(job.id, 'mark_complete', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')}
-              style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: busy ? 'not-allowed' : 'pointer', background: busy ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? 'rgba(255,255,255,0.4)' : '#fff', fontWeight: 700, fontSize: '0.95rem', opacity: busy ? 0.7 : 1 }}
-            >
-              {acting === job.id + 'mark_complete' ? 'Enviando...' : '✅ Marcar como completado'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                disabled={busy}
+                onClick={() => doConfirm(job.id, 'mark_complete', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, border: 'none', cursor: busy ? 'not-allowed' : 'pointer', background: busy ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? 'rgba(255,255,255,0.4)' : '#fff', fontWeight: 700, fontSize: '0.95rem', opacity: busy ? 0.7 : 1 }}
+              >
+                {acting === job.id + 'mark_complete' ? 'Enviando...' : '✅ Marcar como completado'}
+              </button>
+              <button
+                onClick={() => openExtraModal(job)}
+                style={{ padding: '13px 14px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, cursor: 'pointer' }}
+              >
+                💰
+              </button>
+            </div>
           )}
 
           {status === 'completion_pending' && (
-            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', fontWeight: 700, fontSize: '0.88rem' }}>
-              ⏳ Esperando confirmación del cliente… ({job.completion_attempts}/3)
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1, textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', fontWeight: 700, fontSize: '0.88rem' }}>
+                ⏳ Esperando cliente… ({job.completion_attempts}/3)
+              </div>
+              <button
+                onClick={() => openExtraModal(job)}
+                style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, cursor: 'pointer' }}
+              >
+                💰
+              </button>
             </div>
           )}
 
@@ -501,6 +586,73 @@ export default function TecnicoActivoPage() {
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />
+      )}
+
+      {/* Extra charge modal */}
+      {extraModal && (
+        <>
+          <div onClick={() => setExtraModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9998 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: 'var(--text-primary)' }}>💰 Cobros extras</h3>
+
+            {extraModal.items.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {extraModal.items.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: 10, marginBottom: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.9rem' }}>{fmtGs(it.amount)}</div>
+                      {it.reason && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{it.reason}</div>}
+                    </div>
+                    <button onClick={() => extraItemEdit(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => extraItemDelete(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>🗑️</button>
+                  </div>
+                ))}
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', marginTop: 4 }}>
+                  Total extras: {fmtGs(extraModal.items.reduce((s, i) => s + i.amount, 0))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px', marginBottom: 14, border: '1px solid var(--border-subtle)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                {extraModal.editIndex !== null ? `✏️ Editando ítem ${extraModal.editIndex + 1}` : '➕ Agregar ítem'}
+              </p>
+              <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Monto (Gs.)</label>
+              <input type="text" inputMode="numeric" value={extraModal.formAmountDisplay}
+                onChange={e => { const raw = e.target.value.replace(/\D/g, ''); setExtraModal(prev => prev ? { ...prev, formAmountDisplay: raw ? Number(raw).toLocaleString('es-PY') : '', formAmount: raw ? Number(raw) : 0 } : null); }}
+                placeholder="Ej: 20.000"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1rem', marginBottom: 10, boxSizing: 'border-box', outline: 'none' }} />
+              <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Motivo</label>
+              <input type="text" value={extraModal.formReason}
+                onChange={e => setExtraModal(prev => prev ? { ...prev, formReason: e.target.value } : null)}
+                placeholder="Ej: Material adicional"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '0.93rem', marginBottom: 10, boxSizing: 'border-box', outline: 'none' }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={extraFormConfirm} disabled={extraModal.formAmount <= 0}
+                  style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: extraModal.formAmount <= 0 ? 'rgba(245,158,11,0.3)' : '#f59e0b', color: '#1C1C2E', fontWeight: 700, cursor: extraModal.formAmount <= 0 ? 'default' : 'pointer' }}>
+                  {extraModal.editIndex !== null ? '✔ Actualizar' : '+ Agregar'}
+                </button>
+                {extraModal.editIndex !== null && (
+                  <button onClick={() => setExtraModal(prev => prev ? { ...prev, editIndex: null, formAmount: 0, formAmountDisplay: '', formReason: '' } : null)}
+                    style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer' }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={submitExtra} disabled={extraSending}
+                style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: extraSending ? 'rgba(5,150,105,0.4)' : '#059669', color: '#fff', fontWeight: 700, cursor: extraSending ? 'default' : 'pointer' }}>
+                {extraSending ? 'Guardando…' : '💾 Guardar'}
+              </button>
+              <button onClick={() => setExtraModal(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </DriverScreenLayout>
   );

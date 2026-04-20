@@ -554,18 +554,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ job: data });
     }
 
-    // ── add_extra (tecnico adds extra charge during service) ─────────────────
+    // ── add_extra (tecnico manages extra charges — full list replacement) ─────
     if (action === 'add_extra') {
-      const { jobId, tecnicoEmail, extraCharge, extraReason } = body;
-      if (!jobId || !tecnicoEmail || extraCharge == null) {
+      const { jobId, tecnicoEmail, extraItems } = body;
+      if (!jobId || !tecnicoEmail || !Array.isArray(extraItems)) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
-      const { data, error } = await sb
+      const items = (extraItems as Array<{ amount: number; reason: string }>)
+        .filter(i => Number(i.amount) > 0)
+        .map(i => ({ amount: Number(i.amount), reason: String(i.reason || '') }));
+      const totalExtra = items.reduce((s, i) => s + i.amount, 0);
+      // Fetch agreed_price to compute total_price
+      const { data: cur } = await sb
         .from('tecnico_jobs')
-        .update({ extra_charge: Number(extraCharge), extra_reason: extraReason || null })
+        .select('agreed_price')
         .eq('id', jobId)
         .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
-        .in('status', ['en_proceso'])
+        .maybeSingle();
+      const agreed = Number(cur?.agreed_price ?? 0);
+      const { data, error } = await sb
+        .from('tecnico_jobs')
+        .update({
+          extra_items:  items,
+          extra_charge: totalExtra > 0 ? totalExtra : null,
+          extra_reason: items.length > 0 ? items.map(i => i.reason).filter(Boolean).join(', ') : null,
+          total_price:  agreed > 0 ? agreed + totalExtra : (totalExtra > 0 ? totalExtra : null),
+        })
+        .eq('id', jobId)
+        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .in('status', ['en_proceso', 'completion_pending'])
         .select()
         .maybeSingle();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
