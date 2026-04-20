@@ -88,7 +88,7 @@ export default function DriverBilleteraPage() {
 
   async function handleSubmitRecharge(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = Number(amount);
+    const parsed = Number(amount.replace(/\./g, ''));
     if (!parsed || parsed <= 0) { setMsg({ text: 'Ingresá un monto válido', ok: false }); return; }
     if (!receiptBase64) { setMsg({ text: '⚠ Debés adjuntar el comprobante', ok: false }); return; }
     setSubmitting(true); setMsg(null);
@@ -267,8 +267,11 @@ export default function DriverBilleteraPage() {
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--label-color)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Monto a recargar (Gs)</div>
                   <input
-                    type="number" min="1000" step="1000" value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    type="text" inputMode="numeric" value={amount}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/\D/g, '');
+                      setAmount(raw ? Number(raw).toLocaleString('es-PY') : '');
+                    }}
                     placeholder="Ej: 50.000"
                     required
                     style={{
