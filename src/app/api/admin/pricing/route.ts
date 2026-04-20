@@ -140,39 +140,34 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Update app settings (string values) — skip if table doesn't exist
+    // Update app settings (string values)
     if (Array.isArray(app_settings) && app_settings.length > 0) {
-      const testQuery = await supabaseServer.from('app_settings').select('id').limit(1)
-      if (testQuery.error && testQuery.error.message.includes('app_settings')) {
-        console.warn('app_settings table does not exist, skipping')
-      } else {
-        for (const item of app_settings) {
-          const value = item.value === null || item.value === undefined ? '' : String(item.value)
-          const hasValidId = item.id && UUID_RE.test(item.id)
-          if (hasValidId) {
+      for (const item of app_settings) {
+        const value = item.value === null || item.value === undefined ? '' : String(item.value)
+        const hasValidId = item.id && UUID_RE.test(item.id)
+        if (hasValidId) {
+          const { error } = await supabaseServer
+            .from('app_settings')
+            .update({ value, updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+          if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
+        } else {
+          const { data: existing } = await supabaseServer
+            .from('app_settings')
+            .select('id')
+            .eq('key', item.key)
+            .maybeSingle()
+          if (existing) {
             const { error } = await supabaseServer
               .from('app_settings')
               .update({ value, updated_at: new Date().toISOString() })
-              .eq('id', item.id)
+              .eq('id', existing.id)
             if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
           } else {
-            const { data: existing } = await supabaseServer
+            const { error } = await supabaseServer
               .from('app_settings')
-              .select('id')
-              .eq('key', item.key)
-              .maybeSingle()
-            if (existing) {
-              const { error } = await supabaseServer
-                .from('app_settings')
-                .update({ value, updated_at: new Date().toISOString() })
-                .eq('id', existing.id)
-              if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
-            } else {
-              const { error } = await supabaseServer
-                .from('app_settings')
-                .insert({ key: item.key, value, label: item.label || item.key, description: item.description || '' })
-              if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
-            }
+              .insert({ key: item.key, value, label: item.label || item.key, description: item.description || '' })
+            if (error) errors.push(`app_settings ${item.key}: ${error.message}`)
           }
         }
       }

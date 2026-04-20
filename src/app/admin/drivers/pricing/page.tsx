@@ -160,6 +160,8 @@ export default function PricingConfigPage() {
       } else {
         setSuccess('Configuración guardada correctamente');
         setTimeout(() => setSuccess(''), 3000);
+        // Reload from DB to confirm the keys were actually persisted
+        await fetchData();
       }
     } catch (err) {
       setError(String(err));
