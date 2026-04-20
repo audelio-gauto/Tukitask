@@ -49,6 +49,8 @@ interface OrderDetail {
   tecnico_rating?: number | null;
   agreed_price?: number | null;
   service_type?: string | null;
+  extra_charge?: number | null;
+  extra_reason?: string | null;
   // multi-stop
   order_stops?: Array<{ sequence: number; address: string; lat?: number | null; lng?: number | null; status?: string }> | null;
 }
@@ -223,6 +225,8 @@ export default function SeguimientoPage() {
           client_address: job.client_address,
           tecnico_email: job.tecnico_email,
           service_type: job.service_type,
+          extra_charge: job.extra_charge ?? null,
+          extra_reason: job.extra_reason ?? null,
         };
         setOrder(mapped);
         if (mapped.accepted_by && !vehicleFetchedRef.current) {
@@ -809,6 +813,16 @@ export default function SeguimientoPage() {
               <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.1rem' }}>
                 {fmtGs(priceVal)}
               </div>
+              {order.type === 'service' && order.extra_charge != null && order.extra_charge > 0 && (
+                <div style={{ color: '#f59e0b', fontWeight: 800, fontSize: '0.9rem', marginTop: 2 }}>
+                  ➕ {fmtGs(order.extra_charge)}
+                </div>
+              )}
+              {order.type === 'service' && order.extra_reason && (
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.68rem', marginTop: 2, maxWidth: 100, textAlign: 'right', lineHeight: 1.3 }}>
+                  {order.extra_reason}
+                </div>
+              )}
               <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>acordado</div>
             </div>
           </div>

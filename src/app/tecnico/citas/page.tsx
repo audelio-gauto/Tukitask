@@ -74,6 +74,7 @@ export default function CitasPage() {
   // Extra charge modal
   const [extraModal, setExtraModal]       = useState<{ jobId: string } | null>(null);
   const [extraAmount, setExtraAmount]     = useState(0);
+  const [extraAmountDisplay, setExtraAmountDisplay] = useState('');
   const [extraReason, setExtraReason]     = useState('');
   const [extraSending, setExtraSending]   = useState(false);
 
@@ -218,7 +219,7 @@ export default function CitasPage() {
       if (json.job) setJobs(prev => prev.map(j => j.id === extraModal!.jobId ? { ...j, ...json.job } : j));
     } catch {}
     setExtraSending(false);
-    setExtraModal(null); setExtraAmount(0); setExtraReason('');
+    setExtraModal(null); setExtraAmount(0); setExtraAmountDisplay(''); setExtraReason('');
   };
 
   const fmtDate = (s: string | null) => {
@@ -384,7 +385,7 @@ export default function CitasPage() {
                         style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
                         ✅ Marcar completado
                       </button>
-                      <button onClick={() => { setExtraModal({ jobId: job.id }); setExtraAmount(job.extra_charge ?? 0); setExtraReason(''); }}
+                      <button onClick={() => { setExtraModal({ jobId: job.id }); const v = job.extra_charge ?? 0; setExtraAmount(v); setExtraAmountDisplay(v > 0 ? v.toLocaleString('es-PY') : ''); setExtraReason(''); }}
                         style={{ padding: '10px 12px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
                         💰 Extra
                       </button>
@@ -435,7 +436,7 @@ export default function CitasPage() {
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)' }}>
             <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: 'var(--text-primary)' }}>💰 Agregar cobro extra</h3>
             <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Monto extra (Gs.)</label>
-            <input type="number" value={extraAmount || ''} onChange={e => setExtraAmount(Number(e.target.value))} placeholder="Ej: 20000"
+            <input type="text" inputMode="numeric" value={extraAmountDisplay} onChange={e => { const raw = e.target.value.replace(/\D/g, ''); setExtraAmountDisplay(raw ? Number(raw).toLocaleString('es-PY') : ''); setExtraAmount(raw ? Number(raw) : 0); }} placeholder="Ej: 20.000"
               style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1rem', marginBottom: 12, boxSizing: 'border-box', outline: 'none' }} />
             <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Motivo</label>
             <input type="text" value={extraReason} onChange={e => setExtraReason(e.target.value)} placeholder="Ej: Material adicional"
