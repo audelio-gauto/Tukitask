@@ -25,17 +25,16 @@ export async function googlePlacesSearch(
   proximity?: { lat: number; lng: number },
 ): Promise<GeocodeResult[]> {
   const params = new URLSearchParams({
-    query,
+    query: `${query} Paraguay`,
     key: apiKey,
     language: 'es',
     region: 'py',
   })
 
-  // Bias results toward user location (5 km radius)
-  if (proximity && isFinite(proximity.lat) && isFinite(proximity.lng)) {
-    params.set('location', `${proximity.lat},${proximity.lng}`)
-    params.set('radius', '5000')
-  }
+  // Restrict results to Paraguay bounding box
+  // SW: -27.60, -62.65  NE: -19.29, -54.24
+  params.set('location', proximity && isFinite(proximity.lat) ? `${proximity.lat},${proximity.lng}` : '-23.44,-58.44')
+  params.set('radius', '50000')
 
   const url = `${PLACES_SEARCH_URL}?${params.toString()}`
   const res = await fetch(url)
@@ -50,7 +49,16 @@ export async function googlePlacesSearch(
     return []
   }
 
-  return (data.results || []).slice(0, limit).map((r: any): GeocodeResult => ({
+  // Filter: only results within Paraguay bounds
+  const PY_BOUNDS = { minLat: -27.60, maxLat: -19.29, minLng: -62.65, maxLng: -54.24 }
+  const inParaguay = (lat: number, lng: number) =>
+    lat >= PY_BOUNDS.minLat && lat <= PY_BOUNDS.maxLat &&
+    lng >= PY_BOUNDS.minLng && lng <= PY_BOUNDS.maxLng
+
+  return (data.results || [])
+    .filter((r: any) => inParaguay(r.geometry.location.lat, r.geometry.location.lng))
+    .slice(0, limit)
+    .map((r: any): GeocodeResult => ({
     provider: 'google_places',
     placeId: r.place_id,
     display_name: r.name ? `${r.name} — ${r.formatted_address}` : r.formatted_address,
