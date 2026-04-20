@@ -72,6 +72,7 @@ interface ActiveJob {
   tecnico_rating: number | null;
   agreed_price: number | null;
   extra_charge: number | null;
+  extra_reason: string | null;
   extra_items: Array<{ amount: number; reason: string }> | null;
   total_price: number | null;
   created_at?: string;
@@ -1106,7 +1107,7 @@ export default function ClienteHomePage() {
                   vehicle_brand: acceptedDriverInfo[o.id]?.vehicle_brand ?? null,
                   vehicle_plate: acceptedDriverInfo[o.id]?.vehicle_plate ?? null,
                   price: o.offer ?? o.suggested_price, origin: o.pickup_address, dest: o.delivery_address, svcType: '' })),
-                ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type, agreed_price: j.agreed_price, extra_charge: j.extra_charge, extra_items: j.extra_items, total_price: j.total_price })),
+                ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type, agreed_price: j.agreed_price, extra_charge: j.extra_charge, extra_reason: j.extra_reason, extra_items: j.extra_items, total_price: j.total_price })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
                 const canCancel = ['accepted', 'assigned'].includes(item.status);
@@ -1278,27 +1279,39 @@ export default function ClienteHomePage() {
                     {item.type === 'service' && item.status === 'completion_pending' && (
                       <div>
                         {/* Price breakdown */}
-                        {item.agreed_price != null && (
-                          <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px 14px', marginBottom: 12, border: '1px solid rgba(167,139,250,0.2)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.83rem' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>💰 Precio acordado</span>
-                              <span style={{ fontWeight: 700, color: '#4ade80' }}>{fmtGs(item.agreed_price)}</span>
-                            </div>
-                            {Array.isArray(item.extra_items) && item.extra_items.map((it, i) => (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.83rem' }}>
-                                <span style={{ color: 'rgba(255,255,255,0.5)' }}>➕ {it.reason || 'Extra'}</span>
-                                <span style={{ fontWeight: 700, color: '#f59e0b' }}>{fmtGs(it.amount)}</span>
+                        {(item.agreed_price != null || item.extra_charge != null) && (
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '12px 14px', marginBottom: 12, border: '1px solid var(--border-subtle)' }}>
+                            {item.agreed_price != null && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.85rem' }}>
+                                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>💰 Precio acordado</span>
+                                <span style={{ fontWeight: 700, color: '#059669' }}>{fmtGs(item.agreed_price)}</span>
                               </div>
-                            ))}
+                            )}
+                            {/* extra_items list (new multi-extra) */}
+                            {Array.isArray(item.extra_items) && item.extra_items.length > 0
+                              ? item.extra_items.map((it, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.83rem' }}>
+                                  <span style={{ color: 'var(--text-secondary)' }}>➕ {it.reason || 'Extra'}</span>
+                                  <span style={{ fontWeight: 700, color: '#d97706' }}>{fmtGs(it.amount)}</span>
+                                </div>
+                              ))
+                              /* fallback: show single extra_charge + extra_reason */
+                              : item.extra_charge != null && item.extra_charge > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.83rem' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>➕ {(item as any).extra_reason || 'Extra'}</span>
+                                  <span style={{ fontWeight: 700, color: '#d97706' }}>{fmtGs(item.extra_charge)}</span>
+                                </div>
+                              )
+                            }
                             {item.extra_charge != null && item.extra_charge > 0 && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.9rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 4, borderTop: '1px solid var(--border-subtle)', fontSize: '0.9rem' }}>
                                 <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>= Total a pagar</span>
-                                <span style={{ fontWeight: 900, color: '#a78bfa', fontSize: '1rem' }}>{fmtGs(item.total_price ?? (item.agreed_price + item.extra_charge))}</span>
+                                <span style={{ fontWeight: 900, color: '#7c3aed', fontSize: '1rem' }}>{fmtGs(item.total_price ?? ((item.agreed_price ?? 0) + item.extra_charge))}</span>
                               </div>
                             )}
                           </div>
                         )}
-                        <p style={{ margin: '0 0 10px', fontSize: '0.83rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                        <p style={{ margin: '0 0 10px', fontSize: '0.83rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
                           ¿El servicio fue realizado correctamente?
                         </p>
                         <div style={{ display: 'flex', gap: 10 }}>
