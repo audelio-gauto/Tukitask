@@ -478,7 +478,7 @@ export default function DriverDashboard() {
       orderType: (o.order_type as 'envio' | 'mandadito' | 'flete') || 'envio',
       from: o.pickup_address,
       to: o.delivery_address,
-      price: o.suggested_price,
+      price: o.offer ?? o.suggested_price,
       createdAt: o.created_at,
       pickupLat: o.pickup_lat,
       pickupLng: o.pickup_lng,
