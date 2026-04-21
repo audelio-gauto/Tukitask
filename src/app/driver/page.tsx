@@ -48,6 +48,8 @@ export default function DriverDashboard() {
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half');
   const sheetRef = useRef<HTMLDivElement>(null);
   const locateFnRef = useRef<(() => void) | null>(null);
+  const [mapPickup, setMapPickup] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapDelivery, setMapDelivery] = useState<{ lat: number; lng: number } | null>(null);
 
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -482,6 +484,8 @@ export default function DriverDashboard() {
       createdAt: o.created_at,
       pickupLat: o.pickup_lat,
       pickupLng: o.pickup_lng,
+      deliveryLat: o.delivery_lat,
+      deliveryLng: o.delivery_lng,
       clientPhoto: o.client_photo,
       clientName: o.client_name || o.client_email?.split('@')[0],
       clientRating: o.client_avg_rating,
@@ -499,7 +503,7 @@ export default function DriverDashboard() {
     <>
       {/* Mapbox Map */}
       <div className="tuki-map">
-        <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} />
+        <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} pickup={mapPickup} delivery={mapDelivery} />
       </div>
 
       {/* Radar overlay — visible only when online and no active feed */}
@@ -755,6 +759,10 @@ export default function DriverDashboard() {
         sendingId={sendingOfferId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}
+        onActiveItem={(item) => {
+          setMapPickup(item?.pickupLat != null && item?.pickupLng != null ? { lat: Number(item.pickupLat), lng: Number(item.pickupLng) } : null);
+          setMapDelivery(item?.deliveryLat != null && item?.deliveryLng != null ? { lat: Number(item.deliveryLat), lng: Number(item.deliveryLng) } : null);
+        }}
       />
 
       {/* Bottom Sheet */}

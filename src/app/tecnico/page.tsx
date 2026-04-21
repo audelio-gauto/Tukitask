@@ -133,6 +133,8 @@ export default function TecnicoDashboard() {
   const [filterOpen, setFilterOpen]     = useState(false);
   const [serviceFilters, setServiceFilters] = useState<Record<string, boolean>>({});
   const [rangoKm, setRangoKm]           = useState(20);
+  const [mapPickup, setMapPickup] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapDelivery, setMapDelivery] = useState<{ lat: number; lng: number } | null>(null);
 
   // ── Wallet balance ────────────────────────────────────────────────────────
   const [walletBalance, setWalletBalance] = useState<number | null>(null);  const [walletBlocked, setWalletBlocked] = useState(false);  useEffect(() => {
@@ -497,7 +499,7 @@ export default function TecnicoDashboard() {
   return (
     <>
       <div className="tuki-map">
-        <WorkerMap onLocate={() => {}} />
+        <WorkerMap onLocate={() => {}} pickup={mapPickup} delivery={mapDelivery} />
       </div>
 
       {/* Radar overlay — visible only when online and no active feed */}
@@ -695,6 +697,11 @@ export default function TecnicoDashboard() {
         sendingId={sendingJobId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}
+        onActiveItem={(item) => {
+          // A = tecnico GPS, B = client location
+          setMapPickup(driverPos ? { lat: driverPos.lat, lng: driverPos.lng } : null);
+          setMapDelivery(item?.pickupLat != null && item?.pickupLng != null ? { lat: Number(item.pickupLat), lng: Number(item.pickupLng) } : null);
+        }}
       />
 
       {/* ── Bottom sheet ── */}
