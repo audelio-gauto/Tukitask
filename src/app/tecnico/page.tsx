@@ -135,6 +135,7 @@ export default function TecnicoDashboard() {
   const [rangoKm, setRangoKm]           = useState(20);
   const [mapPickup, setMapPickup] = useState<{ lat: number; lng: number } | null>(null);
   const [mapDelivery, setMapDelivery] = useState<{ lat: number; lng: number } | null>(null);
+  const [activeMapItem, setActiveMapItem] = useState<import('@/components/RequestsFeed').FeedItem | null>(null);
 
   // ── Wallet balance ────────────────────────────────────────────────────────
   const [walletBalance, setWalletBalance] = useState<number | null>(null);  const [walletBlocked, setWalletBlocked] = useState(false);  useEffect(() => {
@@ -156,6 +157,19 @@ export default function TecnicoDashboard() {
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
+
+  // Keep mapPickup in sync with driverPos — if GPS arrives after card was shown, update A point
+  useEffect(() => {
+    if (activeMapItem) {
+      setMapPickup(driverPos ? { lat: driverPos.lat, lng: driverPos.lng } : null);
+      setMapDelivery(activeMapItem.pickupLat != null && activeMapItem.pickupLng != null
+        ? { lat: Number(activeMapItem.pickupLat), lng: Number(activeMapItem.pickupLng) }
+        : null);
+    } else {
+      setMapPickup(null);
+      setMapDelivery(null);
+    }
+  }, [driverPos, activeMapItem]);
 
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingJobs, setPendingJobs] = useState<any[]>([]);
@@ -697,11 +711,7 @@ export default function TecnicoDashboard() {
         sendingId={sendingJobId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}
-        onActiveItem={(item) => {
-          // A = tecnico GPS, B = client location
-          setMapPickup(driverPos ? { lat: driverPos.lat, lng: driverPos.lng } : null);
-          setMapDelivery(item?.pickupLat != null && item?.pickupLng != null ? { lat: Number(item.pickupLat), lng: Number(item.pickupLng) } : null);
-        }}
+        onActiveItem={(item) => setActiveMapItem(item ?? null)}
       />
 
       {/* ── Bottom sheet ── */}
