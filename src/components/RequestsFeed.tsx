@@ -212,6 +212,9 @@ export default function RequestsFeed({
     }}>
       <div style={{
         overflowY: 'auto',
+        flex: 1,
+        minHeight: 0,
+        maxHeight: '92dvh',
         padding: `0 10px calc(var(--tuki-nav-h, 64px) + 8px)`,
         display: 'flex', flexDirection: 'column', gap: 8,
         WebkitOverflowScrolling: 'touch' as never,
