@@ -18,9 +18,9 @@ function timeAgo(dateStr: string): string {
 
 // Map notification type → URL to navigate when tapped
 const typeUrl: Record<string, string> = {
-  new_order:       '/driver/deliveries',
+  new_order:       '/driver/delivered',
   new_offer:       '/cliente/mis-envios',
-  offer_accepted:  '/driver/deliveries',
+  offer_accepted:  '/driver/delivered',
   offer_rejected:  '/cliente/mis-envios',
   status_change:   '/cliente/mis-envios',
   new_job:         '/tecnico',

@@ -58,6 +58,14 @@ export default function EnviarPaquetePage() {
   // Location picker (map pin) state
   const [pickerMode, setPickerMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
 
+  // Escape key to dismiss address overlay
+  useEffect(() => {
+    if (!searchMode) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSearchMode(null); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [searchMode]);
+
   const [form, setForm] = useState({
     pickupAddress: '',
     vehicleType: 'moto',
@@ -622,9 +630,8 @@ export default function EnviarPaquetePage() {
                       className="enviar-address-input"
                       placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? '🏪 Almacén / Tienda donde comprar' : 'Punto de recogida'}
                       value={form.pickupAddress}
-                      onChange={e => update('pickupAddress', e.target.value)}
-                      onFocus={() => { if (!pickupLoading) openSearch('pickup'); }}
-                      readOnly={pickupLoading}
+                      onClick={() => { if (!pickupLoading) openSearch('pickup'); }}
+                      readOnly
                     />
                     <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
@@ -657,8 +664,8 @@ export default function EnviarPaquetePage() {
                               className="enviar-address-input"
                               placeholder={`Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
                               value={stop.address}
-                              onChange={e => updateStop(idx, 'address', e.target.value)}
-                              onFocus={() => openSearch(`stop_${idx}`)}
+                              onClick={() => openSearch(`stop_${idx}`)}
+                              readOnly
                               style={{ flex: 1 }}
                             />
                             <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(`stop_${idx}`); }} aria-label="Seleccionar en mapa">

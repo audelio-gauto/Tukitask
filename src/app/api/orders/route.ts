@@ -168,7 +168,10 @@ export async function GET(req: Request) {
     }
 
     // Server-side filter: vehicle type + service_filters + docs
+    // New drivers with zero approved vehicle types can browse all orders
+    // (acceptance is still enforced at offer POST time via doc check)
     const filtered = allOrders.filter(o => {
+      if (approvedVts.size === 0) return true; // cold-start: let new drivers see work
       const ovt = (o.vehicle_type as string) || '';
       if (ovt && !allowedOrderVts.has(ovt)) return false;
       return true;

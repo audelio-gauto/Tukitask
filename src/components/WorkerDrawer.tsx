@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 const driverMenuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/driver', icon: 'home' },
-  { slug: 'deliveries', label: 'Envíos', href: '/driver/deliveries', icon: 'box' },
+  { slug: 'deliveries', label: 'Envíos', href: '/driver/delivered', icon: 'box' },
   { slug: 'billetera', label: 'Mi Billetera', href: '/driver/billetera', icon: 'wallet' },
   { slug: 'settings', label: 'Configuración', href: '/driver/settings', icon: 'settings' },
 ];

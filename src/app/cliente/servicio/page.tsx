@@ -78,6 +78,14 @@ export default function SolicitarServicioPage() {
   const [pickerMode, setPickerMode] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
+  // Escape key to dismiss address overlay
+  useEffect(() => {
+    if (!searchMode) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSearchMode(false); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [searchMode]);
+
   // Auto-detect client location on mount
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
@@ -385,9 +393,9 @@ export default function SolicitarServicioPage() {
                       className="enviar-address-input"
                       placeholder={locationLoading ? 'Detectando ubicación…' : 'Dirección del servicio'}
                       value={locationAddress}
+                      onClick={() => { if (!locationLoading) setSearchMode(true); }}
                       onChange={e => setLocationAddress(e.target.value)}
-                      onFocus={() => setSearchMode(true)}
-                      readOnly={locationLoading}
+                      readOnly
                     />
                     <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(true); }} aria-label="Seleccionar en mapa">
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>

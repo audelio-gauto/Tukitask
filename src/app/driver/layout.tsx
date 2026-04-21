@@ -207,7 +207,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         profilePhoto={profilePhoto}
       />
       <NotificationBell userEmail={email} className="" />
-      <ChatBadge email={email} href="/driver/deliveries" scope="order" />
+      <ChatBadge email={email} href="/driver/delivered" scope="order" />
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
         {children}
         <BottomNav tabs={DRIVER_TABS} accent="#F5C518" />
