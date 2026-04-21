@@ -462,15 +462,7 @@ export default function RequestsFeed({
                 )}
               </div>
               </div>
-              {/* Ignorar — fijo al pie, siempre visible (estilo InDrive) */}
-              <div style={{ flexShrink: 0, padding: '10px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                <button
-                  onClick={() => onDismiss(item.id)}
-                  style={{ width: '100%', padding: '11px 0', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, background: 'transparent', color: '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', letterSpacing: '0.01em' }}
-                >
-                  🚫 Ignorar esta solicitud
-                </button>
-              </div>
+
             </div>
           );
         })}
