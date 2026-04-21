@@ -243,9 +243,8 @@ export default function RequestsFeed({
           const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
 
           return (
-            <div key={item.id} style={{ background: 'var(--sheet-bg)', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : 'var(--border-strong)'}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(82dvh - var(--tuki-nav-h, 64px))', overflow: 'hidden' }}>
-              {/* Scrollable content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 8px', WebkitOverflowScrolling: 'touch' as never }}>
+            <div key={item.id} style={{ background: 'var(--sheet-bg)', borderRadius: 16, border: `1px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.35)' : 'var(--border-strong)'}`, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '12px 14px 8px' }}>
               {/* Row 1: photo + label + client + price + timer + dismiss */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 {item.clientPhoto
@@ -464,7 +463,7 @@ export default function RequestsFeed({
                   </div>
                 )}
               </div>
-              </div>
+            </div>
 
             </div>
           );
