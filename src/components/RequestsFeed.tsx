@@ -1,13 +1,21 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { haversineKm } from '@/lib/geo';
 
 const CARD_TIMER = 100;
+const MAX_VISIBLE = 10; // max cards rendered at once
+
 function getRemaining(createdAt: string): number {
   return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
 }
 
-function CountdownRing({ seconds }: { seconds: number }) {
+// Self-contained countdown — only this component re-renders every second, not the whole list
+function CountdownRing({ createdAt }: { createdAt: string }) {
+  const [seconds, setSeconds] = useState(() => getRemaining(createdAt));
+  useEffect(() => {
+    const iv = setInterval(() => setSeconds(getRemaining(createdAt)), 1000);
+    return () => clearInterval(iv);
+  }, [createdAt]);
   const r = 14, circ = 2 * Math.PI * r;
   const dash = circ * (seconds / CARD_TIMER);
   const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
@@ -93,7 +101,7 @@ type Props = {
   driverLng?: number | null;
 };
 
-export default function RequestsFeed({
+export default memo(function RequestsFeed({
   items,
   available,
   dismissed,
@@ -104,34 +112,33 @@ export default function RequestsFeed({
   driverLat,
   driverLng,
 }: Props) {
-  const [, setTick] = useState(0);
   const [offerNotes, setOfferNotes] = useState<Record<string, string>>({});
   const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
   const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
   const [stopsOpen, setStopsOpen] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setTick(t => t + 1);
-      // Auto-dismiss any card whose countdown just hit 0
-      itemsRef.current.forEach(item => {
-        if (!dismissedRef.current.has(item.id) && getRemaining(item.createdAt) === 0) {
-          onDismiss(item.id);
-        }
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Auto-dismiss expired cards — checked every 5s (not every 1s — cards have their own ring timer)
+  const itemsRef     = useRef(items);
+  const dismissedRef = useRef(dismissed);
+  itemsRef.current     = items;
+  dismissedRef.current = dismissed;
 
   // ── Sound: motivating chime (C5→E5→G5 xylophone arpeggio) ─────────────────
   const audioCtxRef  = useRef<AudioContext | null>(null);
   const soundIvRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevIdsRef   = useRef<Set<string>>(new Set());
-  const itemsRef     = useRef(items);
-  const dismissedRef = useRef(dismissed);
-  itemsRef.current     = items;
-  dismissedRef.current = dismissed;
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      itemsRef.current.forEach(item => {
+        if (!dismissedRef.current.has(item.id) && getRemaining(item.createdAt) === 0) {
+          onDismiss(item.id);
+        }
+      });
+    }, 5000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const playChime = () => {
     try {
@@ -198,6 +205,8 @@ export default function RequestsFeed({
   }, []);
 
   const visible = items.filter(i => !dismissed.has(i.id));
+  const capped  = visible.slice(0, MAX_VISIBLE);
+  const hidden  = visible.length - capped.length;
 
   if (!available || visible.length === 0) return null;
 
@@ -228,13 +237,12 @@ export default function RequestsFeed({
           </span>
         </div>
 
-        {visible.map(item => {
+        {capped.map(item => {
           const isSending = !!sendingId; // block ALL submissions while any offer is in-flight
           const clientPrice = Number(item.price || 0);
           const qo_15 = Math.round(clientPrice * 1.15 / 1000) * 1000;
           const qo_30 = Math.round(clientPrice * 1.30 / 1000) * 1000;
           const qo_50 = Math.round(clientPrice * 1.50 / 1000) * 1000;
-          const remaining = getRemaining(item.createdAt);
           const distKm = (driverLat != null && driverLng != null && item.pickupLat != null && item.pickupLng != null)
             ? haversineKm(driverLat, driverLng, item.pickupLat, item.pickupLng)
             : null;
@@ -280,7 +288,7 @@ export default function RequestsFeed({
                     <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, lineHeight: 1.1 }}>≈{pricePerStop.toLocaleString()}/stop</div>
                   )}
                 </div>
-                <CountdownRing seconds={remaining} />
+                <CountdownRing createdAt={item.createdAt} />
                 <button
                   onClick={() => onDismiss(item.id)}
                   style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280', borderRadius: 99, padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
@@ -468,7 +476,16 @@ export default function RequestsFeed({
             </div>
           );
         })}
+
+        {/* "N más" chip when list exceeds MAX_VISIBLE */}
+        {hidden > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 8px' }}>
+            <span style={{ background: 'rgba(200,255,0,0.12)', color: '#c8ff00', border: '1px solid rgba(200,255,0,0.3)', borderRadius: 99, padding: '5px 16px', fontSize: '0.78rem', fontWeight: 800 }}>
+              ↕ {hidden} solicitud{hidden !== 1 ? 'es' : ''} más — deslizá para ver
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+})
