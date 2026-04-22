@@ -21,8 +21,13 @@ async function authorizeAdmin(req: Request) {
   } catch { return false; }
 }
 
-// GET /api/admin/config  → { logo_url, logo_size, ... }  (público — solo lectura)
-export async function GET() {
+// Claves que se exponen públicamente (usadas en login page y PWA manifest)
+const PUBLIC_KEYS = new Set(['logo_url', 'logo_size', 'pwa_icon_192', 'pwa_icon_512']);
+
+// GET /api/admin/config  → sin auth: solo claves públicas; con auth admin: todo
+export async function GET(req: Request) {
+  const isAdmin = await authorizeAdmin(req);
+
   const { data, error } = await sb()
     .from('app_config')
     .select('key, value');
@@ -30,7 +35,11 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const config: Record<string, string> = {};
-  (data ?? []).forEach(row => { config[row.key] = row.value; });
+  (data ?? []).forEach(row => {
+    if (isAdmin || PUBLIC_KEYS.has(row.key)) {
+      config[row.key] = row.value;
+    }
+  });
   return NextResponse.json(config);
 }
 

@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
+import { sbAdmin, getAuthUser, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
-// GET — devuelve todos los alias activos (también se usa en billetera pública)
+// GET — devuelve alias activos (requiere usuario autenticado; solo admin ve inactivos)
 export async function GET(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   const { searchParams } = new URL(req.url);
   const all = searchParams.get('all') === 'true'; // admin ve inactivos también
 
