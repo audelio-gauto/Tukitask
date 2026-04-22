@@ -1110,7 +1110,7 @@ export default function ClienteHomePage() {
                 ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type, agreed_price: j.agreed_price, extra_charge: j.extra_charge, extra_reason: j.extra_reason, extra_items: j.extra_items, total_price: j.total_price })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
-                const canCancel = ['accepted', 'assigned'].includes(item.status);
+                const canCancel = false; // una vez asignado un driver/técnico, el cliente no puede cancelar
                 return (
                   <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, marginBottom: 12, border: `1px solid ${info.color}40` }}>
                     {/* Status banner */}
@@ -1199,9 +1199,9 @@ export default function ClienteHomePage() {
                     </div>
                     {/* Addresses */}
                     {(item.origin || item.dest) && (
-                      <div style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 12, marginBottom: 12 }}>
-                        {item.origin && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>📍 {item.origin}</div>}
-                        {item.dest   && <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>🏁 {item.dest}</div>}
+                      <div style={{ padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 12, marginBottom: 12, border: '1px solid var(--border-subtle)' }}>
+                        {item.origin && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>📍 {item.origin}</div>}
+                        {item.dest   && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginTop: 5 }}>🏁 {item.dest}</div>}
                       </div>
                     )}
                     {/* ── Action buttons row ── */}
