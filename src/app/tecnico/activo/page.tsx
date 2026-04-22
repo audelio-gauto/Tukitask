@@ -531,7 +531,7 @@ export default function TecnicoActivoPage() {
   };
 
   return (
-    <DriverScreenLayout title="Trabajo Activo">
+    <DriverScreenLayout title="Trabajo Activo" backHref="/tecnico">
       {/* Toast queue */}
       {toasts.map((t, i) => (
         <div key={t.id} style={{

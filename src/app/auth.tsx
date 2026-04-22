@@ -197,8 +197,11 @@ export default function Auth() {
               // Placeholder while config loads — no flash
               <div style={{ width: 90, height: 90 }} />
             ) : logoFailed ? (
-              <div style={{ width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #2563EB, #F5C518)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.4)' }}>
-                <span style={{ fontSize: '2.2rem' }}>📦</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, #1d4ed8, #F5C518)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(245,197,24,0.35)' }}>
+                  <span style={{ fontWeight: 900, fontSize: '1.5rem', color: '#fff', letterSpacing: '-0.04em' }}>TK</span>
+                </div>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>TukiTask</span>
               </div>
             ) : (
               <img
