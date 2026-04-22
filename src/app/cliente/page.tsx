@@ -951,8 +951,8 @@ export default function ClienteHomePage() {
             onClick={() => setCancelConfirm({ id: firstItem.id, type: firstItem.type })}
             disabled={!!actionId}
             style={{
-              position: 'absolute', top: 92, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 5, display: 'flex', alignItems: 'center', gap: 7,
+              position: 'fixed', top: 92, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 11, display: 'flex', alignItems: 'center', gap: 7,
               background: 'rgba(20,10,10,0.88)', border: '1.5px solid rgba(239,68,68,0.6)',
               borderRadius: 99, padding: '9px 22px',
               color: '#f87171', fontWeight: 700, fontSize: '0.85rem',
