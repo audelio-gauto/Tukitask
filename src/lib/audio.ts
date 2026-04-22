@@ -67,15 +67,58 @@ function beepSoft(ctx: AudioContext, t: number, f: number, dur = 0.13): void {
 
 // ─── Public exports ────────────────────────────────────────────────────────────
 
-/** Triple wave alert — driver sees a new delivery order in the feed */
+/**
+ * Ka-ching! Cash register sound — metallic bell + mechanical click.
+ * Built entirely with Web Audio API (no external files needed).
+ */
+function kaChingSound(c: AudioContext): void {
+  const t = c.currentTime;
+
+  // ── Mechanical click (percussive transient) ──
+  const clickBuf = c.createBuffer(1, c.sampleRate * 0.04, c.sampleRate);
+  const clickData = clickBuf.getChannelData(0);
+  for (let i = 0; i < clickData.length; i++) {
+    clickData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / clickData.length, 3);
+  }
+  const clickSrc = c.createBufferSource();
+  clickSrc.buffer = clickBuf;
+  const clickGain = c.createGain();
+  clickGain.gain.setValueAtTime(0.9, t);
+  clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  clickSrc.connect(clickGain); clickGain.connect(c.destination);
+  clickSrc.start(t);
+
+  // ── Metallic bell body (harmonic partials — classic bell timbre) ──
+  const bellFreqs = [1318, 1760, 2637, 3520];
+  const bellVols  = [0.9,  0.6,  0.35, 0.2];
+  for (let i = 0; i < bellFreqs.length; i++) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = bellFreqs[i];
+    const start = t + 0.005 + i * 0.002;
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(bellVols[i] * 0.55, start + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, start + 0.6 + i * 0.08);
+    o.connect(g); g.connect(c.destination);
+    o.start(start); o.stop(start + 0.7);
+  }
+
+  // ── High shimmer ring (metallic overtone) ──
+  const shimmer = c.createOscillator(), sGain = c.createGain();
+  shimmer.type = 'triangle'; shimmer.frequency.value = 5200;
+  sGain.gain.setValueAtTime(0.25, t + 0.01);
+  sGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  shimmer.connect(sGain); sGain.connect(c.destination);
+  shimmer.start(t + 0.01); shimmer.stop(t + 0.36);
+}
+
+/** Ka-ching cash register sound — driver sees a new delivery order in the feed */
 export function playNewOrderAlert(): void {
   try {
     const c = getAC(); if (!c) return;
-    const n = c.currentTime;
-    for (let g = 0; g < 3; g++) {
-      const t = n + g * 2.3;
-      tone(880, t, 0.15); tone(880, t + 0.25, 0.15); tone(1100, t + 0.55, 0.35);
-    }
+    kaChingSound(c);
+    // Repeat twice more with delay so it keeps ringing
+    setTimeout(() => { try { const c2 = getAC(); if (c2) kaChingSound(c2); } catch { /**/ } }, 2300);
+    setTimeout(() => { try { const c3 = getAC(); if (c3) kaChingSound(c3); } catch { /**/ } }, 4600);
   } catch { /* silent */ }
 }
 
@@ -100,14 +143,13 @@ export function playOfferAlert(): void {
   } catch { /* silent */ }
 }
 
-/** Rapid quad-burst — tecnico sees a new service job available */
+/** Ka-ching cash register sound — tecnico sees a new service job available */
 export function playNewJobAlert(): void {
   try {
     const c = getAC(); if (!c) return;
-    for (let r = 0; r < 4; r++) {
-      const t = c.currentTime + r * 0.5;
-      beepHard(c, t, 660, 0.1); beepHard(c, t + 0.13, 880, 0.1); beepHard(c, t + 0.26, 1100, 0.14);
-    }
+    kaChingSound(c);
+    setTimeout(() => { try { const c2 = getAC(); if (c2) kaChingSound(c2); } catch { /**/ } }, 2300);
+    setTimeout(() => { try { const c3 = getAC(); if (c3) kaChingSound(c3); } catch { /**/ } }, 4600);
   } catch { /* silent */ }
 }
 
