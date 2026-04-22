@@ -134,22 +134,48 @@ export default memo(function RequestsFeed({
   const playChime = () => {
     try {
       if (!audioCtxRef.current) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // eslint-disable name
+        audioCtxRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!)();
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
-      ([[523.25, 0], [659.25, 0.18], [783.99, 0.36]] as const).forEach(([freq, delay]) => {
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = 'sine'; osc.frequency.value = freq;
-        const t = ctx.currentTime + delay;
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.16, t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
-        osc.start(t); osc.stop(t + 1.1);
-      });
+      const t = ctx.currentTime;
+
+      // ── Click mecánico (transiente percusivo) ──
+      const clickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
+      const cd = clickBuf.getChannelData(0);
+      for (let i = 0; i < cd.length; i++) {
+        cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 3);
+      }
+      const clickSrc = ctx.createBufferSource();
+      clickSrc.buffer = clickBuf;
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.9, t);
+      cg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      clickSrc.connect(cg); cg.connect(ctx.destination);
+      clickSrc.start(t);
+
+      // ── Campana metálica (parciales armónicos — timbre ka-ching) ──
+      const freqs = [1318, 1760, 2637, 3520];
+      const vols  = [0.5,  0.34, 0.19, 0.11];
+      for (let i = 0; i < freqs.length; i++) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freqs[i];
+        const st = t + 0.005 + i * 0.002;
+        g.gain.setValueAtTime(0, st);
+        g.gain.linearRampToValueAtTime(vols[i], st + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, st + 0.65 + i * 0.08);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(st); o.stop(st + 0.75);
+      }
+
+      // ── Shimmer agudo (brillo metálico) ──
+      const sh = ctx.createOscillator(), shg = ctx.createGain();
+      sh.type = 'triangle'; sh.frequency.value = 5200;
+      shg.gain.setValueAtTime(0.22, t + 0.01);
+      shg.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      sh.connect(shg); shg.connect(ctx.destination);
+      sh.start(t + 0.01); sh.stop(t + 0.39);
     } catch { /* blocked */ }
   };
 
@@ -164,7 +190,7 @@ export default memo(function RequestsFeed({
         const alive = itemsRef.current.filter(i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0);
         if (alive.length > 0) playChime();
         else { clearInterval(soundIvRef.current!); soundIvRef.current = null; }
-      }, 7000);
+      }, 4000);
     }
     if (visibleLive.length === 0 && soundIvRef.current) {
       clearInterval(soundIvRef.current); soundIvRef.current = null;
