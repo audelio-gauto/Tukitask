@@ -939,6 +939,37 @@ export default function ClienteHomePage() {
         </div>
       </div>
 
+      {/* ── Cancel pill — visible over the map when tracking, Bolt/inDrive style ── */}
+      {mode === 'tracking' && (() => {
+        const firstItem = [
+          ...trackingOrders.map(o => ({ id: o.id, type: 'delivery' as const })),
+          ...trackingJobs.map(j => ({ id: j.id, type: 'service' as const })),
+        ][0];
+        if (!firstItem) return null;
+        return (
+          <button
+            onClick={() => setCancelConfirm({ id: firstItem.id, type: firstItem.type })}
+            disabled={!!actionId}
+            style={{
+              position: 'absolute', top: 92, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 5, display: 'flex', alignItems: 'center', gap: 7,
+              background: 'rgba(20,10,10,0.88)', border: '1.5px solid rgba(239,68,68,0.6)',
+              borderRadius: 99, padding: '9px 22px',
+              color: '#f87171', fontWeight: 700, fontSize: '0.85rem',
+              cursor: actionId ? 'default' : 'pointer',
+              boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
+              whiteSpace: 'nowrap',
+              backdropFilter: 'blur(8px)',
+              opacity: actionId ? 0.6 : 1,
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <span style={{ fontSize: '0.9rem' }}>✕</span>
+            Cancelar solicitud
+          </button>
+        );
+      })()}
+
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
@@ -1247,13 +1278,13 @@ export default function ClienteHomePage() {
                         Ver mapa
                       </Link>
                     </div>
-                    {/* Cancel */}
-                    {canCancel && (
+                    {/* Cancel — si hay múltiples pedidos, mostrar botón en cada tarjeta además del pill global */}
+                    {canCancel && (trackingOrders.length + trackingJobs.length) > 1 && (
                       <button
                         onClick={() => setCancelConfirm({ id: item.id, type: item.type })}
                         disabled={actionId === 'cancel_' + item.id}
-                        style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.5)', background: 'rgba(239,68,68,0.12)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: actionId === 'cancel_' + item.id ? 'default' : 'pointer' }}
-                      >✕ Cancelar solicitud</button>
+                        style={{ width: '100%', padding: '9px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 600, fontSize: '0.8rem', cursor: actionId === 'cancel_' + item.id ? 'default' : 'pointer' }}
+                      >✕ Cancelar este pedido</button>
                     )}
                     {/* Return: client accepts or rejects driver return request */}
                     {item.type === 'delivery' && item.status === 'returning' && (
