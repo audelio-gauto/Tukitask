@@ -38,6 +38,7 @@ self.addEventListener('install', function(event) {
       return cache.addAll([
         '/offline.html',
         '/api/logo',
+        '/logo.svg',
         '/manifest.json',
       ]);
     })
