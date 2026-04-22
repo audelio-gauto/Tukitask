@@ -143,7 +143,7 @@ export default memo(function RequestsFeed({
         const alive = itemsRef.current.filter(i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0);
         if (alive.length > 0) playKaChing();
         else { clearInterval(soundIvRef.current!); soundIvRef.current = null; }
-      }, 4000);
+      }, 3000);
     }
     if (visibleLive.length === 0 && soundIvRef.current) {
       clearInterval(soundIvRef.current); soundIvRef.current = null;
