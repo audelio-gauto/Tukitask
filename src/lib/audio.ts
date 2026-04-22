@@ -68,59 +68,54 @@ function beepSoft(ctx: AudioContext, t: number, f: number, dur = 0.13): void {
 // ─── Public exports ────────────────────────────────────────────────────────────
 
 /**
- * Ka-ching! Cash register sound — metallic bell + mechanical click.
- * Built entirely with Web Audio API (no external files needed).
+ * Cash register Ka-ching! — used for all new order/job alerts.
+ * Percussive click + metallic bell partials + shimmer.
  */
-function kaChingSound(c: AudioContext): void {
-  const t = c.currentTime;
-
-  // ── Mechanical click (percussive transient) ──
-  const clickBuf = c.createBuffer(1, c.sampleRate * 0.04, c.sampleRate);
-  const clickData = clickBuf.getChannelData(0);
-  for (let i = 0; i < clickData.length; i++) {
-    clickData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / clickData.length, 3);
-  }
-  const clickSrc = c.createBufferSource();
-  clickSrc.buffer = clickBuf;
-  const clickGain = c.createGain();
-  clickGain.gain.setValueAtTime(0.9, t);
-  clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-  clickSrc.connect(clickGain); clickGain.connect(c.destination);
-  clickSrc.start(t);
-
-  // ── Metallic bell body (harmonic partials — classic bell timbre) ──
-  const bellFreqs = [1318, 1760, 2637, 3520];
-  const bellVols  = [0.9,  0.6,  0.35, 0.2];
-  for (let i = 0; i < bellFreqs.length; i++) {
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = 'sine'; o.frequency.value = bellFreqs[i];
-    const start = t + 0.005 + i * 0.002;
-    g.gain.setValueAtTime(0, start);
-    g.gain.linearRampToValueAtTime(bellVols[i] * 0.55, start + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, start + 0.6 + i * 0.08);
-    o.connect(g); g.connect(c.destination);
-    o.start(start); o.stop(start + 0.7);
-  }
-
-  // ── High shimmer ring (metallic overtone) ──
-  const shimmer = c.createOscillator(), sGain = c.createGain();
-  shimmer.type = 'triangle'; shimmer.frequency.value = 5200;
-  sGain.gain.setValueAtTime(0.25, t + 0.01);
-  sGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-  shimmer.connect(sGain); sGain.connect(c.destination);
-  shimmer.start(t + 0.01); shimmer.stop(t + 0.36);
-}
-
-/** Ka-ching cash register sound — driver sees a new delivery order in the feed */
-export function playNewOrderAlert(): void {
+export function playKaChing(): void {
   try {
-    const c = getAC(); if (!c) return;
-    kaChingSound(c);
-    // Repeat twice more with delay so it keeps ringing
-    setTimeout(() => { try { const c2 = getAC(); if (c2) kaChingSound(c2); } catch { /**/ } }, 2300);
-    setTimeout(() => { try { const c3 = getAC(); if (c3) kaChingSound(c3); } catch { /**/ } }, 4600);
-  } catch { /* silent */ }
+    const ctx = getAC(); if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // ── Percussive click (mechanical transient) ──
+    const clickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
+    const cd = clickBuf.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) {
+      cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 3);
+    }
+    const clickSrc = ctx.createBufferSource();
+    clickSrc.buffer = clickBuf;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0.9, t);
+    cg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    clickSrc.connect(cg); cg.connect(ctx.destination);
+    clickSrc.start(t);
+
+    // ── Metallic bell (harmonic partials — ka-ching timbre) ──
+    const freqs = [1318, 1760, 2637, 3520];
+    const vols  = [0.5,  0.34, 0.19, 0.11];
+    for (let i = 0; i < freqs.length; i++) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freqs[i];
+      const st = t + 0.005 + i * 0.002;
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(vols[i], st + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, st + 0.65 + i * 0.08);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(st); o.stop(st + 0.75);
+    }
+
+    // ── Shimmer (metallic brightness) ──
+    const sh = ctx.createOscillator(), shg = ctx.createGain();
+    sh.type = 'triangle'; sh.frequency.value = 5200;
+    shg.gain.setValueAtTime(0.22, t + 0.01);
+    shg.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+    sh.connect(shg); shg.connect(ctx.destination);
+    sh.start(t + 0.01); sh.stop(t + 0.39);
+  } catch { /* blocked */ }
 }
+
+/** Ka-ching! — driver sees a new delivery order in the feed */
+export function playNewOrderAlert(): void { playKaChing(); }
 
 /** Rising scale — offer accepted / order confirmed */
 export function playAccepted(): void {
@@ -143,15 +138,9 @@ export function playOfferAlert(): void {
   } catch { /* silent */ }
 }
 
-/** Ka-ching cash register sound — tecnico sees a new service job available */
-export function playNewJobAlert(): void {
-  try {
-    const c = getAC(); if (!c) return;
-    kaChingSound(c);
-    setTimeout(() => { try { const c2 = getAC(); if (c2) kaChingSound(c2); } catch { /**/ } }, 2300);
-    setTimeout(() => { try { const c3 = getAC(); if (c3) kaChingSound(c3); } catch { /**/ } }, 4600);
-  } catch { /* silent */ }
-}
+/** Ka-ching! — tecnico sees a new service job available */
+export function playNewJobAlert(): void { playKaChing(); }
+
 
 /** Short ascending triple ding — client (mis-servicios) receives new tecnico offer */
 export function playClientOfferAlert(): void {

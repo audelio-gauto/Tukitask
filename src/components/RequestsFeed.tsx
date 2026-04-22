@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, memo } from 'react';
 import { haversineKm } from '@/lib/geo';
+import { playKaChing } from '@/lib/audio';
+import { playKaChing } from '@/lib/audio';
 
 const CARD_TIMER = 100;
 
@@ -115,7 +117,6 @@ export default memo(function RequestsFeed({
   dismissedRef.current = dismissed;
 
   // ── Sound ───────────────────────────────────────────────────────────────────
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const soundIvRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevIdsRef  = useRef<Set<string>>(new Set());
 
@@ -131,64 +132,16 @@ export default memo(function RequestsFeed({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const playChime = () => {
-    try {
-      if (!audioCtxRef.current) {
-        // eslint-disable name
-        audioCtxRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!)();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-      const t = ctx.currentTime;
-
-      // ── Click mecánico (transiente percusivo) ──
-      const clickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
-      const cd = clickBuf.getChannelData(0);
-      for (let i = 0; i < cd.length; i++) {
-        cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 3);
-      }
-      const clickSrc = ctx.createBufferSource();
-      clickSrc.buffer = clickBuf;
-      const cg = ctx.createGain();
-      cg.gain.setValueAtTime(0.9, t);
-      cg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-      clickSrc.connect(cg); cg.connect(ctx.destination);
-      clickSrc.start(t);
-
-      // ── Campana metálica (parciales armónicos — timbre ka-ching) ──
-      const freqs = [1318, 1760, 2637, 3520];
-      const vols  = [0.5,  0.34, 0.19, 0.11];
-      for (let i = 0; i < freqs.length; i++) {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'sine'; o.frequency.value = freqs[i];
-        const st = t + 0.005 + i * 0.002;
-        g.gain.setValueAtTime(0, st);
-        g.gain.linearRampToValueAtTime(vols[i], st + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.001, st + 0.65 + i * 0.08);
-        o.connect(g); g.connect(ctx.destination);
-        o.start(st); o.stop(st + 0.75);
-      }
-
-      // ── Shimmer agudo (brillo metálico) ──
-      const sh = ctx.createOscillator(), shg = ctx.createGain();
-      sh.type = 'triangle'; sh.frequency.value = 5200;
-      shg.gain.setValueAtTime(0.22, t + 0.01);
-      shg.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-      sh.connect(shg); shg.connect(ctx.destination);
-      sh.start(t + 0.01); sh.stop(t + 0.39);
-    } catch { /* blocked */ }
-  };
-
   useEffect(() => {
     const visibleLive = items.filter(i => !dismissed.has(i.id));
     const hasNew = visibleLive.some(i => !prevIdsRef.current.has(i.id));
     prevIdsRef.current = new Set(items.map(i => i.id));
     if (hasNew && visibleLive.length > 0) {
-      playChime();
+      playKaChing();
       if (soundIvRef.current) clearInterval(soundIvRef.current);
       soundIvRef.current = setInterval(() => {
         const alive = itemsRef.current.filter(i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0);
-        if (alive.length > 0) playChime();
+        if (alive.length > 0) playKaChing();
         else { clearInterval(soundIvRef.current!); soundIvRef.current = null; }
       }, 4000);
     }
@@ -200,7 +153,6 @@ export default memo(function RequestsFeed({
 
   useEffect(() => () => {
     if (soundIvRef.current) clearInterval(soundIvRef.current);
-    audioCtxRef.current?.close();
   }, []);
 
   const visible = items.filter(i => !dismissed.has(i.id));
