@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { haversineKm } from '@/lib/geo';
 import { playKaChing } from '@/lib/audio';
-import { playKaChing } from '@/lib/audio';
 
 const CARD_TIMER = 100;
 
