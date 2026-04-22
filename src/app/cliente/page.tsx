@@ -1112,13 +1112,13 @@ export default function ClienteHomePage() {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
                 const canCancel = true; // el cliente puede cancelar en cualquier estado activo
                 return (
-                  <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, marginBottom: 12, border: `1px solid ${info.color}40` }}>
+                  <div key={item.id} style={{ background: 'var(--glass-card)', borderRadius: 20, padding: 16, marginBottom: 12, border: `1px solid ${info.color}40` }}>
                     {/* Status banner */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                       <span style={{ fontSize: '1.4rem' }}>{info.emoji}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 800, fontSize: '0.95rem', color: info.color }}>{info.text}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                           {item.type === 'delivery' ? '📦 Envío' : `🛠 ${SERVICE_LABELS[item.svcType] ?? item.svcType}`}
                         </div>
                       </div>
@@ -1138,7 +1138,7 @@ export default function ClienteHomePage() {
                       )}
                     </div>
                     {/* Provider card — estilo Uber/Bolt */}
-                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, marginBottom: 12, overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--surface-2)', borderRadius: 16, marginBottom: 12, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                       {/* Fila superior: foto + nombre + rating + precio */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 14px 10px' }}>
                         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1163,34 +1163,34 @@ export default function ClienteHomePage() {
                           {item.rating != null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
                               {'★★★★★'.split('').map((_, i) => (
-                                <span key={i} style={{ color: i < Math.round(Number(item.rating)) ? '#F5C518' : 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>★</span>
+                                <span key={i} style={{ color: i < Math.round(Number(item.rating)) ? '#F5C518' : 'rgba(156,163,175,0.5)', fontSize: '0.8rem' }}>★</span>
                               ))}
-                              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginLeft: 2 }}>{Number(item.rating).toFixed(1)}</span>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginLeft: 2 }}>{Number(item.rating).toFixed(1)}</span>
                             </div>
                           )}
                         </div>
                         {item.price != null && (
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.3rem', lineHeight: 1 }}>{Number(item.price).toLocaleString('es-PY')}</div>
-                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Guaraníes</div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>Guaraníes</div>
                           </div>
                         )}
                       </div>
                       {/* Fila inferior: vehículo / marca / placa */}
                       {item.type === 'delivery' && (item.vehicle_label || item.vehicle_brand || item.vehicle_plate) && (
-                        <div style={{ display: 'flex', gap: 8, padding: '8px 14px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 8, padding: '8px 14px 12px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
                           {item.vehicle_label && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(120,120,120,0.1)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                               {item.vehicle_label}
                             </span>
                           )}
                           {item.vehicle_brand && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(120,120,120,0.1)', borderRadius: 99, padding: '4px 10px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                               🏷️ {item.vehicle_brand}
                             </span>
                           )}
                           {item.vehicle_plate && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.78rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.05em' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.78rem', color: '#3b82f6', fontWeight: 800, border: '1px solid rgba(59,130,246,0.4)', letterSpacing: '0.05em' }}>
                               🪪 {item.vehicle_plate}
                             </span>
                           )}
@@ -1199,9 +1199,9 @@ export default function ClienteHomePage() {
                     </div>
                     {/* Addresses */}
                     {(item.origin || item.dest) && (
-                      <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, marginBottom: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-                        {item.origin && <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 500 }}>📍 {item.origin}</div>}
-                        {item.dest   && <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 500, marginTop: 5 }}>🏁 {item.dest}</div>}
+                      <div style={{ padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 12, marginBottom: 12, border: '1px solid var(--border-subtle)' }}>
+                        {item.origin && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>📍 {item.origin}</div>}
+                        {item.dest   && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginTop: 5 }}>🏁 {item.dest}</div>}
                       </div>
                     )}
                     {/* ── Action buttons row ── */}
