@@ -1110,7 +1110,7 @@ export default function ClienteHomePage() {
                 ...trackingJobs.map(j => ({ type: 'service' as const, id: j.id, status: j.status, name: j.tecnico_name, photo: j.tecnico_photo, rating: j.tecnico_rating, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, price: null, origin: null, dest: null, svcType: j.service_type, agreed_price: j.agreed_price, extra_charge: j.extra_charge, extra_reason: j.extra_reason, extra_items: j.extra_items, total_price: j.total_price })),
               ].map(item => {
                 const info = TRACKING_STATUS_INFO[item.status] ?? { emoji: '✅', text: 'En progreso', color: '#22c55e' };
-                const canCancel = false; // una vez asignado un driver/técnico, el cliente no puede cancelar
+                const canCancel = true; // el cliente puede cancelar en cualquier estado activo
                 return (
                   <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, marginBottom: 12, border: `1px solid ${info.color}40` }}>
                     {/* Status banner */}
@@ -1199,9 +1199,9 @@ export default function ClienteHomePage() {
                     </div>
                     {/* Addresses */}
                     {(item.origin || item.dest) && (
-                      <div style={{ padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 12, marginBottom: 12, border: '1px solid var(--border-subtle)' }}>
-                        {item.origin && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>📍 {item.origin}</div>}
-                        {item.dest   && <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, marginTop: 5 }}>🏁 {item.dest}</div>}
+                      <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, marginBottom: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {item.origin && <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 500 }}>📍 {item.origin}</div>}
+                        {item.dest   && <div style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 500, marginTop: 5 }}>🏁 {item.dest}</div>}
                       </div>
                     )}
                     {/* ── Action buttons row ── */}
@@ -1251,8 +1251,8 @@ export default function ClienteHomePage() {
                     {canCancel && (
                       <button
                         onClick={() => setCancelConfirm({ id: item.id, type: item.type })}
-                        disabled={busy}
-                        style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer' }}
+                        disabled={actionId === 'cancel_' + item.id}
+                        style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.5)', background: 'rgba(239,68,68,0.12)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: actionId === 'cancel_' + item.id ? 'default' : 'pointer' }}
                       >✕ Cancelar solicitud</button>
                     )}
                     {/* Return: client accepts or rejects driver return request */}
