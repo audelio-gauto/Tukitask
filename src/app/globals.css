@@ -20,18 +20,18 @@
 
   /* ── Global text colors (dark) ─────────────────────────── */
   --text-primary:   #ffffff;
-  --text-secondary: rgba(255,255,255,0.60);
-  --text-muted:     rgba(255,255,255,0.35);
+  --text-secondary: rgba(255,255,255,0.72);
+  --text-muted:     rgba(255,255,255,0.50);
 
   /* ── Global borders (dark) ──────────────────────────────── */
-  --border-subtle: rgba(255,255,255,0.07);
-  --border-strong: rgba(255,255,255,0.12);
+  --border-subtle: rgba(255,255,255,0.12);
+  --border-strong: rgba(255,255,255,0.18);
   --border-gold:   rgba(245,197,24,0.20);
 
   /* ── Navigation bar ─────────────────────────────────────── */
   --nav-bg:             #111827;
   --nav-border:         rgba(255,255,255,0.07);
-  --nav-icon-inactive:  rgba(255,255,255,0.35);
+  --nav-icon-inactive:  rgba(255,255,255,0.55);
   --nav-tap-active:     rgba(255,255,255,0.06);
 
   /* ── Map overlay gradients (on top of Mapbox tile) ─────── */
@@ -82,7 +82,7 @@
   --input-bg:          #111827;
   --input-border:      rgba(255,255,255,0.12);
   --input-text:        #f1f5f9;
-  --input-placeholder: rgba(255,255,255,0.38);
+  --input-placeholder: rgba(255,255,255,0.55);
 
   /* ── Back-navigation button ─────────────────────────────── */
   --back-btn-bg:    rgba(200,255,0,0.12);
@@ -100,8 +100,8 @@
   --client-bg:              #0b1220;
   --client-surface:         #121826;
   --client-text:            #e5e7eb;
-  --client-text-secondary:  #a0aec0;
-  --client-border:          rgba(148,163,184,0.18);
+  --client-text-secondary:  #b6c2d1;
+  --client-border:          rgba(148,163,184,0.26);
   --client-input-bg:        #0f172a;
   --client-header-bg:       #0f172a;
   --client-header-border:   rgba(148,163,184,0.16);
@@ -109,10 +109,10 @@
   --client-header-btn-hover: rgba(255,255,255,0.14);
   --client-header-btn-color: rgba(255,255,255,0.82);
   --client-action-bar-bg:    #0f172a;
-  --client-action-bar-border: rgba(148,163,184,0.22);
-  --client-placeholder:      rgba(148,163,184,0.55);
-  --client-tracking-divider: rgba(148,163,184,0.16);
-  --client-close-btn:        rgba(148,163,184,0.12);
+  --client-action-bar-border: rgba(148,163,184,0.30);
+  --client-placeholder:      rgba(226,232,240,0.72);
+  --client-tracking-divider: rgba(148,163,184,0.22);
+  --client-close-btn:        rgba(148,163,184,0.18);
   --client-close-color:      #e2e8f0;
   --client-close-active:     rgba(148,163,184,0.20);
   --client-action-active:    rgba(148,163,184,0.12);
