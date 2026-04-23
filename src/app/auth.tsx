@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/useTheme';
+import { Icon } from '@/components/Icon';
 
 export default function Auth() {
   const router = useRouter();
@@ -264,21 +265,21 @@ export default function Auth() {
           <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {forgotSent ? (
               <div style={{ padding: '14px', borderRadius: 12, background: isLight ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.12)', border: isLight ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(16,185,129,0.3)', color: isLight ? '#059669' : '#6ee7b7', fontSize: '0.88rem', textAlign: 'center' }}>
-                ✅ Te enviamos un link a <strong>{email}</strong>.<br />Revisá tu bandeja de entrada (y spam).
+                <Icon name="check" size={14} /> Te enviamos un link a <strong>{email}</strong>.<br />Revisá tu bandeja de entrada (y spam).
               </div>
             ) : (
               <>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Correo electrónico</label>
                   <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', fontSize: '1rem' }}>✉️</span>
+                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', lineHeight: 1 }}><Icon name="mail" size={15} /></span>
                     <input type="email" placeholder="nombre@email.com" value={email} onChange={e => setEmail(e.target.value)} required
                       style={{ width: '100%', padding: '12px 14px 12px 40px', borderRadius: 12, border: isLight ? '1.5px solid rgba(245,197,24,0.4)' : '1.5px solid rgba(245,197,24,0.2)', background: isLight ? '#fff' : 'rgba(255,255,255,0.06)', color: isLight ? '#111' : '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 </div>
-                {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: isLight ? 'rgba(220,38,38,0.08)' : 'rgba(239,68,68,0.12)', border: isLight ? '1px solid rgba(220,38,38,0.2)' : '1px solid rgba(239,68,68,0.3)', color: isLight ? '#dc2626' : '#fca5a5', fontSize: '0.84rem' }}>⚠️ {error}</div>}
+                {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: isLight ? 'rgba(220,38,38,0.08)' : 'rgba(239,68,68,0.12)', border: isLight ? '1px solid rgba(220,38,38,0.2)' : '1px solid rgba(239,68,68,0.3)', color: isLight ? '#dc2626' : '#fca5a5', fontSize: '0.84rem' }}><Icon name="exclamation" size={14} /> {error}</div>}
                 <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: loading ? 'default' : 'pointer', background: loading ? 'rgba(245,197,24,0.3)' : 'linear-gradient(135deg, #F5C518 0%, #F58A07 100%)', color: loading ? (isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)') : '#1C1C2E', fontWeight: 800, fontSize: '1rem' }}>
-                  {loading ? 'Enviando…' : '📧 Enviar link de recuperación'}
+                  {loading ? 'Enviando…' : 'Enviar link de recuperación'}
                 </button>
               </>
             )}
@@ -298,7 +299,7 @@ export default function Auth() {
               Correo electrónico
             </label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', fontSize: '1rem' }}>✉️</span>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', lineHeight: 1 }}><Icon name="mail" size={15} /></span>
               <input
                 type="email"
                 placeholder="nombre@email.com"
@@ -324,7 +325,7 @@ export default function Auth() {
               Contraseña
             </label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', fontSize: '1rem' }}>🔒</span>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', pointerEvents: 'none', lineHeight: 1 }}><Icon name="lock" size={15} /></span>
               <input
                 type={showPass ? 'text' : 'password'}
                 placeholder="••••••••"
@@ -348,7 +349,7 @@ export default function Auth() {
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', fontSize: '1rem', padding: 2 }}
                 aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
-                {showPass ? '🙈' : '👁️'}
+                <Icon name={showPass ? 'eye-off' : 'eye'} size={16} />
               </button>
             </div>
           </div>
@@ -364,12 +365,12 @@ export default function Auth() {
           {/* Error / Success */}
           {error && (
             <div style={{ padding: '10px 14px', borderRadius: 10, background: isLight ? 'rgba(220,38,38,0.08)' : 'rgba(239,68,68,0.12)', border: isLight ? '1px solid rgba(220,38,38,0.2)' : '1px solid rgba(239,68,68,0.3)', color: isLight ? '#dc2626' : '#fca5a5', fontSize: '0.84rem', fontWeight: 500 }}>
-              ⚠️ {error}
+              <Icon name="exclamation" size={14} /> {error}
             </div>
           )}
           {success && (
             <div style={{ padding: '10px 14px', borderRadius: 10, background: isLight ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.12)', border: isLight ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(16,185,129,0.3)', color: isLight ? '#059669' : '#6ee7b7', fontSize: '0.84rem', fontWeight: 500 }}>
-              ✅ {success}
+              <Icon name="check" size={14} /> {success}
             </div>
           )}
 
@@ -391,7 +392,7 @@ export default function Auth() {
           >
             {loading
               ? (isRegister ? 'Registrando…' : 'Ingresando…')
-              : (isRegister ? '🚀 Crear cuenta' : '⚡ Ingresar')
+              : (isRegister ? 'Crear cuenta' : 'Ingresar')
             }
           </button>
         </form>

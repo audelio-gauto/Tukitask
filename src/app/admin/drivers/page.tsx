@@ -1,10 +1,18 @@
 'use client';
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/Icon';
 
-const SECTIONS = [
+const SECTIONS: Array<{
+  href: string;
+  icon: IconName;
+  title: string;
+  desc: string;
+  color: string;
+  border: string;
+}> = [
   {
     href: '/admin/drivers/driver',
-    icon: '🚗',
+    icon: 'car',
     title: 'Lista de conductores',
     desc: 'Ver todos los usuarios con rol de conductor.',
     color: 'rgba(74,222,128,0.12)',
@@ -12,7 +20,7 @@ const SECTIONS = [
   },
   {
     href: '/admin/drivers/commission',
-    icon: '💰',
+    icon: 'money',
     title: 'Comisiones & Suscripciones',
     desc: 'Ajustar comisión por conductor y gestionar suscripciones.',
     color: 'rgba(245,197,24,0.1)',
@@ -20,7 +28,7 @@ const SECTIONS = [
   },
   {
     href: '/admin/drivers/pricing',
-    icon: '📋',
+    icon: 'clipboard',
     title: 'Tarifas & Precios',
     desc: 'Configurar multiplicadores de paquetes, recargos y tarifas base.',
     color: 'rgba(96,165,250,0.1)',
@@ -41,7 +49,9 @@ export default function DriversPage() {
             className="block rounded-xl border p-6 hover:opacity-90 transition-opacity"
             style={{ background: s.color, borderColor: s.border }}
           >
-            <div className="text-3xl mb-3">{s.icon}</div>
+            <div className="mb-3">
+              <Icon name={s.icon} size={28} className="text-white" />
+            </div>
             <h3 className="font-bold text-white text-base mb-1">{s.title}</h3>
             <p className="text-[rgba(255,255,255,0.5)] text-sm leading-relaxed">{s.desc}</p>
           </Link>

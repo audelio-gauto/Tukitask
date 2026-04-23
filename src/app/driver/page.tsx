@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
+import { Icon } from '@/components/Icon';
 
 // Mapbox GL must be loaded client-side only (no SSR)
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
@@ -169,7 +170,7 @@ export default function DriverDashboard() {
   const sendDriverOffer = async (orderId: string, amount: number, note: string, distanceKm: number | null = null) => {
     if (!amount || !email || !!sendingOfferId) return;
     if (walletBlocked) {
-      showToast('⚠️ Recargá tu billetera para enviar ofertas');
+      showToast('Recarga tu billetera para enviar ofertas');
       return;
     }
     setSendingOfferId(orderId);
@@ -184,13 +185,13 @@ export default function DriverDashboard() {
         setWalletBlocked(true);
         setWalletBalance(Number(body.balance ?? 0));
         setPendingOrders([]);
-        showToast('⚠️ Saldo insuficiente — recargá tu billetera');
+        showToast('Saldo insuficiente — recarga tu billetera');
         setSendingOfferId(null);
         return;
       }
       setDismissedHome(prev => new Set([...prev, orderId]));
     } catch {
-      showToast('❌ Error al enviar oferta. Intentá de nuevo.');
+      showToast('Error al enviar oferta. Intenta de nuevo.');
     }
     setSendingOfferId(null);
   };
@@ -417,7 +418,7 @@ export default function DriverDashboard() {
 
   // Stats
   const stats = [
-    { label: 'Tasa Aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: '🏆', onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa Aceptacion', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: 'trophy' as const, onClick: undefined as (() => void) | undefined },
   ];
 
   const feedVisible = available && !walletBlocked && activeOrderCount === 0 && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
@@ -509,7 +510,7 @@ export default function DriverDashboard() {
       {/* Radar overlay — visible only when online and no active feed */}
       {available && !walletBlocked && !feedVisible && (
         <div className="tuki-radar">
-          <div className="tuki-radar-label">Money en camino… atento 👀</div>
+          <div className="tuki-radar-label">Pedidos en camino... atento</div>
           <div className="tuki-radar-rings">
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-ring" />
@@ -526,12 +527,12 @@ export default function DriverDashboard() {
             <img src={profilePhoto} alt="" loading="lazy" decoding="async" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              {displayName?.[0]?.toUpperCase() || '👤'}
+              {displayName?.[0]?.toUpperCase() || <Icon name="user" size={16} color="#1C1C2E" />}
             </div>
           )}
           {avgRating > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 6, padding: '1px 6px' }}>
-              <span style={{ color: '#F5C518', fontSize: '0.65rem' }}>★</span>
+              <Icon name="star" size={10} color="#F5C518" />
               <span style={{ color: '#F5C518', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
             </div>
           )}
@@ -559,7 +560,7 @@ export default function DriverDashboard() {
             : <span style={{ display: 'inline-block', width: 72, height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />}
         </span>
         <span className="tuki-wallet-pill-label" style={walletBlocked ? { color: 'rgba(248,113,113,0.9)' } : undefined}>
-          {walletBlocked ? '⚠️ Recargar' : 'Billetera'}
+          {walletBlocked ? 'Recargar' : 'Billetera'}
         </span>
       </Link>
 
@@ -596,10 +597,10 @@ export default function DriverDashboard() {
             <p className="driver-filter-subtitle">Elegí qué tipo de solicitudes querés recibir</p>
             <div className="driver-filter-list">
               {[
-                { key: 'moto_envios',       label: 'Moto Envíos',       icon: '🏍️', desc: 'Paquetes pequeños en moto',   vt: 'moto'       },
-                { key: 'auto_envios',       label: 'Auto Envíos',       icon: '🚗', desc: 'Paquetes medianos en auto',   vt: 'auto'       },
-                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', desc: 'Fletes en moto o carro',      vt: 'moto_carro' },
-                { key: 'camion_fletes',     label: 'Camión Fletes',     icon: '🚛', desc: 'Fletes grandes en camión',    vt: 'camion'     },
+                { key: 'moto_envios',       label: 'Moto Envios',       icon: 'truck', desc: 'Paquetes pequenos en moto',   vt: 'moto'       },
+                { key: 'auto_envios',       label: 'Auto Envios',       icon: 'car', desc: 'Paquetes medianos en auto',   vt: 'auto'       },
+                { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: 'truck', desc: 'Fletes en moto o carro',      vt: 'moto_carro' },
+                { key: 'camion_fletes',     label: 'Camion Fletes',     icon: 'truck', desc: 'Fletes grandes en camion',    vt: 'camion'     },
               ].filter(item => approvedVehicleTypes.has(item.vt)).map(item => (
                 <button
                   key={item.key}
@@ -607,7 +608,7 @@ export default function DriverDashboard() {
                   className={`driver-filter-item${serviceFilters[item.key] ? ' active' : ''}`}
                   onClick={() => toggleFilter(item.key)}
                 >
-                  <span className="driver-filter-item-icon">{item.icon}</span>
+                  <span className="driver-filter-item-icon"><Icon name={item.icon as 'truck' | 'car'} size={16} /></span>
                   <div className="driver-filter-item-info">
                     <span className="driver-filter-item-label">{item.label}</span>
                     <span className="driver-filter-item-desc">{item.desc}</span>
@@ -619,7 +620,7 @@ export default function DriverDashboard() {
               ))}
               {approvedVehicleTypes.size === 0 && (
                 <p style={{ textAlign: 'center', fontSize: '0.83rem', color: '#9ca3af', padding: '1rem 0' }}>
-                  📋 Completá y aprobá los documentos de cada vehículo para activar sus servicios.
+                  Completa y aprueba los documentos de cada vehiculo para activar sus servicios.
                 </p>
               )}
             </div>
@@ -628,7 +629,10 @@ export default function DriverDashboard() {
             <div style={{ padding: '0 4px', marginTop: 4 }}>
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>📍 Rango de recogida</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="map-pin" size={12} color="var(--tuki-text-main)" />
+                    Rango de recogida
+                  </label>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981' }}>{pickupRangeKm} km</span>
                 </div>
                 <input type="range" min={1} max={50} step={1} value={pickupRangeKm}
@@ -640,7 +644,10 @@ export default function DriverDashboard() {
               </div>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>🚛 Rango de entrega</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="truck" size={12} color="var(--tuki-text-main)" />
+                    Rango de entrega
+                  </label>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6' }}>{deliveryRangeKm} km</span>
                 </div>
                 <input type="range" min={1} max={100} step={1} value={deliveryRangeKm}
@@ -693,7 +700,9 @@ export default function DriverDashboard() {
             {/* Header */}
             <div style={{ background: 'rgba(250,204,21,0.1)', borderBottom: '1px solid rgba(250,204,21,0.2)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>Ganancias</span>
-              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
+              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Cerrar">
+                <Icon name="x" size={16} />
+              </button>
             </div>
             {/* Period tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0.75rem 1rem 0' }}>
@@ -734,7 +743,9 @@ export default function DriverDashboard() {
       {/* ── Solicitudes overlay (floating over map) ── */}
       {gpsNeeded && (
         <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: 'var(--surface-2)', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.4rem' }}>📍</span>
+          <span style={{ display: 'inline-flex', color: '#f59e0b' }}>
+            <Icon name="map-pin" size={16} color="#f59e0b" />
+          </span>
           <div>
             <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de recogida ({pickupRangeKm} km) y entrega ({deliveryRangeKm} km) requieren tu ubicación</div>
@@ -784,7 +795,7 @@ export default function DriverDashboard() {
           >
             {walletBlocked ? (
               <span className="tuki-sheet-hint-text" style={{ color: '#f87171', fontWeight: 700 }}>
-                ⚠️ Recargá tu billetera para recibir pedidos
+                Recarga tu billetera para recibir pedidos
               </span>
             ) : available ? (
               <>
@@ -802,7 +813,7 @@ export default function DriverDashboard() {
               </>
             ) : (
               <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
-                💤 Actívate para recibir solicitudes
+                Activate para recibir solicitudes
               </span>
             )}
           </div>
@@ -813,23 +824,23 @@ export default function DriverDashboard() {
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
               <span className={`tuki-status-badge ${available && !walletBlocked ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available && !walletBlocked ? '💰 Hacer money' : '💸 Money off'}
+                {available && !walletBlocked ? 'Disponible' : 'Sin conexion'}
               </span>
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available && !walletBlocked} onChange={() => {
-                if (walletBlocked) { showToast('⚠️ Recargá tu billetera para activarte'); return; }
+                if (walletBlocked) { showToast('Recarga tu billetera para activarte'); return; }
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return;
                 if (!available) {
                   // Going online → save state
                   setAvailable(true);
                   try { localStorage.setItem('driver_available', 'true'); } catch {}
-                  showToast('💰 ¡Online! Buscando pedidos…');
+                  showToast('Online. Buscando pedidos...');
                 } else {
                   // Going offline → stay on dashboard
                   setAvailable(false);
                   try { localStorage.setItem('driver_available', 'false'); } catch {}
-                  showToast('💸 Offline — descansando');
+                  showToast('Offline. Descansando');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -879,8 +890,8 @@ export default function DriverDashboard() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.5rem' }}>
-                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
+                  <span style={{ display: 'inline-flex', color: docAlerts.expired.length > 0 ? '#ef4444' : docCounts.rejected > 0 ? '#ef4444' : 'var(--text-muted)' }}>
+                    <Icon name={docAlerts.expired.length > 0 ? 'x' : docCounts.rejected > 0 ? 'x' : 'paper-clip'} size={16} />
                   </span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
@@ -900,7 +911,9 @@ export default function DriverDashboard() {
           {/* Alertas de documentos */}
           {docAlerts.expired.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-error-bg)', border: '1.5px solid var(--alert-error-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🚫</span>
+              <span style={{ display: 'inline-flex', color: '#ef4444', flexShrink: 0 }}>
+                <Icon name="x" size={16} />
+              </span>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-error-title)' }}>Documentos vencidos — no podés ponerte En Línea</p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-error-text)' }}>Actualizá tus documentos en Perfil → Configuración</p>
@@ -909,7 +922,9 @@ export default function DriverDashboard() {
           )}
           {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-error-bg)', border: '1.5px solid var(--alert-error-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📋</span>
+              <span style={{ display: 'inline-flex', color: 'var(--alert-error-title)', flexShrink: 0 }}>
+                <Icon name="clipboard" size={16} />
+              </span>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-error-title)' }}>No podés ponerte En Línea aún</p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-error-text)' }}>Tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.</p>
@@ -918,7 +933,9 @@ export default function DriverDashboard() {
           )}
           {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
             <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-warning-bg)', border: '1.5px solid var(--alert-warning-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+              <span style={{ display: 'inline-flex', color: 'var(--alert-warning-title)', flexShrink: 0 }}>
+                <Icon name="exclamation" size={16} />
+              </span>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-warning-title)' }}>Documentos próximos a vencer</p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-warning-text)' }}>Actualizá antes de que venzan para seguir operando</p>
@@ -930,8 +947,13 @@ export default function DriverDashboard() {
           {Object.values(serviceFilters).some(v => v) && (
             <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
-                  📦 Serv. activos · 📍{pickupRangeKm} km recogida · 🚚{deliveryRangeKm} km entrega
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="package" size={12} />
+                  Serv. activos ·
+                  <Icon name="map-pin" size={12} />
+                  {pickupRangeKm} km recogida ·
+                  <Icon name="truck" size={12} />
+                  {deliveryRangeKm} km entrega
                 </span>
                 <button
                   type="button"
@@ -943,13 +965,16 @@ export default function DriverDashboard() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {([
-                  { key: 'moto_envios',       label: 'Moto Envíos',       icon: '🏍️', vt: 'moto'       },
-                  { key: 'auto_envios',       label: 'Auto Envíos',       icon: '🚗', vt: 'auto'       },
-                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: '🛵', vt: 'moto_carro' },
-                  { key: 'camion_fletes',     label: 'Camión Fletes',     icon: '🚛', vt: 'camion'     },
-                ] as { key: string; label: string; icon: string; vt: string }[]).filter(s => serviceFilters[s.key] && approvedVehicleTypes.has(s.vt)).map(s => (
+                  { key: 'moto_envios',       label: 'Moto Envios',       icon: 'truck', vt: 'moto'       },
+                  { key: 'auto_envios',       label: 'Auto Envios',       icon: 'car', vt: 'auto'       },
+                  { key: 'moto_carro_fletes', label: 'Moto Carro Fletes', icon: 'truck', vt: 'moto_carro' },
+                  { key: 'camion_fletes',     label: 'Camion Fletes',     icon: 'truck', vt: 'camion'     },
+                ] as { key: string; label: string; icon: 'truck' | 'car'; vt: string }[]).filter(s => serviceFilters[s.key] && approvedVehicleTypes.has(s.vt)).map(s => (
                   <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
-                    {s.icon} {s.label}
+                    <span style={{ display: 'inline-flex', marginRight: 4 }}>
+                      <Icon name={s.icon} size={12} />
+                    </span>
+                    {s.label}
                   </span>
                 ))}
                 {!Object.values(serviceFilters).some(v => v) && (
@@ -978,7 +1003,7 @@ export default function DriverDashboard() {
             <div className="tuki-stat-card" style={{ gridColumn: 'span 2' }}
               onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}>
-              <span className="tuki-stat-icon">💰</span>
+              <span className="tuki-stat-icon"><Icon name="money" size={18} /></span>
               <div className="tuki-stat-value">
                 {earningsData.dia.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
               </div>
@@ -988,13 +1013,13 @@ export default function DriverDashboard() {
               s.onClick ? (
                 <div key={s.label} className="tuki-stat-card" onClick={s.onClick} role="button" tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && s.onClick?.()}>
-                  <span className="tuki-stat-icon">{s.icon}</span>
+                  <span className="tuki-stat-icon"><Icon name={s.icon} size={18} /></span>
                   <div className="tuki-stat-value">{s.value}</div>
                   <div className="tuki-stat-label">{s.label}</div>
                 </div>
               ) : (
                 <Link key={s.label} href={s.href} className="tuki-stat-card">
-                  <span className="tuki-stat-icon">{s.icon}</span>
+                  <span className="tuki-stat-icon"><Icon name={s.icon} size={18} /></span>
                   <div className="tuki-stat-value">{s.value}</div>
                   <div className="tuki-stat-label">{s.label}</div>
                 </Link>
@@ -1002,12 +1027,12 @@ export default function DriverDashboard() {
             ))}
             {/* Entregados + Fallidos side by side */}
             <Link href="/driver/delivered" className="tuki-stat-card">
-              <span className="tuki-stat-icon">✅</span>
+              <span className="tuki-stat-icon"><Icon name="check" size={18} /></span>
               <div className="tuki-stat-value">{deliveredCount}</div>
               <div className="tuki-stat-label">Entregados Hoy</div>
             </Link>
             <Link href="/driver/failed" className="tuki-stat-card">
-              <span className="tuki-stat-icon">❌</span>
+              <span className="tuki-stat-icon"><Icon name="x" size={18} /></span>
               <div className="tuki-stat-value">{failedCount}</div>
               <div className="tuki-stat-label">Fallidos Hoy</div>
             </Link>

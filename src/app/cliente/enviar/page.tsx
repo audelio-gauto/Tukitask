@@ -6,21 +6,28 @@ import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
+import { Icon } from '@/components/Icon';
 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 
 const vehicleTypes = [
-  { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: '🏍️', priceHint: 'Más económico' },
-  { value: 'auto', label: 'Auto', sub: 'Mayor capacidad', icon: '🚗', priceHint: 'Cómodo y seguro' },
-  { value: 'motocarro', label: 'Moto Carro', sub: 'Carga mediana, mudanza', icon: '🛵', priceHint: 'Carga mediana' },
-  { value: 'camion2t', label: 'Camión flete', sub: 'Carga mediana, pesada, mudanza', icon: '🚛', priceHint: 'Mudanzas y fletes' },
+  { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: 'bolt', priceHint: 'Más económico' },
+  { value: 'auto', label: 'Auto', sub: 'Mayor capacidad', icon: 'car', priceHint: 'Cómodo y seguro' },
+  { value: 'motocarro', label: 'Moto Carro', sub: 'Carga mediana, mudanza', icon: 'truck', priceHint: 'Carga mediana' },
+  { value: 'camion2t', label: 'Camion flete', sub: 'Carga mediana, pesada, mudanza', icon: 'truck', priceHint: 'Mudanzas y fletes' },
 ];
 
 const paymentMethods = [
-  { value: 'efectivo', label: 'Efectivo', icon: '💵' },
-  { value: 'transferencia', label: 'Transferencia', icon: '🏦' },
+  { value: 'efectivo', label: 'Efectivo', icon: 'money' },
+  { value: 'transferencia', label: 'Transferencia', icon: 'credit-card' },
 ];
+
+const ORDER_TYPE_ICONS = {
+  envio: 'package',
+  mandadito: 'package',
+  flete: 'truck',
+} as const;
 
 // ── Multi-stop types ──────────────────────────────────────────────────────────
 interface DeliveryStop {
@@ -461,7 +468,11 @@ export default function EnviarPaquetePage() {
   if (success) {
     return (
       <div className="enviar-success-screen">
-        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
+        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="check" size={28} color="#22c55e" />
+          </div>
+        </div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>¡Envío registrado!</h2>
         <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -536,8 +547,11 @@ export default function EnviarPaquetePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="enviar-page-title">
-            {orderType === 'mandadito' ? '🛒 Nuevo Mandadito' : orderType === 'flete' ? '🚛 Nuevo Flete' : '📦 Nuevo Envío'}
+          <h1 className="enviar-page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name={ORDER_TYPE_ICONS[orderType]} size={18} />
+            <span>
+              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : 'Nuevo Envio'}
+            </span>
           </h1>
         </div>
 
@@ -545,11 +559,11 @@ export default function EnviarPaquetePage() {
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
             <div className="enviar-order-toggle">
-              {([
-                { key: 'envio',     label: '📦', sublabel: 'Envío' },
-                { key: 'mandadito', label: '🛒', sublabel: 'Mandaditos' },
-                { key: 'flete',     label: '🚛', sublabel: 'Fletes' },
-              ] as const).map(tab => (
+                {([
+                  { key: 'envio',     icon: 'package', sublabel: 'Envio' },
+                  { key: 'mandadito', icon: 'package', sublabel: 'Mandaditos' },
+                  { key: 'flete',     icon: 'truck', sublabel: 'Fletes' },
+                ] as const).map(tab => (
                 <button
                   key={tab.key}
                   type="button"
@@ -561,7 +575,9 @@ export default function EnviarPaquetePage() {
                   }}
                   className={`enviar-order-tab ${orderType === tab.key ? 'active' : ''}`}
                 >
-                  <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{tab.label}</span>
+                  <span style={{ display: 'inline-flex', lineHeight: 1 }}>
+                    <Icon name={tab.icon} size={16} />
+                  </span>
                   <span className="enviar-order-tab-label">{tab.sublabel}</span>
                 </button>
               ))}
@@ -569,7 +585,10 @@ export default function EnviarPaquetePage() {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span className={`enviar-step-pill ${orderType}`}>
-                {orderType === 'mandadito' ? '🛒 Mandaditos' : orderType === 'flete' ? '🚛 Fletes' : '📦 Envío'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name={ORDER_TYPE_ICONS[orderType]} size={12} />
+                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Fletes' : 'Envio'}
+                </span>
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--client-text-secondary)' }}>Paso {step} de 3</span>
             </div>
@@ -595,7 +614,9 @@ export default function EnviarPaquetePage() {
             {step === 1 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">{orderType === 'mandadito' ? '🛒' : orderType === 'flete' ? '🚛' : '📍'}</span>
+                  <span className="enviar-step-title-icon">
+                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'package' : 'map-pin'} size={16} />
+                  </span>
                   <div>
                     <div className="enviar-step-title-main">
                       {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : orderType === 'flete' ? '¿Dónde recogemos y entregamos el flete?' : '¿Dónde recogemos y entregamos?'}
@@ -616,7 +637,7 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-dot green" />
                     <input
                       className="enviar-address-input"
-                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? '🏪 Almacén / Tienda donde comprar' : 'Punto de recogida'}
+                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacen / Tienda donde comprar' : 'Punto de recogida'}
                       value={form.pickupAddress}
                       onClick={() => { if (!pickupLoading) openSearch('pickup'); }}
                       readOnly
@@ -701,7 +722,9 @@ export default function EnviarPaquetePage() {
                       <>
                         <div className="enviar-route-divider" />
                         <div className="enviar-route-stat">
-                          <span className="enviar-route-icon" style={{ background: '#8b5cf6' }}>📍</span>
+                          <span className="enviar-route-icon" style={{ background: '#8b5cf6' }}>
+                            <Icon name="map-pin" size={10} />
+                          </span>
                           <span><strong>{stops.length}</strong> paradas</span>
                         </div>
                       </>
@@ -777,7 +800,9 @@ export default function EnviarPaquetePage() {
             {step === 2 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">🚗</span>
+                  <span className="enviar-step-title-icon">
+                    <Icon name="car" size={16} />
+                  </span>
                   <div>
                     <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
                     <div className="enviar-step-title-sub">Los conductores verán tu precio y aceptarán</div>
@@ -804,7 +829,9 @@ export default function EnviarPaquetePage() {
                         className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
                         onClick={() => update('vehicleType', v.value)}
                       >
-                        <span className="enviar-vehicle-icon">{v.icon}</span>
+                        <span className="enviar-vehicle-icon">
+                          <Icon name={v.icon as import('@/components/Icon').IconName} size={18} />
+                        </span>
                         <div className="enviar-vehicle-info">
                           <span className="enviar-vehicle-name">{v.label}</span>
                           <span className="enviar-vehicle-sub">{v.sub}</span>
@@ -879,7 +906,9 @@ export default function EnviarPaquetePage() {
                       className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`}
                       onClick={() => update('paymentMethod', pm.value)}
                     >
-                      <span className="enviar-pay-pill-icon">{pm.icon}</span>
+                      <span className="enviar-pay-pill-icon">
+                        <Icon name={pm.icon as import('@/components/Icon').IconName} size={14} />
+                      </span>
                       <span>{pm.label}</span>
                     </button>
                   ))}
@@ -907,7 +936,9 @@ export default function EnviarPaquetePage() {
             {step === 3 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">👤</span>
+                  <span className="enviar-step-title-icon">
+                    <Icon name="user" size={16} />
+                  </span>
                   <div>
                     <div className="enviar-step-title-main">Confirmar datos del remitente</div>
                     <div className="enviar-step-title-sub">Revisá tu nombre y teléfono</div>
@@ -982,7 +1013,10 @@ export default function EnviarPaquetePage() {
                   {/* Scheduled date-time */}
                   <div className="enviar-contact-card">
                     <div className="enviar-field">
-                      <label className="enviar-field-label">📅 Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
+                      <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="calendar" size={12} />
+                        Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span>
+                      </label>
                       <input
                         type="datetime-local"
                         className="enviar-field-input"
@@ -996,7 +1030,10 @@ export default function EnviarPaquetePage() {
                   {/* Promo code */}
                   <div className="enviar-contact-card">
                     <div className="enviar-field">
-                      <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
+                      <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="tag" size={12} />
+                        Codigo promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span>
+                      </label>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input
                           className="enviar-field-input"
@@ -1016,13 +1053,15 @@ export default function EnviarPaquetePage() {
                         </button>
                       </div>
                       {promoResult && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600 }}>
-                          ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Icon name="check" size={12} color="var(--client-success)" />
+                          Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
                         </div>
                       )}
                       {promoError && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600 }}>
-                          ❌ {promoError}
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Icon name="x" size={12} color="var(--client-danger)" />
+                          {promoError}
                         </div>
                       )}
                     </div>
@@ -1031,8 +1070,9 @@ export default function EnviarPaquetePage() {
 
                 {/* CTA */}
                 {submitError && (
-                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.84rem', fontWeight: 500, marginTop: '0.5rem' }}>
-                    ⚠️ {submitError}
+                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.84rem', fontWeight: 500, marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="exclamation" size={12} color="var(--client-danger)" />
+                    {submitError}
                   </div>
                 )}
                 <div className="enviar-step-actions">

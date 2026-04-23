@@ -34,18 +34,18 @@ interface Job {
 }
 
 const SERVICE_LABELS: Record<string, string> = {
-  limpieza: '🧹 Limpieza',
-  niera: '👶 Niñera',
-  cocina: '🍳 Cocina',
-  eventos: '🎉 Eventos',
-  cuidado_mascotas: '🐾 Cuidado Mascotas',
-  cuidado_adultos: '👴 Cuidado adultos',
-  aire_split: '❄️ Tec Aire Split',
-  electrico: '⚡ Serv. Eléctrico',
-  plomeria: '🔧 Serv. Plomería',
-  cerrajeria: '🔑 Serv. Cerrajería',
-  gestor: '🗂️ Gestor',
-  otros: '✨ Otros',
+  limpieza: 'Limpieza',
+  niera: 'Niñera',
+  cocina: 'Cocina',
+  eventos: 'Eventos',
+  cuidado_mascotas: 'Cuidado Mascotas',
+  cuidado_adultos: 'Cuidado adultos',
+  aire_split: 'Tec Aire Split',
+  electrico: 'Serv. Eléctrico',
+  plomeria: 'Serv. Plomería',
+  cerrajeria: 'Serv. Cerrajería',
+  gestor: 'Gestor',
+  otros: 'Otros',
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {

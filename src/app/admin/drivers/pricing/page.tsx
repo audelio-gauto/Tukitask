@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon, type IconName } from '@/components/Icon';
 
 interface PackageMultiplier {
   id: string;
@@ -30,6 +31,21 @@ interface PricingSetting {
   label: string;
   description: string;
 }
+
+const vehicleIconName = (type: string): IconName => {
+  switch ((type || '').toLowerCase()) {
+    case 'camion2t':
+    case 'camion_3000':
+    case 'camion_5000':
+      return 'truck';
+    case 'moto':
+    case 'motocarro':
+    case 'moto_carro':
+      return 'car';
+    default:
+      return 'car';
+  }
+};
 
 export default function PricingConfigPage() {
   const [multipliers, setMultipliers] = useState<PackageMultiplier[]>([]);
@@ -63,10 +79,10 @@ export default function PricingConfigPage() {
       });
       // if backend has no vehicle rows yet, initialize sensible defaults so admin can set base and per-km
       const defaultVehicles = [
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: 'truck', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
       ];
       setVehicles(filteredVehicles.length > 0 ? filteredVehicles : defaultVehicles);
       setSettings(data.pricing_settings || []);
@@ -95,10 +111,10 @@ export default function PricingConfigPage() {
       setError(String(err));
       // Even on error, show default vehicles so admin can still see the UI
       setVehicles([
-        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: '🏍️', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: '🚗', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: '🛵', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
-        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: '🚛', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-moto', vehicle_type: 'moto', label: 'Moto Envíos', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-auto', vehicle_type: 'auto', label: 'Auto Envíos', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-motocarro', vehicle_type: 'motocarro', label: 'Moto Carro Fletes', emoji: 'car', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
+        { id: 'default-camion2t', vehicle_type: 'camion2t', label: 'Camión Fletes', emoji: 'truck', base_price: null, price_per_km: null, commission_pct: 10, commission_fixed: 0 },
       ]);
     } finally {
       setLoading(false);
@@ -307,7 +323,7 @@ export default function PricingConfigPage() {
           {vehicles.map(v => (
             <div key={v.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">{v.emoji}</span>
+                <Icon name={vehicleIconName(v.vehicle_type)} size={18} className="text-gray-600" />
                 <span className="font-semibold text-gray-700">{v.label}</span>
               </div>
               <p className="text-xs text-gray-400 mb-3">
@@ -341,7 +357,12 @@ export default function PricingConfigPage() {
                   <p className="text-[11px] text-gray-400 mt-1">Precio por kilómetro. Si vacío, usa el global.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">💰 Comisión %</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="money" size={14} />
+                      Comisión %
+                    </span>
+                  </label>
                   <div className="relative">
                     <input
                       type="number"
@@ -357,7 +378,12 @@ export default function PricingConfigPage() {
                   <p className="text-[11px] text-gray-400 mt-1">% del monto del envío. Se descuenta de la billetera.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">💰 Comisión Fija</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="money" size={14} />
+                      Comisión Fija
+                    </span>
+                  </label>
                   <div className="relative">
                     <input
                       type="number"

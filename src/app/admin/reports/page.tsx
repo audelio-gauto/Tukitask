@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import SuspendUserModal, { SuspendTarget } from '../components/SuspendUserModal';
+import { Icon, type IconName } from '@/components/Icon';
 
 interface Report {
   id: string;
@@ -20,14 +21,14 @@ interface Report {
   resolved_at: string | null;
 }
 
-const REASON_LABELS: Record<string, string> = {
-  no_llego:           '🚫 No llegó / No apareció',
-  cobro_indebido:     '💸 Cobro indebido',
-  mal_comportamiento: '😡 Mal comportamiento',
-  fraude:             '⚠️ Fraude / Estafa',
-  pago_no_realizado:  '💳 Pago no realizado',
-  maltrato:           '🆘 Maltrato / Agresión',
-  otro:               '📝 Otro motivo',
+const REASON_LABELS: Record<string, { label: string; icon: IconName }> = {
+  no_llego:           { label: 'No llego / No aparecio', icon: 'x' },
+  cobro_indebido:     { label: 'Cobro indebido', icon: 'money' },
+  mal_comportamiento: { label: 'Mal comportamiento', icon: 'exclamation' },
+  fraude:             { label: 'Fraude / Estafa', icon: 'shield' },
+  pago_no_realizado:  { label: 'Pago no realizado', icon: 'credit-card' },
+  maltrato:           { label: 'Maltrato / Agresion', icon: 'exclamation' },
+  otro:               { label: 'Otro motivo', icon: 'document' },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -37,10 +38,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   dismissed:  { label: 'Descartado',color: '#9ca3af', bg: 'rgba(156,163,175,0.12)' },
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  cliente: '👤 Cliente',
-  driver:  '🚗 Driver',
-  tecnico: '🔧 Técnico',
+const ROLE_LABELS: Record<string, { label: string; icon: IconName }> = {
+  cliente: { label: 'Cliente', icon: 'user' },
+  driver:  { label: 'Driver', icon: 'car' },
+  tecnico: { label: 'Tecnico', icon: 'tool' },
 };
 
 type StatusFilter = 'all' | 'pending' | 'reviewing' | 'resolved' | 'dismissed';
@@ -93,11 +94,11 @@ export default function AdminReportsPage() {
       body: JSON.stringify({ id, status, admin_note: adminNote }),
     });
     if (res.ok) {
-      setSaveMsg('✅ Guardado');
+      setSaveMsg('Guardado');
       setReports(prev => prev.map(r => r.id === id ? { ...r, status: status as Report['status'], admin_note: adminNote || r.admin_note } : r));
       setSelected(prev => prev?.id === id ? { ...prev, status: status as Report['status'], admin_note: adminNote || prev.admin_note } : prev);
     } else {
-      setSaveMsg('❌ Error al guardar');
+      setSaveMsg('Error al guardar');
     }
     setSaving(false);
     setTimeout(() => setSaveMsg(''), 3000);
@@ -181,7 +182,10 @@ export default function AdminReportsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-gray-800">{REASON_LABELS[r.reason]}</span>
+                      <span className="text-sm font-semibold text-gray-800 inline-flex items-center gap-2">
+                        <Icon name={(REASON_LABELS[r.reason]?.icon) || 'flag'} size={14} />
+                        {REASON_LABELS[r.reason]?.label || r.reason}
+                      </span>
                       <span
                         className="text-xs font-bold px-2 py-0.5 rounded-full"
                         style={{ color: sc.color, background: sc.bg }}
@@ -192,14 +196,24 @@ export default function AdminReportsPage() {
 
                     <div className="text-xs text-gray-500 space-y-0.5">
                       <div>
-                        <span className="font-medium">Reportó:</span> {ROLE_LABELS[r.reporter_role]} —{' '}
+                        <span className="font-medium">Reporto:</span>{' '}
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name={(ROLE_LABELS[r.reporter_role]?.icon) || 'user'} size={12} />
+                          {ROLE_LABELS[r.reporter_role]?.label || r.reporter_role}
+                        </span>
+                        {' — '}
                         <button
                           onClick={e => { e.stopPropagation(); lookupAndSuspend(r.reporter_email, r.reporter_role); }}
                           className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                         >{r.reporter_email}</button>
                       </div>
                       <div>
-                        <span className="font-medium">Reportado:</span> {ROLE_LABELS[r.reported_role]} —{' '}
+                        <span className="font-medium">Reportado:</span>{' '}
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name={(ROLE_LABELS[r.reported_role]?.icon) || 'user'} size={12} />
+                          {ROLE_LABELS[r.reported_role]?.label || r.reported_role}
+                        </span>
+                        {' — '}
                         <button
                           onClick={e => { e.stopPropagation(); lookupAndSuspend(r.reported_email, r.reported_role); }}
                           className="text-red-600 hover:text-red-800 hover:underline font-medium"
@@ -253,21 +267,41 @@ export default function AdminReportsPage() {
               <button
                 onClick={() => setSelected(null)}
                 className="text-gray-400 hover:text-gray-700 text-lg leading-none"
-              >✕</button>
+              >
+                <Icon name="x" size={16} />
+              </button>
             </div>
 
             <div className="space-y-2 text-sm text-gray-700 mb-4">
-              <div><span className="font-semibold">Motivo:</span> {REASON_LABELS[selected.reason]}</div>
+              <div>
+                <span className="font-semibold">Motivo:</span>{' '}
+                <span className="inline-flex items-center gap-2">
+                  <Icon name={(REASON_LABELS[selected.reason]?.icon) || 'flag'} size={14} />
+                  {REASON_LABELS[selected.reason]?.label || selected.reason}
+                </span>
+              </div>
               <div><span className="font-semibold">Estado:</span>{' '}
                 <span style={{ color: STATUS_CONFIG[selected.status].color }}>
                   {STATUS_CONFIG[selected.status].label}
                 </span>
               </div>
-              <div><span className="font-semibold">Reportó:</span> {ROLE_LABELS[selected.reporter_role]} —{' '}
+              <div>
+                <span className="font-semibold">Reporto:</span>{' '}
+                <span className="inline-flex items-center gap-1">
+                  <Icon name={(ROLE_LABELS[selected.reporter_role]?.icon) || 'user'} size={12} />
+                  {ROLE_LABELS[selected.reporter_role]?.label || selected.reporter_role}
+                </span>
+                {' — '}
                 <button onClick={() => lookupAndSuspend(selected.reporter_email, selected.reporter_role)}
                   className="text-blue-600 hover:text-blue-800 hover:underline font-medium">{selected.reporter_email}</button>
               </div>
-              <div><span className="font-semibold">Reportado:</span> {ROLE_LABELS[selected.reported_role]} —{' '}
+              <div>
+                <span className="font-semibold">Reportado:</span>{' '}
+                <span className="inline-flex items-center gap-1">
+                  <Icon name={(ROLE_LABELS[selected.reported_role]?.icon) || 'user'} size={12} />
+                  {ROLE_LABELS[selected.reported_role]?.label || selected.reported_role}
+                </span>
+                {' — '}
                 <button onClick={() => lookupAndSuspend(selected.reported_email, selected.reported_role)}
                   className="text-red-600 hover:text-red-800 hover:underline font-medium">{selected.reported_email}</button>
               </div>
@@ -311,7 +345,10 @@ export default function AdminReportsPage() {
                   onClick={() => updateStatus(selected.id, 'reviewing')}
                   className="w-full py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 disabled:opacity-50"
                 >
-                  🔍 Marcar como Revisando
+                  <span className="inline-flex items-center gap-2">
+                    <Icon name="eye" size={14} />
+                    Marcar como Revisando
+                  </span>
                 </button>
               )}
               {selected.status !== 'resolved' && (
@@ -320,7 +357,10 @@ export default function AdminReportsPage() {
                   onClick={() => updateStatus(selected.id, 'resolved')}
                   className="w-full py-2 rounded-lg text-sm font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-50"
                 >
-                  ✅ Marcar como Resuelto
+                  <span className="inline-flex items-center gap-2">
+                    <Icon name="check" size={14} />
+                    Marcar como Resuelto
+                  </span>
                 </button>
               )}
               {selected.status !== 'dismissed' && (
@@ -329,11 +369,14 @@ export default function AdminReportsPage() {
                   onClick={() => updateStatus(selected.id, 'dismissed')}
                   className="w-full py-2 rounded-lg text-sm font-semibold bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 disabled:opacity-50"
                 >
-                  🗑️ Descartar
+                  <span className="inline-flex items-center gap-2">
+                    <Icon name="trash" size={14} />
+                    Descartar
+                  </span>
                 </button>
               )}
               {saveMsg && (
-                <p className="text-center text-sm font-semibold" style={{ color: saveMsg.startsWith('✅') ? '#4ade80' : '#f87171' }}>
+                <p className="text-center text-sm font-semibold" style={{ color: saveMsg === 'Guardado' ? '#4ade80' : '#f87171' }}>
                   {saveMsg}
                 </p>
               )}

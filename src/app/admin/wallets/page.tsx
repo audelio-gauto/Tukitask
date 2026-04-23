@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon } from '@/components/Icon';
 
 interface RechargeRequest {
   id: string;
@@ -63,7 +64,7 @@ export default function AdminWalletsPage() {
     const json = await res.json();
     setActionId(null);
     if (json.success) {
-      showToast(`✓ Aprobado — ${fmtGS(json.amount)} acreditados a ${json.driver}`, true);
+      showToast(`Aprobado — ${fmtGS(json.amount)} acreditados a ${json.driver}`, true);
       fetchRequests();
     } else {
       showToast(json.error || 'Error al aprobar', false);
@@ -129,7 +130,10 @@ export default function AdminWalletsPage() {
       <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 10, padding: 4, marginBottom: '1.5rem', width: 'fit-content' }}>
         {(['pending', 'approved', 'rejected'] as const).map(t => (
           <button key={t} style={tabStyle(tab === t)} onClick={() => setTab(t)}>
-            {t === 'pending' ? '⏳ Pendientes' : t === 'approved' ? '✓ Aprobadas' : '✗ Rechazadas'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {t === 'pending' ? <Icon name="clock" size={14} /> : t === 'approved' ? <Icon name="check" size={14} /> : <Icon name="x" size={14} />}
+              {t === 'pending' ? 'Pendientes' : t === 'approved' ? 'Aprobadas' : 'Rechazadas'}
+            </span>
           </button>
         ))}
       </div>
@@ -138,7 +142,9 @@ export default function AdminWalletsPage() {
         <div className="bg-white rounded-xl p-12 text-center text-gray-400">Cargando...</div>
       ) : requests.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <div style={{ fontSize: '2rem', marginBottom: 8 }}>{tab === 'pending' ? '🎉' : '📋'}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <Icon name={tab === 'pending' ? 'trophy' : 'clipboard'} size={28} className="text-gray-400" />
+          </div>
           <p className="text-gray-400 text-sm">
             {tab === 'pending' ? 'No hay solicitudes pendientes' : 'Sin registros en esta categoría'}
           </p>
@@ -176,7 +182,10 @@ export default function AdminWalletsPage() {
                     onClick={() => setPreviewUrl(req.receipt_url)}
                     style={{ padding: '0.35rem 0.7rem', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '0.78rem', cursor: 'pointer', color: '#374151' }}
                   >
-                    📷 Ver comprobante
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="camera" size={14} />
+                      Ver comprobante
+                    </span>
                   </button>
                 )}
 
@@ -191,7 +200,12 @@ export default function AdminWalletsPage() {
                         background: '#059669', color: '#fff', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
                       }}
                     >
-                      {actionId === req.id ? '...' : '✓ Aprobar'}
+                      {actionId === req.id ? '...' : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <Icon name="check" size={14} />
+                          Aprobar
+                        </span>
+                      )}
                     </button>
                     <button
                       disabled={actionId === req.id}
@@ -201,7 +215,10 @@ export default function AdminWalletsPage() {
                         background: '#fee2e2', color: '#dc2626', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
                       }}
                     >
-                      ✗ Rechazar
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="x" size={14} />
+                        Rechazar
+                      </span>
                     </button>
                   </div>
                 )}

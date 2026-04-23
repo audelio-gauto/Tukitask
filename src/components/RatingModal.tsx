@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Icon } from '@/components/Icon';
 
 interface RatingModalProps {
   title: string;
@@ -73,22 +74,22 @@ export default function RatingModal({
               onMouseEnter={() => setHovered(star)}
               onMouseLeave={() => setHovered(0)}
               style={{
-                fontSize: '2.4rem', background: 'none', border: 'none', cursor: 'pointer',
+                background: 'none', border: 'none', cursor: 'pointer',
                 color: displayRating >= star ? '#f59e0b' : '#d1d5db',
                 transition: 'transform 0.12s, color 0.12s',
-                transform: displayRating >= star ? 'scale(1.2)' : 'scale(1)',
+                transform: displayRating >= star ? 'scale(1.15)' : 'scale(1)',
                 padding: 0, lineHeight: 1,
               }}
               aria-label={`${star} estrellas`}
             >
-              ★
+              <Icon name="star" size={26} color={displayRating >= star ? '#f59e0b' : '#d1d5db'} />
             </button>
           ))}
         </div>
 
         {rating > 0 && (
           <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.75rem', fontWeight: 500 }}>
-            {['', '😞 Muy malo', '😕 Malo', '😐 Regular', '😊 Bueno', '🤩 Excelente'][rating]}
+            {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][rating]}
           </div>
         )}
 
@@ -130,7 +131,7 @@ export default function RatingModal({
               transition: 'background 0.2s',
             }}
           >
-            {submitting ? 'Enviando...' : '⭐ Enviar calificación'}
+            {submitting ? 'Enviando...' : 'Enviar calificación'}
           </button>
         </div>
 

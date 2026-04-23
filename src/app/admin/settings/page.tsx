@@ -12,7 +12,7 @@ export default function SettingsPage() {
   const [logoSize, setLogoSize]     = useState(90);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoMsg, setLogoMsg]       = useState('');
+  const [logoMsg, setLogoMsg]       = useState<{ text: string; ok: boolean } | null>(null);
   const [sizeSaving, setSizeSaving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [pwaPreview512, setPwaPreview512]   = useState<string | null>(null);
   const [pwaUploading192, setPwaUploading192] = useState(false);
   const [pwaUploading512, setPwaUploading512] = useState(false);
-  const [pwaMsg, setPwaMsg]                 = useState('');
+  const [pwaMsg, setPwaMsg]                 = useState<{ text: string; ok: boolean } | null>(null);
   const pwa192Ref = useRef<HTMLInputElement>(null);
   const pwa512Ref = useRef<HTMLInputElement>(null);
 
@@ -56,7 +56,7 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
-    setLogoMsg('');
+    setLogoMsg(null);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -75,12 +75,12 @@ export default function SettingsPage() {
       if (json.url) {
         setLogoUrl(json.url);
         setLogoPreview(json.url);
-        setLogoMsg('✅ Logo actualizado correctamente');
+        setLogoMsg({ text: 'Logo actualizado correctamente', ok: true });
       } else {
-        setLogoMsg(`❌ ${json.error || 'Error al subir'}`);
+        setLogoMsg({ text: json.error || 'Error al subir', ok: false });
       }
     } catch {
-      setLogoMsg('❌ Error al subir el logo');
+      setLogoMsg({ text: 'Error al subir el logo', ok: false });
     }
     setLogoUploading(false);
     if (logoInputRef.current) logoInputRef.current.value = '';
@@ -94,7 +94,7 @@ export default function SettingsPage() {
       body: JSON.stringify({ key: 'logo_size', value: String(logoSize) }),
     });
     const json = await res.json();
-    setLogoMsg(json.ok ? '✅ Tamaño guardado' : `❌ ${json.error}`);
+    setLogoMsg({ text: json.ok ? 'Tamano guardado' : (json.error || 'Error al guardar'), ok: Boolean(json.ok) });
     setSizeSaving(false);
   };
 
@@ -104,7 +104,7 @@ export default function SettingsPage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPwaMsg('');
+    setPwaMsg(null);
     size === 192 ? setPwaUploading192(true) : setPwaUploading512(true);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -126,12 +126,15 @@ export default function SettingsPage() {
       if (json.url) {
         if (size === 192) { setPwaIcon192(json.url); setPwaPreview192(json.url); }
         else              { setPwaIcon512(json.url); setPwaPreview512(json.url); }
-        setPwaMsg(`✅ Ícono ${size}×${size} actualizado. El nuevo ícono estará activo al re-instalar la PWA.`);
+        setPwaMsg({
+          text: `Icono ${size}x${size} actualizado. El nuevo icono estara activo al re-instalar la PWA.`,
+          ok: true,
+        });
       } else {
-        setPwaMsg(`❌ ${json.error || 'Error al subir el ícono'}`);
+        setPwaMsg({ text: json.error || 'Error al subir el icono', ok: false });
       }
     } catch {
-      setPwaMsg('❌ Error al procesar el archivo');
+      setPwaMsg({ text: 'Error al procesar el archivo', ok: false });
     }
     size === 192 ? setPwaUploading192(false) : setPwaUploading512(false);
     if (size === 192 && pwa192Ref.current) pwa192Ref.current.value = '';
@@ -336,10 +339,10 @@ export default function SettingsPage() {
 
               {/* Feedback */}
               {logoMsg && (
-                <div className={`p-3 text-sm rounded-lg border ${logoMsg.startsWith('✅')
+                <div className={`p-3 text-sm rounded-lg border ${logoMsg.ok
                   ? 'bg-green-50 text-green-700 border-green-200'
                   : 'bg-red-50 text-red-700 border-red-200'}`}>
-                  {logoMsg}
+                  {logoMsg.text}
                 </div>
               )}
             </div>
@@ -426,10 +429,10 @@ export default function SettingsPage() {
 
           {/* Feedback */}
           {pwaMsg && (
-            <div className={`mt-4 p-3 text-sm rounded-lg border ${pwaMsg.startsWith('✅')
+            <div className={`mt-4 p-3 text-sm rounded-lg border ${pwaMsg.ok
               ? 'bg-green-50 text-green-700 border-green-200'
               : 'bg-red-50 text-red-700 border-red-200'}`}>
-              {pwaMsg}
+              {pwaMsg.text}
             </div>
           )}
 

@@ -1,35 +1,37 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type React from 'react';
 import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
+import { Icon } from '@/components/Icon';
 
 const ACTIVE_STATUSES = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
 
-const STATUS_LABEL: Record<ActiveStatus, { label: string; color: string; bg: string; icon: string }> = {
-  accepted:           { label: 'Confirmado',          color: '#4ade80', bg: 'rgba(74,222,128,0.15)',  icon: '✅' },
-  en_camino:          { label: 'En camino',            color: '#60a5fa', bg: 'rgba(96,165,250,0.15)', icon: '🚗' },
-  llegue:             { label: 'Llegué',               color: '#F5C518', bg: 'rgba(245,197,24,0.15)', icon: '📍' },
-  en_proceso:         { label: 'En proceso',           color: '#fb923c', bg: 'rgba(251,146,60,0.15)', icon: '🔧' },
-  completion_pending: { label: 'Esperando cliente',    color: '#a78bfa', bg: 'rgba(167,139,250,0.15)',icon: '⏳' },
+const STATUS_LABEL: Record<ActiveStatus, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Icon>['name'] }> = {
+  accepted:           { label: 'Confirmado',       color: '#4ade80', bg: 'rgba(74,222,128,0.15)',  icon: 'check' },
+  en_camino:          { label: 'En camino',        color: '#60a5fa', bg: 'rgba(96,165,250,0.15)',  icon: 'car' },
+  llegue:             { label: 'Llegue',           color: '#F5C518', bg: 'rgba(245,197,24,0.15)',  icon: 'map-pin' },
+  en_proceso:         { label: 'En proceso',       color: '#fb923c', bg: 'rgba(251,146,60,0.15)',  icon: 'tool' },
+  completion_pending: { label: 'Esperando cliente', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', icon: 'refresh' },
 };
 
 const SERVICE_LABELS: Record<string, string> = {
-  limpieza: '🧹 Limpieza',
-  niera: '👶 Niñera',
-  cocina: '🍳 Cocina',
-  eventos: '🎉 Eventos',
-  cuidado_mascotas: '🐾 Mascotas',
-  cuidado_adultos: '👴 Adultos',
-  gestor: '📋 Gestor',
-  aire_split: '❄️ Tec Aire Split',
-  electrico: '⚡ Serv. Eléctrico',
-  plomeria: '🔧 Serv. Plomería',
-  cerrajeria: '🔑 Cerrajería',
-  otros: '✨ Otros',
+  limpieza: 'Limpieza',
+  niera: 'Niera',
+  cocina: 'Cocina',
+  eventos: 'Eventos',
+  cuidado_mascotas: 'Mascotas',
+  cuidado_adultos: 'Adultos',
+  gestor: 'Gestor',
+  aire_split: 'Tec Aire Split',
+  electrico: 'Serv. Electrico',
+  plomeria: 'Serv. Plomeria',
+  cerrajeria: 'Cerrajeria',
+  otros: 'Otros',
 };
 
 interface ExtraItem { amount: number; reason: string }
@@ -270,13 +272,13 @@ export default function TecnicoActivoPage() {
           showToast('Trabajo cancelado.');
         } else {
           setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...json.job } : j));
-          if (action === 'mark_complete') showToast('⏳ Esperando confirmación del cliente…');
+          if (action === 'mark_complete') showToast('Esperando confirmacion del cliente…');
         }
       } else {
-        showToast('❌ ' + (json?.error || 'Error al actualizar'));
+        showToast((json?.error || 'Error al actualizar'));
       }
     } catch {
-      showToast('❌ Error de conexión. Intentá de nuevo.');
+      showToast('Error de conexion. Intenta de nuevo.');
     }
     setActing(null);
   };
@@ -290,7 +292,7 @@ export default function TecnicoActivoPage() {
 
   const renderCard = (job: Job) => {
     const status = job.status as ActiveStatus;
-    const statusInfo = STATUS_LABEL[status] ?? { label: job.status, color: '#64748b', bg: 'rgba(100,116,139,0.15)', icon: '•' };
+    const statusInfo = STATUS_LABEL[status] ?? { label: job.status, color: '#64748b', bg: 'rgba(100,116,139,0.15)', icon: 'tag' };
     const clientName = job.client_name || job.client_email?.split('@')[0] || 'Cliente';
     const clientPhoto = job.client_photo || null;
     const busy = !!acting;
@@ -310,8 +312,9 @@ export default function TecnicoActivoPage() {
           padding: '10px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ color: statusInfo.color, fontWeight: 700, fontSize: '0.9rem' }}>
-            {statusInfo.icon} {statusInfo.label}
+          <span style={{ color: statusInfo.color, fontWeight: 700, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name={statusInfo.icon} size={14} color={statusInfo.color} />
+            {statusInfo.label}
           </span>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
             {SERVICE_LABELS[job.service_type] ?? job.service_type}
@@ -335,7 +338,10 @@ export default function TecnicoActivoPage() {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
               {job.client_rating != null && job.client_rating > 0 && (
-                <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>⭐ {Number(job.client_rating).toFixed(1)}</div>
+                <div style={{ fontSize: '0.75rem', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="star" size={12} color="#f59e0b" />
+                  {Number(job.client_rating).toFixed(1)}
+                </div>
               )}
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -351,10 +357,16 @@ export default function TecnicoActivoPage() {
           {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
             <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(245,158,11,0.08)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.2)', fontSize: '0.8rem' }}>
               {job.agreed_price != null && (
-                <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 4 }}>💰 Acordado: {fmtGs(job.agreed_price)}</div>
+                <div style={{ color: '#4ade80', fontWeight: 600, marginBottom: 4, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="money" size={12} color="#4ade80" />
+                  Acordado: {fmtGs(job.agreed_price)}
+                </div>
               )}
               {job.extra_items.map((it, i) => (
-                <div key={i} style={{ color: '#f59e0b', fontWeight: 600, marginBottom: 2 }}>➕ {it.reason || 'Extra'}: {fmtGs(it.amount)}</div>
+                <div key={i} style={{ color: '#f59e0b', fontWeight: 600, marginBottom: 2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="plus" size={12} color="#f59e0b" />
+                  {it.reason || 'Extra'}: {fmtGs(it.amount)}
+                </div>
               ))}
             </div>
           )}
@@ -371,7 +383,8 @@ export default function TecnicoActivoPage() {
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              💬 Chat con el cliente
+              <Icon name="chat" size={14} />
+              Chat con el cliente
               {!!unreadCounts[job.id] && (
                 <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800 }}>
                   {unreadCounts[job.id]}
@@ -390,7 +403,8 @@ export default function TecnicoActivoPage() {
                   onClick={() => openMaps(job.address!)}
                   style={{ width: '100%', padding: '8px', borderRadius: 10, border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.1)', color: '#4ade80', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}
                 >
-                  🗺️ Navegar
+                  <Icon name="map" size={14} />
+                  Navegar
                 </button>
               )}
             </div>
@@ -398,8 +412,9 @@ export default function TecnicoActivoPage() {
 
           {/* Scheduled */}
           {job.scheduled_at && (
-            <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 10, padding: '8px 12px', marginBottom: 14, fontSize: '0.8rem', color: '#818cf8' }}>
-              📅 Programado: {fmtDate(job.scheduled_at)}
+            <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 10, padding: '8px 12px', marginBottom: 14, fontSize: '0.8rem', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="calendar" size={12} color="#818cf8" />
+              Programado: {fmtDate(job.scheduled_at)}
             </div>
           )}
 
@@ -414,7 +429,10 @@ export default function TecnicoActivoPage() {
           {/* Audio */}
           {job.audio_url && (
             <div style={{ marginBottom: 14, padding: '8px 10px', background: 'rgba(5,150,105,0.1)', borderRadius: 8, border: '1px solid rgba(5,150,105,0.3)' }}>
-              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase' }}>🎙 Audio del cliente</p>
+              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="chat" size={12} color="#4ade80" />
+                Audio del cliente
+              </p>
               <audio controls src={job.audio_url} style={{ width: '100%', height: 36 }} />
             </div>
           )}
@@ -440,14 +458,14 @@ export default function TecnicoActivoPage() {
                 onClick={() => doAction(job.id, 'en_camino')}
                 style={{ flex: 1, padding: '13px', borderRadius: 12, border: 'none', cursor: busy ? 'not-allowed' : 'pointer', background: busy ? 'rgba(255,255,255,0.08)' : '#0ea5e9', color: busy ? 'rgba(255,255,255,0.4)' : '#fff', fontWeight: 700, fontSize: '0.95rem', opacity: busy ? 0.7 : 1 }}
               >
-                {acting === job.id + 'en_camino' ? 'Actualizando...' : '🚗 Voy en camino'}
+                {acting === job.id + 'en_camino' ? 'Actualizando...' : 'Voy en camino'}
               </button>
               {job.lat && job.lng && (
                 <button
                   onClick={() => openMaps(job.address!)}
                   style={{ padding: '13px 16px', borderRadius: 12, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
-                  🧭
+                  <Icon name="map" size={14} />
                 </button>
               )}
             </div>
@@ -460,7 +478,8 @@ export default function TecnicoActivoPage() {
                   onClick={() => openMaps(job.address!)}
                   style={{ width: '100%', padding: '11px', borderRadius: 12, border: 'none', background: '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
                 >
-                  🧭 Navegar al cliente
+                  <Icon name="map" size={14} />
+                  Navegar al cliente
                 </button>
               )}
               <button
@@ -468,7 +487,7 @@ export default function TecnicoActivoPage() {
                 onClick={() => doAction(job.id, 'llegue')}
                 style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: busy ? 'not-allowed' : 'pointer', background: busy ? 'rgba(255,255,255,0.08)' : '#F5C518', color: busy ? 'rgba(255,255,255,0.4)' : '#1C1C2E', fontWeight: 700, fontSize: '0.95rem', opacity: busy ? 0.7 : 1 }}
               >
-                {acting === job.id + 'llegue' ? 'Actualizando...' : '📍 Ya llegué'}
+                {acting === job.id + 'llegue' ? 'Actualizando...' : 'Ya llegue'}
               </button>
             </div>
           )}
@@ -490,27 +509,28 @@ export default function TecnicoActivoPage() {
                 onClick={() => doConfirm(job.id, 'mark_complete', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')}
                 style={{ flex: 1, padding: '13px', borderRadius: 12, border: 'none', cursor: busy ? 'not-allowed' : 'pointer', background: busy ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? 'rgba(255,255,255,0.4)' : '#fff', fontWeight: 700, fontSize: '0.95rem', opacity: busy ? 0.7 : 1 }}
               >
-                {acting === job.id + 'mark_complete' ? 'Enviando...' : '✅ Marcar como completado'}
+                {acting === job.id + 'mark_complete' ? 'Enviando...' : 'Marcar como completado'}
               </button>
               <button
                 onClick={() => openExtraModal(job)}
                 style={{ padding: '13px 14px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, cursor: 'pointer' }}
               >
-                💰
+                <Icon name="money" size={14} />
               </button>
             </div>
           )}
 
           {status === 'completion_pending' && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1, textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', fontWeight: 700, fontSize: '0.88rem' }}>
-                ⏳ Esperando cliente… ({job.completion_attempts}/3)
+              <div style={{ flex: 1, textAlign: 'center', padding: '14px', borderRadius: 12, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', fontWeight: 700, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Icon name="refresh" size={14} />
+                Esperando cliente… ({job.completion_attempts}/3)
               </div>
               <button
                 onClick={() => openExtraModal(job)}
                 style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, cursor: 'pointer' }}
               >
-                💰
+                <Icon name="money" size={14} />
               </button>
             </div>
           )}
@@ -563,7 +583,11 @@ export default function TecnicoActivoPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 80, color: 'var(--text-muted)', padding: 24 }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>🔧</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="tool" size={28} color="var(--text-muted)" />
+            </div>
+          </div>
           <p style={{ fontWeight: 700, color: 'var(--text-secondary)', fontSize: '1.05rem', marginBottom: 8 }}>Sin trabajos activos</p>
           <p style={{ fontSize: '0.85rem', marginBottom: 0, lineHeight: 1.5 }}>
             Cuando aceptes un trabajo y esté en curso, aparecerá acá.
@@ -603,8 +627,12 @@ export default function TecnicoActivoPage() {
                       <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.9rem' }}>{fmtGs(it.amount)}</div>
                       {it.reason && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{it.reason}</div>}
                     </div>
-                    <button onClick={() => extraItemEdit(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>✏️</button>
-                    <button onClick={() => extraItemDelete(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>🗑️</button>
+                    <button onClick={() => extraItemEdit(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <Icon name="pencil" size={12} />
+                    </button>
+                    <button onClick={() => extraItemDelete(i)} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <Icon name="trash" size={12} />
+                    </button>
                   </div>
                 ))}
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', marginTop: 4 }}>
@@ -644,7 +672,12 @@ export default function TecnicoActivoPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={submitExtra} disabled={extraSending}
                 style={{ flex: 1, padding: '11px', borderRadius: 12, border: 'none', background: extraSending ? 'rgba(5,150,105,0.4)' : '#059669', color: '#fff', fontWeight: 700, cursor: extraSending ? 'default' : 'pointer' }}>
-                {extraSending ? 'Guardando…' : '💾 Guardar'}
+                {extraSending ? 'Guardando…' : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="check" size={12} />
+                    Guardar
+                  </span>
+                )}
               </button>
               <button onClick={() => setExtraModal(null)}
                 style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>

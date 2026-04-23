@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import type React from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/lib/useNotifications';
 import { UrgentNotificationPopup } from '@/components/UrgentNotificationPopup';
+import { Icon } from '@/components/Icon';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
 
 function timeAgo(dateStr: string): string {
@@ -31,19 +33,19 @@ const typeUrl: Record<string, string> = {
   wallet:          '/cliente/mis-envios',
   rating:          '/cliente/mis-envios',
 };
-const typeStyle: Record<string, { icon: string; accent: string }> = {
-  new_order:       { icon: '📦', accent: '#8b5cf6' },
-  new_offer:       { icon: '💰', accent: '#F5C518' },
-  offer_accepted:  { icon: '✅', accent: '#22c55e' },
-  offer_rejected:  { icon: '❌', accent: '#ef4444' },
-  status_change:   { icon: '🔄', accent: '#3b82f6' },
-  new_job:         { icon: '🔧', accent: '#8b5cf6' },
-  new_job_offer:   { icon: '💼', accent: '#F5C518' },
-  job_accepted:    { icon: '✅', accent: '#22c55e' },
-  job_status:      { icon: '📋', accent: '#3b82f6' },
-  commission:      { icon: '💵', accent: '#22c55e' },
-  wallet:          { icon: '👛', accent: '#f59e0b' },
-  rating:          { icon: '⭐', accent: '#f59e0b' },
+const typeStyle: Record<string, { icon: React.ComponentProps<typeof Icon>['name']; accent: string }> = {
+  new_order:       { icon: 'package', accent: '#8b5cf6' },
+  new_offer:       { icon: 'money', accent: '#F5C518' },
+  offer_accepted:  { icon: 'check', accent: '#22c55e' },
+  offer_rejected:  { icon: 'x', accent: '#ef4444' },
+  status_change:   { icon: 'refresh', accent: '#3b82f6' },
+  new_job:         { icon: 'tool', accent: '#8b5cf6' },
+  new_job_offer:   { icon: 'briefcase', accent: '#F5C518' },
+  job_accepted:    { icon: 'check', accent: '#22c55e' },
+  job_status:      { icon: 'clipboard', accent: '#3b82f6' },
+  commission:      { icon: 'money', accent: '#22c55e' },
+  wallet:          { icon: 'tag', accent: '#f59e0b' },
+  rating:          { icon: 'star', accent: '#f59e0b' },
 };
 
 const priorityBorder: Record<NotifPriority, string> = {
@@ -219,7 +221,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
                 </div>
               ) : (
                 notifications.map((n, i) => {
-                  const ts = typeStyle[n.type] || { icon: '🔔', accent: '#6b7280' };
+                  const ts = typeStyle[n.type] || { icon: 'bell', accent: '#6b7280' };
                   const priority = (n.priority || 'normal') as NotifPriority;
                   const borderColor = priorityBorder[priority];
 
@@ -250,10 +252,10 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '1rem',
+                        color: ts.accent,
                         flexShrink: 0,
                       }}>
-                        {ts.icon}
+                        <Icon name={ts.icon} size={18} />
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>

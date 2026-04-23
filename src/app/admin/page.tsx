@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/Icon';
 
 interface Stats {
   total: number;
@@ -103,13 +104,13 @@ export default function AdminDashboard() {
     })();
   }, []);
 
-  const statCards = [
-    { label: 'Total Usuarios', value: stats.total,      color: 'bg-gradient-to-br from-[#F5C518] to-[#F58A07]', icon: '👥' },
-    { label: 'Conductores',   value: stats.drivers,    color: 'bg-emerald-600',  icon: '🚗' },
-    { label: 'Vendedores',    value: stats.vendedores, color: 'bg-amber-500',    icon: '🛍️' },
-    { label: 'Servicios',     value: stats.servicios,  color: 'bg-sky-600',      icon: '🔧' },
-    { label: 'Hotelería',     value: stats.hoteleria,  color: 'bg-purple-600',   icon: '🏨' },
-    { label: 'Clientes',      value: stats.clientes,   color: 'bg-rose-600',     icon: '👤' },
+  const statCards: Array<{ label: string; value: number; color: string; icon: IconName }> = [
+    { label: 'Total Usuarios', value: stats.total,      color: 'bg-gradient-to-br from-[#F5C518] to-[#F58A07]', icon: 'user' },
+    { label: 'Conductores',   value: stats.drivers,    color: 'bg-emerald-600',  icon: 'car' },
+    { label: 'Vendedores',    value: stats.vendedores, color: 'bg-amber-500',    icon: 'briefcase' },
+    { label: 'Servicios',     value: stats.servicios,  color: 'bg-sky-600',      icon: 'tool' },
+    { label: 'Hoteleria',     value: stats.hoteleria,  color: 'bg-purple-600',   icon: 'home' },
+    { label: 'Clientes',      value: stats.clientes,   color: 'bg-rose-600',     icon: 'user' },
   ];
 
   if (loading) {
@@ -133,7 +134,7 @@ export default function AdminDashboard() {
         {statCards.map((card) => (
           <div key={card.label} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:shadow-md transition-all">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xl">{card.icon}</span>
+              <Icon name={card.icon} size={18} className="text-gray-600" />
               <span className={`${card.color} text-white text-xs font-bold px-2 py-0.5 rounded-full`}>
                 {card.value}
               </span>
@@ -147,16 +148,18 @@ export default function AdminDashboard() {
       <div className="mb-6">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pedidos & Facturación</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: 'Total Pedidos',  value: orderMetrics.totalOrders,     icon: '📦', color: 'text-blue-600' },
-            { label: 'Pendientes',     value: orderMetrics.pendingOrders,    icon: '⏳', color: 'text-amber-600' },
-            { label: 'Entregados',     value: orderMetrics.deliveredOrders,  icon: '✅', color: 'text-emerald-600' },
-            { label: 'Cancelados',     value: orderMetrics.cancelledOrders,  icon: '❌', color: 'text-red-600' },
-            { label: 'Ingresos Hoy',   value: `${fmtGs(orderMetrics.revenueToday)} Gs`, icon: '💰', color: 'text-yellow-600' },
-            { label: 'Ingresos Total', value: `${fmtGs(orderMetrics.totalRevenue)} Gs`, icon: '💵', color: 'text-yellow-600' },
-          ].map(card => (
+          {([
+            { label: 'Total Pedidos',  value: orderMetrics.totalOrders,     icon: 'package', color: 'text-blue-600' },
+            { label: 'Pendientes',     value: orderMetrics.pendingOrders,    icon: 'clock', color: 'text-amber-600' },
+            { label: 'Entregados',     value: orderMetrics.deliveredOrders,  icon: 'check', color: 'text-emerald-600' },
+            { label: 'Cancelados',     value: orderMetrics.cancelledOrders,  icon: 'x', color: 'text-red-600' },
+            { label: 'Ingresos Hoy',   value: `${fmtGs(orderMetrics.revenueToday)} Gs`, icon: 'money', color: 'text-yellow-600' },
+            { label: 'Ingresos Total', value: `${fmtGs(orderMetrics.totalRevenue)} Gs`, icon: 'credit-card', color: 'text-yellow-600' },
+          ] as Array<{ label: string; value: string | number; icon: IconName; color: string }>).map(card => (
             <div key={card.label} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:shadow-md transition-all">
-              <div className="text-lg mb-1">{card.icon}</div>
+              <div className="mb-1">
+                <Icon name={card.icon} size={18} className={card.color} />
+              </div>
               <div className={`font-bold text-base leading-tight ${card.color}`}>{card.value}</div>
               <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
             </div>

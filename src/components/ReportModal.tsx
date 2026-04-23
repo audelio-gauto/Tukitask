@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import type React from 'react';
+import { Icon } from '@/components/Icon';
 import { authFetch } from '@/lib/authFetch';
 
 export type ReporterRole = 'cliente' | 'driver' | 'tecnico';
@@ -19,14 +21,14 @@ interface ReportModalProps {
   onSuccess?: () => void;
 }
 
-const REASONS: { key: string; label: string; icon: string }[] = [
-  { key: 'no_llego',          label: 'No llegó / No apareció',    icon: '🚫' },
-  { key: 'cobro_indebido',    label: 'Cobro indebido',            icon: '💸' },
-  { key: 'mal_comportamiento',label: 'Mal comportamiento',        icon: '😡' },
-  { key: 'fraude',            label: 'Fraude / Estafa',           icon: '⚠️' },
-  { key: 'pago_no_realizado', label: 'Pago no realizado',         icon: '💳' },
-  { key: 'maltrato',          label: 'Maltrato / Agresión',       icon: '🆘' },
-  { key: 'otro',              label: 'Otro motivo',               icon: '📝' },
+const REASONS: { key: string; label: string; icon: React.ComponentProps<typeof Icon>['name'] }[] = [
+  { key: 'no_llego',           label: 'No llegó / No apareció',    icon: 'x' },
+  { key: 'cobro_indebido',     label: 'Cobro indebido',            icon: 'money' },
+  { key: 'mal_comportamiento', label: 'Mal comportamiento',        icon: 'exclamation' },
+  { key: 'fraude',             label: 'Fraude / Estafa',           icon: 'exclamation' },
+  { key: 'pago_no_realizado',  label: 'Pago no realizado',         icon: 'credit-card' },
+  { key: 'maltrato',           label: 'Maltrato / Agresión',       icon: 'shield' },
+  { key: 'otro',               label: 'Otro motivo',               icon: 'document' },
 ];
 
 export default function ReportModal({
@@ -110,7 +112,7 @@ export default function ReportModal({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 800 }}>
-                🚨 Reportar
+                Reportar
               </h2>
               {reportedName && (
                 <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
@@ -122,7 +124,7 @@ export default function ReportModal({
               onClick={onClose}
               style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'var(--glass-card)', color: 'var(--text-primary)', fontSize: '1rem', cursor: 'pointer' }}
             >
-              ✕
+              <Icon name="x" size={16} />
             </button>
           </div>
         </div>
@@ -130,7 +132,11 @@ export default function ReportModal({
         {done ? (
           /* Success state */
           <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>✅</div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="check" size={28} color="#22c55e" />
+              </div>
+            </div>
             <h3 style={{ color: '#4ade80', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
               Reporte enviado
             </h3>
@@ -167,7 +173,9 @@ export default function ReportModal({
                     textAlign: 'left',
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{r.icon}</span>
+                  <span style={{ display: 'inline-flex', width: 20, justifyContent: 'center', color: reason === r.key ? '#F5C518' : 'var(--text-secondary)' }}>
+                    <Icon name={r.icon} size={16} />
+                  </span>
                   {r.label}
                 </button>
               ))}
@@ -210,7 +218,7 @@ export default function ReportModal({
                 transition: 'all 0.2s',
               }}
             >
-              {sending ? 'Enviando…' : '🚨 Enviar reporte'}
+              {sending ? 'Enviando…' : 'Enviar reporte'}
             </button>
           </div>
         )}

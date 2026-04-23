@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon, type IconName } from '@/components/Icon';
 
 interface Driver {
   email: string;
@@ -15,9 +16,13 @@ interface Driver {
   subscription_expires_at: string | null;
 }
 
-const VEHICLE_LABELS: Record<string, string> = {
-  moto: '🏍️ Moto', auto: '🚗 Auto', moto_carro: '🚙 Moto carro', camion: '🚛 Camión',
-  motocarro: '🛵 Moto Carro', camion2t: '🚛 Camión',
+const VEHICLE_LABELS: Record<string, { label: string; icon: IconName }> = {
+  moto: { label: 'Moto', icon: 'car' },
+  auto: { label: 'Auto', icon: 'car' },
+  moto_carro: { label: 'Moto carro', icon: 'car' },
+  motocarro: { label: 'Moto carro', icon: 'car' },
+  camion: { label: 'Camion', icon: 'truck' },
+  camion2t: { label: 'Camion', icon: 'truck' },
 };
 
 function formatDate(iso: string | null) {
@@ -125,7 +130,10 @@ export default function DriverCommissionPage() {
   return (
     <div className="max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">💰 Comisión por Conductor</h1>
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Icon name="money" size={20} />
+          Comision por Conductor
+        </h1>
         <p className="text-gray-500 text-sm mt-1">
           Configura comisión personalizada y suscripción mensual por conductor.
           Los drivers con suscripción activa pagan su comisión personalizada (más baja).
@@ -147,7 +155,12 @@ export default function DriverCommissionPage() {
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
       )}
       {success && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">✅ {success}</div>
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+          <span className="inline-flex items-center gap-1">
+            <Icon name="check" size={14} />
+            {success}
+          </span>
+        </div>
       )}
 
       {/* Search */}
@@ -190,18 +203,28 @@ export default function DriverCommissionPage() {
                   <p className="text-xs text-gray-400 truncate">{driver.email}</p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {driver.transport_mode && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                        {VEHICLE_LABELS[driver.transport_mode] || driver.transport_mode}
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <Icon
+                          name={(VEHICLE_LABELS[driver.transport_mode]?.icon) || 'car'}
+                          size={12}
+                        />
+                        {VEHICLE_LABELS[driver.transport_mode]?.label || driver.transport_mode}
                       </span>
                     )}
                     {subStatus === 'active' && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                        ✅ Suscripción activa · vence {formatDate(driver.subscription_expires_at)}
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="check" size={12} />
+                          Suscripcion activa · vence {formatDate(driver.subscription_expires_at)}
+                        </span>
                       </span>
                     )}
                     {subStatus === 'expired' && (
                       <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
-                        ⚠️ Suscripción vencida · {formatDate(driver.subscription_expires_at)}
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="exclamation" size={12} />
+                          Suscripcion vencida · {formatDate(driver.subscription_expires_at)}
+                        </span>
                       </span>
                     )}
                     {subStatus === 'none' && (
@@ -337,7 +360,12 @@ export default function DriverCommissionPage() {
                       className="px-5 py-2 bg-[#F5C518] text-[#1C1C2E] rounded-lg text-sm font-semibold
                         hover:bg-[#E6A800] disabled:opacity-50 transition-colors"
                     >
-                      {saving === driver.email ? 'Guardando...' : '💾 Guardar'}
+                      {saving === driver.email ? 'Guardando...' : (
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="document" size={14} />
+                          Guardar
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>

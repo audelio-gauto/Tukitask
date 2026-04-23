@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon } from '@/components/Icon';
 
 interface Tecnico {
   email: string;
@@ -211,7 +212,14 @@ export default function ServiceCommissionPage() {
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
-      {success && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">✅ {success}</div>}
+      {success && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+          <span className="inline-flex items-center gap-1">
+            <Icon name="check" size={14} />
+            {success}
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 border-b border-gray-200">
@@ -249,14 +257,22 @@ export default function ServiceCommissionPage() {
                   onClick={() => setShowNewCat(!showNewCat)}
                   className="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600"
                 >
-                  ➕ Nueva Categoría
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="plus" size={14} />
+                    Nueva Categoría
+                  </span>
                 </button>
                 <button
                   onClick={handleSavePricing}
                   disabled={savingPricing}
                   className="px-4 py-1.5 bg-[#F5C518] text-[#1C1C2E] text-sm font-semibold rounded-lg hover:bg-[#E6A800] disabled:opacity-50"
                 >
-                  {savingPricing ? 'Guardando...' : '💾 Guardar'}
+                  {savingPricing ? 'Guardando...' : (
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="document" size={14} />
+                      Guardar
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -284,9 +300,9 @@ export default function ServiceCommissionPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-500 mb-1">Emoji</label>
+                    <label className="block text-[11px] text-gray-500 mb-1">Icono</label>
                     <input
-                      type="text" placeholder="🎨"
+                      type="text" placeholder="icono"
                       value={newCat.emoji}
                       onChange={e => setNewCat(p => ({ ...p, emoji: e.target.value }))}
                       className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
@@ -397,7 +413,10 @@ export default function ServiceCommissionPage() {
                         title={s.is_active ? 'Desactivar' : 'Activar'}
                         className={`px-2 py-1 rounded text-xs font-semibold ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}
                       >
-                        {s.is_active ? '✅ Activo' : '⏸ Inactivo'}
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name={s.is_active ? 'check' : 'clock'} size={12} />
+                          {s.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -405,7 +424,7 @@ export default function ServiceCommissionPage() {
                         className="px-2 py-1 rounded text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100"
                         title="Eliminar categoría"
                       >
-                        🗑
+                        <Icon name="trash" size={12} />
                       </button>
                     </div>
                   </div>
@@ -469,12 +488,18 @@ export default function ServiceCommissionPage() {
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {subStatus === 'active' && (
                           <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                            ✅ Suscripción activa · vence {formatDate(t.subscription_expires_at)}
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="check" size={12} />
+                              Suscripcion activa · vence {formatDate(t.subscription_expires_at)}
+                            </span>
                           </span>
                         )}
                         {subStatus === 'expired' && (
                           <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
-                            ⚠️ Suscripción vencida · {formatDate(t.subscription_expires_at)}
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="exclamation" size={12} />
+                              Suscripcion vencida · {formatDate(t.subscription_expires_at)}
+                            </span>
                           </span>
                         )}
                         {subStatus === 'none' && (
@@ -585,7 +610,12 @@ export default function ServiceCommissionPage() {
                           disabled={saving === t.email}
                           className="px-5 py-2 bg-[#F5C518] text-[#1C1C2E] rounded-lg text-sm font-semibold hover:bg-[#E6A800] disabled:opacity-50 transition-colors"
                         >
-                          {saving === t.email ? 'Guardando...' : '💾 Guardar'}
+                          {saving === t.email ? 'Guardando...' : (
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="document" size={14} />
+                              Guardar
+                            </span>
+                          )}
                         </button>
                       </div>
                     </div>

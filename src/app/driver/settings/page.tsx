@@ -1,36 +1,38 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import type React from 'react';
 import { useTheme } from '@/lib/useTheme';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { useWorkerContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
+import { Icon } from '@/components/Icon';
 
 const VEHICLE_TYPES = [
-  { value: 'moto',       label: 'Moto',       emoji: '🏍️', color: '#f59e0b' },
-  { value: 'auto',       label: 'Auto',       emoji: '🚗', color: '#3b82f6' },
-  { value: 'moto_carro', label: 'Moto carro', emoji: '🚙', color: '#8b5cf6' },
-  { value: 'camion',     label: 'Camión',     emoji: '🚛', color: '#ef4444' },
+  { value: 'moto',       label: 'Moto',       icon: 'bolt', color: '#f59e0b' },
+  { value: 'auto',       label: 'Auto',       icon: 'car', color: '#3b82f6' },
+  { value: 'moto_carro', label: 'Moto carro', icon: 'truck', color: '#8b5cf6' },
+  { value: 'camion',     label: 'Camion',     icon: 'truck', color: '#ef4444' },
 ];
 
 const NAV_APPS = [
-  { value: 'google_maps', label: 'Google Maps', logo: '🗺️' },
-  { value: 'waze',        label: 'Waze',        logo: '📍' },
+  { value: 'google_maps', label: 'Google Maps', logo: 'map' },
+  { value: 'waze',        label: 'Waze',        logo: 'map-pin' },
 ];
 
-type DocEntry = { key: string; label: string; icon: string; hint?: string; requiresExpiry?: boolean };
+type DocEntry = { key: string; label: string; icon: React.ComponentProps<typeof Icon>['name']; hint?: string; requiresExpiry?: boolean };
 
 const PERSONAL_DOCS: DocEntry[] = [
-  { key: 'cedula_frente', label: 'Cédula — frente',          icon: '🪪', requiresExpiry: true },
-  { key: 'antecedentes',  label: 'Antecedentes policiales',  icon: '📋', hint: 'Vigente', requiresExpiry: true },
-  { key: 'domicilio',     label: 'Comprobante de domicilio', icon: '🏠', hint: 'ANDE, agua o internet' },
+  { key: 'cedula_frente', label: 'Cedula — frente',          icon: 'document', requiresExpiry: true },
+  { key: 'antecedentes',  label: 'Antecedentes policiales',  icon: 'clipboard', hint: 'Vigente', requiresExpiry: true },
+  { key: 'domicilio',     label: 'Comprobante de domicilio', icon: 'home', hint: 'ANDE, agua o internet' },
 ];
 
 const VEHICLE_DOCS: DocEntry[] = [
-  { key: 'registro_frente',     label: 'Registro de conducir — frente', icon: '🚗', requiresExpiry: true },
-  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',  icon: '🚗', requiresExpiry: true },
-  { key: 'cedula_verde_frente', label: 'Cédula Verde — frente',         icon: '📄' },
-  { key: 'cedula_verde_dorso',  label: 'Cédula Verde — dorso',          icon: '📄' },
+  { key: 'registro_frente',     label: 'Registro de conducir — frente', icon: 'car', requiresExpiry: true },
+  { key: 'registro_dorso',      label: 'Registro de conducir — dorso',  icon: 'car', requiresExpiry: true },
+  { key: 'cedula_verde_frente', label: 'Cedula Verde — frente',         icon: 'document' },
+  { key: 'cedula_verde_dorso',  label: 'Cedula Verde — dorso',          icon: 'document' },
 ];
 
 export default function DriverSettingsPage() {
@@ -286,7 +288,9 @@ export default function DriverSettingsPage() {
                 display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
                 background: 'rgba(16,185,129,0.15)', borderRadius: 99, padding: '2px 10px',
               }}>
-                <span style={{ fontSize: '0.85rem' }}>{selectedVehicle.emoji}</span>
+                <span style={{ display: 'inline-flex', color: '#10b981' }}>
+                  <Icon name={selectedVehicle.icon as import('@/components/Icon').IconName} size={12} />
+                </span>
                 <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: 600 }}>{selectedVehicle.label}</span>
                 {vehicleDetails[vehicleType]?.marca && <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>· {vehicleDetails[vehicleType].marca}</span>}
                 {vehicleDetails[vehicleType]?.matricula && <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>· {vehicleDetails[vehicleType].matricula}</span>}
@@ -326,7 +330,9 @@ export default function DriverSettingsPage() {
                     outline: 'none',
                   }}
                 >
-                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{v.emoji}</span>
+                  <span style={{ display: 'inline-flex', lineHeight: 1, color: active ? v.color : 'var(--text-muted)' }}>
+                    <Icon name={v.icon as import('@/components/Icon').IconName} size={18} />
+                  </span>
                   <span style={{
                     fontSize: '0.65rem', fontWeight: active ? 700 : 500,
                     color: active ? v.color : 'var(--label-color)',
@@ -389,7 +395,7 @@ export default function DriverSettingsPage() {
             });
             const bgColor = hasRejected || hasExpired ? 'var(--alert-error-bg)' : approvedCount === allDocs.length ? 'var(--stat-success-bg)' : 'var(--alert-warning-bg)';
             const borderColor = hasRejected || hasExpired ? 'var(--alert-error-border)' : approvedCount === allDocs.length ? 'var(--stat-success-border)' : 'var(--alert-warning-border)';
-            const icon = hasExpired ? '🚫' : hasRejected ? '❌' : approvedCount === allDocs.length ? '✅' : '📎';
+            const icon = hasExpired ? 'x' : hasRejected ? 'x' : approvedCount === allDocs.length ? 'check' : 'paper-clip';
             return (
               <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
                 <button
@@ -402,7 +408,9 @@ export default function DriverSettingsPage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '1.4rem' }}>{icon}</span>
+                    <span style={{ display: 'inline-flex', color: hasExpired || hasRejected ? '#ef4444' : approvedCount === allDocs.length ? '#10b981' : 'var(--text-muted)' }}>
+                      <Icon name={icon} size={16} />
+                    </span>
                     <div style={{ textAlign: 'left' }}>
                       <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
                       <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
@@ -429,19 +437,32 @@ export default function DriverSettingsPage() {
                       return (
                         <div key={doc.key}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--doc-card-bg)', borderRadius: 12, border: '1px solid var(--doc-card-border)' }}>
-                            <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                            <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text-muted)' }}>
+                              <Icon name={doc.icon} size={16} />
+                            </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
                               {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>}
                               {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
                             </div>
-                            {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
+                            {ds && (
+                              <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name={ds.status === 'approved' ? 'check' : ds.status === 'rejected' ? 'x' : 'clock'} size={10} />
+                                {ds.status === 'approved' ? 'Verificado' : ds.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                              </span>
+                            )}
                             {isUploading ? (
                               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                             ) : isLocked ? (
-                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Verificado</span>
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name="lock" size={10} />
+                                Verificado
+                              </span>
                             ) : needsExpiry ? (
-                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name="calendar" size={10} />
+                                Fecha primero
+                              </span>
                             ) : (
                               <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                 {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
@@ -475,19 +496,32 @@ export default function DriverSettingsPage() {
                       return (
                         <div key={docKey}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--doc-card-bg)', borderRadius: 12, border: '1px solid var(--doc-card-border)' }}>
-                            <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                            <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text-muted)' }}>
+                              <Icon name={doc.icon} size={16} />
+                            </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
                               {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>}
                               {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
                             </div>
-                            {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
+                            {ds && (
+                              <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name={ds.status === 'approved' ? 'check' : ds.status === 'rejected' ? 'x' : 'clock'} size={10} />
+                                {ds.status === 'approved' ? 'Verificado' : ds.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                              </span>
+                            )}
                             {isUploading ? (
                               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                             ) : isLocked ? (
-                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Verificado</span>
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name="lock" size={10} />
+                                Verificado
+                              </span>
                             ) : needsExpiry ? (
-                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Icon name="calendar" size={10} />
+                                Fecha primero
+                              </span>
                             ) : (
                               <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                 {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
@@ -542,7 +576,9 @@ export default function DriverSettingsPage() {
                     cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
                   }}
                 >
-                  <span style={{ fontSize: '1.4rem' }}>{app.logo}</span>
+                  <span style={{ display: 'inline-flex', color: active ? '#3b82f6' : 'var(--text-muted)' }}>
+                    <Icon name={app.logo as import('@/components/Icon').IconName} size={16} />
+                  </span>
                   <span style={{ fontWeight: active ? 700 : 500, color: active ? '#3b82f6' : 'var(--text-primary)', fontSize: '0.88rem' }}>
                     {app.label}
                   </span>
@@ -564,7 +600,7 @@ export default function DriverSettingsPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '1rem' }}>🎨</span>
+              <Icon name="settings" size={14} color="#8b5cf6" />
             </div>
             <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Tema de la app</h3>
           </div>
@@ -578,8 +614,8 @@ export default function DriverSettingsPage() {
               boxSizing: 'border-box',
             }}
           >
-            <option value="light">☀️ Claro</option>
-            <option value="dark">🌙 Oscuro</option>
+            <option value="light">Claro</option>
+            <option value="dark">Oscuro</option>
           </select>
         </div>
 
@@ -664,7 +700,12 @@ export default function DriverSettingsPage() {
             transition: 'all 0.2s',
           }}
         >
-          {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+          {saving ? 'Guardando...' : (
+            <>
+              <Icon name="check" size={16} />
+              Guardar Cambios
+            </>
+          )}
         </button>
 
         {message && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type React from 'react';
 import { useWorkerContext } from '../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import dynamic from 'next/dynamic';
@@ -9,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
+import { Icon } from '@/components/Icon';
 
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
@@ -22,8 +24,23 @@ interface ServiceCategory {
   sort_order: number;
 }
 
-function toUI(c: ServiceCategory): { key: string; label: string; icon: string } {
-  return { key: c.service_type, label: c.label, icon: c.emoji };
+const SERVICE_ICON_MAP: Record<string, React.ComponentProps<typeof Icon>['name']> = {
+  limpieza: 'tool',
+  niera: 'user',
+  cocina: 'clipboard',
+  eventos: 'calendar',
+  cuidado_mascotas: 'tag',
+  cuidado_adultos: 'user',
+  gestor: 'clipboard',
+  aire_split: 'refresh',
+  electrico: 'bolt',
+  plomeria: 'tool',
+  cerrajeria: 'lock',
+  otros: 'settings',
+};
+
+function toUI(c: ServiceCategory): { key: string; label: string; icon: React.ComponentProps<typeof Icon>['name'] } {
+  return { key: c.service_type, label: c.label, icon: SERVICE_ICON_MAP[c.service_type] || 'tool' };
 }
 
 function filterCatsByGender(cats: ServiceCategory[], gender: string) {
@@ -476,19 +493,19 @@ export default function TecnicoDashboard() {
       label: 'Citas Confirmadas',
       value: statsLoading ? '…' : statsData.citasConfirmadas,
       href: '/tecnico/citas',
-      icon: '📅',
+      icon: 'calendar',
     },
     {
       label: 'Tasa Aceptación',
       value: statsLoading ? '…' : (statsData.tasaAceptacion !== null ? `${statsData.tasaAceptacion}%` : '—'),
       href: '/tecnico/aceptacion',
-      icon: '🏆',
+      icon: 'trophy',
     },
     {
       label: 'Ganancias Hoy',
       value: statsLoading ? '…' : fmtGs(statsData.gananciasHoy),
       href: '/tecnico/ganancias',
-      icon: '💰',
+      icon: 'money',
     },
   ];
 
@@ -519,7 +536,10 @@ export default function TecnicoDashboard() {
       {/* Radar overlay — visible only when online and no active feed */}
       {available && !walletBlocked && !feedVisible && (
         <div className="tuki-radar">
-          <div className="tuki-radar-label">Money en camino… atento 👀</div>
+          <div className="tuki-radar-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="eye" size={14} />
+            Ofertas en camino… atento
+          </div>
           <div className="tuki-radar-rings">
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-ring" />
@@ -536,7 +556,7 @@ export default function TecnicoDashboard() {
             <img src={profilePhoto} alt="" loading="lazy" decoding="async" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              {displayName?.[0]?.toUpperCase() || '👤'}
+              {displayName?.[0]?.toUpperCase() || <Icon name="user" size={16} />}
             </div>
           )}
           {avgRating > 0 && (
@@ -569,7 +589,12 @@ export default function TecnicoDashboard() {
             : <span style={{ display: 'inline-block', width: 72, height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />}
         </span>
         <span className="tuki-wallet-pill-label" style={walletBlocked ? { color: 'rgba(248,113,113,0.9)' } : undefined}>
-          {walletBlocked ? '⚠️ Recargar' : 'Billetera'}
+          {walletBlocked ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="exclamation" size={12} />
+              Recargar
+            </span>
+          ) : 'Billetera'}
         </span>
       </Link>
 
@@ -614,7 +639,9 @@ export default function TecnicoDashboard() {
             {/* Gender indicator */}
             {gender && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0 12px', borderBottom: '1px solid #f1f5f9', marginBottom: 8 }}>
-                <span style={{ fontSize: '1.2rem' }}>{gender === 'hombre' ? '👨' : '👩'}</span>
+                <span style={{ display: 'inline-flex', color: '#F5C518' }}>
+                  <Icon name="user" size={16} />
+                </span>
                 <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
                   Perfil: <strong style={{ color: '#F5C518' }}>{gender === 'hombre' ? 'Hombre' : 'Mujer'}</strong>
                   {' · '}{enabledCount}/{catalogue.length} activos
@@ -632,7 +659,9 @@ export default function TecnicoDashboard() {
                   className={`driver-filter-item${serviceFilters[item.key] ? ' active' : ''}`}
                   onClick={() => toggleFilter(item.key)}
                 >
-                  <span className="driver-filter-item-icon">{item.icon}</span>
+                  <span className="driver-filter-item-icon">
+                    <Icon name={item.icon as import('@/components/Icon').IconName} size={14} />
+                  </span>
                   <div className="driver-filter-item-info">
                     <span className="driver-filter-item-label">{item.label}</span>
                   </div>
@@ -647,7 +676,10 @@ export default function TecnicoDashboard() {
             <div style={{ padding: '12px 4px 4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)' }}>
-                  📍 Rango de trabajo
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="map-pin" size={12} />
+                    Rango de trabajo
+                  </span>
                 </label>
                 <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#F5C518' }}>{rangoKm} km</span>
               </div>
@@ -671,7 +703,9 @@ export default function TecnicoDashboard() {
       {/* ── Aviso GPS ── */}
       {gpsNeeded && (
         <div style={{ position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 12px)', left: 12, right: 12, zIndex: 9990, background: 'var(--surface-2)', border: '1px solid #f59e0b', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.4rem' }}>📍</span>
+          <span style={{ display: 'inline-flex', color: '#f59e0b' }}>
+            <Icon name="map-pin" size={16} />
+          </span>
           <div>
             <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de trabajo ({rangoKm} km) requiere tu ubicación</div>
@@ -733,7 +767,10 @@ export default function TecnicoDashboard() {
           >
             {walletBlocked ? (
               <span className="tuki-sheet-hint-text" style={{ color: '#f87171', fontWeight: 700 }}>
-                ⚠️ Recargá tu billetera para recibir solicitudes
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="exclamation" size={12} />
+                  Recarga tu billetera para recibir solicitudes
+                </span>
               </span>
             ) : available ? (
               <>
@@ -751,7 +788,10 @@ export default function TecnicoDashboard() {
               </>
             ) : (
               <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
-                💤 Actívate para recibir solicitudes
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="refresh" size={12} />
+                  Activate para recibir solicitudes
+                </span>
               </span>
             )}
           </div>
@@ -763,21 +803,31 @@ export default function TecnicoDashboard() {
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
               <span className={`tuki-status-badge ${available && !walletBlocked ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available && !walletBlocked ? '💰 Hacer money' : '💸 Money off'}
+                {available && !walletBlocked ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="money" size={12} />
+                    Online
+                  </span>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="x" size={12} />
+                    Offline
+                  </span>
+                )}
               </span>
             </div>
             <label className="tuki-toggle">
               <input type="checkbox" checked={available && !walletBlocked} onChange={() => {
-                if (walletBlocked) { showToast('⚠️ Recargá tu billetera para activarte'); return; }
+                if (walletBlocked) { showToast('Recarga tu billetera para activarte'); return; }
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
                 if (!available) {
                   setAvailable(true);
                   try { localStorage.setItem('tecnico_available', 'true'); } catch {}
-                  showToast('💰 ¡Online! Buscando solicitudes…');
+                  showToast('Online. Buscando solicitudes…');
                 } else {
                   setAvailable(false);
                   try { localStorage.setItem('tecnico_available', 'false'); } catch {}
-                  showToast('💸 Offline — descansando');
+                  showToast('Offline. Descansando.');
                 }
               }} />
               <span className="tuki-toggle-slider" />
@@ -827,8 +877,8 @@ export default function TecnicoDashboard() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.5rem' }}>
-                    {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
+                  <span style={{ display: 'inline-flex', color: docAlerts.expired.length > 0 || docCounts.rejected > 0 ? '#ef4444' : '#9ca3af' }}>
+                    <Icon name={docAlerts.expired.length > 0 ? 'x' : docCounts.rejected > 0 ? 'x' : 'paper-clip'} size={16} />
                   </span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
@@ -850,7 +900,10 @@ export default function TecnicoDashboard() {
             <div style={{ marginBottom: '0.75rem', padding: '0.65rem 0.85rem', borderRadius: 12, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.20)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#C8960A' }}>
-                  🛠 Serv. activos · {rangoKm} km
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="tool" size={12} />
+                    Serv. activos · {rangoKm} km
+                  </span>
                 </span>
                 <button
                   type="button"
@@ -863,7 +916,10 @@ export default function TecnicoDashboard() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {catalogue.filter(s => serviceFilters[s.key]).map(s => (
                   <span key={s.key} style={{ fontSize: '0.75rem', background: 'rgba(245,197,24,0.10)', color: '#C8960A', borderRadius: 8, padding: '2px 8px', fontWeight: 600 }}>
-                    {s.icon} {s.label}
+                    <span style={{ display: 'inline-flex', marginRight: 4 }}>
+                      <Icon name={s.icon as import('@/components/Icon').IconName} size={12} />
+                    </span>
+                    {s.label}
                   </span>
                 ))}
                 {enabledCount === 0 && (
@@ -889,7 +945,9 @@ export default function TecnicoDashboard() {
           <div className="tuki-stats-grid">
             {stats.map((s) => (
               <Link key={s.label} href={s.href} className="tuki-stat-card">
-                <span className="tuki-stat-icon">{s.icon}</span>
+                <span className="tuki-stat-icon">
+                  <Icon name={s.icon as import('@/components/Icon').IconName} size={16} />
+                </span>
                 <div className="tuki-stat-value">{s.value}</div>
                 <div className="tuki-stat-label">{s.label}</div>
               </Link>
@@ -900,7 +958,10 @@ export default function TecnicoDashboard() {
           <div style={{ marginTop: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--tuki-text-main)', marginBottom: '0.75rem' }}>Acciones Rápidas</h2>
             <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: '1fr' }}>
-              <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)}>🛠 Mis Servicios</button>
+              <button className="tuki-btn tuki-btn-primary" onClick={() => setFilterOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                <Icon name="tool" size={14} />
+                Mis Servicios
+              </button>
             </div>
           </div>
         </div>

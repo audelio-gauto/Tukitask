@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import { Icon } from '@/components/Icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface RechargeRecord {
@@ -294,7 +295,9 @@ export default function RechargeHistoryPage() {
                 <tr>
                   <td colSpan={9} style={{ ...S.td, textAlign: 'center', padding: '3.5rem', color: '#94a3b8' }}>
                     <div>
-                      <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🔍</div>
+                      <div style={{ marginBottom: 8 }}>
+                        <Icon name="eye" size={24} className="text-gray-300" />
+                      </div>
                       <div style={{ fontWeight: 600, color: '#64748b' }}>Sin resultados</div>
                       <div style={{ fontSize: '0.82rem', marginTop: 4 }}>Intentá ajustar los filtros</div>
                     </div>

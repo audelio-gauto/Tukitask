@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon } from '@/components/Icon';
 
 export interface SuspendTarget {
   user_id: string;
@@ -147,7 +148,9 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
         <div className="px-5 pt-5 pb-3 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-bold text-gray-900">Gestión de Cuenta</h2>
-            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm">✕</button>
+            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+              <Icon name="x" size={12} />
+            </button>
           </div>
           <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
             {target.profile_photo ? (

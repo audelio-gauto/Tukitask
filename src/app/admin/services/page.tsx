@@ -1,10 +1,19 @@
 'use client';
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/Icon';
 
-const SECTIONS = [
+const SECTIONS: Array<{
+  href: string;
+  icon: IconName;
+  title: string;
+  desc: string;
+  color: string;
+  border: string;
+  textColor: string;
+}> = [
   {
     href: '/admin/services/tecnico',
-    icon: '👷',
+    icon: 'tool',
     title: 'Lista de Técnicos',
     desc: 'Ver, verificar y gestionar técnicos registrados.',
     color: 'rgba(99,102,241,0.08)',
@@ -13,7 +22,7 @@ const SECTIONS = [
   },
   {
     href: '/admin/services/commission',
-    icon: '💰',
+    icon: 'money',
     title: 'Comisiones & Suscripciones',
     desc: 'Ajustar comisión por técnico, precios y suscripciones.',
     color: 'rgba(251,146,60,0.08)',
@@ -35,7 +44,9 @@ export default function ServicesPage() {
             className="block rounded-xl border bg-white p-6 hover:shadow-md transition-shadow"
             style={{ borderColor: s.border }}
           >
-            <div className="text-3xl mb-3">{s.icon}</div>
+            <div className="mb-3">
+              <Icon name={s.icon} size={28} color={s.textColor} />
+            </div>
             <h3 className="font-semibold text-gray-900 text-base mb-1">{s.title}</h3>
             <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
           </Link>

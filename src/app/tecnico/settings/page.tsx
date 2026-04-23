@@ -5,12 +5,13 @@ import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
+import { Icon } from '@/components/Icon';
 
-const TECNICO_DOC_TYPES: { key: string; label: string; icon: string; hint?: string; requiresExpiry?: boolean }[] = [
-  { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cédula', icon: '🤳', hint: 'Cara y cédula visibles' },
-  { key: 'cedula_frente', label: 'Cédula — frente',               icon: '🪪', requiresExpiry: true },
-  { key: 'antecedentes',  label: 'Antecedentes policiales',       icon: '📋', hint: 'Vigente', requiresExpiry: true },
-  { key: 'domicilio',     label: 'Comprobante de domicilio',      icon: '🏠', hint: 'ANDE, agua o internet' },
+const TECNICO_DOC_TYPES: { key: string; label: string; icon: React.ComponentProps<typeof Icon>['name']; hint?: string; requiresExpiry?: boolean }[] = [
+  { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cedula', icon: 'camera', hint: 'Cara y cedula visibles' },
+  { key: 'cedula_frente', label: 'Cedula — frente',              icon: 'document', requiresExpiry: true },
+  { key: 'antecedentes',  label: 'Antecedentes policiales',      icon: 'clipboard', hint: 'Vigente', requiresExpiry: true },
+  { key: 'domicilio',     label: 'Comprobante de domicilio',     icon: 'home', hint: 'ANDE, agua o internet' },
 ];
 
 export default function TecnicoSettings() {
@@ -253,7 +254,14 @@ export default function TecnicoSettings() {
               fontSize: '0.6rem', fontWeight: 700, textAlign: 'center',
               padding: '3px 0', letterSpacing: '0.05em',
             }}>
-              {uploading ? '⏳' : '📷 CAMBIAR'}
+              {uploading ? (
+                <Icon name="refresh" size={12} color="#fff" />
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="camera" size={12} color="#fff" />
+                  CAMBIAR
+                </span>
+              )}
             </div>
           </div>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={async (e) => {
@@ -280,7 +288,7 @@ export default function TecnicoSettings() {
         </div>
 
         {/* ── SECCIÓN: Soy ── */}
-        <Section icon="🧑" title="Soy" required>
+        <Section icon="user" title="Soy" required>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             {(['hombre', 'mujer'] as const).map(g => (
               <button key={g} type="button" onClick={() => setGender(g)} style={{
@@ -292,7 +300,9 @@ export default function TecnicoSettings() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'all 0.18s', boxShadow: gender === g ? '0 4px 12px rgba(245,197,24,0.35)' : 'none',
               }}>
-                <span style={{ fontSize: '1.5rem' }}>{g === 'hombre' ? '👨' : '👩'}</span>
+                <span style={{ display: 'inline-flex' }}>
+                  <Icon name="user" size={18} />
+                </span>
                 <span>{g === 'hombre' ? 'Hombre' : 'Mujer'}</span>
               </button>
             ))}
@@ -304,7 +314,7 @@ export default function TecnicoSettings() {
 
         {/* ── SECCIÓN: Mis documentos ── */}
         <div ref={docsRef} style={{ scrollMarginTop: 80 }}>
-        <Section icon="📎" title="Mis documentos" collapsible>
+        <Section icon="paper-clip" title="Mis documentos" collapsible>
           <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
           </p>
@@ -318,7 +328,9 @@ export default function TecnicoSettings() {
               return (
                 <div key={doc.key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
+                  <span style={{ display: 'inline-flex', flexShrink: 0, color: '#6b7280' }}>
+                    <Icon name={doc.icon} size={16} />
+                  </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
                     {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
@@ -330,19 +342,30 @@ export default function TecnicoSettings() {
                       background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
                       color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
                     }}>
-                      {ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name={ds.status === 'approved' ? 'check' : ds.status === 'rejected' ? 'x' : 'clock'} size={10} />
+                        {ds.status === 'approved' ? 'Verificado' : ds.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                      </span>
                     </span>
                   )}
                   {isUploading ? (
                     <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
                   ) : isLocked ? (
-                    <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                    <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="lock" size={10} />
+                      Verificado
+                    </span>
                   ) : needsExpiry ? (
                     <span title="Ingresá la fecha de vencimiento primero" style={{
                       flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8,
                       background: '#f3f4f6', color: '#9ca3af',
                       fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb',
-                    }}>📅 Fecha primero</span>
+                    }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="calendar" size={10} />
+                        Fecha primero
+                      </span>
+                    </span>
                   ) : (
                     <label style={{
                       flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
@@ -384,7 +407,10 @@ export default function TecnicoSettings() {
                   </div>
                   {doc.requiresExpiry && (
                     <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <label style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap' }}>📅 Vence:</label>
+                      <label style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="calendar" size={10} />
+                        Vence:
+                      </label>
                       {isLocked ? (
                         <span style={{ fontSize: '0.75rem', color: '#374151', fontWeight: 600 }}>
                           {docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}
@@ -407,7 +433,7 @@ export default function TecnicoSettings() {
         </div>
 
         {/* ── SECCIÓN: Datos personales ── */}
-        <Section icon="👤" title="Datos personales">
+        <Section icon="user" title="Datos personales">
           <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
             <Field label="Nombre" required>
               <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" style={inputStyle} required />
@@ -422,7 +448,7 @@ export default function TecnicoSettings() {
         </Section>
 
         {/* ── SECCIÓN: Contacto ── */}
-        <Section icon="📞" title="Contacto">
+        <Section icon="mail" title="Contacto">
           <Field label="Teléfono / WhatsApp">
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+595 9XX XXX XXX" style={inputStyle} />
           </Field>
@@ -437,14 +463,14 @@ export default function TecnicoSettings() {
         </Section>
 
         {/* ── SECCIÓN: Cuenta ── */}
-        <Section icon="🔒" title="Cuenta">
+        <Section icon="lock" title="Cuenta">
           <Field label="Correo electrónico">
             <input type="email" value={email || ''} readOnly style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
           </Field>
           <Field label="Tema de la app">
             <select value={themeMode} onChange={e => setThemeMode(e.target.value === 'dark' ? 'dark' : 'light')} style={inputStyle}>
-              <option value="light">☀️ Claro</option>
-              <option value="dark">🌙 Oscuro</option>
+              <option value="light">Claro</option>
+              <option value="dark">Oscuro</option>
             </select>
           </Field>
           <Field label="APP de navegación">
@@ -458,12 +484,14 @@ export default function TecnicoSettings() {
         {/* ── Mensajes ── */}
         {success && (
           <div style={{ margin: '0 0 0.75rem', padding: '0.75rem 1rem', borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-            ✅ {success}
+            <Icon name="check" size={12} />
+            {success}
           </div>
         )}
         {error && (
           <div style={{ margin: '0 0 0.75rem', padding: '0.75rem 1rem', borderRadius: 12, background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-            ⚠️ {error}
+            <Icon name="exclamation" size={12} />
+            {error}
           </div>
         )}
 
@@ -487,7 +515,12 @@ export default function TecnicoSettings() {
               </svg>
               Guardando...
             </>
-          ) : '💾 Guardar configuración'}
+          ) : (
+            <>
+              <Icon name="check" size={16} />
+              Guardar configuración
+            </>
+          )}
         </button>
 
       </form>
@@ -496,7 +529,7 @@ export default function TecnicoSettings() {
 }
 
 /* ── Helpers de layout ── */
-function Section({ icon, title, required, collapsible, children }: { icon: string; title: string; required?: boolean; collapsible?: boolean; children: React.ReactNode }) {
+function Section({ icon, title, required, collapsible, children }: { icon: React.ComponentProps<typeof Icon>['name']; title: string; required?: boolean; collapsible?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(!collapsible);
   return (
     <div style={{ marginBottom: '1rem', background: 'var(--card-bg)', borderRadius: 16, border: '1px solid var(--card-border)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
@@ -504,7 +537,9 @@ function Section({ icon, title, required, collapsible, children }: { icon: strin
         onClick={collapsible ? () => setOpen(o => !o) : undefined}
         style={{ padding: '0.75rem 1rem', borderBottom: open ? '1px solid var(--card-section-border)' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: collapsible ? 'pointer' : 'default' }}
       >
-        <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+        <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}>
+          <Icon name={icon} size={16} />
+        </span>
         <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', flex: 1 }}>{title}</span>
         {required && <span style={{ color: '#ef4444', marginLeft: 2, fontSize: '0.85rem' }}>*</span>}
         {collapsible && <span style={{ fontSize: '0.85rem', color: '#9ca3af', transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>}

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import SuspendUserModal, { SuspendTarget } from '../../components/SuspendUserModal';
+import { Icon } from '@/components/Icon';
 
 interface TecnicoItem {
   id: string;
@@ -198,7 +199,8 @@ export default function TecnicoListPage() {
                   <div className="flex items-center">
                     {subActive && !subExpired ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                        ✓ {t.subscription_plan || 'Activa'}
+                        <Icon name="check" size={12} />
+                        {t.subscription_plan || 'Activa'}
                         {subExpires && <span className="opacity-60 text-[10px]">· {fmtDate(subExpires)}</span>}
                       </span>
                     ) : subExpires && subExpired ? (
@@ -219,7 +221,8 @@ export default function TecnicoListPage() {
                   <div className="flex items-center">
                     {isVerified ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                        ✓ Verificado
+                        <Icon name="check" size={12} />
+                        Verificado
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">

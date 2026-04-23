@@ -7,7 +7,9 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import type React from 'react';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
+import { Icon } from '@/components/Icon';
 
 // ── Sound system (reuses shared AudioContext pattern from audio.ts) ──────────
 let _popupAC: AudioContext | null = null;
@@ -64,22 +66,22 @@ function triggerVibration() {
 }
 
 // ── Icon/color by notification type ─────────────────────────────────────────
-const typeConfig: Record<string, { icon: string; color: string; bg: string }> = {
-  new_offer:       { icon: '💰', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
-  new_job_offer:   { icon: '💼', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
-  offer_accepted:  { icon: '✅', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-  job_accepted:    { icon: '✅', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-  offer_rejected:  { icon: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-  status_change:   { icon: '🔄', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  job_status:      { icon: '📋', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  new_order:       { icon: '📦', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  new_job:         { icon: '🔧', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  commission:      { icon: '💵', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-  wallet:          { icon: '👛', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  rating:          { icon: '⭐', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+const typeConfig: Record<string, { icon: React.ComponentProps<typeof Icon>['name']; color: string; bg: string }> = {
+  new_offer:       { icon: 'money', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
+  new_job_offer:   { icon: 'briefcase', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
+  offer_accepted:  { icon: 'check', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+  job_accepted:    { icon: 'check', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+  offer_rejected:  { icon: 'x', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  status_change:   { icon: 'refresh', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  job_status:      { icon: 'clipboard', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  new_order:       { icon: 'package', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  new_job:         { icon: 'tool', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  commission:      { icon: 'money', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+  wallet:          { icon: 'tag', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  rating:          { icon: 'star', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
 };
 
-const defaultConfig = { icon: '🔔', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' };
+const defaultConfig = { icon: 'bell' as const, color: '#F5C518', bg: 'rgba(245,197,24,0.12)' };
 
 // ── Component ────────────────────────────────────────────────────────────────
 interface Props {
@@ -189,11 +191,11 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.4rem',
+            color: cfg.color,
             flexShrink: 0,
             animation: notification.priority === 'urgent' ? 'urgentBounce 0.6s ease' : undefined,
           }}>
-            {cfg.icon}
+            <Icon name={cfg.icon} size={20} />
           </div>
 
           {/* Text content */}

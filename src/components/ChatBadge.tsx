@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { Icon } from '@/components/Icon';
 
 interface Props {
   email: string;
@@ -101,7 +102,7 @@ export function ChatBadge({ email, href, scope }: Props) {
         gap: 0,
       }}
     >
-      💬
+      <Icon name="chat" size={20} color="#fff" />
       <span style={{
         position: 'absolute',
         top: 2,

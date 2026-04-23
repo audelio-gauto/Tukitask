@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import { Icon } from '@/components/Icon';
 
 interface BankAlias {
   id: number;
@@ -110,7 +111,10 @@ export default function BankAliasPage() {
 
         {/* ── Formulario nuevo alias ── */}
         <div style={card}>
-          <p style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#1e293b' }}>➕ Nuevo Alias de Banco</p>
+          <p style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#1e293b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="plus" size={14} />
+            Nuevo Alias de Banco
+          </p>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             <input
               placeholder="Nombre del banco (ej: BNF)"
@@ -197,8 +201,9 @@ export default function BankAliasPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b', margin: 0 }}>
-                        🏦 {a.bank_name}
+                      <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b', margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="credit-card" size={14} />
+                        {a.bank_name}
                       </p>
                       <p style={{ fontSize: '1rem', fontWeight: 800, color: '#4f46e5', margin: '2px 0' }}>
                         {a.alias}
@@ -219,15 +224,30 @@ export default function BankAliasPage() {
                     <button
                       onClick={() => { setEditing(a.id); setEditData({}); }}
                       style={{ padding: '0.4rem 0.9rem', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', background: '#f8fafc', fontSize: '0.82rem', fontWeight: 600 }}
-                    >✏️ Editar</button>
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="pencil" size={12} />
+                        Editar
+                      </span>
+                    </button>
                     <button
                       onClick={() => handleToggle(a)}
                       style={{ padding: '0.4rem 0.9rem', borderRadius: 8, border: 'none', cursor: 'pointer', background: a.is_active ? '#fef3c7' : '#d1fae5', fontSize: '0.82rem', fontWeight: 600, color: a.is_active ? '#92400e' : '#065f46' }}
-                    >{a.is_active ? '⏸ Desactivar' : '▶ Activar'}</button>
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name={a.is_active ? 'clock' : 'check'} size={12} />
+                        {a.is_active ? 'Desactivar' : 'Activar'}
+                      </span>
+                    </button>
                     <button
                       onClick={() => handleDelete(a.id)}
                       style={{ padding: '0.4rem 0.9rem', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fee2e2', fontSize: '0.82rem', fontWeight: 600, color: '#991b1b' }}
-                    >🗑 Eliminar</button>
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="trash" size={12} />
+                        Eliminar
+                      </span>
+                    </button>
                   </div>
                 </div>
               )}

@@ -5,6 +5,7 @@ import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { Icon, type IconName } from '@/components/Icon';
 
 function StarDisplay({ rating, total }: { rating: number; total: number }) {
   if (!rating) return null;
@@ -12,7 +13,7 @@ function StarDisplay({ rating, total }: { rating: number; total: number }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
       <div style={{ display: 'flex', gap: 1 }}>
         {[1, 2, 3, 4, 5].map(s => (
-          <span key={s} style={{ fontSize: '1.05rem', color: rating >= s ? '#f59e0b' : '#d1d5db' }}>★</span>
+          <Icon key={s} name="star" size={14} color={rating >= s ? '#f59e0b' : '#d1d5db'} />
         ))}
       </div>
       <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{Number(rating).toFixed(1)}</span>
@@ -34,8 +35,8 @@ function ThemeSelector() {
         boxSizing: 'border-box',
       }}
     >
-      <option value="light">☀️ Claro</option>
-      <option value="dark">🌙 Oscuro</option>
+      <option value="light">Claro</option>
+      <option value="dark">Oscuro</option>
     </select>
   );
 }
@@ -63,9 +64,9 @@ export default function ClientSettingsPage() {
   const [idExpiries,  setIdExpiries]  = useState<Record<string, string>>({});
   const [idUploading, setIdUploading] = useState<Record<string, boolean>>({});
 
-  const ID_DOCS = [
-    { key: 'selfie_cedula', icon: '🤳', label: 'Selfie sosteniendo tu cédula', hint: 'Cara y cédula visibles', requiresExpiry: false },
-    { key: 'cedula_frente', icon: '🪪', label: 'Cédula — frente', hint: 'Con fecha de vencimiento visible', requiresExpiry: true },
+  const ID_DOCS: { key: string; icon: IconName; label: string; hint: string; requiresExpiry: boolean }[] = [
+    { key: 'selfie_cedula', icon: 'camera', label: 'Selfie sosteniendo tu cedula', hint: 'Cara y cedula visibles', requiresExpiry: false },
+    { key: 'cedula_frente', icon: 'document', label: 'Cedula — frente', hint: 'Con fecha de vencimiento visible', requiresExpiry: true },
   ];
 
   const loadIdDocs = useCallback(async () => {
@@ -115,7 +116,7 @@ export default function ClientSettingsPage() {
       if (json.error) { showToast('Error: ' + json.error); }
       else {
         setIdDocs(p => ({ ...p, [docType]: { ...p[docType], status: 'pending', rejection_reason: undefined } }));
-        showToast('Documento enviado ✓ — pendiente de revisión');
+        showToast('Documento enviado - pendiente de revision');
       }
     } catch { showToast('Error al subir documento'); }
     setIdUploading(p => ({ ...p, [docType]: false }));
@@ -139,7 +140,7 @@ export default function ClientSettingsPage() {
         body: JSON.stringify({ email, base64, mimeType: file.type, role: 'client' }),
       });
       const json = await res.json();
-      if (json.url) { setProfilePhoto(json.url + '?t=' + Date.now()); showToast('Foto actualizada ✓'); }
+      if (json.url) { setProfilePhoto(json.url + '?t=' + Date.now()); showToast('Foto actualizada'); }
       else showToast(json.error || 'Error al subir foto');
     } catch { showToast('Error de conexión'); }
     setUploading(false);
@@ -167,7 +168,7 @@ export default function ClientSettingsPage() {
     }
 
     setSavingProfile(false);
-    showToast('Configuración guardada ✓');
+    showToast('Configuracion guardada');
   };
 
   return (
@@ -176,7 +177,10 @@ export default function ClientSettingsPage() {
 
         {/* ── Perfil ── */}
         <div className="client-form-card">
-          <h3 className="client-form-title">🧑 Mi Perfil</h3>
+          <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="user" size={16} />
+            Mi Perfil
+          </h3>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
             <div
@@ -192,14 +196,16 @@ export default function ClientSettingsPage() {
               }}
             >
               {!profilePhoto && (
-                <span style={{ fontSize: '2rem' }}>{displayName?.[0]?.toUpperCase() || '👤'}</span>
+                <span style={{ display: 'flex', color: '#111' }}>
+                  {displayName?.[0]?.toUpperCase() || <Icon name="user" size={22} />}
+                </span>
               )}
               <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0,
                 background: 'rgba(0,0,0,0.5)', color: '#fff',
                 fontSize: '0.6rem', textAlign: 'center', padding: '3px 0',
               }}>
-                {uploading ? '...' : '📷 Cambiar'}
+                {uploading ? '...' : 'Cambiar'}
               </div>
             </div>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
@@ -210,8 +216,9 @@ export default function ClientSettingsPage() {
               </div>
               <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: 2 }}>{email}</div>
               {isVerified && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, padding: '2px 10px', borderRadius: 99, background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700 }}>
-                  ✅ Identidad verificada
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4, padding: '2px 10px', borderRadius: 99, background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <Icon name="check" size={12} color="#065f46" />
+                  Identidad verificada
                 </span>
               )}
               <StarDisplay rating={avgRating} total={totalRatings} />
@@ -239,7 +246,7 @@ export default function ClientSettingsPage() {
           const allApproved   = approvedCount === ID_DOCS.length;
           const bgCol    = isVerified ? 'var(--stat-success-bg)' : hasRejected ? 'var(--alert-error-bg)' : approvedCount > 0 ? 'var(--alert-warning-bg)' : 'var(--surface-2)';
           const bdCol    = isVerified ? 'var(--stat-success-border)' : hasRejected ? 'var(--alert-error-border)' : approvedCount > 0 ? 'var(--alert-warning-border)' : 'var(--border-subtle)';
-          const headerIcon = isVerified ? '✅' : hasRejected ? '❌' : approvedCount > 0 ? '⏳' : '🪪';
+          const headerIcon: IconName = isVerified ? 'check' : hasRejected ? 'x' : approvedCount > 0 ? 'clock' : 'document';
           return (
             <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
               <button
@@ -252,11 +259,11 @@ export default function ClientSettingsPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.4rem' }}>{headerIcon}</span>
+                  <Icon name={headerIcon} size={16} color={isVerified ? '#10b981' : hasRejected ? '#ef4444' : approvedCount > 0 ? '#f59e0b' : 'var(--text-muted)'} />
                   <div style={{ textAlign: 'left' }}>
                     <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Verificar tu identidad</p>
                     <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
-                      {isVerified ? 'Identidad verificada — badge ✅ activo en tu perfil'
+                      {isVerified ? 'Identidad verificada — badge activo en tu perfil'
                         : allApproved ? 'Documentos enviados — en revisión'
                         : hasRejected ? `${approvedCount}/${ID_DOCS.length} aprobados · documentos rechazados`
                         : approvedCount > 0 ? `${approvedCount}/${ID_DOCS.length} aprobados · opcional`
@@ -270,7 +277,7 @@ export default function ClientSettingsPage() {
               {idOpen && (
                 <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    Subí los dos documentos para obtener el <strong>badge ✅ Verificado</strong> en tu perfil.
+                    Subi los dos documentos para obtener el <strong>badge Verificado</strong> en tu perfil.
                     Es completamente opcional — el admin lo revisará y te avisará por email.
                   </p>
 
@@ -282,7 +289,9 @@ export default function ClientSettingsPage() {
                     return (
                       <div key={doc.key}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--input-bg)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
-                          <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
+                          <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text-secondary)' }}>
+                            <Icon name={doc.icon} size={16} />
+                          </span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
                             <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>
@@ -290,15 +299,21 @@ export default function ClientSettingsPage() {
                           </div>
                           {ds && (
                             <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>
-                              {ds.status === 'approved' ? '✅ Aprobado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+                              {ds.status === 'approved' ? 'Aprobado' : ds.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
                             </span>
                           )}
                           {isUp ? (
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                           ) : isLocked ? (
-                            <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Ok</span>
+                            <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Icon name="lock" size={12} color="var(--doc-verified-text)" />
+                              Ok
+                            </span>
                           ) : needsDate ? (
-                            <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
+                            <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Icon name="calendar" size={12} color="var(--doc-disabled-text)" />
+                              Fecha primero
+                            </span>
                           ) : (
                             <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'rejected' ? '#fff7f7' : '#f0f9ff', color: ds?.status === 'rejected' ? '#dc2626' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'rejected' ? '#fca5a5' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                               {ds ? '↑ Re-subir' : '↑ Subir'}
@@ -323,7 +338,10 @@ export default function ClientSettingsPage() {
 
         {/* ── Cuenta ── */}
         <div className="client-form-card">
-          <h3 className="client-form-title">🔒 Cuenta</h3>
+          <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="lock" size={16} />
+            Cuenta
+          </h3>
           <div className="client-form-grid">
             <div>
               <label className="client-form-label">Email</label>
@@ -339,7 +357,10 @@ export default function ClientSettingsPage() {
 
         {/* ── Tema ── */}
         <div className="client-form-card">
-          <h3 className="client-form-title">🎨 Tema de la app</h3>
+          <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="sun" size={16} />
+            Tema de la app
+          </h3>
           <ThemeSelector />
         </div>
 
@@ -367,7 +388,12 @@ export default function ClientSettingsPage() {
               </svg>
               Guardando...
             </>
-          ) : '💾 Guardar configuración'}
+          ) : (
+            <>
+              <Icon name="check" size={16} />
+              Guardar configuración
+            </>
+          )}
         </button>
 
       </form>

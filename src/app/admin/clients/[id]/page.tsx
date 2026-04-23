@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-
+import { Icon } from '@/components/Icon';
 interface ClientDetail {
   user: { id: string; email: string; role: string; created_at: string };
   profile: {
@@ -127,7 +127,10 @@ export default function ClientDetailPage() {
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
-          {toast.ok ? '✅' : '❌'} {toast.msg}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name={toast.ok ? 'check' : 'x'} size={14} />
+            {toast.msg}
+          </span>
         </div>
       )}
 
@@ -163,7 +166,10 @@ export default function ClientDetailPage() {
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-gray-900">{profile?.avg_rating ? Number(profile.avg_rating).toFixed(1) : '—'}</p>
-                <p className="text-xs text-gray-500">Rating ⭐</p>
+                <p className="text-xs text-gray-500 inline-flex items-center justify-center gap-1">
+                  <Icon name="star" size={12} />
+                  Rating
+                </p>
               </div>
             </div>
 
@@ -175,7 +181,10 @@ export default function ClientDetailPage() {
             {!editing ? (
               <button onClick={handleEdit}
                 className="mt-4 w-full py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                ✏️ Editar datos
+                <span className="inline-flex items-center gap-2">
+                  <Icon name="pencil" size={14} />
+                  Editar datos
+                </span>
               </button>
             ) : (
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">

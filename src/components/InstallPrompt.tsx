@@ -10,6 +10,7 @@
  * The banner auto-dismisses after install or after being closed once (persisted in localStorage).
  */
 import { useEffect, useState, useCallback } from 'react';
+import { Icon } from '@/components/Icon';
 
 type Mode = 'android' | 'ios' | null;
 
@@ -121,7 +122,9 @@ export function InstallPrompt() {
           background: 'none', border: 'none', color: 'var(--text-muted)',
           cursor: 'pointer', fontSize: '1.2rem', padding: '4px', lineHeight: 1,
           flexShrink: 0,
-        }}>✕</button>
+        }}>
+          <Icon name="x" size={16} />
+        </button>
       </div>
     );
   }
@@ -147,7 +150,9 @@ export function InstallPrompt() {
         <button onClick={dismiss} style={{
           marginLeft: 'auto', background: 'none', border: 'none',
           color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem',
-        }}>✕</button>
+        }}>
+          <Icon name="x" size={16} />
+        </button>
       </div>
 
       {!iosStep ? (
@@ -161,7 +166,9 @@ export function InstallPrompt() {
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
-              <span style={{ fontSize: '1.5rem' }}>⬆️</span>
+              <span style={{ display: 'flex', color: '#F5C518' }}>
+                <Icon name="arrow-up" size={18} />
+              </span>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>1. Compartir</span>
             </div>
             <div style={{
@@ -169,7 +176,9 @@ export function InstallPrompt() {
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
-              <span style={{ fontSize: '1.5rem' }}>➕</span>
+              <span style={{ display: 'flex', color: '#F5C518' }}>
+                <Icon name="plus" size={18} />
+              </span>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>2. Agregar</span>
             </div>
             <div style={{
@@ -177,7 +186,9 @@ export function InstallPrompt() {
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
-              <span style={{ fontSize: '1.5rem' }}>📱</span>
+              <span style={{ display: 'flex', color: '#F5C518' }}>
+                <Icon name="device-mobile" size={18} />
+              </span>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>3. Listo</span>
             </div>
           </div>

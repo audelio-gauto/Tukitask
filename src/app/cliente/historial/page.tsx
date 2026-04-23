@@ -1,12 +1,14 @@
 ﻿'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import type React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useClientContext } from '../context';
 import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
 import ChatModal from '@/components/ChatModal';
+import { Icon } from '@/components/Icon';
 import { authFetch } from '@/lib/authFetch';
 
 interface Order {
@@ -48,10 +50,19 @@ const SERVICE_LABELS: Record<string, string> = {
   cerrajeria: 'Cerrajeria', gestor: 'Gestor', otros: 'Otros',
 };
 
-const SERVICE_ICONS: Record<string, string> = {
-  limpieza: '🧹', niera: '👶', cocina: '🍳', eventos: '🎉',
-  cuidado_mascotas: '🐾', cuidado_adultos: '👴', aire_split: '❄️',
-  electrico: '⚡', plomeria: '🔧', cerrajeria: '🔑', gestor: '🗂️', otros: '✨',
+const SERVICE_ICONS: Record<string, React.ComponentProps<typeof Icon>['name']> = {
+  limpieza: 'tool',
+  niera: 'user',
+  cocina: 'clipboard',
+  eventos: 'calendar',
+  cuidado_mascotas: 'tag',
+  cuidado_adultos: 'user',
+  aire_split: 'refresh',
+  electrico: 'bolt',
+  plomeria: 'tool',
+  cerrajeria: 'lock',
+  gestor: 'clipboard',
+  otros: 'settings',
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -184,18 +195,31 @@ export default function ClienteHistorialPage() {
   const fmtGs = (n: number | null) => n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '';
   const fmtDate = (s: string | null) => !s ? '' : new Date(s).toLocaleDateString('es-PY', { day: '2-digit', month: 'short' });
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: '⏳ Buscando...', negotiating: '💬 Negociando', assigned: '✅ Asignado',
-      accepted: '✅ Asignado', in_progress: '🔧 En progreso', picking_up: '🚗 Recogiendo',
-      in_transit: '🚚 En camino', completado: '✅ Completado', completed: '✅ Completado',
-      delivered: '✅ Entregado', cancelled: '🚫 Cancelado por cliente', failed: '⚠️ Entrega fallida',
-      return_rejected: '📦 Devolución rechazada', returning: '↩️ Devolviendo', returned: '↩️ Devuelto',
-      return_delivered: '↩️ Devolución entregada', incident_closed: '✓ Incidente cerrado',
-      incidente: '⚠️ Incidente', client_confirmed: '✅ Confirmado', commission_charged: '✅ Completado',
-      driver_returning: '↩️ Conductor devolviendo',
+  const getStatusInfo = (status: string) => {
+    const labels: Record<string, { label: string; icon: React.ComponentProps<typeof Icon>['name'] }> = {
+      pending: { label: 'Buscando...', icon: 'refresh' },
+      negotiating: { label: 'Negociando', icon: 'chat' },
+      assigned: { label: 'Asignado', icon: 'check' },
+      accepted: { label: 'Asignado', icon: 'check' },
+      in_progress: { label: 'En progreso', icon: 'tool' },
+      picking_up: { label: 'Recogiendo', icon: 'truck' },
+      in_transit: { label: 'En camino', icon: 'truck' },
+      completado: { label: 'Completado', icon: 'check' },
+      completed: { label: 'Completado', icon: 'check' },
+      delivered: { label: 'Entregado', icon: 'check' },
+      cancelled: { label: 'Cancelado por cliente', icon: 'x' },
+      failed: { label: 'Entrega fallida', icon: 'exclamation' },
+      return_rejected: { label: 'Devolucion rechazada', icon: 'package' },
+      returning: { label: 'Devolviendo', icon: 'refresh' },
+      returned: { label: 'Devuelto', icon: 'refresh' },
+      return_delivered: { label: 'Devolucion entregada', icon: 'refresh' },
+      incident_closed: { label: 'Incidente cerrado', icon: 'check' },
+      incidente: { label: 'Incidente', icon: 'exclamation' },
+      client_confirmed: { label: 'Confirmado', icon: 'check' },
+      commission_charged: { label: 'Completado', icon: 'check' },
+      driver_returning: { label: 'Conductor devolviendo', icon: 'refresh' },
     };
-    return labels[status] || status;
+    return labels[status] || { label: status, icon: 'tag' };
   };
 
   const activeStatuses = ['pending', 'negotiating', 'assigned', 'accepted', 'in_progress', 'picking_up', 'in_transit', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
@@ -252,7 +276,9 @@ export default function ClienteHistorialPage() {
           width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)',
           background: 'rgba(245,197,24,0.15)', color: '#F5C518', fontSize: '1.1rem',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>↺</button>
+        }}>
+          <Icon name="refresh" size={16} />
+        </button>
       </div>
 
       {/* Scrollable body */}
@@ -277,24 +303,37 @@ export default function ClienteHistorialPage() {
                   {paginatedActive.map(item => item.kind === 'job' ? (
                     <div key={item.data.id} style={{ background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ fontSize: '1.5rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
+                        <span style={{ color: '#a5b4fc', display: 'inline-flex' }}>
+                          <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={18} />
+                        </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color="var(--text-muted)" />
+                            {getStatusInfo(item.data.status).label}
+                          </div>
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
                       <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                        📍 Ver en inicio
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <Icon name="map-pin" size={14} />
+                          Ver en inicio
+                        </span>
                       </Link>
                     </div>
                   ) : (
                     <div key={item.data.id} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ fontSize: '1.5rem' }}>📦</span>
+                        <span style={{ color: '#F5C518', display: 'inline-flex' }}>
+                          <Icon name="package" size={18} />
+                        </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color="var(--text-muted)" />
+                            {getStatusInfo(item.data.status).label}
+                          </div>
                         </div>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
@@ -316,7 +355,9 @@ export default function ClienteHistorialPage() {
                                 <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
                                   <button onClick={() => setOrderStopsOpen(p => ({ ...p, [item.data.id]: !p[item.data.id] }))}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.1)', padding: '4px 8px', cursor: 'pointer', border: 'none' }}>
-                                    <span style={{ fontSize: '0.72rem' }}>📦</span>
+                                    <span style={{ color: '#fbbf24', display: 'inline-flex' }}>
+                                      <Icon name="package" size={12} />
+                                    </span>
                                     <span style={{ flex: 1, fontSize: '0.7rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{(item.data as Order).order_stops!.length} paradas</span>
                                     <span style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 700 }}>{orderStopsOpen[item.data.id] ? '▲' : '▼'}</span>
                                   </button>
@@ -329,7 +370,12 @@ export default function ClienteHistorialPage() {
                                             <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: done ? 'rgba(34,197,94,0.2)' : fail ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)', border: `1px solid ${done ? '#22c55e' : fail ? '#ef4444' : 'rgba(245,158,11,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: done ? '#22c55e' : fail ? '#ef4444' : '#fbbf24', marginTop: 1 }}>{done ? '✓' : fail ? '✗' : s.sequence}</div>
                                             <div style={{ flex: 1 }}>
                                               <div style={{ fontSize: '0.71rem', color: done ? '#4ade80' : fail ? '#f87171' : '#fde68a', wordBreak: 'break-word', lineHeight: 1.3 }}>{s.address}</div>
-                                              {fail && s.fail_reason && <div style={{ fontSize: '0.63rem', color: '#fca5a5', marginTop: 1 }}>⚠️ {s.fail_reason}</div>}
+                                              {fail && s.fail_reason && (
+                                                <div style={{ fontSize: '0.63rem', color: '#fca5a5', marginTop: 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                  <Icon name="exclamation" size={10} color="#fca5a5" />
+                                                  {s.fail_reason}
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
                                         );
@@ -348,13 +394,18 @@ export default function ClienteHistorialPage() {
                       )}
                       <div style={{ display: 'flex', gap: 8 }}>
                         <Link href="/cliente" style={{ flex: 1, display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                          📍 Ver en inicio
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="map-pin" size={14} />
+                            Ver en inicio
+                          </span>
                         </Link>
                         <button
                           onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
                           style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)', background: 'rgba(245,197,24,0.1)', color: '#F5C518', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                           title="Chat 24h"
-                        >💬</button>
+                        >
+                          <Icon name="chat" size={16} />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -377,12 +428,21 @@ export default function ClienteHistorialPage() {
                   {paginatedDone.map(item => item.kind === 'job' ? (
                     <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
-                        <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
+                        <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
+                          <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={16} />
+                        </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: item.data.status === 'completado' ? '#4ade80' : '#f87171' }}>
-                              {item.data.status === 'completado' ? '✅ Completado' : item.data.status === 'cancelled' ? '❌ Cancelado' : '⚠️ Incidente'}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <Icon
+                                  name={item.data.status === 'completado' ? 'check' : item.data.status === 'cancelled' ? 'x' : 'exclamation'}
+                                  size={12}
+                                  color={item.data.status === 'completado' ? '#4ade80' : '#f87171'}
+                                />
+                                {item.data.status === 'completado' ? 'Completado' : item.data.status === 'cancelled' ? 'Cancelado' : 'Incidente'}
+                              </span>
                             </span>
                             {item.data.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.data.tecnico_name}</span>}
                           </div>
@@ -395,7 +455,10 @@ export default function ClienteHistorialPage() {
                       {item.data.status === 'completado' && !item.data.tecnico_rating && (
                         <button onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
                           style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}>
-                          ⭐ Calificar técnico
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="star" size={14} />
+                            Calificar tecnico
+                          </span>
                         </button>
                       )}
                       {item.data.tecnico_rating != null && (
@@ -408,19 +471,31 @@ export default function ClienteHistorialPage() {
                           onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
                           style={{ marginTop: 6, background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
                         >
-                          🚨 Reportar
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="flag" size={12} />
+                            Reportar
+                          </span>
                         </button>
                       )}
                     </div>
                   ) : (
                     <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                        <span style={{ fontSize: '1.4rem' }}>📦</span>
+                        <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
+                          <Icon name="package" size={16} />
+                        </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
-                              {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '✅ Entregado' : '❌ Cancelado'}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <Icon
+                                  name={['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'check' : 'x'}
+                                  size={12}
+                                  color={['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171'}
+                                />
+                                {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'Entregado' : 'Cancelado'}
+                              </span>
                             </span>
                             {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(item.data as Order).driver_name}</span>}
                           </div>
@@ -448,7 +523,9 @@ export default function ClienteHistorialPage() {
                                 <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
                                   <button onClick={() => setOrderStopsOpen(p => ({ ...p, [item.data.id]: !p[item.data.id] }))}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.08)', padding: '4px 8px', cursor: 'pointer', border: 'none' }}>
-                                    <span style={{ fontSize: '0.7rem' }}>📦</span>
+                                    <span style={{ color: '#fbbf24', display: 'inline-flex' }}>
+                                      <Icon name="package" size={12} />
+                                    </span>
                                     <span style={{ flex: 1, fontSize: '0.68rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{(item.data as Order).order_stops!.length} paradas de entrega</span>
                                     <span style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700 }}>{orderStopsOpen[item.data.id] ? '▲' : '▼ ver todas'}</span>
                                   </button>
@@ -510,7 +587,8 @@ export default function ClienteHistorialPage() {
                           onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
                           style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                         >
-                          💬 Chat 24h con el driver
+                          <Icon name="chat" size={14} />
+                          Chat 24h con el driver
                         </button>
                       )}
                       {/* Driver rating */}
@@ -524,7 +602,10 @@ export default function ClienteHistorialPage() {
                             onClick={() => setDriverRatingModal({ orderId: item.data.id, driverName: (item.data as Order).driver_name, driverPhoto: (item.data as Order).driver_photo })}
                             style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6 }}
                           >
-                            ⭐ Calificar driver
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <Icon name="star" size={14} />
+                              Calificar driver
+                            </span>
                           </button>
                         )
                       )}
@@ -533,7 +614,10 @@ export default function ClienteHistorialPage() {
                           onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
                           style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
                         >
-                          🚨 Reportar
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name="flag" size={12} />
+                            Reportar
+                          </span>
                         </button>
                       )}
                       {/* Tip + Favourite row */}
@@ -541,8 +625,9 @@ export default function ClienteHistorialPage() {
                         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                           {/* Tip */}
                           {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount ?? 0) > 0 && (
-                            <div style={{ flex: 1, padding: '8px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#4ade80', fontSize: '0.78rem', fontWeight: 700, textAlign: 'center' }}>
-                              💰 Propina: {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount!).toLocaleString('es-PY')} Gs
+                            <div style={{ flex: 1, padding: '8px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#4ade80', fontSize: '0.78rem', fontWeight: 700, textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                              <Icon name="money" size={12} color="#4ade80" />
+                              Propina: {(localTips[(item.data as Order).id] ?? (item.data as Order).tip_amount!).toLocaleString('es-PY')} Gs
                             </div>
                           )}
                         </div>

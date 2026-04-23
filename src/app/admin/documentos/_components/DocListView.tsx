@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon, type IconName } from '@/components/Icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DocRecord {
@@ -122,11 +123,14 @@ const TAB_BG:    Record<DriverTab, string>  = { listos: '#eff6ff', incompletos: 
 const TAB_BORDER:Record<DriverTab, string>  = { listos: '#bfdbfe', incompletos: '#fde68a', rechazados: '#fecaca', aprobados: '#bbf7d0' };
 
 // ─── StatChip ─────────────────────────────────────────────────────────────────
-function StatChip({ label, value, color, icon }: { label: string; value: number; color: string; icon?: string }) {
+function StatChip({ label, value, color, icon }: { label: string; value: number; color: string; icon?: IconName }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 10, background: '#fff', border: `1.5px solid ${color}33`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
       <span style={{ fontWeight: 900, fontSize: '1.15rem', color, lineHeight: 1 }}>{value}</span>
-      <span style={{ fontSize: '0.71rem', color: '#6b7280', lineHeight: 1.3 }}>{icon ? icon + ' ' : ''}{label}</span>
+      <span style={{ fontSize: '0.71rem', color: '#6b7280', lineHeight: 1.3, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {icon ? <Icon name={icon} size={12} /> : null}
+        {label}
+      </span>
     </div>
   );
 }
@@ -200,7 +204,7 @@ function DocThumb({
           <img src={signedUrl} alt={doc.doc_type} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: '1.8rem', opacity: 0.25 }}>📄</span>
+            <Icon name="document" size={22} className="text-gray-300" />
             <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>cargando…</span>
           </div>
         )}
@@ -212,12 +216,18 @@ function DocThumb({
         {/* Expiry overlay badge on image */}
         {expiry.expired && (
           <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.6rem', fontWeight: 800, background: '#ef4444ee', color: '#fff', borderRadius: 5, padding: '2px 6px' }}>
-            ⛔ VENCIDO
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="x" size={10} />
+              VENCIDO
+            </span>
           </span>
         )}
         {!expiry.expired && expiry.daysLeft !== null && (
           <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.6rem', fontWeight: 800, background: '#f59e0bee', color: '#fff', borderRadius: 5, padding: '2px 6px' }}>
-            ⚠️ {expiry.daysLeft}d
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="exclamation" size={10} />
+              {expiry.daysLeft}d
+            </span>
           </span>
         )}
       </div>
@@ -233,15 +243,31 @@ function DocThumb({
             background: expiry.expired ? '#fee2e2' : expiry.daysLeft !== null ? '#fef3c7' : '#f3f4f6',
             color:      expiry.expired ? '#dc2626' : expiry.daysLeft !== null ? '#d97706' : '#6b7280',
           }}>
-            {expiry.expired
-              ? `⛔ Vencido ${new Date(doc.expires_at).toLocaleDateString('es-PY')}`
-              : expiry.daysLeft !== null
-                ? `⚠️ Vence en ${expiry.daysLeft}d · ${new Date(doc.expires_at).toLocaleDateString('es-PY')}`
-                : `📅 ${new Date(doc.expires_at).toLocaleDateString('es-PY')}`}
+            {expiry.expired ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="x" size={10} />
+                Vencido {new Date(doc.expires_at).toLocaleDateString('es-PY')}
+              </span>
+            ) : expiry.daysLeft !== null ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="exclamation" size={10} />
+                Vence en {expiry.daysLeft}d · {new Date(doc.expires_at).toLocaleDateString('es-PY')}
+              </span>
+            ) : (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="calendar" size={10} />
+                {new Date(doc.expires_at).toLocaleDateString('es-PY')}
+              </span>
+            )}
           </span>
         )}
 
-        {conflict && <p style={{ margin: 0, fontSize: '0.62rem', color: '#d97706', fontWeight: 700 }}>⚠️ Conflicto — actualizá</p>}
+        {conflict && (
+          <p style={{ margin: 0, fontSize: '0.62rem', color: '#d97706', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Icon name="exclamation" size={10} />
+            Conflicto — actualiza
+          </p>
+        )}
         {localReason && localStatus === 'rejected' && (
           <p style={{ margin: 0, fontSize: '0.62rem', color: '#dc2626' }}>↳ {localReason}</p>
         )}
@@ -252,13 +278,17 @@ function DocThumb({
           background: localStatus === 'approved' ? '#d1fae5' : localStatus === 'rejected' ? '#fee2e2' : '#fef3c7',
           color:      localStatus === 'approved' ? '#065f46' : localStatus === 'rejected' ? '#991b1b' : '#92400e',
         }}>
-          {localStatus === 'approved' ? '✅ Aprobado' : localStatus === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}
+          <Icon name={localStatus === 'approved' ? 'check' : localStatus === 'rejected' ? 'x' : 'clock'} size={10} />
+          {localStatus === 'approved' ? 'Aprobado' : localStatus === 'rejected' ? 'Rechazado' : 'Pendiente'}
         </span>
 
         {/* Re-subida indicator */}
         {localStatus === 'rejected' && (
           <p style={{ margin: 0, fontSize: '0.6rem', color: '#9ca3af', fontStyle: 'italic' }}>
-            📤 Esperando re-envío del conductor
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="arrow-up" size={10} />
+              Esperando re-envio del conductor
+            </span>
           </p>
         )}
 
@@ -266,16 +296,24 @@ function DocThumb({
         {!showReject && localStatus !== 'approved' && (
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={approve} disabled={saving} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
-              {saving ? '…' : '✅ Aprobar'}
+              {saving ? '…' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="check" size={10} />
+                  Aprobar
+                </span>
+              )}
             </button>
             <button onClick={() => setShowReject(true)} disabled={saving} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: 'none', background: '#fee2e2', color: '#dc2626', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
-              ❌ Rechazar
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="x" size={10} />
+                Rechazar
+              </span>
             </button>
           </div>
         )}
         {!showReject && localStatus === 'approved' && (
           <button onClick={() => setShowReject(true)} style={{ padding: '4px 0', borderRadius: 7, border: 'none', background: '#f3f4f6', color: '#6b7280', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
-            ↩️ Revocar
+            Revocar
           </button>
         )}
         {showReject && (
@@ -302,7 +340,12 @@ function DocThumb({
           onClick={toggleHistory}
           style={{ padding: '3px 0', border: 'none', background: 'transparent', color: '#9ca3af', fontSize: '0.6rem', cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}
         >
-          {loadingHist ? 'Cargando historial…' : showHistory ? '▲ Ocultar historial' : '🕐 Ver historial'}
+          {loadingHist ? 'Cargando historial…' : showHistory ? '▲ Ocultar historial' : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="clock" size={10} />
+              Ver historial
+            </span>
+          )}
         </button>
         {showHistory && (
           <div style={{ fontSize: '0.6rem', color: '#6b7280', display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 120, overflowY: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: 5 }}>
@@ -310,7 +353,10 @@ function DocThumb({
               <span>Sin historial registrado.</span>
             ) : history.map(h => (
               <div key={h.id} style={{ borderLeft: `2px solid ${h.action === 'approved' ? '#10b981' : h.action === 'rejected' ? '#ef4444' : '#f59e0b'}`, paddingLeft: 5, paddingBottom: 2 }}>
-                <span style={{ fontWeight: 700 }}>{h.action === 'approved' ? '✅' : h.action === 'rejected' ? '❌' : '⏳'} {h.action}</span>
+                <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name={h.action === 'approved' ? 'check' : h.action === 'rejected' ? 'x' : 'clock'} size={10} />
+                  {h.action}
+                </span>
                 {' · '}{h.admin_email}{' · '}{new Date(h.created_at).toLocaleString('es-PY')}
                 {h.rejection_reason && <span style={{ color: '#dc2626' }}> — {h.rejection_reason}</span>}
               </div>
@@ -397,8 +443,8 @@ function DriverCard({
         {group.profile.photo ? (
           <img src={group.profile.photo} alt="" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2.5px solid ${tabColor}` }} />
         ) : (
-          <div style={{ width: 50, height: 50, borderRadius: '50%', background: tabColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0, border: `2.5px solid ${tabColor}` }}>
-            {group.role === 'tecnico' ? '🔧' : group.role === 'client' ? '🧑' : '🚗'}
+          <div style={{ width: 50, height: 50, borderRadius: '50%', background: tabColor + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2.5px solid ${tabColor}` }}>
+            <Icon name={group.role === 'tecnico' ? 'tool' : group.role === 'client' ? 'user' : 'car'} size={20} color={tabColor} />
           </div>
         )}
 
@@ -409,17 +455,24 @@ function DriverCard({
               {group.profile.name !== group.email ? group.profile.name : '(sin nombre)'}
             </span>
             <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: group.role === 'tecnico' ? '#f3e8ff' : group.role === 'client' ? '#fef9c3' : '#e0f2fe', color: group.role === 'tecnico' ? '#7c3aed' : group.role === 'client' ? '#854d0e' : '#0369a1' }}>
-              {group.role === 'tecnico' ? '🔧 Técnico' : group.role === 'client' ? '🧑 Cliente' : '🚗 Driver'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name={group.role === 'tecnico' ? 'tool' : group.role === 'client' ? 'user' : 'car'} size={10} />
+                {group.role === 'tecnico' ? 'Tecnico' : group.role === 'client' ? 'Cliente' : 'Driver'}
+              </span>
             </span>
           </div>
           <p style={{ margin: '1px 0 0', fontSize: '0.74rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.email}</p>
           {group.profile.vehicle && (
-            <p style={{ margin: '1px 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>🏍️ {group.profile.vehicle}</p>
+            <p style={{ margin: '1px 0 0', fontSize: '0.7rem', color: '#9ca3af', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="car" size={12} />
+              {group.profile.vehicle}
+            </p>
           )}
           {/* Oldest pending indicator */}
           {oldest && (
-            <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#2563eb', fontWeight: 700 }}>
-              ⏰ Esperando revisión hace {Math.floor((Date.now() - oldest.getTime()) / 86400000)}d
+            <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#2563eb', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="clock" size={10} />
+              Esperando revision hace {Math.floor((Date.now() - oldest.getTime()) / 86400000)}d
             </p>
           )}
           {/* Chips */}
@@ -427,12 +480,42 @@ function DriverCard({
             <span style={{ fontSize: '0.68rem', background: '#f3f4f6', color: '#374151', borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>
               {localDocs.length}/{required}
             </span>
-            {approved > 0 && <span style={{ fontSize: '0.68rem', background: '#d1fae5', color: '#065f46',  borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>✅ {approved}</span>}
-            {pending  > 0 && <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#92400e',  borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>⏳ {pending}</span>}
-            {rejected > 0 && <span style={{ fontSize: '0.68rem', background: '#fee2e2', color: '#991b1b',  borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>📤 {rejected} re-envío</span>}
-            {missing  > 0 && <span style={{ fontSize: '0.68rem', background: '#f3f4f6', color: '#6b7280',  borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>📭 {missing} falt{missing > 1 ? 'an' : 'a'}</span>}
-            {expiredCount > 0 && <span style={{ fontSize: '0.68rem', background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '2px 6px', fontWeight: 800 }}>⛔ {expiredCount} vencido{expiredCount > 1 ? 's' : ''}</span>}
-            {soonCount > 0 && expiredCount === 0 && <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#d97706', borderRadius: 6, padding: '2px 6px', fontWeight: 800 }}>⚠️ {soonCount} vence pronto</span>}
+            {approved > 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#d1fae5', color: '#065f46', borderRadius: 6, padding: '2px 6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="check" size={10} />
+                {approved}
+              </span>
+            )}
+            {pending > 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="clock" size={10} />
+                {pending}
+              </span>
+            )}
+            {rejected > 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="arrow-up" size={10} />
+                {rejected} re-envio
+              </span>
+            )}
+            {missing > 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '2px 6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="mail" size={10} />
+                {missing} falt{missing > 1 ? 'an' : 'a'}
+              </span>
+            )}
+            {expiredCount > 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '2px 6px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="x" size={10} />
+                {expiredCount} vencido{expiredCount > 1 ? 's' : ''}
+              </span>
+            )}
+            {soonCount > 0 && expiredCount === 0 && (
+              <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#d97706', borderRadius: 6, padding: '2px 6px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="exclamation" size={10} />
+                {soonCount} vence pronto
+              </span>
+            )}
           </div>
         </div>
         <span style={{ color: '#9ca3af', fontSize: '1.1rem', flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
@@ -464,12 +547,18 @@ function DriverCard({
               disabled={bulkLoading}
               style={{ marginTop: 14, width: '100%', padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer', background: bulkLoading ? '#e5e7eb' : 'linear-gradient(135deg,#10b981,#059669)', color: bulkLoading ? '#9ca3af' : '#fff', fontWeight: 800, fontSize: '0.92rem' }}
             >
-              {bulkLoading ? 'Aprobando…' : `✅ Aprobar todos los pendientes (${pending})`}
+              {bulkLoading ? 'Aprobando…' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="check" size={12} />
+                  Aprobar todos los pendientes ({pending})
+                </span>
+              )}
             </button>
           )}
           {pending === 0 && rejected === 0 && missing === 0 && expiredCount === 0 && (
-            <p style={{ textAlign: 'center', color: '#059669', fontWeight: 700, fontSize: '0.85rem', margin: '12px 0 0' }}>
-              🎉 Todos los documentos verificados — conductor habilitado
+            <p style={{ textAlign: 'center', color: '#059669', fontWeight: 700, fontSize: '0.85rem', margin: '12px 0 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="trophy" size={14} />
+              Todos los documentos verificados — conductor habilitado
             </p>
           )}
         </div>
@@ -585,12 +674,12 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
   const statsExpired = groups.filter(g => g.docs.some(d => expiryStatus(d.expires_at).expired)).length;
   const statsSoon    = groups.filter(g => !g.docs.some(d => expiryStatus(d.expires_at).expired) && g.docs.some(d => expiryStatus(d.expires_at).daysLeft !== null)).length;
 
-  const tabs: { key: DriverTab | 'todos'; label: string; count: number; color: string }[] = [
-    { key: 'listos',      label: '🔵 Listos para revisar', count: byTab.listos.length,      color: '#2563eb' },
-    { key: 'rechazados',  label: '🔴 Con rechazados',      count: byTab.rechazados.length,  color: '#dc2626' },
-    { key: 'incompletos', label: '🟡 Incompletos',          count: byTab.incompletos.length, color: '#d97706' },
-    { key: 'aprobados',   label: '🟢 Aprobados',            count: byTab.aprobados.length,   color: '#059669' },
-    { key: 'todos',       label: '📋 Todos',                count: filtered.length,          color: '#6b7280' },
+  const tabs: { key: DriverTab | 'todos'; label: string; count: number; color: string; icon: IconName }[] = [
+    { key: 'listos',      label: 'Listos para revisar', count: byTab.listos.length,      color: '#2563eb', icon: 'clock' },
+    { key: 'rechazados',  label: 'Con rechazados',      count: byTab.rechazados.length,  color: '#dc2626', icon: 'x' },
+    { key: 'incompletos', label: 'Incompletos',          count: byTab.incompletos.length, color: '#d97706', icon: 'exclamation' },
+    { key: 'aprobados',   label: 'Aprobados',            count: byTab.aprobados.length,   color: '#059669', icon: 'check' },
+    { key: 'todos',       label: 'Todos',                count: filtered.length,          color: '#6b7280', icon: 'clipboard' },
   ];
 
   if (!token) {
@@ -618,14 +707,22 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
             onClick={() => exportCSV(filtered)}
             className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
           >
-            📥 Exportar CSV
+            <span className="inline-flex items-center gap-2">
+              <Icon name="arrow-up" size={14} />
+              Exportar CSV
+            </span>
           </button>
           <button
             onClick={() => { setGroups([]); setNextCursor(null); setHasMore(false); fetchGroups(false, null); }}
             disabled={loading}
             className="px-4 py-2 rounded-xl bg-[#F5C518] text-[#1C1C2E] text-sm font-bold hover:bg-[#e6b800] transition-colors disabled:opacity-60"
           >
-            {loading ? '⟳ Cargando…' : '🔄 Actualizar'}
+            {loading ? 'Cargando…' : (
+              <span className="inline-flex items-center gap-2">
+                <Icon name="refresh" size={14} />
+                Actualizar
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -637,8 +734,8 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
           <StatChip value={byTabAll.rechazados.length}  label="con rechazados"       color="#dc2626" />
           <StatChip value={byTabAll.incompletos.length} label="incompletos"           color="#d97706" />
           <StatChip value={byTabAll.aprobados.length}   label="aprobados"             color="#059669" />
-          {statsExpired > 0 && <StatChip value={statsExpired} label="con docs vencidos"    color="#ef4444" icon="⛔" />}
-          {statsSoon    > 0 && <StatChip value={statsSoon}    label="con docs por vencer"  color="#f59e0b" icon="⚠️" />}
+          {statsExpired > 0 && <StatChip value={statsExpired} label="con docs vencidos"    color="#ef4444" icon="x" />}
+          {statsSoon    > 0 && <StatChip value={statsSoon}    label="con docs por vencer"  color="#f59e0b" icon="exclamation" />}
         </div>
       )}
 
@@ -648,7 +745,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 Buscar por nombre o correo…"
+          placeholder="Buscar por nombre o correo…"
           className="flex-1 min-w-[220px] px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#F5C518] shadow-sm"
         />
         <div className="flex bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -658,7 +755,12 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
               onClick={() => setRoleFilter(r)}
               className={`px-3 py-2 text-sm font-bold transition-colors whitespace-nowrap ${roleFilter === r ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
             >
-              {r === 'all' ? 'Todos' : r === 'driver' ? '🚗 Driver' : r === 'tecnico' ? '🔧 Técnico' : '🧑 Cliente'}
+              <span className="inline-flex items-center gap-1">
+                {r === 'all' ? null : (
+                  <Icon name={r === 'driver' ? 'car' : r === 'tecnico' ? 'tool' : 'user'} size={12} />
+                )}
+                {r === 'all' ? 'Todos' : r === 'driver' ? 'Driver' : r === 'tecnico' ? 'Tecnico' : 'Cliente'}
+              </span>
             </button>
           ))}
         </div>
@@ -666,7 +768,10 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
 
       {/* ── Date range filter ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-        <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>📅 Filtrar por fecha de envío:</span>
+        <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="calendar" size={12} />
+          Filtrar por fecha de envio:
+        </span>
         <input
           type="date"
           value={dateFrom}
@@ -685,7 +790,10 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
             onClick={() => { setDateFrom(''); setDateTo(''); }}
             style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
           >
-            ✕ Limpiar
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="x" size={10} />
+              Limpiar
+            </span>
           </button>
         )}
       </div>
@@ -704,6 +812,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
               transition: 'all 0.15s',
             }}
           >
+            <Icon name={t.icon} size={12} />
             {t.label}
             <span style={{ background: activeTab === t.key ? '#ffffff33' : '#e5e7eb', color: activeTab === t.key ? '#fff' : '#374151', borderRadius: 99, padding: '0 6px', fontSize: '0.75rem', fontWeight: 800, minWidth: 20, textAlign: 'center' }}>
               {t.count}
@@ -720,7 +829,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <div className="text-4xl mb-3">
-            {activeTab === 'aprobados' ? '🎉' : activeTab === 'listos' ? '✨' : '🔍'}
+            <Icon name={activeTab === 'aprobados' ? 'trophy' : activeTab === 'listos' ? 'star' : 'eye'} size={28} className="text-gray-300" />
           </div>
           <p className="font-medium text-gray-500">
             {activeTab === 'aprobados' ? 'Ningún conductor completamente aprobado aún'
@@ -754,7 +863,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
               opacity: loadingMore ? 0.6 : 1, transition: 'opacity 0.15s',
             }}
           >
-            {loadingMore ? '⟳ Cargando…' : '⬇ Cargar más conductores'}
+            {loadingMore ? 'Cargando…' : 'Cargar más conductores'}
           </button>
         </div>
       )}

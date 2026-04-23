@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { Icon } from '@/components/Icon';
 
 // Leaflet — no WebGL required, works in all browsers
 const DEFAULT_CENTER: [number, number] = [-25.2637, -57.5759]; // [lat, lng] Asunción
@@ -244,7 +245,7 @@ export default function RutaPage() {
       seen.add(u.id);
       const color = effectiveColor(u);
       const stale = isStale(u);
-      const inits = initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧');
+      const inits = initials(u.name) || (u.role === 'driver' ? 'D' : 'T');
 
       const icon = L.divIcon({
         className: '',
@@ -279,7 +280,7 @@ export default function RutaPage() {
           <span style="font-size:11px;font-weight:600;color:${stale ? '#6b7280' : st.color};">${stale ? 'Sin señal' : st.text}</span>
           <span style="font-size:10px;color:#999;">· ${u.role === 'driver' ? 'Conductor' : 'Técnico'}</span>
         </div>
-        ${stale ? `<div style="font-size:10px;color:#f59e0b;font-weight:600;">⚠ Sin GPS +10 min · última: ${timeAgo(u.updated_at)}</div>` : ''}
+        ${stale ? `<div style="font-size:10px;color:#f59e0b;font-weight:600;">Sin GPS +10 min · ultima: ${timeAgo(u.updated_at)}</div>` : ''}
       </div>`;
 
       if (markersRef.current.has(u.id)) {
@@ -668,7 +669,7 @@ export default function RutaPage() {
                           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
                           style={{ background: effectiveColor(u) + '33', border: `2px solid ${effectiveColor(u)}` }}
                         >
-                          {initials(u.name) || (u.role === 'driver' ? '🚗' : '🔧')}
+                          {initials(u.name) || (u.role === 'driver' ? 'D' : 'T')}
                         </div>
                       )}
                       {/* Online dot */}
@@ -691,7 +692,7 @@ export default function RutaPage() {
                           style={{ color: stale ? '#f59e0b' : st.color }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: stale ? '#f59e0b' : st.color }} />
-                          {stale ? '⚠ Sin señal' : st.text}
+                          {stale ? 'Sin señal' : st.text}
                         </span>
                         <span className="text-white/20 text-[10px]">·</span>
                         <span className="text-white/35 text-[10px]">
@@ -785,7 +786,10 @@ export default function RutaPage() {
       {/* ── Success toast ── */}
       {actionSuccess && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-5 py-3 rounded-xl text-sm shadow-xl backdrop-blur-sm">
-          ✓ {actionSuccess}
+          <span className="inline-flex items-center gap-2">
+            <Icon name="check" size={14} />
+            {actionSuccess}
+          </span>
         </div>
       )}
 
@@ -802,7 +806,7 @@ export default function RutaPage() {
             <div className="text-center mb-5">
               <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 text-2xl
                 ${confirm.action === 'block' ? 'bg-red-500/15' : confirm.action === 'suspend' ? 'bg-yellow-500/15' : 'bg-emerald-500/15'}`}>
-                {confirm.action === 'block' ? '🚫' : confirm.action === 'suspend' ? '⏸️' : '✅'}
+                <Icon name={confirm.action === 'block' ? 'x' : confirm.action === 'suspend' ? 'clock' : 'check'} size={22} />
               </div>
               <h3 className="text-white font-bold text-base">
                 {confirm.action === 'block' ? 'Bloquear usuario' : confirm.action === 'suspend' ? 'Suspender 30 días' : 'Reactivar usuario'}

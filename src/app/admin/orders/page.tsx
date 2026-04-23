@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Icon, type IconName } from '@/components/Icon';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Order {
@@ -78,20 +79,20 @@ const TECNICO_STATUSES: Record<string, { label: string; color: string }> = {
   incidente:           { label: 'Incidente',        color: 'bg-red-200 text-red-900' },
 };
 
-const VEHICLE_LABELS: Record<string, string> = {
-  moto:       '🏍️ Moto',
-  auto:       '🚗 Auto',
-  motocarro:  '🛺 Motocarro',
-  camion2t:   '🚛 Camión',
-  camion_3000:'🚛 Camión 3T',
-  camion_5000:'🚛 Camión 5T',
+const VEHICLE_LABELS: Record<string, { label: string; icon: IconName }> = {
+  moto:        { label: 'Moto', icon: 'car' },
+  auto:        { label: 'Auto', icon: 'car' },
+  motocarro:   { label: 'Motocarro', icon: 'car' },
+  camion2t:    { label: 'Camion', icon: 'truck' },
+  camion_3000: { label: 'Camion 3T', icon: 'truck' },
+  camion_5000: { label: 'Camion 5T', icon: 'truck' },
 };
 
 // ── Tab config ──────────────────────────────────────────────────────────────
-const TABS = [
-  { key: 'all',     label: 'Todos',     icon: '📋' },
-  { key: 'orders',  label: 'Envíos',    icon: '🚗' },
-  { key: 'tecnico', label: 'Servicios', icon: '🔧' },
+const TABS: { key: string; label: string; icon: IconName }[] = [
+  { key: 'all',     label: 'Todos',     icon: 'clipboard' },
+  { key: 'orders',  label: 'Envios',    icon: 'car' },
+  { key: 'tecnico', label: 'Servicios', icon: 'tool' },
 ];
 
 const ALL_ORDER_STATUS_KEYS = Object.keys(ORDER_STATUSES);
@@ -122,8 +123,18 @@ function StatusBadge({ status, type }: { status: string; type: 'order' | 'tecnic
 
 function TypeBadge({ type }: { type: 'order' | 'tecnico' }) {
   return type === 'order'
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">🚗 Envío</span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200">🔧 Servicio</span>;
+    ? (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+        <Icon name="car" size={12} />
+        Envio
+      </span>
+    )
+    : (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200">
+        <Icon name="tool" size={12} />
+        Servicio
+      </span>
+    );
 }
 
 function ActiveDot({ active }: { active: boolean }) {
@@ -186,7 +197,18 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
           {isOrder ? (
             <>
               <InfoField label="Driver" value={o.accepted_by} extra={<ActiveDot active={o._driver_active} />} />
-              <InfoField label="Vehículo" value={VEHICLE_LABELS[o.vehicle_type] ?? o.vehicle_type} />
+              <InfoField
+                label="Vehiculo"
+                value={(() => {
+                  const v = VEHICLE_LABELS[o.vehicle_type];
+                  return v ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name={v.icon} size={12} />
+                      {v.label}
+                    </span>
+                  ) : (o.vehicle_type || '—');
+                })()}
+              />
               <InfoField label="Pago" value={o.payment_method ?? '—'} />
               <InfoField label="Precio sugerido" value={fmtPrice(o.suggested_price)} />
               <InfoField label="Precio acordado" value={fmtPrice(o.offer)} highlight />
@@ -204,10 +226,21 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
         {/* Addresses */}
         {isOrder && (
           <div className="space-y-2">
-            <AddrField label="📍 Origen" value={o.pickup_address} />
+            <AddrField
+              label={(
+                <span className="inline-flex items-center gap-1">
+                  <Icon name="map-pin" size={12} />
+                  Origen
+                </span>
+              )}
+              value={o.pickup_address}
+            />
             {o.is_multi_stop && o.order_stops && o.order_stops.length > 0 ? (
               <div className="bg-gray-50 rounded-lg p-2.5">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">📦 Paradas ({o.order_stops.length})</p>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5 inline-flex items-center gap-1">
+                  <Icon name="package" size={10} />
+                  Paradas ({o.order_stops.length})
+                </p>
                 <div className="space-y-1.5">
                   {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, idx) => (
                     <div key={idx} className="flex items-start gap-2">
@@ -217,27 +250,66 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-700 leading-snug">{s.address}</p>
                         {s.status === 'failed' && s.fail_reason && (
-                          <p className="text-[10px] text-red-500 mt-0.5">✗ {s.fail_reason}</p>
+                          <p className="text-[10px] text-red-500 mt-0.5 inline-flex items-center gap-1">
+                            <Icon name="x" size={10} />
+                            {s.fail_reason}
+                          </p>
                         )}
                       </div>
                       <span className={`flex-shrink-0 text-[10px] font-semibold ${
                         s.status === 'delivered' ? 'text-green-600' : s.status === 'failed' ? 'text-red-500' : 'text-gray-400'
-                      }`}>{s.status === 'delivered' ? '✓' : s.status === 'failed' ? '✗' : '···'}</span>
+                      }`}>
+                        <Icon name={s.status === 'delivered' ? 'check' : s.status === 'failed' ? 'x' : 'clock'} size={10} />
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <AddrField label="🎯 Destino" value={o.delivery_address} />
+              <AddrField
+                label={(
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="map-pin" size={12} />
+                    Destino
+                  </span>
+                )}
+                value={o.delivery_address}
+              />
             )}
-            {o.description && <AddrField label="📝 Descripción" value={o.description} />}
+            {o.description && (
+              <AddrField
+                label={(
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="clipboard" size={12} />
+                    Descripcion
+                  </span>
+                )}
+                value={o.description}
+              />
+            )}
           </div>
         )}
         {!isOrder && j.address && (
-          <AddrField label="📍 Dirección" value={j.address} />
+          <AddrField
+            label={(
+              <span className="inline-flex items-center gap-1">
+                <Icon name="map-pin" size={12} />
+                Direccion
+              </span>
+            )}
+            value={j.address}
+          />
         )}
         {!isOrder && j.description && (
-          <AddrField label="📝 Descripción" value={j.description} />
+          <AddrField
+            label={(
+              <span className="inline-flex items-center gap-1">
+                <Icon name="clipboard" size={12} />
+                Descripcion
+              </span>
+            )}
+            value={j.description}
+          />
         )}
 
         {/* Cancel button */}
@@ -246,7 +318,10 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
             onClick={() => onCancel(row.id, row._type)}
             className="mt-auto w-full py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
           >
-            ✕ Cancelar pedido
+            <span className="inline-flex items-center gap-2">
+              <Icon name="x" size={14} />
+              Cancelar pedido
+            </span>
           </button>
         )}
       </div>
@@ -254,7 +329,7 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
   );
 }
 
-function InfoField({ label, value, extra, highlight }: { label: string; value: string | null | undefined; extra?: React.ReactNode; highlight?: boolean }) {
+function InfoField({ label, value, extra, highlight }: { label: string; value: React.ReactNode; extra?: React.ReactNode; highlight?: boolean }) {
   return (
     <div className="bg-gray-50 rounded-lg p-2.5">
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
@@ -268,7 +343,7 @@ function InfoField({ label, value, extra, highlight }: { label: string; value: s
   );
 }
 
-function AddrField({ label, value }: { label: string; value: string }) {
+function AddrField({ label, value }: { label: React.ReactNode; value: string }) {
   return (
     <div className="bg-gray-50 rounded-lg p-2.5">
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
@@ -397,7 +472,10 @@ export default function AdminOrdersPage() {
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
-          {toast.ok ? '✅' : '❌'} {toast.msg}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name={toast.ok ? 'check' : 'x'} size={14} />
+            {toast.msg}
+          </span>
         </div>
       )}
 
@@ -436,7 +514,8 @@ export default function AdminOrdersPage() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t.icon} {t.label}
+            <Icon name={t.icon} size={14} />
+            {t.label}
           </button>
         ))}
       </div>
@@ -645,7 +724,19 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
       <div className="flex flex-col justify-center overflow-hidden pr-3">
         <p className="text-sm text-gray-800 font-medium truncate">{row.client_email}</p>
         {isOrder
-          ? <p className="text-xs text-gray-400 truncate">{o.vehicle_type ? (VEHICLE_LABELS[o.vehicle_type] ?? o.vehicle_type) : ''}</p>
+          ? (
+            <p className="text-xs text-gray-400 truncate">
+              {o.vehicle_type ? (() => {
+                const v = VEHICLE_LABELS[o.vehicle_type];
+                return v ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name={v.icon} size={12} />
+                    {v.label}
+                  </span>
+                ) : o.vehicle_type;
+              })() : ''}
+            </p>
+          )
           : <p className="text-xs text-gray-400 truncate">{j.client_name ?? ''}</p>
         }
       </div>
@@ -655,7 +746,8 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
         <p className="text-xs text-gray-700 leading-snug line-clamp-2">{destination || '—'}</p>
         {isOrder && o.is_multi_stop && (
           <span className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 w-fit">
-            📦 {o.stop_count ?? o.order_stops?.length ?? '?'} paradas
+            <Icon name="package" size={10} />
+            {o.stop_count ?? o.order_stops?.length ?? '?'} paradas
           </span>
         )}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import { Icon } from '@/components/Icon';
 
 interface PromoCode {
   id: string;
@@ -100,7 +101,10 @@ export default function AdminPromosPage() {
     <div className="min-h-screen bg-[#13131F] text-white p-6">
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
-          {toast.ok ? '✅' : '❌'} {toast.msg}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name={toast.ok ? 'check' : 'x'} size={14} />
+            {toast.msg}
+          </span>
         </div>
       )}
 
@@ -112,7 +116,17 @@ export default function AdminPromosPage() {
         <button onClick={() => setShowForm(v => !v)}
           className="px-4 py-2 rounded-xl font-bold text-sm"
           style={{ background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E' }}>
-          {showForm ? '✕ Cancelar' : '+ Nuevo código'}
+          {showForm ? (
+            <span className="inline-flex items-center gap-2">
+              <Icon name="x" size={14} />
+              Cancelar
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <Icon name="plus" size={14} />
+              Nuevo codigo
+            </span>
+          )}
         </button>
       </div>
 
@@ -188,7 +202,7 @@ export default function AdminPromosPage() {
                   {p.is_active ? 'Desactivar' : 'Activar'}
                 </button>
                 <button onClick={() => handleDelete(p.id, p.code)} style={{ padding: '7px 10px', borderRadius: 9, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }} title="Eliminar">
-                  🗑
+                  <Icon name="trash" size={14} />
                 </button>
               </div>
             </div>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { haversineKm } from '@/lib/geo';
 import { playKaChing } from '@/lib/audio';
+import { Icon } from '@/components/Icon';
 
 const CARD_TIMER = 100;
 
@@ -31,25 +32,25 @@ function CountdownRing({ createdAt }: { createdAt: string }) {
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
-  moto: '🏍️ Moto Envíos',
-  auto: '🚗 Auto Envíos',
-  motocarro: '🛵 Moto Carro Fletes',
-  camion2t: '🚛 Camión Fletes',
+  moto: 'Moto Envíos',
+  auto: 'Auto Envíos',
+  motocarro: 'Moto Carro Fletes',
+  camion2t: 'Camión Fletes',
 };
 
 const SERVICE_LABELS: Record<string, string> = {
-  limpieza: '🧹 Limpieza',
-  niera: '👶 Niñera',
-  cocina: '🍳 Cocina',
-  eventos: '🎉 Eventos',
-  cuidado_mascotas: '🐾 Mascotas',
-  cuidado_adultos: '👴 Adultos',
-  gestor: '📋 Gestor',
-  aire_split: '❄️ Tec Aire Split',
-  electrico: '⚡ Serv. Eléctrico',
-  plomeria: '🔧 Serv. Plomería',
-  cerrajeria: '🔑 Cerrajería',
-  otros: '✨ Otros',
+  limpieza: 'Limpieza',
+  niera: 'Niñera',
+  cocina: 'Cocina',
+  eventos: 'Eventos',
+  cuidado_mascotas: 'Mascotas',
+  cuidado_adultos: 'Adultos',
+  gestor: 'Gestor',
+  aire_split: 'Tec Aire Split',
+  electrico: 'Serv. Eléctrico',
+  plomeria: 'Serv. Plomería',
+  cerrajeria: 'Cerrajería',
+  otros: 'Otros',
 };
 
 export type FeedItem = {
@@ -289,7 +290,9 @@ export default memo(function RequestsFeed({
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
               backdropFilter: 'blur(4px)',
             }}>
-              <div style={{ fontSize: '2.2rem' }}>⏳</div>
+              <div style={{ color: '#c8ff00' }}>
+                <Icon name="refresh" size={26} />
+              </div>
               <div style={{ color: '#c8ff00', fontWeight: 800, fontSize: '1rem', textAlign: 'center' }}>Oferta enviada</div>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', maxWidth: 200 }}>Esperando respuesta del cliente…</div>
             </div>
@@ -305,8 +308,10 @@ export default memo(function RequestsFeed({
                     style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover',
                       border: `2.5px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
                 : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--surface-3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem',
-                    flexShrink: 0, border: '2px solid var(--border-strong)' }}>👤</div>
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
+                    flexShrink: 0, border: '2px solid var(--border-strong)' }}>
+                    <Icon name="user" size={20} />
+                  </div>
               }
 
               {/* Name + service + meta */}
@@ -315,28 +320,48 @@ export default memo(function RequestsFeed({
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
                   <span>{item.clientName || 'Cliente'}</span>
-                  {item.clientVerified && <span title="Verificado">🛡️</span>}
-                  {item.clientRating != null && item.clientRating > 0 && (
-                    <span style={{ color: '#f59e0b' }}>⭐ {Number(item.clientRating).toFixed(1)}</span>
+                  {item.clientVerified && (
+                    <span title="Verificado" style={{ color: '#22c55e', display: 'inline-flex' }}>
+                      <Icon name="shield" size={12} />
+                    </span>
                   )}
-                  {distKm != null && <span>📐 {distKm.toFixed(1)} km</span>}
+                  {item.clientRating != null && item.clientRating > 0 && (
+                    <span style={{ color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="star" size={12} color="#f59e0b" />
+                      {Number(item.clientRating).toFixed(1)}
+                    </span>
+                  )}
+                  {distKm != null && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="map" size={12} color="#94a3b8" />
+                      {distKm.toFixed(1)} km
+                    </span>
+                  )}
                 </div>
                 {/* Badges */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                   {item.orderType === 'mandadito' && (
-                    <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800 }}>🛒 Mandadito</span>
+                    <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="package" size={12} />
+                      Mandadito
+                    </span>
                   )}
                   {item.orderType === 'flete' && (
-                    <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800 }}>🚛 Flete</span>
+                    <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="truck" size={12} />
+                      Flete
+                    </span>
                   )}
                   {stopCount >= 2 && (
-                    <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)' }}>
-                      📦 {stopCount} paradas
+                    <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="package" size={12} color="#fbbf24" />
+                      {stopCount} paradas
                     </span>
                   )}
                   {item.dateScheduled && (
-                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(99,102,241,0.3)' }}>
-                      📅 {new Date(item.dateScheduled).toLocaleString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(99,102,241,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Icon name="calendar" size={12} color="#818cf8" />
+                      {new Date(item.dateScheduled).toLocaleString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                 </div>
@@ -366,7 +391,7 @@ export default memo(function RequestsFeed({
             <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {item.from && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ color: '#10b981', flexShrink: 0, marginTop: 2 }}>🟢</span>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#10b981', flexShrink: 0, marginTop: 6 }} />
                   <span style={{ lineHeight: 1.4 }}>{item.from}</span>
                 </div>
               )}
@@ -378,7 +403,9 @@ export default memo(function RequestsFeed({
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6,
                       background: 'rgba(245,158,11,0.1)', padding: '5px 10px', cursor: 'pointer', border: 'none' }}
                   >
-                    <span style={{ fontSize: '0.85rem' }}>📦</span>
+                    <span style={{ display: 'inline-flex', color: '#fbbf24' }}>
+                      <Icon name="package" size={12} />
+                    </span>
                     <span style={{ flex: 1, fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>
                       {item.stops.length} parada{item.stops.length !== 1 ? 's' : ''} de entrega
                     </span>
@@ -406,13 +433,15 @@ export default memo(function RequestsFeed({
               )}
               {item.to && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }}>🟥</span>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#ef4444', flexShrink: 0, marginTop: 6 }} />
                   <span style={{ lineHeight: 1.4 }}>{item.to}</span>
                 </div>
               )}
               {item.location && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ flexShrink: 0, marginTop: 2 }}>📍</span>
+                  <span style={{ flexShrink: 0, marginTop: 2, color: '#94a3b8' }}>
+                    <Icon name="map-pin" size={12} />
+                  </span>
                   <span style={{ lineHeight: 1.4 }}>{item.location}</span>
                 </div>
               )}
@@ -440,21 +469,30 @@ export default memo(function RequestsFeed({
             {item.orderType === 'mandadito' && item.shoppingList && (
               <div style={{ fontSize: '0.82rem', marginBottom: 8, padding: '7px 10px',
                 background: 'rgba(245,158,11,0.1)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.3)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 3, color: '#fbbf24', fontSize: '0.8rem' }}>🛒 Lista de compras</div>
+                <div style={{ fontWeight: 700, marginBottom: 3, color: '#fbbf24', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="clipboard" size={12} color="#fbbf24" />
+                  Lista de compras
+                </div>
                 <div style={{ whiteSpace: 'pre-wrap', color: '#fde68a', fontSize: '0.78rem' }}>{item.shoppingList}</div>
               </div>
             )}
             {item.orderType === 'mandadito' && item.maxBudget != null && (
               <div style={{ fontSize: '0.82rem', color: '#34d399', marginBottom: 8, padding: '6px 10px',
                 background: 'rgba(52,211,153,0.08)', borderRadius: 10, border: '1px solid rgba(52,211,153,0.2)' }}>
-                💰 Presupuesto máx.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="money" size={12} color="#34d399" />
+                  Presupuesto max.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
+                </span>
               </div>
             )}
             {item.instructions && (
               <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 8, padding: '7px 10px',
                 background: 'rgba(245,197,24,0.08)', borderRadius: 10, border: '1px solid rgba(245,197,24,0.2)',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
-                📝 {item.instructions}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="pencil" size={12} color="#C8960A" />
+                  {item.instructions}
+                </span>
               </div>
             )}
           </div>
@@ -518,7 +556,9 @@ export default memo(function RequestsFeed({
                   alignItems: 'center', justifyContent: 'center', gap: 2 }}
                 title="Precio personalizado"
               >
-                <span style={{ fontSize: '1rem' }}>✏️</span>
+                <span style={{ display: 'flex', color: customOpen ? '#818cf8' : 'var(--text-muted)' }}>
+                  <Icon name="pencil" size={14} />
+                </span>
                 <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
               </button>
             </div>

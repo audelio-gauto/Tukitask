@@ -9,18 +9,19 @@ import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
+import { Icon, type IconName } from '@/components/Icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface VehicleInfo {
-  label: string | null;    // e.g. '🏍️ Moto'
+  label: string | null;    // e.g. 'Moto'
   brand: string | null;    // e.g. 'Taiga 150'
   plate: string | null;    // e.g. 'ACF 5432'
   photo: string | null;    // profile photo URL
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
-  moto: '🏍️ Moto', auto: '🚗 Auto', moto_carro: '🛵 Moto Carro', camion: '🚛 Camión',
+  moto: 'Moto', auto: 'Auto', moto_carro: 'Moto Carro', camion: 'Camion',
 };
 
 interface OrderDetail {
@@ -91,22 +92,22 @@ function fmtGs(n: number | null) {
 }
 
 function statusLabel(status: string) {
-  const map: Record<string, { text: string; color: string; emoji: string }> = {
-    accepted:            { text: 'Conductor asignado',        color: '#0ea5e9', emoji: '🔵' },
-    picking_up:          { text: 'Conductor en camino',       color: '#0ea5e9', emoji: '🏃' },
-    in_transit:          { text: 'En tránsito',               color: '#22c55e', emoji: '🚀' },
-    in_progress:         { text: 'En curso',                  color: '#22c55e', emoji: '⚙️' },
-    returning:           { text: 'Devolviendo paquete',       color: '#f59e0b', emoji: '↩️' },
-    driver_returning:    { text: 'Conductor regresando',      color: '#f59e0b', emoji: '↩️' },
-    en_route:            { text: 'Técnico en camino',         color: '#0ea5e9', emoji: '🔧' },
-    arrived:             { text: 'Técnico llegó',             color: '#22c55e', emoji: '📍' },
-    completion_pending:  { text: 'Completando servicio',      color: '#a78bfa', emoji: '✅' },
-    delivered:           { text: '¡Entregado!',               color: '#22c55e', emoji: '📦' },
-    completado:          { text: '¡Servicio completado!',     color: '#22c55e', emoji: '✅' },
-    commission_charged:  { text: 'Completado',                color: '#22c55e', emoji: '✅' },
-    cancelled:           { text: 'Cancelado',                 color: '#6b7280', emoji: '🚫' },
+  const map: Record<string, { text: string; color: string; icon: IconName }> = {
+    accepted:            { text: 'Conductor asignado',        color: '#0ea5e9', icon: 'check' },
+    picking_up:          { text: 'Conductor en camino',       color: '#0ea5e9', icon: 'truck' },
+    in_transit:          { text: 'En transito',               color: '#22c55e', icon: 'truck' },
+    in_progress:         { text: 'En curso',                  color: '#22c55e', icon: 'tool' },
+    returning:           { text: 'Devolviendo paquete',       color: '#f59e0b', icon: 'refresh' },
+    driver_returning:    { text: 'Conductor regresando',      color: '#f59e0b', icon: 'refresh' },
+    en_route:            { text: 'Tecnico en camino',         color: '#0ea5e9', icon: 'tool' },
+    arrived:             { text: 'Tecnico llego',             color: '#22c55e', icon: 'map-pin' },
+    completion_pending:  { text: 'Completando servicio',      color: '#a78bfa', icon: 'clock' },
+    delivered:           { text: 'Entregado',                 color: '#22c55e', icon: 'package' },
+    completado:          { text: 'Servicio completado',       color: '#22c55e', icon: 'check' },
+    commission_charged:  { text: 'Completado',                color: '#22c55e', icon: 'check' },
+    cancelled:           { text: 'Cancelado',                 color: '#6b7280', icon: 'x' },
   };
-  return map[status] ?? { text: status, color: '#6b7280', emoji: '❓' };
+  return map[status] ?? { text: status, color: '#6b7280', icon: 'exclamation' };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -344,7 +345,7 @@ export default function SeguimientoPage() {
     if (destLat != null && destLng != null) {
       const pinB = L.divIcon({
         className: '',
-        html: `<div style="background:#ef4444;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);white-space:nowrap;">📍 B</div>`,
+        html: `<div style="background:#ef4444;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);white-space:nowrap;">B</div>`,
         iconSize: [36, 28], iconAnchor: [18, 28],
       });
       if (destMarkerRef.current) { map.removeLayer(destMarkerRef.current); }
@@ -355,7 +356,7 @@ export default function SeguimientoPage() {
     if (order.pickup_lat != null && order.pickup_lng != null) {
       const pinA = L.divIcon({
         className: '',
-        html: `<div style="background:#f59e0b;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);">📦 A</div>`,
+        html: `<div style="background:#f59e0b;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);">A</div>`,
         iconSize: [36, 28], iconAnchor: [18, 28],
       });
       if (pickupMarkerRef.current) { map.removeLayer(pickupMarkerRef.current); }
@@ -398,7 +399,7 @@ export default function SeguimientoPage() {
 
       const innerHtml = photo
         ? `<img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" />`
-        : `<div style="width:42px;height:42px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${inits || (type === 'service' ? '🔧' : '🚗')}</div>`;
+        : `<div style="width:42px;height:42px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">${inits || (type === 'service' ? 'T' : 'D')}</div>`;
 
       const driverIcon = L.divIcon({
         className: '',
@@ -682,8 +683,8 @@ export default function SeguimientoPage() {
           )}
         </div>
         {st && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: '4px 10px', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.8rem' }}>{st.emoji}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: '4px 10px', flexShrink: 0 }}>
+            <Icon name={st.icon} size={12} color={st.color} />
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: st.color }}>{st.text}</span>
           </div>
         )}
@@ -747,7 +748,7 @@ export default function SeguimientoPage() {
         {/* No GPS signal */}
         {mapReady && !driverLoc && isActive && !loading && (
           <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '8px 16px', border: '1px solid rgba(245,158,11,0.3)' }}>
-            <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600 }}>📡 Esperando señal GPS…</span>
+            <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600 }}>Esperando senal GPS…</span>
           </div>
         )}
       </div>
@@ -782,7 +783,7 @@ export default function SeguimientoPage() {
                   fontSize: '1.4rem', background: type === 'service' ? 'rgba(139,92,246,0.15)' : 'rgba(34,197,94,0.15)',
                   border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`,
                 }}>
-                  {type === 'service' ? '🔧' : '🚗'}
+                  <Icon name={type === 'service' ? 'tool' : 'car'} size={18} color={type === 'service' ? '#8b5cf6' : '#22c55e'} />
                 </div>
               )}
             </div>
@@ -794,8 +795,8 @@ export default function SeguimientoPage() {
               </div>
               {workerRating != null && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
-                  {'★★★★★'.split('').map((_, i) => (
-                    <span key={i} style={{ color: i < Math.round(Number(workerRating)) ? '#F5C518' : 'var(--border-strong)', fontSize: '0.82rem' }}>★</span>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Icon key={i} name="star" size={12} color={i < Math.round(Number(workerRating)) ? '#F5C518' : 'var(--border-strong)'} />
                   ))}
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: 3 }}>{Number(workerRating).toFixed(1)}</span>
                 </div>
@@ -815,7 +816,10 @@ export default function SeguimientoPage() {
               </div>
               {order.type === 'service' && order.extra_charge != null && order.extra_charge > 0 && (
                 <div style={{ color: '#f59e0b', fontWeight: 800, fontSize: '0.9rem', marginTop: 2 }}>
-                  ➕ {fmtGs(order.extra_charge)}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="plus" size={12} color="#f59e0b" />
+                    {fmtGs(order.extra_charge)}
+                  </span>
                 </div>
               )}
               {order.type === 'service' && order.extra_reason && (
@@ -837,12 +841,14 @@ export default function SeguimientoPage() {
               )}
               {vehicle.brand && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--glass-card)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  🏷️ {vehicle.brand}
+                  <Icon name="tag" size={12} color="var(--text-secondary)" />
+                  {vehicle.brand}
                 </span>
               )}
               {vehicle.plate && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.73rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.04em' }}>
-                  🪪 {vehicle.plate}
+                  <Icon name="document" size={12} color="#93c5fd" />
+                  {vehicle.plate}
                 </span>
               )}
             </div>
@@ -863,7 +869,9 @@ export default function SeguimientoPage() {
                     onClick={() => setStopsOpen(v => !v)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.1)', padding: '5px 9px', cursor: 'pointer', border: 'none' }}
                   >
-                    <span style={{ fontSize: '0.75rem' }}>📦</span>
+                    <span style={{ display: 'inline-flex', color: '#fbbf24' }}>
+                      <Icon name="package" size={12} color="#fbbf24" />
+                    </span>
                     <span style={{ flex: 1, fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>
                       {order.order_stops.length} parada{order.order_stops.length !== 1 ? 's' : ''} de entrega
                     </span>

@@ -6,28 +6,29 @@ import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import ReportModal from '@/components/ReportModal';
+import { Icon } from '@/components/Icon';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
 const SERVICE_LABELS: Record<string, string> = {
-  limpieza:          '🧹 Limpieza',
-  niera:             '👶 Niñera',
-  cocina:            '🍳 Cocina',
-  eventos:           '🎉 Eventos',
-  cuidado_mascotas:  '🐾 Cuidado Mascotas',
-  cuidado_adultos:   '👴 Cuidado adultos',
-  aire_split:        '❄️ Tec Aire Split',
-  electrico:         '⚡ Serv. Eléctrico',
-  plomeria:          '🔧 Serv. Plomería',
-  cerrajeria:        '🔑 Serv. Cerrajería',
-  gestor:            '🗂️ Gestor',
-  otros:             '✨ Otros',
+  limpieza:          'Limpieza',
+  niera:             'Niñera',
+  cocina:            'Cocina',
+  eventos:           'Eventos',
+  cuidado_mascotas:  'Cuidado Mascotas',
+  cuidado_adultos:   'Cuidado adultos',
+  aire_split:        'Tec Aire Split',
+  electrico:         'Serv. Eléctrico',
+  plomeria:          'Serv. Plomería',
+  cerrajeria:        'Serv. Cerrajería',
+  gestor:            'Gestor',
+  otros:             'Otros',
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  completado: { label: '✅ Completado',  color: '#10b981' },
-  cancelled:  { label: '❌ Cancelado',   color: '#ef4444' },
-  incidente:  { label: '⚠️ Incidente',   color: '#f59e0b' },
+  completado: { label: 'Completado',  color: '#10b981' },
+  cancelled:  { label: 'Cancelado',   color: '#ef4444' },
+  incidente:  { label: 'Incidente',   color: '#f59e0b' },
 };
 
 function StarRow({ rating }: { rating: number | null }) {
@@ -191,7 +192,7 @@ export default function TecnicoHistorialPage() {
               padding: '8px 12px', marginBottom: 10,
               fontSize: '0.78rem', color: 'var(--text-secondary)',
             }}>
-              📍 {job.address}
+              <Icon name="map-pin" size={13} style={{ marginRight: 4 }} /> {job.address}
             </div>
           )}
 
@@ -234,7 +235,7 @@ export default function TecnicoHistorialPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              💬 Chat con el cliente
+              <Icon name="chat" size={15} /> Chat con el cliente
             </button>
           )}
 
@@ -247,9 +248,10 @@ export default function TecnicoHistorialPage() {
                 cursor: 'pointer',
                 background: 'linear-gradient(135deg, #F5C518, #f59e0b)',
                 color: '#1C1C2E', fontWeight: 700, fontSize: '0.88rem', marginTop: 2,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              ⭐ Calificar Cliente
+              <Icon name="star" size={15} /> Calificar Cliente
             </button>
           )}
 
@@ -296,7 +298,7 @@ export default function TecnicoHistorialPage() {
               transition: 'all 0.15s',
             }}
           >
-            {f === 'all' ? 'Todos' : f === 'completado' ? '✅ Completados' : '❌ Cancelados'}
+            {f === 'all' ? 'Todos' : f === 'completado' ? 'Completados' : 'Cancelados'}
           </button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#9ca3af', alignSelf: 'center' }}>
@@ -312,7 +314,7 @@ export default function TecnicoHistorialPage() {
       {/* Empty state */}
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 12 }}>📋</div>
+          <Icon name="clipboard" size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
           <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-secondary)' }}>
             Sin trabajos en el historial
           </div>

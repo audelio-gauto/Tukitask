@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { Icon } from '@/components/Icon';
 
 interface Message {
   id: string;
@@ -186,8 +187,8 @@ export default function ChatModal({
           {otherPhoto ? (
             <img src={otherPhoto} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
-              {orderId ? '🚗' : '👷'}
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0', flexShrink: 0 }}>
+              <Icon name={orderId ? 'truck' : 'tool'} size={20} />
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -219,7 +220,11 @@ export default function ChatModal({
           )}
           {!loading && messages.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💬</div>
+              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--glass-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5f5' }}>
+                  <Icon name="chat" size={22} />
+                </div>
+              </div>
               <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
                 Comenzá la conversación.<br />Los mensajes son privados entre vos y {otherName || 'el conductor'}.
               </div>
