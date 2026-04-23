@@ -28,7 +28,7 @@
   top: 0; left: 0; right: 0; bottom: 0;
   overflow: hidden;
   background: var(--tuki-background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   color: var(--tuki-text-main);
 }
@@ -407,7 +407,7 @@ input:checked + .tuki-toggle-slider:before {
 }
 .tuki-stat-card:hover { background: var(--glass-card-hover); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
 .tuki-stat-card:active { transform: scale(0.97); }
-.tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: #c8ff00; }
+.tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: var(--tuki-primary); }
 .tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 0.5rem; }
 .tuki-stat-label { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
 
@@ -458,7 +458,7 @@ input:checked + .tuki-toggle-slider:before {
   overflow: hidden;
 }
 .tuki-order-header {
-  background: #f9fafb;
+  background: var(--surface-2);
   padding: 1rem;
   border-bottom: 1px solid var(--tuki-border);
   display: flex;
@@ -584,11 +584,11 @@ input:checked + .tuki-toggle-slider:before {
   z-index: 9999;
 }
 .tuki-toast {
-  background: #1e293b; color: white;
+  background: #0f172a; color: white;
   padding: 12px 24px;
   border-radius: 99px;
   font-size: 0.9rem; font-weight: 500;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  box-shadow: 0 12px 24px rgba(15,23,42,0.28);
   animation: tuki-toast-in 0.3s ease-out;
 }
 @keyframes tuki-toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
