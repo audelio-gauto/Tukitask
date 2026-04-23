@@ -68,90 +68,133 @@ function beepSoft(ctx: AudioContext, t: number, f: number, dur = 0.13): void {
 // ─── Public exports ────────────────────────────────────────────────────────────
 
 /**
- * Cash register Ka-ching! — professional two-part sound.
- * "KA": mechanical drawer thump + noise burst.
- * "CHING": rich bell chord with long sustain (~2s).
+ * Cash register Ka-ching! — professional alert sound.
+ *
+ * Structure (~4 seconds total):
+ *  t=0.00  STRIKE 1 — heavy mechanical "KA" thump + noise burst
+ *  t=0.08  CHING 1  — full bell chord, rich harmonics, long sustain
+ *  t=0.90  STRIKE 2 — lighter echo "KA" (drawer bounce)
+ *  t=0.96  CHING 2  — secondary shimmer ring
+ *  t=1.40  SHIMMER  — persistent high sparkle for urgency
+ *  t≈4.0s  tail     — warm pad sustain fades out
+ *
+ * Total duration ≈ 4.2 s. Loop interval should be ≥ 4500 ms.
  */
 export function playKaChing(): void {
   try {
     const ctx = getAC(); if (!ctx) return;
     const now = ctx.currentTime;
 
-    // ═══ "KA" — mechanical drawer punch (t=0) ═══
-
-    // Low thump: pitch drops fast like a drawer slamming
-    const thump = ctx.createOscillator(), tg = ctx.createGain();
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(200, now);
-    thump.frequency.exponentialRampToValueAtTime(55, now + 0.10);
-    tg.gain.setValueAtTime(0.75, now);
-    tg.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
-    thump.connect(tg); tg.connect(ctx.destination);
-    thump.start(now); thump.stop(now + 0.15);
-
-    // Noise click burst
-    const clickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.055), ctx.sampleRate);
-    const cd = clickBuf.getChannelData(0);
-    for (let i = 0; i < cd.length; i++) {
-      cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cd.length, 2.5);
+    // ─── Helper: noise burst (drawer click / strike) ───────────────────────
+    function noiseBurst(ac: AudioContext, t: number, durationSec: number, vol: number) {
+      const len = Math.floor(ac.sampleRate * durationSec);
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+      }
+      const src = ac.createBufferSource(), g = ac.createGain();
+      src.buffer = buf;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + durationSec);
+      src.connect(g); g.connect(ac.destination);
+      src.start(t);
     }
-    const click = ctx.createBufferSource(), cg = ctx.createGain();
-    click.buffer = clickBuf;
-    cg.gain.setValueAtTime(1.1, now);
-    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
-    click.connect(cg); cg.connect(ctx.destination);
-    click.start(now);
 
-    // ═══ "CHING" — rich metallic bell chord (t=80ms) ═══
-    const ch = now + 0.08;
+    // ─── Helper: bell partial ───────────────────────────────────────────────
+    function bell(ac: AudioContext, t: number, freq: number, vol: number, decay: number, type: OscillatorType = 'sine') {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.007);
+      g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + decay + 0.05);
+    }
 
-    // Bell harmonics — layered sines simulating a real register bell
-    const bells: [number, number, number][] = [
-      // [freq Hz, peak volume, decay seconds]
-      [523,  0.50, 2.2],   // C5  — warm fundamental
-      [659,  0.40, 2.0],   // E5
-      [784,  0.35, 1.8],   // G5
-      [1047, 0.28, 1.6],   // C6
-      [1319, 0.20, 1.4],   // E6
-      [1568, 0.14, 1.1],   // G6
-      [2093, 0.09, 0.85],  // C7
-      [2637, 0.06, 0.65],  // E7
-      [3520, 0.04, 0.50],  // A7
+    // ─── Helper: pitch-drop thump (mechanical drawer punch) ────────────────
+    function thump(ac: AudioContext, t: number, startHz: number, endHz: number, vol: number, dur: number) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(startHz, t);
+      o.frequency.exponentialRampToValueAtTime(endHz, t + dur * 0.55);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  STRIKE 1 — heavy drawer slam  (t = 0)
+    // ════════════════════════════════════════════════════════════
+    thump(ctx, now, 220, 48, 0.90, 0.14);
+    noiseBurst(ctx, now, 0.065, 1.3);
+
+    // ════════════════════════════════════════════════════════════
+    //  CHING 1 — full bell chord  (t = 80 ms)
+    // ════════════════════════════════════════════════════════════
+    const ch1 = now + 0.08;
+
+    // Rich C-major bell chord — layered sines simulating a real register bell
+    const bells1: [number, number, number][] = [
+      [523,  0.60, 3.5],   // C5  — warm fundamental
+      [659,  0.48, 3.2],   // E5
+      [784,  0.40, 2.9],   // G5
+      [1047, 0.32, 2.6],   // C6
+      [1319, 0.24, 2.2],   // E6
+      [1568, 0.17, 1.8],   // G6
+      [2093, 0.11, 1.4],   // C7
+      [2637, 0.07, 1.0],   // E7
+      [3520, 0.04, 0.70],  // A7
+      [4186, 0.03, 0.50],  // C8
     ];
-    for (const [freq, vol, decay] of bells) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = 'sine'; o.frequency.value = freq;
-      g.gain.setValueAtTime(0, ch);
-      g.gain.linearRampToValueAtTime(vol, ch + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.001, ch + decay);
-      o.connect(g); g.connect(ctx.destination);
-      o.start(ch); o.stop(ch + decay + 0.05);
-    }
+    for (const [f, v, dec] of bells1) bell(ctx, ch1, f, v, dec);
 
-    // Inharmonic ring — adds that imperfect metallic character
-    const ring = ctx.createOscillator(), rg = ctx.createGain();
-    ring.type = 'sine'; ring.frequency.value = 3136; // G7
-    rg.gain.setValueAtTime(0.13, ch + 0.01);
-    rg.gain.exponentialRampToValueAtTime(0.001, ch + 1.1);
-    ring.connect(rg); rg.connect(ctx.destination);
-    ring.start(ch + 0.01); ring.stop(ch + 1.15);
+    // Inharmonic partial — imperfect metallic character
+    bell(ctx, ch1 + 0.01, 3136, 0.16, 1.4);   // G7
+    bell(ctx, ch1 + 0.01, 4978, 0.10, 0.9);   // D#8
 
     // High shimmer — bright metallic sparkle
-    const sh = ctx.createOscillator(), sg = ctx.createGain();
-    sh.type = 'triangle'; sh.frequency.value = 5400;
-    sg.gain.setValueAtTime(0.20, ch);
-    sg.gain.exponentialRampToValueAtTime(0.001, ch + 0.5);
-    sh.connect(sg); sg.connect(ctx.destination);
-    sh.start(ch); sh.stop(ch + 0.55);
+    bell(ctx, ch1, 5400, 0.24, 0.7, 'triangle');
+    bell(ctx, ch1, 7040, 0.08, 0.4, 'triangle');
 
-    // Soft sustain pad — makes the tail feel warm and full
-    const pad = ctx.createOscillator(), pg = ctx.createGain();
-    pad.type = 'sine'; pad.frequency.value = 523;
-    pg.gain.setValueAtTime(0, ch + 0.05);
-    pg.gain.linearRampToValueAtTime(0.08, ch + 0.2);
-    pg.gain.exponentialRampToValueAtTime(0.001, ch + 2.4);
-    pad.connect(pg); pg.connect(ctx.destination);
-    pad.start(ch + 0.05); pad.stop(ch + 2.45);
+    // Warm sustain pad — makes the tail feel full
+    const pad1 = ctx.createOscillator(), pg1 = ctx.createGain();
+    pad1.type = 'sine'; pad1.frequency.value = 523;
+    pg1.gain.setValueAtTime(0, ch1 + 0.06);
+    pg1.gain.linearRampToValueAtTime(0.10, ch1 + 0.25);
+    pg1.gain.exponentialRampToValueAtTime(0.001, ch1 + 3.8);
+    pad1.connect(pg1); pg1.connect(ctx.destination);
+    pad1.start(ch1 + 0.06); pad1.stop(ch1 + 3.85);
+
+    // ════════════════════════════════════════════════════════════
+    //  STRIKE 2 — lighter bounce / echo  (t = 900 ms)
+    // ════════════════════════════════════════════════════════════
+    const s2 = now + 0.90;
+    thump(ctx, s2, 160, 52, 0.55, 0.10);
+    noiseBurst(ctx, s2, 0.042, 0.75);
+
+    // ════════════════════════════════════════════════════════════
+    //  CHING 2 — secondary shimmer ring  (t = 960 ms)
+    // ════════════════════════════════════════════════════════════
+    const ch2 = now + 0.96;
+    const bells2: [number, number, number][] = [
+      [1047, 0.28, 2.0],   // C6
+      [1319, 0.20, 1.7],   // E6
+      [1568, 0.14, 1.4],   // G6
+      [2093, 0.09, 1.1],   // C7
+      [2637, 0.06, 0.75],  // E7
+    ];
+    for (const [f, v, dec] of bells2) bell(ctx, ch2, f, v, dec);
+    bell(ctx, ch2, 3520, 0.08, 0.55);
+
+    // ════════════════════════════════════════════════════════════
+    //  URGENCY SPARKLE — persistent high shimmer  (t = 1.4 s)
+    // ════════════════════════════════════════════════════════════
+    const sp = now + 1.40;
+    bell(ctx, sp, 5400, 0.14, 0.80, 'triangle');
+    bell(ctx, sp + 0.18, 4978, 0.09, 0.60, 'triangle');
+    bell(ctx, sp + 0.38, 5400, 0.07, 0.50, 'triangle');
 
   } catch { /* blocked */ }
 }

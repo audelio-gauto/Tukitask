@@ -116,8 +116,10 @@ export default memo(function RequestsFeed({
   dismissedRef.current = dismissed;
 
   // ── Sound ───────────────────────────────────────────────────────────────────
-  const soundIvRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevIdsRef  = useRef<Set<string>>(new Set());
+  const soundIvRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevIdsRef   = useRef<Set<string>>(new Set());
+  const sendingIdRef = useRef(sendingId);
+  sendingIdRef.current = sendingId;
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -131,18 +133,28 @@ export default memo(function RequestsFeed({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Stop alert loop immediately when an offer/accept action is in-flight
+  useEffect(() => {
+    if (sendingId && soundIvRef.current) {
+      clearInterval(soundIvRef.current);
+      soundIvRef.current = null;
+    }
+  }, [sendingId]);
+
   useEffect(() => {
     const visibleLive = items.filter(i => !dismissed.has(i.id));
     const hasNew = visibleLive.some(i => !prevIdsRef.current.has(i.id));
     prevIdsRef.current = new Set(items.map(i => i.id));
-    if (hasNew && visibleLive.length > 0) {
+    if (hasNew && visibleLive.length > 0 && !sendingIdRef.current) {
       playKaChing();
       if (soundIvRef.current) clearInterval(soundIvRef.current);
+      // Repeat every 4500 ms — matches the new ~4.2 s ka-ching sound duration
       soundIvRef.current = setInterval(() => {
+        if (sendingIdRef.current) { clearInterval(soundIvRef.current!); soundIvRef.current = null; return; }
         const alive = itemsRef.current.filter(i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0);
         if (alive.length > 0) playKaChing();
         else { clearInterval(soundIvRef.current!); soundIvRef.current = null; }
-      }, 3000);
+      }, 4500);
     }
     if (visibleLive.length === 0 && soundIvRef.current) {
       clearInterval(soundIvRef.current); soundIvRef.current = null;
