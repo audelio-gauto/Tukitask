@@ -163,11 +163,11 @@ export default function Auth() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      background: isLight 
-        ? 'linear-gradient(145deg, #f5f5f0 0%, #e5e7eb 100%)' 
-        : 'linear-gradient(145deg, #1C1C2E 0%, #16213E 60%, #0F3460 100%)',
+      background: isLight
+        ? 'linear-gradient(140deg, #f6f7fb 0%, #eef2f7 55%, #e2e8f0 100%)'
+        : 'linear-gradient(140deg, #0b1220 0%, #111827 55%, #0f172a 100%)',
       padding: '24px 16px',
-      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      fontFamily: 'var(--font-sans), system-ui, sans-serif',
       position: 'relative',
       overflow: 'hidden',
     }}>
@@ -191,15 +191,15 @@ export default function Auth() {
       <div style={{
         width: '100%',
         maxWidth: 400,
-        background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.04)',
+        background: isLight ? '#ffffff' : 'rgba(15,23,42,0.72)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(245,197,24,0.18)',
+        border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(245,197,24,0.22)',
         borderRadius: 24,
         padding: '36px 32px 32px',
         boxShadow: isLight
-          ? '0 24px 64px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02)'
-          : '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,197,24,0.08)',
+          ? '0 24px 64px rgba(15,23,42,0.10), 0 0 0 1px rgba(15,23,42,0.02)'
+          : '0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(245,197,24,0.08)',
       }}>
 
         {/* Logo */}
@@ -223,10 +223,10 @@ export default function Auth() {
               />
             )}
           </div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#F5C518', letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: isLight ? '#0f172a' : '#f8fafc', letterSpacing: '-0.02em' }}>
             {isForgot ? 'Recuperar contraseña' : isRegister ? 'Crear cuenta' : 'Bienvenido'}
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.87rem', color: isLight ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.45)' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '0.87rem', color: isLight ? '#64748b' : 'rgba(226,232,240,0.62)' }}>
             {isForgot ? 'Te enviaremos un link para resetear tu contraseña' : isRegister ? 'Completá tus datos para registrarte' : 'Ingresá a tu cuenta TukiTask'}
           </p>
         </div>
@@ -234,7 +234,7 @@ export default function Auth() {
         {/* Tab switcher — hidden on forgot password screen */}
         {!isForgot && (
         <div style={{
-          display: 'flex', borderRadius: 12, background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+          display: 'flex', borderRadius: 12, background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)',
           padding: 3, marginBottom: 24, gap: 3,
         }}>
           {(['Iniciar sesión', 'Registrarse'] as const).map((label, i) => {
@@ -248,7 +248,7 @@ export default function Auth() {
                   flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
                   fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.2s',
                   background: active ? 'linear-gradient(135deg, #F5C518, #F58A07)' : 'transparent',
-                  color: active ? '#1C1C2E' : isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)',
+                  color: active ? '#1C1C2E' : isLight ? '#64748b' : 'rgba(226,232,240,0.6)',
                   boxShadow: active ? '0 2px 10px rgba(245,197,24,0.3)' : 'none',
                 }}
               >
