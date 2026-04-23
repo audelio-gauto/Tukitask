@@ -339,8 +339,8 @@
   box-shadow: 0 0 0 1.5px rgba(16,185,129,0.28);
 }
 .tuki-status-offline {
-  background: rgba(100,116,139,0.1);
-  color: #64748b;
+  background: rgba(148,163,184,0.18);
+  color: #94a3b8;
 }
 
 /* Toggle switch — fast spring animation */
@@ -409,7 +409,7 @@ input:checked + .tuki-toggle-slider:before {
 .tuki-stat-card:active { transform: scale(0.97); }
 .tuki-stat-icon { font-size: 1.2rem; margin-bottom: 0.4rem; color: var(--tuki-primary); }
 .tuki-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 0.5rem; }
-.tuki-stat-label { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
+.tuki-stat-label { color: var(--text-secondary); font-size: 0.875rem; font-weight: 600; }
 
 /* Heading */
 .tuki-heading {
