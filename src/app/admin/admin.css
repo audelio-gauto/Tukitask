@@ -3,46 +3,50 @@
 /* Light (default) */
 :root,
 [data-theme="light"] {
-  --adm-bg:           #f0f0f1;
+  --adm-bg:           #f6f7fb;
   --adm-surface:      #ffffff;
-  --adm-surface-2:    #f7f7f8;
-  --adm-border:       #e2e4e7;
-  --adm-text-primary: #1d2327;
-  --adm-text-secondary: #50575e;
-  --adm-text-muted:   #8c8f94;
+  --adm-surface-2:    #f1f5f9;
+  --adm-border:       #e2e8f0;
+  --adm-text-primary: #0f172a;
+  --adm-text-secondary: #475569;
+  --adm-text-muted:   #94a3b8;
   --adm-header-bg:    #ffffff;
-  --adm-header-border:#e2e4e7;
-  --adm-sidebar-bg:   #1d2327;
+  --adm-header-border:#e2e8f0;
+  --adm-sidebar-bg:   #0b1220;
   --adm-accent:       #F5C518;
-  --adm-accent-text:  #1d2327;
+  --adm-accent-text:  #0f172a;
   --adm-input-bg:     #ffffff;
-  --adm-input-border: #d0d5dd;
-  --adm-badge-bg:     #f0f0f1;
-  --adm-row-hover:    #f7f7f8;
+  --adm-input-border: #e2e8f0;
+  --adm-badge-bg:     #f1f5f9;
+  --adm-row-hover:    #f8fafc;
   --adm-danger:       #dc2626;
   --adm-danger-bg:    #fef2f2;
+  --adm-shadow-soft:  0 8px 24px rgba(15,23,42,0.08);
+  --adm-shadow-card:  0 12px 28px rgba(15,23,42,0.12);
 }
 
 /* Dark */
 [data-theme="dark"] {
-  --adm-bg:           #0f1117;
-  --adm-surface:      #1a1d27;
-  --adm-surface-2:    #222535;
-  --adm-border:       #2e3347;
-  --adm-text-primary: #f0f2f5;
-  --adm-text-secondary: #a8b0c0;
-  --adm-text-muted:   #6b7590;
-  --adm-header-bg:    #1a1d27;
-  --adm-header-border:#2e3347;
-  --adm-sidebar-bg:   #111318;
+  --adm-bg:           #0b1220;
+  --adm-surface:      #111827;
+  --adm-surface-2:    #0f172a;
+  --adm-border:       #243043;
+  --adm-text-primary: #e5e7eb;
+  --adm-text-secondary: #a3b3c5;
+  --adm-text-muted:   #7b8aa0;
+  --adm-header-bg:    #0f172a;
+  --adm-header-border:#243043;
+  --adm-sidebar-bg:   #0b1220;
   --adm-accent:       #F5C518;
-  --adm-accent-text:  #111318;
-  --adm-input-bg:     #222535;
-  --adm-input-border: #2e3347;
-  --adm-badge-bg:     #222535;
-  --adm-row-hover:    #222535;
+  --adm-accent-text:  #0b1220;
+  --adm-input-bg:     #0f172a;
+  --adm-input-border: #2b3646;
+  --adm-badge-bg:     #0f172a;
+  --adm-row-hover:    #111827;
   --adm-danger:       #f87171;
   --adm-danger-bg:    rgba(239,68,68,0.1);
+  --adm-shadow-soft:  0 10px 28px rgba(15,23,42,0.35);
+  --adm-shadow-card:  0 18px 36px rgba(15,23,42,0.45);
 }
 
 /* ── Layout ────────────────────────────────────────────── */
@@ -51,11 +55,12 @@
   background: var(--adm-bg);
   color: var(--adm-text-primary);
   transition: background 0.2s, color 0.2s;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* ── Header ────────────────────────────────────────────── */
 .adm-header {
-  height: 56px;
+  height: 60px;
   background: var(--adm-header-bg);
   border-bottom: 1px solid var(--adm-header-border);
   display: flex;
@@ -63,10 +68,11 @@
   justify-content: space-between;
   padding: 0 24px;
   transition: background 0.2s, border-color 0.2s;
+  box-shadow: var(--adm-shadow-soft);
 }
 .adm-header-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--adm-text-secondary);
 }
 .adm-header-actions {
