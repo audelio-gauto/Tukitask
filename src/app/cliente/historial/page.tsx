@@ -571,18 +571,32 @@ export default function ClienteHistorialPage() {
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
       }}>
         {([
-          { icon: '🏠', label: 'Home', path: '/cliente', active: false },
-          { icon: '➕', label: 'Solicitar', path: '/cliente', active: false },
-          { icon: '📋', label: 'Historial', path: '/cliente/historial', active: true },
-          { icon: '👤', label: 'Cuenta', path: '/cliente/settings', active: false },
-        ] as { icon: string; label: string; path: string; active: boolean }[]).map(item => (
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>),
+            label: 'Home', path: '/cliente', active: false,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>),
+            label: 'Solicitar', path: '/cliente', active: false,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5h6M9 9h6M9 13h6M7 5h.01M7 9h.01M7 13h.01"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>),
+            label: 'Historial', path: '/cliente/historial', active: true,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>),
+            label: 'Cuenta', path: '/cliente/settings', active: false,
+          },
+        ] as { icon: React.ReactNode; label: string; path: string; active: boolean }[]).map(item => (
           <Link key={item.label} href={item.path} style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
             padding: '8px 4px', textDecoration: 'none', borderRadius: 12,
-            background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent',
+            background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent',
+            color: item.active ? '#F5C518' : 'var(--nav-icon-inactive)',
           }}>
-            <span style={{ fontSize: '1.35rem' }}>{item.icon}</span>
-            <span style={{ fontSize: '0.67rem', fontWeight: 700, color: item.active ? '#F5C518' : 'var(--text-muted)' }}>{item.label}</span>
+            {item.icon}
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
+            {item.active && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5C518', marginTop: 1 }} />}
           </Link>
         ))}
       </div>
