@@ -885,14 +885,14 @@ export default function ClienteHomePage() {
 
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ position: 'fixed', inset: 0, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div className="client-map-shell">
       {/* Map base */}
-      <div style={{ position: 'absolute', inset: 0 }}>
+      <div className="client-map-base">
         <ClientMap dark showMyLocationButton={false} locateRef={locateRef} />
       </div>
 
       {/* Top gradient */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, var(--map-header-overlay) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
+      <div className="client-map-top-gradient" />
 
       {/* ── No tasker toast ────────────────────────────────────────────── */}
       {noTaskerMsg && (
@@ -1369,45 +1369,27 @@ export default function ClienteHomePage() {
 
       {/* ── IDLE — service selector ───────────────────────────────────────── */}
       {mode === 'idle' && !loading && (
-        <div style={{
-          position: 'absolute', top: 0, bottom: 72, left: 0, right: 0,
-          zIndex: 5, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', padding: '0 20px',
-        }}>
+        <div className="client-idle-overlay">
           {/* Hero illustration */}
-          <div style={{ position: 'relative', marginBottom: 22 }}>
-            <div style={{
-              width: 82, height: 82, borderRadius: 26,
-              background: 'linear-gradient(135deg, rgba(245,197,24,0.13), rgba(245,138,7,0.06))',
-              border: '1.5px solid rgba(245,197,24,0.22)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="client-idle-hero">
+            <div className="client-idle-hero-core">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
             </div>
-            <div style={{ position: 'absolute', inset: -20, borderRadius: 46, background: 'radial-gradient(circle, rgba(245,197,24,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div className="client-idle-hero-glow" />
           </div>
 
           <div style={{ textAlign: 'center', marginBottom: 26 }}>
-            <div style={{ fontWeight: 800, fontSize: '1.22rem', color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>¿Qué necesitás hoy?</div>
-            <div style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>Elegí un servicio para empezar</div>
+            <div className="client-idle-title">¿Qué necesitás hoy?</div>
+            <div className="client-idle-subtitle">Elegí un servicio para empezar</div>
           </div>
 
           {/* Direct service cards — no modal needed */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 370 }}>
+          <div className="client-idle-cards">
             {/* Envíos card */}
-            <Link href="/cliente/enviar" style={{
-              display: 'flex', alignItems: 'center', gap: 14, padding: '17px 18px',
-              borderRadius: 20, textDecoration: 'none',
-              background: 'rgba(245,197,24,0.07)', border: '1.5px solid rgba(245,197,24,0.22)',
-            }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                background: 'linear-gradient(135deg, #F5C518 0%, #F58A07 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 5px 16px rgba(245,197,24,0.38)',
-              }}>
+            <Link href="/cliente/enviar" className="client-idle-card envios">
+              <div className="client-idle-card-icon envios">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="1" y="3" width="15" height="13" rx="2"/>
                   <path d="M16 8h4l3 5v3h-7V8z"/>
@@ -1416,35 +1398,26 @@ export default function ClienteHomePage() {
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Mandaditos / Envíos</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Delivery rápido a domicilio</div>
+                <div className="client-idle-card-title">Mandaditos / Envíos</div>
+                <div className="client-idle-card-sub">Delivery rápido a domicilio</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,197,24,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="client-idle-card-arrow">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </Link>
 
             {/* Tasker card */}
-            <Link href="/cliente/servicio" style={{
-              display: 'flex', alignItems: 'center', gap: 14, padding: '17px 18px',
-              borderRadius: 20, textDecoration: 'none',
-              background: 'rgba(99,102,241,0.07)', border: '1.5px solid rgba(99,102,241,0.22)',
-            }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 5px 16px rgba(99,102,241,0.38)',
-              }}>
+            <Link href="/cliente/servicio" className="client-idle-card tasker">
+              <div className="client-idle-card-icon tasker">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Contratar un Tasker</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Servicios en tu hogar</div>
+                <div className="client-idle-card-title">Contratar un Tasker</div>
+                <div className="client-idle-card-sub">Servicios en tu hogar</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(139,92,246,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="client-idle-card-arrow">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </Link>

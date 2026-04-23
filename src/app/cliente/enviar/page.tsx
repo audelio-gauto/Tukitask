@@ -544,7 +544,7 @@ export default function EnviarPaquetePage() {
         <div className="enviar-page-body">
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 18, background: '#f1f5f9', borderRadius: 14, padding: 5 }}>
+            <div className="enviar-order-toggle">
               {([
                 { key: 'envio',     label: '📦', sublabel: 'Envío' },
                 { key: 'mandadito', label: '🛒', sublabel: 'Mandaditos' },
@@ -559,31 +559,19 @@ export default function EnviarPaquetePage() {
                     if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
                     if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
                   }}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    padding: '10px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', gap: 2,
-                    background: orderType === tab.key ? '#fff' : 'transparent',
-                    color: orderType === tab.key ? '#1C1C2E' : '#9ca3af',
-                    boxShadow: orderType === tab.key ? '0 2px 6px rgba(0,0,0,0.10)' : 'none',
-                    transition: 'all 0.15s',
-                  }}
+                  className={`enviar-order-tab ${orderType === tab.key ? 'active' : ''}`}
                 >
                   <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{tab.label}</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: 0.2 }}>{tab.sublabel}</span>
+                  <span className="enviar-order-tab-label">{tab.sublabel}</span>
                 </button>
               ))}
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                background: orderType === 'mandadito' ? '#d1fae5' : orderType === 'flete' ? '#fef3c7' : '#fef9ec',
-                color: orderType === 'mandadito' ? '#065f46' : orderType === 'flete' ? '#92400e' : '#92400e',
-                borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem', fontWeight: 800,
-              }}>
+              <span className={`enviar-step-pill ${orderType}`}>
                 {orderType === 'mandadito' ? '🛒 Mandaditos' : orderType === 'flete' ? '🚛 Fletes' : '📦 Envío'}
               </span>
-              <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Paso {step} de 3</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--client-text-secondary)' }}>Paso {step} de 3</span>
             </div>
           )}
 
@@ -646,7 +634,7 @@ export default function EnviarPaquetePage() {
                         {/* Numbered badge */}
                         <span style={{
                           minWidth: 20, height: 20, borderRadius: '50%',
-                          background: '#ef4444', color: '#fff',
+                          background: 'var(--client-danger)', color: '#fff',
                           fontSize: '0.7rem', fontWeight: 800,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0, marginTop: 2,
@@ -675,7 +663,7 @@ export default function EnviarPaquetePage() {
                               <button
                                 type="button"
                                 onClick={() => removeStop(idx)}
-                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}
+                                style={{ background: 'none', border: 'none', color: 'var(--client-danger)', cursor: 'pointer', padding: '2px 4px', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}
                                 aria-label="Eliminar parada"
                               >✕</button>
                             )}
@@ -692,13 +680,7 @@ export default function EnviarPaquetePage() {
                     <button
                       type="button"
                       onClick={addStop}
-                      style={{
-                        marginTop: 10, width: '100%', padding: '9px 0',
-                        border: '1.5px dashed #F5C518', borderRadius: 10,
-                        background: '#FFFBEB', color: '#B45309',
-                        fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      }}
+                      className="enviar-add-stop-btn"
                     >
                       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                       Agregar parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : ''}
@@ -749,8 +731,8 @@ export default function EnviarPaquetePage() {
                 {orderType === 'mandadito' && (
                   <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 4, display: 'block' }}>
-                        Lista de lo que necesitás <span style={{ fontWeight: 400, color: '#9ca3af' }}>(describí cada producto)</span>
+                      <label className="enviar-mandadito-label">
+                        Lista de lo que necesitás <span className="enviar-mandadito-note">(describí cada producto)</span>
                       </label>
                       <textarea
                         className="enviar-field-textarea"
@@ -758,12 +740,11 @@ export default function EnviarPaquetePage() {
                         value={shoppingList}
                         onChange={e => setShoppingList(e.target.value)}
                         rows={4}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', resize: 'vertical', background: '#fafafa', boxSizing: 'border-box' }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: 4, display: 'block' }}>
-                        Monto máximo a gastar <span style={{ fontWeight: 400, color: '#9ca3af' }}>(Gs.)</span>
+                      <label className="enviar-mandadito-label">
+                        Monto máximo a gastar <span className="enviar-mandadito-note">(Gs.)</span>
                       </label>
                       <input
                         type="text"
@@ -775,7 +756,6 @@ export default function EnviarPaquetePage() {
                           const raw = e.target.value.replace(/\D/g, '');
                           setMaxBudget(raw ? parseInt(raw).toLocaleString('es-PY') : '');
                         }}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: '0.85rem', background: '#fafafa', boxSizing: 'border-box' }}
                       />
                     </div>
                   </div>
@@ -966,9 +946,9 @@ export default function EnviarPaquetePage() {
                 </div>
 
 
-                <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: '#fafafa' }}>
+                <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: 'var(--client-action-active)' }}>
                   <div className="enviar-field">
-                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                     <textarea
                       className="enviar-field-textarea"
                       placeholder="Ej: Dejar en portería, tocar timbre 2 veces, es frágil..."
@@ -985,7 +965,7 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-summary-dot green" />
                     <span className="enviar-summary-addr">{form.pickupAddress.split(',')[0]}</span>
                   </div>
-                  <svg width="14" height="14" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <svg width="14" height="14" fill="none" stroke="var(--client-text-secondary)" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   <div className="enviar-summary-item">
                     <span className="enviar-summary-dot red" />
                     <span className="enviar-summary-addr">
@@ -1002,7 +982,7 @@ export default function EnviarPaquetePage() {
                   {/* Scheduled date-time */}
                   <div className="enviar-contact-card">
                     <div className="enviar-field">
-                      <label className="enviar-field-label">📅 Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                      <label className="enviar-field-label">📅 Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                       <input
                         type="datetime-local"
                         className="enviar-field-input"
@@ -1016,7 +996,7 @@ export default function EnviarPaquetePage() {
                   {/* Promo code */}
                   <div className="enviar-contact-card">
                     <div className="enviar-field">
-                      <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                      <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input
                           className="enviar-field-input"
@@ -1030,18 +1010,18 @@ export default function EnviarPaquetePage() {
                           type="button"
                           onClick={validatePromo}
                           disabled={promoLoading || !promoCode.trim()}
-                          style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: promoLoading || !promoCode.trim() ? '#e5e7eb' : '#111827', color: promoLoading || !promoCode.trim() ? '#9ca3af' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: promoLoading || !promoCode.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                          className="promo-apply-btn"
                         >
                           {promoLoading ? '...' : 'Aplicar'}
                         </button>
                       </div>
                       {promoResult && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 600 }}>
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600 }}>
                           ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
                         </div>
                       )}
                       {promoError && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>
+                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600 }}>
                           ❌ {promoError}
                         </div>
                       )}
@@ -1051,7 +1031,7 @@ export default function EnviarPaquetePage() {
 
                 {/* CTA */}
                 {submitError && (
-                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', fontSize: '0.84rem', fontWeight: 500, marginTop: '0.5rem' }}>
+                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.84rem', fontWeight: 500, marginTop: '0.5rem' }}>
                     ⚠️ {submitError}
                   </div>
                 )}

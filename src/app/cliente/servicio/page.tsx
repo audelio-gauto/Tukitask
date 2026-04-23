@@ -739,12 +739,12 @@ export default function SolicitarServicioPage() {
                       </button>
                     </div>
                     {promoResult && (
-                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '0.8rem', fontWeight: 600 }}>
+                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600 }}>
                         ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
                       </div>
                     )}
                     {promoError && (
-                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>
+                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600 }}>
                         ❌ {promoError}
                       </div>
                     )}
@@ -752,7 +752,7 @@ export default function SolicitarServicioPage() {
                 </div>
 
                 {submitError && (
-                  <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.82rem', fontWeight: 600 }}>
+                  <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: 'var(--client-danger)', fontSize: '0.82rem', fontWeight: 600 }}>
                     ⚠️ {submitError}
                   </div>
                 )}
