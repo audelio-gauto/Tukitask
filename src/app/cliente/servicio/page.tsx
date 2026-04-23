@@ -404,38 +404,22 @@ export default function SolicitarServicioPage() {
                 </div>
 
                 {/* ── Cuándo lo necesitás (obligatorio) ── */}
-                <div style={{ margin: '16px 0', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                <div className="servicio-mode-section">
+                  <p className="servicio-mode-title">
                     ¿Cuándo lo necesitás? <span style={{ color: '#ef4444' }}>*</span>
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
+                  <div className="servicio-mode-row">
                     <button
                       type="button"
                       onClick={() => setServiceMode('ahora')}
-                      style={{
-                        flex: 1, padding: '12px 0', borderRadius: 12,
-                        border: serviceMode === 'ahora' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
-                        background: serviceMode === 'ahora' ? '#e0f2fe' : '#f8fafc',
-                        color: serviceMode === 'ahora' ? '#0369a1' : '#64748b',
-                        fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: serviceMode === 'ahora' ? '0 2px 8px rgba(14, 165, 233, 0.15)' : 'none'
-                      }}
+                      className={`servicio-mode-btn ${serviceMode === 'ahora' ? 'active' : ''}`}
                     >
                       ⚡ Ahora
                     </button>
                     <button
                       type="button"
                       onClick={() => setServiceMode('agendar')}
-                      style={{
-                        flex: 1, padding: '12px 0', borderRadius: 12,
-                        border: serviceMode === 'agendar' ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
-                        background: serviceMode === 'agendar' ? '#e0f2fe' : '#f8fafc',
-                        color: serviceMode === 'agendar' ? '#0369a1' : '#64748b',
-                        fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: serviceMode === 'agendar' ? '0 2px 8px rgba(14, 165, 233, 0.15)' : 'none'
-                      }}
+                      className={`servicio-mode-btn ${serviceMode === 'agendar' ? 'active' : ''}`}
                     >
                       📅 Agendar
                     </button>
@@ -447,17 +431,12 @@ export default function SolicitarServicioPage() {
                         value={scheduledAt}
                         min={new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16)}
                         onChange={e => setScheduledAt(e.target.value)}
-                        style={{
-                          width: '100%', padding: '12px', borderRadius: 10,
-                          border: '2px solid #0ea5e9', fontSize: '0.95rem',
-                          background: '#fff', color: '#1e293b', boxSizing: 'border-box',
-                          outline: 'none', fontWeight: 600
-                        }}
+                        className="servicio-mode-input"
                       />
                     </div>
                   )}
                   {serviceMode === null && (
-                    <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <p className="servicio-mode-warning">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                       Seleccioná una opción para continuar
                     </p>
@@ -616,9 +595,9 @@ export default function SolicitarServicioPage() {
                 </div>
 
                 {/* Photos */}
-                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem', background: '#fafafa' }}>
+                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem', background: 'var(--client-action-active)' }}>
                   <div className="enviar-contact-header" style={{ marginBottom: '0.5rem' }}>
-                    Fotos del problema <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af', fontSize: '0.72rem' }}>(opcional)</span>
+                    Fotos del problema <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)', fontSize: '0.72rem' }}>(opcional)</span>
                   </div>
                   <div className="photo-upload-area" style={{ marginBottom: 0 }}>
                     <input
@@ -635,9 +614,9 @@ export default function SolicitarServicioPage() {
                           <span style={{ color: '#F5C518', fontSize: '0.85rem', fontWeight: 600 }}>Subiendo...</span>
                         ) : (
                           <>
-                            <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--client-text-secondary)' }}>
                               <rect x="3" y="3" width="18" height="18" rx="3" />
-                              <circle cx="8.5" cy="8.5" r="1.5" fill="#9ca3af" stroke="none" />
+                              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none" />
                               <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                             </svg>
                             <span className="photo-upload-text">Agregar fotos</span>
@@ -659,13 +638,13 @@ export default function SolicitarServicioPage() {
                           </div>
                   ))}
                   {!photosUploading && (
-                    <label htmlFor="photo-upload" className="photo-add-btn">
-                      <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                    </label>
+                              <label htmlFor="photo-upload" className="photo-add-btn">
+                                <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" style={{ color: 'var(--client-text-secondary)' }}><path d="M12 5v14M5 12h14" /></svg>
+                              </label>
                       )}
                       {!photosUploading && (
                         <label htmlFor="photo-upload" className="photo-add-btn">
-                          <svg width="28" height="28" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                          <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" style={{ color: 'var(--client-text-secondary)' }}><path d="M12 5v14M5 12h14" /></svg>
                         </label>
                       )}
                       {photosUploading && (
@@ -740,7 +719,7 @@ export default function SolicitarServicioPage() {
                 {/* Promo code */}
                 <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
                   <div className="enviar-field">
-                    <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: '#9ca3af' }}>(opcional)</span></label>
+                    <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input
                         className="enviar-field-input"
@@ -754,7 +733,7 @@ export default function SolicitarServicioPage() {
                         type="button"
                         onClick={validatePromo}
                         disabled={promoLoading || !promoCode.trim()}
-                        style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: promoLoading || !promoCode.trim() ? '#e5e7eb' : '#111827', color: promoLoading || !promoCode.trim() ? '#9ca3af' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: promoLoading || !promoCode.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                        className="promo-apply-btn"
                       >
                         {promoLoading ? '...' : 'Aplicar'}
                       </button>
@@ -773,7 +752,7 @@ export default function SolicitarServicioPage() {
                 </div>
 
                 {submitError && (
-                  <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: '#fee2e2', color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
+                  <div style={{ margin: '4px 0 8px', padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.82rem', fontWeight: 600 }}>
                     ⚠️ {submitError}
                   </div>
                 )}
