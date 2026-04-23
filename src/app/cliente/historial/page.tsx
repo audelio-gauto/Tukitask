@@ -229,24 +229,24 @@ export default function ClienteHistorialPage() {
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      background: 'linear-gradient(160deg, #0d0d1a 0%, #16213E 55%, #0F3460 100%)',
+      background: 'var(--background)',
       display: 'flex', flexDirection: 'column',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
       {/* Header */}
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12,
-        padding: '14px 14px 12px', background: 'rgba(13,13,26,0.95)',
+        padding: '14px 14px 12px', background: 'var(--header-bg)',
         borderBottom: '1px solid rgba(245,197,24,0.12)',
       }}>
         <button onClick={() => router.back()} style={{
           width: 36, height: 36, borderRadius: 10, border: 'none',
-          background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '1.1rem',
+          background: 'var(--ghost-btn)', color: 'var(--ghost-btn-color)', fontSize: '1.1rem',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>Historial</h1>
-          <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Envíos y servicios</p>
+          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Historial</h1>
+          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>Envíos y servicios</p>
         </div>
         <button onClick={loadHistory} style={{
           width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)',
@@ -260,13 +260,13 @@ export default function ClienteHistorialPage() {
         {loading ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
             <svg style={{ width: 40, height: 40, marginBottom: 12 }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" style={{ animation: 'spin 1s linear infinite', transformOrigin: 'center' }} /></svg>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Cargando historial…</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Cargando historial…</p>
           </div>
         ) : total === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
-            <svg style={{ width: 56, height: 56, marginBottom: 16, opacity: 0.35 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg>
-            <p style={{ fontWeight: 700, color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', marginBottom: 8 }}>Sin historial aún</p>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.88rem' }}>Tus envíos y servicios aparecerán aquí</p>
+            <svg style={{ width: 56, height: 56, marginBottom: 16, opacity: 0.35 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg>
+            <p style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: 8 }}>Sin historial aún</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Tus envíos y servicios aparecerán aquí</p>
           </div>
         ) : (
           <>
@@ -279,10 +279,10 @@ export default function ClienteHistorialPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ fontSize: '1.5rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
                       <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
                         📍 Ver en inicio
@@ -293,24 +293,24 @@ export default function ClienteHistorialPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <span style={{ fontSize: '1.5rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>{getStatusLabel(item.data.status)}</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{fmtDate(item.data.created_at)}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
                       {/* Route A → stops → B — active order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                        <div style={{ background: 'var(--glass-card)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                              <span style={{ width: 2, height: 20, background: 'rgba(255,255,255,0.18)', display: 'block' }} />
+                              <span style={{ width: 2, height: 20, background: 'var(--border-subtle)', display: 'block' }} />
                               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
                             </div>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                               <div>
                                 <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>Punto A</div>
-                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).pickup_address || '—'}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', marginTop: 1 }}>{(item.data as Order).pickup_address || '—'}</div>
                               </div>
                               {(item.data as Order).order_stops && (item.data as Order).order_stops!.length > 0 && (
                                 <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
@@ -340,7 +340,7 @@ export default function ClienteHistorialPage() {
                               )}
                               <div>
                                 <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>Punto B</div>
-                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: 1 }}>{(item.data as Order).delivery_address || '—'}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', marginTop: 1 }}>{(item.data as Order).delivery_address || '—'}</div>
                               </div>
                             </div>
                           </div>
@@ -372,24 +372,24 @@ export default function ClienteHistorialPage() {
 
             {doneItems.length > 0 && (
               <div>
-                <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
+                <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {paginatedDone.map(item => item.kind === 'job' ? (
-                    <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
+                    <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
                         <span style={{ fontSize: '1.4rem' }}>{SERVICE_ICONS[item.data.service_type] || '✨'}</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: item.data.status === 'completado' ? '#4ade80' : '#f87171' }}>
                               {item.data.status === 'completado' ? '✅ Completado' : item.data.status === 'cancelled' ? '❌ Cancelado' : '⚠️ Incidente'}
                             </span>
-                            {item.data.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{item.data.tecnico_name}</span>}
+                            {item.data.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.data.tecnico_name}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           {item.data.total_price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs(item.data.total_price)}</div>}
-                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
                       {item.data.status === 'completado' && !item.data.tecnico_rating && (
@@ -399,7 +399,7 @@ export default function ClienteHistorialPage() {
                         </button>
                       )}
                       {item.data.tecnico_rating != null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                           Tu calificación: <StarRating rating={item.data.tecnico_rating} />
                         </div>
                       )}
@@ -413,36 +413,36 @@ export default function ClienteHistorialPage() {
                       )}
                     </div>
                   ) : (
-                    <div key={item.data.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px' }}>
+                    <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ fontSize: '1.4rem' }}>📦</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
                             <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
                               {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '✅ Entregado' : '❌ Cancelado'}
                             </span>
-                            {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{(item.data as Order).driver_name}</span>}
+                            {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(item.data as Order).driver_name}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           {((item.data as Order).offer ?? (item.data as Order).suggested_price) != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs((item.data as Order).offer ?? (item.data as Order).suggested_price)}</div>}
-                          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
                       {/* Route A → stops → B — completed order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
+                        <div style={{ background: 'var(--glass-card)', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                              <span style={{ width: 2, height: 18, background: 'rgba(255,255,255,0.15)', display: 'block' }} />
+                              <span style={{ width: 2, height: 18, background: 'var(--border-subtle)', display: 'block' }} />
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
                             </div>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                               <div>
                                 <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
-                                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).pickup_address || '—'}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{(item.data as Order).pickup_address || '—'}</div>
                               </div>
                               {(item.data as Order).order_stops && (item.data as Order).order_stops!.length > 0 && (
                                 <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
@@ -472,7 +472,7 @@ export default function ClienteHistorialPage() {
                                         const deliveredCount = (item.data as Order).order_stops!.filter(s => s.status === 'delivered').length;
                                         const failedCount = (item.data as Order).order_stops!.filter(s => s.status === 'failed').length;
                                         return deliveredCount > 0 || failedCount > 0 ? (
-                                          <div style={{ display: 'flex', gap: 10, fontSize: '0.65rem', paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 2 }}>
+                                          <div style={{ display: 'flex', gap: 10, fontSize: '0.65rem', paddingTop: 4, borderTop: '1px solid var(--border-subtle)', marginTop: 2 }}>
                                             {deliveredCount > 0 && <span style={{ color: '#4ade80', fontWeight: 700 }}>✓ {deliveredCount} entregada{deliveredCount !== 1 ? 's' : ''}</span>}
                                             {failedCount > 0 && <span style={{ color: '#f87171', fontWeight: 700 }}>✗ {failedCount} fallida{failedCount !== 1 ? 's' : ''}</span>}
                                           </div>
@@ -484,7 +484,7 @@ export default function ClienteHistorialPage() {
                               )}
                               <div>
                                 <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
-                                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)' }}>{(item.data as Order).delivery_address || '—'}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{(item.data as Order).delivery_address || '—'}</div>
                               </div>
                             </div>
                           </div>
@@ -499,7 +499,7 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
                             Motivo del fallo
                           </div>
-                          <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                             {(item.data as Order).fail_reason}
                           </div>
                         </div>
@@ -516,7 +516,7 @@ export default function ClienteHistorialPage() {
                       {/* Driver rating */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_name && (
                         localDriverRatings[item.data.id] != null || (item.data as Order).driver_rating != null ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>
                             Tu calificación al driver: <StarRating rating={localDriverRatings[item.data.id] ?? (item.data as Order).driver_rating!} />
                           </div>
                         ) : (
@@ -567,7 +567,7 @@ export default function ClienteHistorialPage() {
       {/* Footer */}
       <div style={{
         flexShrink: 0, display: 'flex', gap: 4, justifyContent: 'space-around',
-        background: 'rgba(13,13,26,0.97)', borderTop: '1px solid rgba(245,197,24,0.15)',
+        background: 'var(--header-bg)', borderTop: '1px solid rgba(245,197,24,0.15)',
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
       }}>
         {([
@@ -582,7 +582,7 @@ export default function ClienteHistorialPage() {
             background: item.active ? 'rgba(245,197,24,0.15)' : 'transparent',
           }}>
             <span style={{ fontSize: '1.35rem' }}>{item.icon}</span>
-            <span style={{ fontSize: '0.67rem', fontWeight: 700, color: item.active ? '#F5C518' : 'rgba(255,255,255,0.45)' }}>{item.label}</span>
+            <span style={{ fontSize: '0.67rem', fontWeight: 700, color: item.active ? '#F5C518' : 'var(--text-muted)' }}>{item.label}</span>
           </Link>
         ))}
       </div>
@@ -638,9 +638,9 @@ export default function ClienteHistorialPage() {
       {/* Tip modal */}
       {tipModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: '#1C1C2E', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, border: '1px solid rgba(245,197,24,0.2)' }}>
-            <h3 style={{ margin: '0 0 6px', color: '#fff', fontSize: '1.1rem', fontWeight: 800 }}>💰 Dar propina</h3>
-            <p style={{ margin: '0 0 18px', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+          <div style={{ background: 'var(--modal-bg)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, border: '1px solid rgba(245,197,24,0.2)' }}>
+            <h3 style={{ margin: '0 0 6px', color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 800 }}>💰 Dar propina</h3>
+            <p style={{ margin: '0 0 18px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               {tipModal.driverName ? `Para ${tipModal.driverName}` : 'Para el conductor'} · ingresa monto en Gs
             </p>
             <input
@@ -648,10 +648,10 @@ export default function ClienteHistorialPage() {
               placeholder="Ej: 10000"
               value={tipInput}
               onChange={e => setTipInput(e.target.value)}
-              style={{ width: '100%', padding: '13px 14px', borderRadius: 12, border: '1px solid rgba(245,197,24,0.3)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }}
+              style={{ width: '100%', padding: '13px 14px', borderRadius: 12, border: '1px solid rgba(245,197,24,0.3)', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }}
             />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setTipModal(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>
+              <button onClick={() => setTipModal(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid var(--border-subtle)', background: 'var(--ghost-btn)', color: 'var(--ghost-btn-color)', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>
                 Cancelar
               </button>
               <button onClick={handleTip} disabled={tipSending || !tipInput} style={{ flex: 2, padding: '12px', borderRadius: 12, border: 'none', background: tipSending || !tipInput ? 'rgba(245,197,24,0.3)' : 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', cursor: tipSending || !tipInput ? 'not-allowed' : 'pointer' }}>

@@ -1417,7 +1417,7 @@ export default function ClienteHomePage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Mandaditos / Envíos</div>
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Delivery rápido a domicilio</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Delivery rápido a domicilio</div>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,197,24,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"/>
@@ -1442,7 +1442,7 @@ export default function ClienteHomePage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 800, fontSize: '0.97rem', color: 'var(--text-primary)', marginBottom: 3 }}>Contratar un Tasker</div>
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.42)' }}>Servicios en tu hogar</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Servicios en tu hogar</div>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(139,92,246,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"/>
