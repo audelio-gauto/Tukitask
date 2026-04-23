@@ -888,7 +888,7 @@ export default function ClienteHomePage() {
     <div className="client-map-shell">
       {/* Map base */}
       <div className="client-map-base">
-        <ClientMap dark showMyLocationButton={false} locateRef={locateRef} />
+        <ClientMap showMyLocationButton={false} locateRef={locateRef} />
       </div>
 
       {/* Top gradient */}
