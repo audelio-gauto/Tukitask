@@ -92,7 +92,7 @@ export function InstallPrompt() {
     return (
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-        background: '#1e293b',
+        background: 'var(--modal-bg, var(--surface-1))',
         borderTop: '1px solid rgba(245,197,24,0.25)',
         borderRadius: '20px 20px 0 0',
         padding: '16px 20px calc(16px + env(safe-area-inset-bottom, 0px))',
@@ -103,10 +103,10 @@ export function InstallPrompt() {
         <img src="/icons/icon-96x96.png" alt=""
           style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.95rem', marginBottom: 2 }}>
+          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', marginBottom: 2 }}>
             Instalar TukiTask
           </div>
-          <div style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Acceso rápido desde tu pantalla de inicio
           </div>
         </div>
@@ -118,7 +118,7 @@ export function InstallPrompt() {
           Instalar
         </button>
         <button onClick={dismiss} style={{
-          background: 'none', border: 'none', color: '#64748b',
+          background: 'none', border: 'none', color: 'var(--text-muted)',
           cursor: 'pointer', fontSize: '1.2rem', padding: '4px', lineHeight: 1,
           flexShrink: 0,
         }}>✕</button>
@@ -130,7 +130,7 @@ export function InstallPrompt() {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-      background: '#1e293b',
+      background: 'var(--modal-bg, var(--surface-1))',
       borderTop: '1px solid rgba(245,197,24,0.25)',
       borderRadius: '20px 20px 0 0',
       padding: '20px 20px calc(20px + env(safe-area-inset-bottom, 0px))',
@@ -141,44 +141,44 @@ export function InstallPrompt() {
         <img src="/icons/icon-96x96.png" alt=""
           style={{ width: 48, height: 48, borderRadius: 10 }} />
         <div>
-          <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.95rem' }}>Instalar TukiTask</div>
-          <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Agregar a pantalla de inicio</div>
+          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>Instalar TukiTask</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Agregar a pantalla de inicio</div>
         </div>
         <button onClick={dismiss} style={{
           marginLeft: 'auto', background: 'none', border: 'none',
-          color: '#64748b', cursor: 'pointer', fontSize: '1.2rem',
+          color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem',
         }}>✕</button>
       </div>
 
       {!iosStep ? (
         <div>
-          <p style={{ color: '#94a3b8', fontSize: '0.88rem', marginBottom: 14, lineHeight: 1.5 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: 14, lineHeight: 1.5 }}>
             Toca <strong style={{ color: '#F5C518' }}>Compartir</strong> en Safari y luego "Agregar a inicio".
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
             <div style={{
-              background: 'rgba(255,255,255,0.07)', borderRadius: 12,
+              background: 'var(--glass-card)', borderRadius: 12,
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: '1.5rem' }}>⬆️</span>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>1. Compartir</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>1. Compartir</span>
             </div>
             <div style={{
-              background: 'rgba(255,255,255,0.07)', borderRadius: 12,
+              background: 'var(--glass-card)', borderRadius: 12,
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: '1.5rem' }}>➕</span>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>2. Agregar</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>2. Agregar</span>
             </div>
             <div style={{
-              background: 'rgba(255,255,255,0.07)', borderRadius: 12,
+              background: 'var(--glass-card)', borderRadius: 12,
               padding: '10px 16px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: '1.5rem' }}>📱</span>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>3. Listo</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>3. Listo</span>
             </div>
           </div>
         </div>

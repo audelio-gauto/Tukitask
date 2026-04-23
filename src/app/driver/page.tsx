@@ -684,7 +684,7 @@ export default function DriverDashboard() {
           <div style={{
             position: 'fixed', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 9999, background: '#1a1a2e',
+            zIndex: 9999, background: 'var(--surface-1)',
             borderRadius: 22, width: 'min(380px, 94vw)',
             boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
             border: '2px solid #facc15',
@@ -693,7 +693,7 @@ export default function DriverDashboard() {
             {/* Header */}
             <div style={{ background: 'rgba(250,204,21,0.1)', borderBottom: '1px solid rgba(250,204,21,0.2)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>💰 Ganancias</span>
-              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
+              <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
             </div>
             {/* Period tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0.75rem 1rem 0' }}>
@@ -701,8 +701,8 @@ export default function DriverDashboard() {
                 <button key={p} onClick={() => setEarningsPeriod(p)}
                   style={{
                     flex: 1, padding: '0.5rem 0', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
-                    background: earningsPeriod === p ? '#facc15' : 'rgba(255,255,255,0.06)',
-                    color: earningsPeriod === p ? '#111' : '#9ca3af',
+                    background: earningsPeriod === p ? '#facc15' : 'var(--glass-card)',
+                    color: earningsPeriod === p ? '#111' : 'var(--text-muted)',
                     transition: 'all 0.2s',
                   }}>
                   {p === 'dia' ? 'Hoy' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'Año'}
@@ -711,20 +711,20 @@ export default function DriverDashboard() {
             </div>
             {/* Amount */}
             <div style={{ padding: '1.5rem 1rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#c8ff00', lineHeight: 1 }}>
+              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--brand-lime, #c8ff00)', lineHeight: 1 }}>
                 {earningsData[earningsPeriod].toLocaleString('es-PY')}
               </div>
-              <div style={{ color: '#9ca3af', fontSize: '0.9rem', marginTop: 6 }}>Guaraníes</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 6 }}>Guaraníes</div>
             </div>
             {/* Summary row */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 1rem 1rem' }}>
               <div style={{ flex: 1, background: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: '0.75rem', textAlign: 'center', border: '1px solid rgba(16,185,129,0.2)' }}>
                 <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1.1rem' }}>{deliveredCount}</div>
-                <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: 2 }}>Entregados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2 }}>Entregados</div>
               </div>
               <div style={{ flex: 1, background: 'rgba(239,68,68,0.1)', borderRadius: 12, padding: '0.75rem', textAlign: 'center', border: '1px solid rgba(239,68,68,0.2)' }}>
                 <div style={{ fontWeight: 800, color: '#ef4444', fontSize: '1.1rem' }}>{failedCount}</div>
-                <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: 2 }}>Fallidos</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2 }}>Fallidos</div>
               </div>
             </div>
           </div>
@@ -841,8 +841,8 @@ export default function DriverDashboard() {
             <Link href="/driver/billetera" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
               <div style={{
                 padding: '1rem', borderRadius: 16,
-                background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
-                border: '2px solid #fca5a5',
+                background: 'var(--alert-error-bg)',
+                border: '2px solid var(--alert-error-border)',
                 display: 'flex', alignItems: 'center', gap: 12,
                 boxShadow: '0 4px 16px rgba(239,68,68,0.15)',
               }}>
@@ -854,8 +854,8 @@ export default function DriverDashboard() {
                   </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#991b1b' }}>Billetera bloqueada</p>
-                  <p style={{ margin: '3px 0 0', fontSize: '0.73rem', color: '#b91c1c', lineHeight: 1.4 }}>
+                  <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--alert-error-title)' }}>Billetera bloqueada</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.73rem', color: 'var(--alert-error-text)', lineHeight: 1.4 }}>
                     Necesitás saldo para recibir solicitudes.
                     Saldo actual: <strong>{Number(walletBalance ?? 0).toLocaleString('es-PY')} ₲</strong>
                   </p>
@@ -873,9 +873,9 @@ export default function DriverDashboard() {
               <div style={{
                 padding: '0.85rem 1rem', borderRadius: 14,
                 background: (docAlerts.expired.length > 0 || docCounts.rejected > 0)
-                  ? 'linear-gradient(135deg,#fee2e2,#fecaca)'
-                  : 'linear-gradient(135deg,#fefce8,#fef3c7)',
-                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? '#fca5a5' : '#fcd34d'}`,
+                  ? 'var(--alert-error-bg)'
+                  : 'var(--alert-warning-bg)',
+                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? 'var(--alert-error-border)' : 'var(--alert-warning-border)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -883,8 +883,8 @@ export default function DriverDashboard() {
                     {docAlerts.expired.length > 0 ? '🚫' : docCounts.rejected > 0 ? '❌' : '📎'}
                   </span>
                   <div>
-                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
                       {docAlerts.expired.length > 0
                         ? 'Documentos vencidos — no podés conectarte'
                         : `${docCounts.approved}/${DRIVER_TOTAL_DOCS} aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
@@ -892,36 +892,36 @@ export default function DriverDashboard() {
                     </p>
                   </div>
                 </div>
-                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>›</span>
+                <span style={{ fontSize: '1rem', color: 'var(--text-muted)', flexShrink: 0 }}>›</span>
               </div>
             </Link>
           )}
 
           {/* Alertas de documentos */}
           {docAlerts.expired.length > 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-error-bg)', border: '1.5px solid var(--alert-error-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🚫</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>Documentos vencidos — no podés ponerte En Línea</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Actualizá tus documentos en Perfil → Configuración</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-error-title)' }}>Documentos vencidos — no podés ponerte En Línea</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-error-text)' }}>Actualizá tus documentos en Perfil → Configuración</p>
               </div>
             </div>
           )}
           {docAlerts.notApproved.length > 0 && docAlerts.expired.length === 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-error-bg)', border: '1.5px solid var(--alert-error-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>📋</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#991b1b' }}>No podés ponerte En Línea aún</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b91c1c' }}>Tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-error-title)' }}>No podés ponerte En Línea aún</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-error-text)' }}>Tenés {docAlerts.notApproved.length} documento{docAlerts.notApproved.length !== 1 ? 's' : ''} pendiente{docAlerts.notApproved.length !== 1 ? 's' : ''} de aprobación. Revisá Configuración.</p>
               </div>
             </div>
           )}
           {docAlerts.expired.length === 0 && docAlerts.notApproved.length === 0 && docAlerts.soon.length > 0 && (
-            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: '#fffbeb', border: '1.5px solid #fcd34d', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ margin: '0 0 0.75rem', padding: '10px 12px', borderRadius: 12, background: 'var(--alert-warning-bg)', border: '1.5px solid var(--alert-warning-border)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#92400e' }}>Documentos próximos a vencer</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#b45309' }}>Actualizá antes de que venzan para seguir operando</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: 'var(--alert-warning-title)' }}>Documentos próximos a vencer</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: 'var(--alert-warning-text)' }}>Actualizá antes de que venzan para seguir operando</p>
               </div>
             </div>
           )}

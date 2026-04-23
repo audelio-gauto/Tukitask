@@ -120,6 +120,43 @@
   --label-color:  #9ca3af;
   --card-section-border: rgba(255,255,255,0.06);
 
+  /* ── Avatar / media fallback ─────────────────────────────── */
+  --avatar-bg: #2d3748;
+
+  /* ── Sheet handle bar ────────────────────────────────────── */
+  --handle-bar: #334155;
+
+  /* ── Alert semantic tokens ───────────────────────────────── */
+  --alert-error-bg:      rgba(239,68,68,0.10);
+  --alert-error-border:  rgba(239,68,68,0.28);
+  --alert-error-text:    #f87171;
+  --alert-error-title:   #fca5a5;
+  --alert-warning-bg:    rgba(245,158,11,0.10);
+  --alert-warning-border: rgba(245,158,11,0.30);
+  --alert-warning-text:  #fbbf24;
+  --alert-warning-title: #fcd34d;
+
+  /* ── Semantic stat cards ─────────────────────────────────── */
+  --stat-success-bg:     rgba(16,185,129,0.12);
+  --stat-success-border: rgba(16,185,129,0.25);
+  --stat-success-text:   #4ade80;
+  --stat-danger-bg:      rgba(239,68,68,0.12);
+  --stat-danger-border:  rgba(239,68,68,0.25);
+  --stat-danger-text:    #f87171;
+
+  /* ── Document card (settings pages) ─────────────────────── */
+  --doc-card-bg:       rgba(255,255,255,0.04);
+  --doc-card-border:   rgba(255,255,255,0.08);
+  --doc-verified-bg:   rgba(5,150,105,0.12);
+  --doc-verified-border: rgba(5,150,105,0.30);
+  --doc-verified-text: #4ade80;
+  --doc-disabled-bg:   rgba(255,255,255,0.06);
+  --doc-disabled-border: rgba(255,255,255,0.12);
+  --doc-disabled-text: rgba(255,255,255,0.35);
+  --doc-date-bg:       rgba(255,255,255,0.06);
+  --doc-date-border:   rgba(255,255,255,0.14);
+  --doc-date-text:     #e2e8f0;
+
   /* ── Radius scale ────────────────────────────────────────── */
   --radius-xs:   6px;
   --radius-sm:   8px;
@@ -227,6 +264,43 @@
   --card-border:  #e5e7eb;
   --label-color:  #374151;
   --card-section-border: #f1f5f9;
+
+  /* Avatar fallback */
+  --avatar-bg: #e2e8f0;
+
+  /* Sheet handle bar */
+  --handle-bar: rgba(0,0,0,0.18);
+
+  /* Alert semantic tokens */
+  --alert-error-bg:      #fef2f2;
+  --alert-error-border:  #fca5a5;
+  --alert-error-text:    #dc2626;
+  --alert-error-title:   #991b1b;
+  --alert-warning-bg:    #fffbeb;
+  --alert-warning-border: #fcd34d;
+  --alert-warning-text:  #d97706;
+  --alert-warning-title: #92400e;
+
+  /* Semantic stat cards */
+  --stat-success-bg:     #d1fae5;
+  --stat-success-border: #6ee7b7;
+  --stat-success-text:   #059669;
+  --stat-danger-bg:      #fee2e2;
+  --stat-danger-border:  #fca5a5;
+  --stat-danger-text:    #dc2626;
+
+  /* Document card (settings pages) */
+  --doc-card-bg:       #fafafa;
+  --doc-card-border:   #f1f5f9;
+  --doc-verified-bg:   #f0fdf4;
+  --doc-verified-border: #bbf7d0;
+  --doc-verified-text: #059669;
+  --doc-disabled-bg:   #f3f4f6;
+  --doc-disabled-border: #e5e7eb;
+  --doc-disabled-text: #9ca3af;
+  --doc-date-bg:       #ffffff;
+  --doc-date-border:   #e5e7eb;
+  --doc-date-text:     #374151;
 
   /* Client panel — light values */
   --client-bg:              #f8f9fc;

@@ -288,8 +288,8 @@ export default function DriverSettingsPage() {
               }}>
                 <span style={{ fontSize: '0.85rem' }}>{selectedVehicle.emoji}</span>
                 <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: 600 }}>{selectedVehicle.label}</span>
-                {vehicleDetails[vehicleType]?.marca && <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>· {vehicleDetails[vehicleType].marca}</span>}
-                {vehicleDetails[vehicleType]?.matricula && <span style={{ color: '#9ca3af', fontSize: '0.72rem' }}>· {vehicleDetails[vehicleType].matricula}</span>}
+                {vehicleDetails[vehicleType]?.marca && <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>· {vehicleDetails[vehicleType].marca}</span>}
+                {vehicleDetails[vehicleType]?.matricula && <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>· {vehicleDetails[vehicleType].matricula}</span>}
               </div>
             )}
           </div>
@@ -387,11 +387,11 @@ export default function DriverSettingsPage() {
               const ds = docStatus[d.docKey]; const ex = docExpiries[d.docKey] || ds?.expires_at;
               return ds?.status === 'approved' && ex && new Date(ex).getTime() <= Date.now();
             });
-            const bgColor = hasRejected || hasExpired ? '#fef2f2' : approvedCount === allDocs.length ? '#f0fdf4' : '#fefce8';
-            const borderColor = hasRejected || hasExpired ? '#fca5a5' : approvedCount === allDocs.length ? '#bbf7d0' : '#fcd34d';
+            const bgColor = hasRejected || hasExpired ? 'var(--alert-error-bg)' : approvedCount === allDocs.length ? 'var(--stat-success-bg)' : 'var(--alert-warning-bg)';
+            const borderColor = hasRejected || hasExpired ? 'var(--alert-error-border)' : approvedCount === allDocs.length ? 'var(--stat-success-border)' : 'var(--alert-warning-border)';
             const icon = hasExpired ? '🚫' : hasRejected ? '❌' : approvedCount === allDocs.length ? '✅' : '📎';
             return (
-              <div style={{ marginTop: '1rem', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+              <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
                 <button
                   type="button"
                   onClick={() => setDocsOpen(p => !p)}
@@ -404,8 +404,8 @@ export default function DriverSettingsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: '1.4rem' }}>{icon}</span>
                     <div style={{ textAlign: 'left' }}>
-                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Mis documentos</p>
-                      <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
                         {approvedCount}/{allDocs.length} aprobados
                         {allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length > 0 && ` · ${allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length} pendiente${allDocs.filter(d => docStatus[d.docKey]?.status === 'pending').length > 1 ? 's' : ''}`}
                         {hasRejected && ` · ${allDocs.filter(d => docStatus[d.docKey]?.status === 'rejected').length} rechazado${allDocs.filter(d => docStatus[d.docKey]?.status === 'rejected').length > 1 ? 's' : ''}`}
@@ -413,13 +413,13 @@ export default function DriverSettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{docsOpen ? '∧' : '∨'}</span>
+                  <span style={{ fontSize: '1rem', color: 'var(--text-muted)', flexShrink: 0 }}>{docsOpen ? '∧' : '∨'}</span>
                 </button>
 
                 {docsOpen && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                     {/* Personal docs */}
-                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 2px' }}>Identificación personal</p>
+                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0 2px' }}>Identificación personal</p>
                     {PERSONAL_DOCS.map(doc => {
                       const ds = docStatus[doc.key];
                       const isUploading = docUploading[doc.key];
@@ -428,20 +428,20 @@ export default function DriverSettingsPage() {
                       const needsExpiry = doc.requiresExpiry && !docExpiries[doc.key];
                       return (
                         <div key={doc.key}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--doc-card-bg)', borderRadius: 12, border: '1px solid var(--doc-card-border)' }}>
                             <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
+                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>}
                               {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
                             </div>
                             {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
                             {isUploading ? (
-                              <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                             ) : isLocked ? (
-                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Verificado</span>
                             ) : needsExpiry ? (
-                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
                             ) : (
                               <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                 {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
@@ -451,11 +451,11 @@ export default function DriverSettingsPage() {
                           </div>
                           {doc.requiresExpiry && (
                             <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Vencimiento:</span>
                               {isLocked ? (
-                                <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>{docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}</span>
                               ) : (
-                                <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                                <input type="date" value={docExpiries[doc.key] || ''} onChange={e => updateExpiry(doc.key, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--doc-date-border)', background: 'var(--doc-date-bg)', color: 'var(--doc-date-text)' }} />
                               )}
                             </div>
                           )}
@@ -464,7 +464,7 @@ export default function DriverSettingsPage() {
                     })}
 
                     {/* Vehicle docs */}
-                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, margin: '8px 0 2px' }}>Documentos — {selectedVehicle?.label}</p>
+                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '8px 0 2px' }}>Documentos — {selectedVehicle?.label}</p>
                     {VEHICLE_DOCS.map(doc => {
                       const docKey = `${vehicleType}_${doc.key}`;
                       const ds = docStatus[docKey];
@@ -474,20 +474,20 @@ export default function DriverSettingsPage() {
                       const needsExpiry = doc.requiresExpiry && !docExpiries[docKey];
                       return (
                         <div key={docKey}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--doc-card-bg)', borderRadius: 12, border: '1px solid var(--doc-card-border)' }}>
                             <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{doc.icon}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
+                              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
+                              {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>}
                               {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
                             </div>
                             {ds && <span style={{ flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7', color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e' }}>{ds.status === 'approved' ? '✅ Verificado' : ds.status === 'rejected' ? '❌ Rechazado' : '⏳ Pendiente'}</span>}
                             {isUploading ? (
-                              <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                             ) : isLocked ? (
-                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Verificado</span>
+                              <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Verificado</span>
                             ) : needsExpiry ? (
-                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                              <span title="Ingresá la fecha de vencimiento primero" style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
                             ) : (
                               <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'approved' ? '#fffbeb' : '#f0f9ff', color: ds?.status === 'approved' ? '#b45309' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'approved' ? '#fcd34d' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                 {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
@@ -497,11 +497,11 @@ export default function DriverSettingsPage() {
                           </div>
                           {doc.requiresExpiry && (
                             <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento:</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Vencimiento:</span>
                               {isLocked ? (
-                                <span style={{ fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}>{docExpiries[docKey] ? new Date(docExpiries[docKey]).toLocaleDateString('es-PY') : '—'}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>{docExpiries[docKey] ? new Date(docExpiries[docKey]).toLocaleDateString('es-PY') : '—'}</span>
                               ) : (
-                                <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fafafa', color: '#374151' }} />
+                                <input type="date" value={docExpiries[docKey] || ''} onChange={e => updateExpiry(docKey, e.target.value)} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--doc-date-border)', background: 'var(--doc-date-bg)', color: 'var(--doc-date-text)' }} />
                               )}
                             </div>
                           )}
@@ -671,9 +671,9 @@ export default function DriverSettingsPage() {
           <div style={{
             marginTop: '0.75rem', padding: '0.85rem 1rem', borderRadius: 12,
             fontSize: '0.88rem', fontWeight: 600, textAlign: 'center',
-            background: message.includes('correctamente') ? '#f0fdf4' : '#fef2f2',
-            color: message.includes('correctamente') ? '#059669' : '#dc2626',
-            border: `1px solid ${message.includes('correctamente') ? '#bbf7d0' : '#fecaca'}`,
+            background: message.includes('correctamente') ? 'var(--stat-success-bg)' : 'var(--alert-error-bg)',
+            color: message.includes('correctamente') ? 'var(--stat-success-text)' : 'var(--alert-error-text)',
+            border: `1px solid ${message.includes('correctamente') ? 'var(--stat-success-border)' : 'var(--alert-error-border)'}`,
           }}>
             {message.includes('correctamente') ? '✅ ' : '⚠️ '}{message}
           </div>
@@ -683,3 +683,4 @@ export default function DriverSettingsPage() {
     </DriverScreenLayout>
   );
 }
+

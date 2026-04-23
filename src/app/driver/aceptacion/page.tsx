@@ -35,7 +35,7 @@ export default function DriverAceptacionPage() {
   const offset = circumference - (ring / 100) * circumference;
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--background)', paddingBottom: 80 }}>
       {/* Header */}
       <div style={{ background: '#F5C518', color: '#111', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#111', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
@@ -54,9 +54,9 @@ export default function DriverAceptacionPage() {
         ) : (
           <>
             {/* Donut chart */}
-            <div style={{ background: '#fff', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: 16 }}>
+            <div style={{ background: 'var(--surface-1)', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: 16, border: '1px solid var(--border-subtle)' }}>
               <svg width="140" height="140" style={{ display: 'block', margin: '0 auto 12px' }}>
-                <circle cx="70" cy="70" r="52" fill="none" stroke="#f1f5f9" strokeWidth="14" />
+                <circle cx="70" cy="70" r="52" fill="none" stroke="var(--border-subtle)" strokeWidth="14" />
                 <circle
                   cx="70" cy="70" r="52" fill="none"
                   stroke={ring >= 70 ? '#059669' : ring >= 40 ? '#f59e0b' : '#ef4444'}
@@ -67,30 +67,30 @@ export default function DriverAceptacionPage() {
                   transform="rotate(-90 70 70)"
                   style={{ transition: 'stroke-dashoffset 0.8s ease' }}
                 />
-                <text x="70" y="66" textAnchor="middle" fontSize="28" fontWeight="800" fill="#1e293b">
+                <text x="70" y="66" textAnchor="middle" fontSize="28" fontWeight="800" fill="currentColor">
                   {tasa !== null ? `${tasa}%` : '—'}
                 </text>
-                <text x="70" y="84" textAnchor="middle" fontSize="11" fill="#9ca3af">aceptación</text>
+                <text x="70" y="84" textAnchor="middle" fontSize="11" fill="currentColor" opacity="0.5">aceptación</text>
               </svg>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 Basado en {total} {total === 1 ? 'envío' : 'envíos'}
               </p>
             </div>
 
             {/* Breakdown */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <div style={{ background: '#d1fae5', borderRadius: 14, padding: '16px 14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#059669' }}>{delivered}</div>
-                <div style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>✅ Completados</div>
+              <div style={{ background: 'var(--stat-success-bg)', borderRadius: 14, padding: '16px 14px', textAlign: 'center', border: '1px solid var(--stat-success-border)' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--stat-success-text)' }}>{delivered}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--stat-success-text)', fontWeight: 600, opacity: 0.8 }}>✅ Completados</div>
               </div>
-              <div style={{ background: '#fee2e2', borderRadius: 14, padding: '16px 14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#dc2626' }}>{cancelled}</div>
-                <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: 600 }}>✕ Cancelados</div>
+              <div style={{ background: 'var(--stat-danger-bg)', borderRadius: 14, padding: '16px 14px', textAlign: 'center', border: '1px solid var(--stat-danger-border)' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--stat-danger-text)' }}>{cancelled}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--stat-danger-text)', fontWeight: 600, opacity: 0.8 }}>✕ Cancelados</div>
               </div>
             </div>
 
             {total === 0 && (
-              <div style={{ textAlign: 'center', paddingTop: 32, color: '#9ca3af' }}>
+              <div style={{ textAlign: 'center', paddingTop: 32, color: 'var(--text-muted)' }}>
                 <p style={{ fontSize: '0.85rem' }}>Completá tu primer envío para ver tu tasa acá.</p>
               </div>
             )}

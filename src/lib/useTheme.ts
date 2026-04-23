@@ -10,11 +10,16 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
 }
 
-/** Read theme mode from localStorage, fallback to 'dark' */
+/** Read theme mode from localStorage, fallback to system prefers-color-scheme */
 function readStoredTheme(): ThemeMode {
   if (typeof localStorage === 'undefined') return 'dark';
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' ? stored : 'dark';
+  if (stored === 'light' || stored === 'dark') return stored;
+  // No manual override — respect the OS preference
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+    return 'light';
+  }
+  return 'dark';
 }
 
 /**
@@ -39,7 +44,22 @@ export function useTheme() {
       }
     };
     window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
+
+    // Sync with OS theme changes — only when no manual override stored
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const mqHandler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem(STORAGE_KEY)) {
+        const next: ThemeMode = e.matches ? 'light' : 'dark';
+        setThemeState(next);
+        applyTheme(next);
+      }
+    };
+    mq.addEventListener('change', mqHandler);
+
+    return () => {
+      window.removeEventListener('storage', handler);
+      mq.removeEventListener('change', mqHandler);
+    };
   }, []);
 
   const setTheme = useCallback((mode: ThemeMode) => {
@@ -54,6 +74,7 @@ export function useTheme() {
 /**
  * Lightweight initializer — call inside a layout useEffect to apply
  * the stored theme without subscribing to changes (avoids extra renders).
+ * Falls back to prefers-color-scheme when no manual preference is stored.
  */
 export function initTheme() {
   if (typeof document === 'undefined') return;

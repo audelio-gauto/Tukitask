@@ -69,6 +69,12 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        {/* Anti-FOUC: apply theme before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('tuki_theme');if(s==='light'||s==='dark'){document.documentElement.setAttribute('data-theme',s);}else if(window.matchMedia('(prefers-color-scheme: light)').matches){document.documentElement.setAttribute('data-theme','light');}else{document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();`,
+          }}
+        />
         {/* Preconnect to key origins for perf */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://api.mapbox.com" />

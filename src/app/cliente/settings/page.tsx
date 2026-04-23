@@ -237,8 +237,8 @@ export default function ClientSettingsPage() {
           const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
           const hasRejected   = ID_DOCS.some(d => idDocs[d.key]?.status === 'rejected');
           const allApproved   = approvedCount === ID_DOCS.length;
-          const bgCol    = isVerified ? '#f0fdf4' : hasRejected ? '#fef2f2' : approvedCount > 0 ? '#fefce8' : '#f8fafc';
-          const bdCol    = isVerified ? '#bbf7d0' : hasRejected ? '#fca5a5' : approvedCount > 0 ? '#fcd34d' : '#e2e8f0';
+          const bgCol    = isVerified ? 'var(--stat-success-bg)' : hasRejected ? 'var(--alert-error-bg)' : approvedCount > 0 ? 'var(--alert-warning-bg)' : 'var(--surface-2)';
+          const bdCol    = isVerified ? 'var(--stat-success-border)' : hasRejected ? 'var(--alert-error-border)' : approvedCount > 0 ? 'var(--alert-warning-border)' : 'var(--border-subtle)';
           const headerIcon = isVerified ? '✅' : hasRejected ? '❌' : approvedCount > 0 ? '⏳' : '🪪';
           return (
             <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -254,8 +254,8 @@ export default function ClientSettingsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: '1.4rem' }}>{headerIcon}</span>
                   <div style={{ textAlign: 'left' }}>
-                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#1f2937' }}>Verificar tu identidad</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#4b5563' }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Verificar tu identidad</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
                       {isVerified ? 'Identidad verificada — badge ✅ activo en tu perfil'
                         : allApproved ? 'Documentos enviados — en revisión'
                         : hasRejected ? `${approvedCount}/${ID_DOCS.length} aprobados · documentos rechazados`
@@ -264,12 +264,12 @@ export default function ClientSettingsPage() {
                     </p>
                   </div>
                 </div>
-                <span style={{ fontSize: '1rem', color: '#6b7280', flexShrink: 0 }}>{idOpen ? '∧' : '∨'}</span>
+                <span style={{ fontSize: '1rem', color: 'var(--text-muted)', flexShrink: 0 }}>{idOpen ? '∧' : '∨'}</span>
               </button>
 
               {idOpen && (
                 <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                     Subí los dos documentos para obtener el <strong>badge ✅ Verificado</strong> en tu perfil.
                     Es completamente opcional — el admin lo revisará y te avisará por email.
                   </p>
@@ -284,8 +284,8 @@ export default function ClientSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--input-bg)', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
                           <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{doc.icon}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                            <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>
+                            <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
+                            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>
                             {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
                           </div>
                           {ds && (
@@ -294,11 +294,11 @@ export default function ClientSettingsPage() {
                             </span>
                           )}
                           {isUp ? (
-                            <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>Subiendo...</span>
                           ) : isLocked ? (
-                            <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0' }}>🔒 Ok</span>
+                            <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--doc-verified-bg)', color: 'var(--doc-verified-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-verified-border)' }}>🔒 Ok</span>
                           ) : needsDate ? (
-                            <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb' }}>📅 Fecha primero</span>
+                            <span style={{ flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8, background: 'var(--doc-disabled-bg)', color: 'var(--doc-disabled-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--doc-disabled-border)' }}>📅 Fecha primero</span>
                           ) : (
                             <label style={{ flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8, background: ds?.status === 'rejected' ? '#fff7f7' : '#f0f9ff', color: ds?.status === 'rejected' ? '#dc2626' : '#0284c7', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid', borderColor: ds?.status === 'rejected' ? '#fca5a5' : '#bae6fd', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                               {ds ? '↑ Re-subir' : '↑ Subir'}
@@ -308,7 +308,7 @@ export default function ClientSettingsPage() {
                         </div>
                         {doc.requiresExpiry && !isLocked && (
                           <div style={{ marginTop: 4, paddingLeft: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>Vencimiento cédula:</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Vencimiento cédula:</span>
                             <input type="date" value={idExpiries[doc.key] || ''} onChange={e => setIdExpiries(p => ({ ...p, [doc.key]: e.target.value }))} style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: 8, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)' }} />
                           </div>
                         )}

@@ -661,22 +661,22 @@ export default function SeguimientoPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0f0f1a', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
 
       {/* ── Top bar ── */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)' }}>
         <button
           onClick={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--ghost-btn)', color: 'var(--ghost-btn-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
         >
           ←
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem' }}>
             {type === 'service' ? 'Seguimiento del técnico' : 'Seguimiento del envío'}
           </div>
           {order && (
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: 1 }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 1 }}>
               #{id.slice(0, 8).toUpperCase()}
             </div>
           )}
@@ -738,7 +738,7 @@ export default function SeguimientoPage() {
 
         {/* Spinner */}
         {!mapReady && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f0f1a', zIndex: 999 }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--background)', zIndex: 999 }}>
             <div style={{ width: 32, height: 32, border: '3px solid rgba(34,197,94,0.2)', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
@@ -754,15 +754,15 @@ export default function SeguimientoPage() {
 
       {/* ── Bottom info card ── */}
       {loading ? (
-        <div style={{ flexShrink: 0, height: 130, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem' }}>Cargando…</div>
+        <div style={{ flexShrink: 0, height: 130, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cargando…</div>
         </div>
       ) : error ? (
         <div style={{ flexShrink: 0, padding: 16, background: 'rgba(239,68,68,0.08)', borderTop: '1px solid rgba(239,68,68,0.15)', textAlign: 'center', color: '#f87171', fontSize: '0.85rem' }}>
           {error} — <Link href="/cliente" style={{ color: '#0ea5e9' }}>Volver al inicio</Link>
         </div>
       ) : order ? (
-        <div style={{ flexShrink: 0, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '14px 16px 20px' }}>
+        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '14px 16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
             {/* Worker avatar */}
@@ -789,19 +789,19 @@ export default function SeguimientoPage() {
 
             {/* Worker info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {workerName}
               </div>
               {workerRating != null && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
                   {'★★★★★'.split('').map((_, i) => (
-                    <span key={i} style={{ color: i < Math.round(Number(workerRating)) ? '#F5C518' : 'rgba(255,255,255,0.2)', fontSize: '0.82rem' }}>★</span>
+                    <span key={i} style={{ color: i < Math.round(Number(workerRating)) ? '#F5C518' : 'var(--border-strong)', fontSize: '0.82rem' }}>★</span>
                   ))}
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginLeft: 3 }}>{Number(workerRating).toFixed(1)}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: 3 }}>{Number(workerRating).toFixed(1)}</span>
                 </div>
               )}
               {/* Address */}
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {type === 'service'
                   ? (order.client_address ?? order.delivery_address ?? '—')
                   : (order.delivery_address ?? '—')}
@@ -823,7 +823,7 @@ export default function SeguimientoPage() {
                   {order.extra_reason}
                 </div>
               )}
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', marginTop: 2 }}>acordado</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: 2 }}>acordado</div>
             </div>
           </div>
 
@@ -831,12 +831,12 @@ export default function SeguimientoPage() {
           {vehicle && (vehicle.label || vehicle.brand || vehicle.plate) && (
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               {vehicle.label && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--glass-card)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   {vehicle.label}
                 </span>
               )}
               {vehicle.brand && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--glass-card)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   🏷️ {vehicle.brand}
                 </span>
               )}
@@ -854,7 +854,7 @@ export default function SeguimientoPage() {
               {order.pickup_address && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
                   <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>A</span>
-                  <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.pickup_address}</span>
+                  <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.pickup_address}</span>
                 </div>
               )}
               {order.order_stops && order.order_stops.length > 0 && (
@@ -894,7 +894,7 @@ export default function SeguimientoPage() {
               {order.delivery_address && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem' }}>
                   <span style={{ background: '#ef4444', color: '#fff', borderRadius: 5, padding: '1px 6px', fontWeight: 700, flexShrink: 0 }}>B</span>
-                  <span style={{ color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address}</span>
+                  <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.delivery_address}</span>
                 </div>
               )}
             </div>
@@ -903,7 +903,7 @@ export default function SeguimientoPage() {
           {/* Back link */}
           <Link
             href="/cliente"
-            style={{ display: 'block', marginTop: 14, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textDecoration: 'none' }}
+            style={{ display: 'block', marginTop: 14, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}
           >
             ← Volver al inicio
           </Link>

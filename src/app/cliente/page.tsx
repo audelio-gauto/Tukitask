@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -232,7 +232,7 @@ function OfferCard({
             </span>
             {/* ETA */}
             {eta != null && (
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#9ca3af', lineHeight: 1 }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>
                 {eta} min
               </span>
             )}
@@ -273,7 +273,7 @@ function OfferCard({
           {offer.photo ? (
             <img src={offer.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#2d3748', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--avatar-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
               {isDriver ? '🚗' : '🛠'}
             </div>
           )}
@@ -290,14 +290,14 @@ function OfferCard({
                 </span>
               )}
               {offer.totalJobs != null && offer.totalJobs > 0 && (
-                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   {offer.totalJobs.toLocaleString()} {isDriver ? 'viajes' : 'servicios'}
                 </span>
               )}
             </div>
             {/* Vehicle model */}
             {offer.vehicleModel && (
-              <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 2 }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
                 {offer.vehicleModel}
               </div>
             )}
@@ -321,7 +321,7 @@ function OfferCard({
 
         {/* Note */}
         {offer.note && (
-          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, borderLeft: '2px solid rgba(255,255,255,0.15)' }}>
+          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '6px 10px', background: 'var(--glass-card)', borderRadius: 8, borderLeft: '2px solid var(--border-strong)' }}>
             "{offer.note}"
           </div>
         )}
@@ -332,7 +332,7 @@ function OfferCard({
             <button
               onClick={onReject}
               disabled={busy}
-              style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: '#2d3748', color: '#9ca3af', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--surface-3)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
             >
               Rechazar
             </button>
@@ -990,7 +990,7 @@ export default function ClienteHomePage() {
           <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
             {/* Handle */}
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
+              <div style={{ width: 40, height: 4, background: 'var(--handle-bar)', borderRadius: 2 }} />
             </div>
 
             {/* Searching content */}
@@ -1126,7 +1126,7 @@ export default function ClienteHomePage() {
         {mode === 'tracking' && (
           <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 2 }} />
+              <div style={{ width: 40, height: 4, background: 'var(--handle-bar)', borderRadius: 2 }} />
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 20px' }}>
               {[

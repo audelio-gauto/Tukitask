@@ -21,7 +21,7 @@ function CountdownRing({ createdAt }: { createdAt: string }) {
   const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
   return (
     <svg width="36" height="36" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
-      <circle cx="18" cy="18" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3"/>
+      <circle cx="18" cy="18" r={r} fill="none" stroke="var(--border-strong)" strokeWidth="3"/>
       <circle cx="18" cy="18" r={r} fill="none" stroke={c} strokeWidth="3"
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
         transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
@@ -241,9 +241,9 @@ export default memo(function RequestsFeed({
             onClick={goPrev}
             disabled={safeIdx === 0}
             style={{
-              background: safeIdx === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(200,255,0,0.12)',
+              background: safeIdx === 0 ? 'var(--glass-card)' : 'rgba(200,255,0,0.12)',
               border: '1px solid rgba(200,255,0,0.25)',
-              color: safeIdx === 0 ? '#334155' : '#c8ff00',
+              color: safeIdx === 0 ? 'var(--text-muted)' : '#c8ff00',
               borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem',
               fontWeight: 800, cursor: safeIdx === 0 ? 'default' : 'pointer',
             }}
@@ -263,9 +263,9 @@ export default memo(function RequestsFeed({
             onClick={goNext}
             disabled={safeIdx >= total - 1}
             style={{
-              background: safeIdx >= total - 1 ? 'rgba(255,255,255,0.04)' : 'rgba(200,255,0,0.12)',
+              background: safeIdx >= total - 1 ? 'var(--glass-card)' : 'rgba(200,255,0,0.12)',
               border: '1px solid rgba(200,255,0,0.25)',
-              color: safeIdx >= total - 1 ? '#334155' : '#c8ff00',
+              color: safeIdx >= total - 1 ? 'var(--text-muted)' : '#c8ff00',
               borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem',
               fontWeight: 800, cursor: safeIdx >= total - 1 ? 'default' : 'pointer',
             }}
@@ -291,7 +291,7 @@ export default memo(function RequestsFeed({
             }}>
               <div style={{ fontSize: '2.2rem' }}>⏳</div>
               <div style={{ color: '#c8ff00', fontWeight: 800, fontSize: '1rem', textAlign: 'center' }}>Oferta enviada</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center', maxWidth: 200 }}>Esperando respuesta del cliente…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', maxWidth: 200 }}>Esperando respuesta del cliente…</div>
             </div>
           )}
 
@@ -306,14 +306,14 @@ export default memo(function RequestsFeed({
                       border: `2.5px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
                 : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--surface-3)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem',
-                    flexShrink: 0, border: '2px solid #334155' }}>👤</div>
+                    flexShrink: 0, border: '2px solid var(--border-strong)' }}>👤</div>
               }
 
               {/* Name + service + meta */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-                <div style={{ fontSize: '0.72rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
                   <span>{item.clientName || 'Cliente'}</span>
                   {item.clientVerified && <span title="Verificado">🛡️</span>}
                   {item.clientRating != null && item.clientRating > 0 && (
@@ -346,14 +346,14 @@ export default memo(function RequestsFeed({
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontWeight: 900, color: '#c8ff00', fontSize: '1.25rem', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.62rem', color: '#6b7280' }}>Gs</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Gs</div>
                   {pricePerStop && <div style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <CountdownRing createdAt={item.createdAt} />
                   <button
                     onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
-                    style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#6b7280',
+                    style={{ background: 'var(--glass-card)', border: 'none', color: 'var(--text-muted)',
                       borderRadius: 99, width: 28, height: 28, display: 'flex', alignItems: 'center',
                       justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem' }}
                     aria-label="Cerrar"
@@ -424,12 +424,12 @@ export default memo(function RequestsFeed({
                 {item.photos.slice(0, 4).map((url, i) => (
                   <img key={i} src={url} alt={`foto ${i+1}`} onClick={() => window.open(url, '_blank')}
                     style={{ width: 50, height: 50, borderRadius: 8, objectFit: 'cover',
-                      flexShrink: 0, border: '1px solid #334155', cursor: 'pointer' }} />
+                      flexShrink: 0, border: '1px solid var(--border-strong)', cursor: 'pointer' }} />
                 ))}
                 {item.photos.length > 4 && (
-                  <div style={{ width: 50, height: 50, borderRadius: 8, background: 'rgba(255,255,255,0.07)',
-                    border: '1px solid #334155', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', flexShrink: 0, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+                  <div style={{ width: 50, height: 50, borderRadius: 8, background: 'var(--glass-card)',
+                    border: '1px solid var(--border-strong)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', flexShrink: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>
                     +{item.photos.length - 4}
                   </div>
                 )}
@@ -511,15 +511,15 @@ export default memo(function RequestsFeed({
                 onClick={() => setCustomOpen(o => !o)}
                 disabled={isSending}
                 style={{ width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
-                  border: `1px solid ${customOpen ? '#818cf8' : '#334155'}`,
-                  background: customOpen ? 'rgba(129,140,248,0.15)' : 'rgba(255,255,255,0.04)',
-                  color: customOpen ? '#818cf8' : '#94a3b8', fontWeight: 700,
+                  border: `1px solid ${customOpen ? '#818cf8' : 'var(--border-strong)'}`,
+                  background: customOpen ? 'rgba(129,140,248,0.15)' : 'var(--glass-card)',
+                  color: customOpen ? '#818cf8' : 'var(--text-muted)', fontWeight: 700,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center', gap: 2 }}
                 title="Precio personalizado"
               >
                 <span style={{ fontSize: '1rem' }}>✏️</span>
-                <span style={{ fontSize: '0.52rem', color: '#475569' }}>Libre</span>
+                <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
               </button>
             </div>
 
