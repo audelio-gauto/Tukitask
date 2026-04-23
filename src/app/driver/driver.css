@@ -121,18 +121,19 @@
   position: fixed;
   top: 0; left: 0;
   height: 100%; width: 300px;
-  background: var(--drawer-bg);
+  background: var(--surface-1);
   z-index: 99999;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  border-right: 1px solid var(--border-subtle);
 }
 .tuki-drawer.open { transform: translateX(0); }
 
 .tuki-drawer-header {
-  padding: 2rem 1.5rem 1.5rem;
+  padding: 2.5rem 1.5rem 1.5rem;
   background: linear-gradient(135deg, #F5C518 0%, #F58A07 100%);
   display: flex;
   align-items: center;
@@ -143,44 +144,44 @@
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  background-color: #d1d5db;
-  border: 3px solid rgba(255,255,255,0.4);
+  background-color: rgba(255,255,255,0.2);
+  border: 3px solid rgba(255,255,255,0.3);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 1.3rem;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.35rem;
 }
-.tuki-drawer-name { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
-.tuki-drawer-email { color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+.tuki-drawer-name { font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.01em; }
+.tuki-drawer-email { color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 500; }
 
-.tuki-drawer-body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+.tuki-drawer-body { flex: 1; overflow-y: auto; padding: 0.75rem 0; }
 
 .tuki-drawer-link {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.9rem 1.5rem;
-  color: var(--drawer-text);
+  padding: 1rem 1.5rem;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.95rem;
-  font-weight: 500;
-  transition: background 0.15s, color 0.15s;
+  font-weight: 600;
+  transition: all 0.2s;
   cursor: pointer;
   border: none;
   background: none;
   width: 100%;
   text-align: left;
 }
-.tuki-drawer-link svg { width: 20px; height: 20px; color: var(--text-muted); flex-shrink: 0; }
-.tuki-drawer-link:hover,
-.tuki-drawer-link.active { background: rgba(245,197,24,0.10); color: #C8960A; }
+.tuki-drawer-link svg { width: 22px; height: 22px; color: var(--text-muted); flex-shrink: 0; transition: color 0.2s; }
+.tuki-drawer-link:hover { color: var(--text-primary); background: var(--nav-tap-active); }
+.tuki-drawer-link.active { background: rgba(245,197,24,0.12); color: var(--client-primary); }
 .tuki-drawer-link:hover svg,
-.tuki-drawer-link.active svg { color: #C8960A; }
+.tuki-drawer-link.active svg { color: var(--client-primary); }
 
-.tuki-drawer-footer { border-top: 1px solid var(--drawer-border); padding: 0.5rem 0; }
+.tuki-drawer-footer { border-top: 1px solid var(--border-subtle); padding: 0.5rem 0; }
 
 /* Overlay */
 .tuki-overlay {
