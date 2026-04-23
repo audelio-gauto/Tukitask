@@ -34,6 +34,9 @@
   --nav-icon-inactive:  rgba(255,255,255,0.35);
   --nav-tap-active:     rgba(255,255,255,0.06);
 
+  /* ── Map overlay gradients (on top of Mapbox tile) ─────── */
+  --map-header-overlay: rgba(0,0,0,0.72);
+
   /* ── Screen header (DriverScreenLayout / ClientScreenLayout) */
   --header-bg:     #1a1a2e;
   --header-border: rgba(255,255,255,0.07);
@@ -199,6 +202,9 @@
   --nav-border:        rgba(0,0,0,0.08);
   --nav-icon-inactive: #9ca3af;
   --nav-tap-active:    rgba(245,197,24,0.07);
+
+  /* Map overlay gradients */
+  --map-header-overlay: rgba(255,255,255,0.82);
 
   /* Screen headers */
   --header-bg:     #ffffff;

@@ -892,7 +892,7 @@ export default function ClienteHomePage() {
       </div>
 
       {/* Top gradient */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 140, background: 'linear-gradient(to bottom, var(--map-header-overlay) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 2 }} />
 
       {/* ── No tasker toast ────────────────────────────────────────────── */}
       {noTaskerMsg && (
@@ -973,7 +973,7 @@ export default function ClienteHomePage() {
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,23,42,0.92)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
       >📍</button>
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
@@ -1506,7 +1506,7 @@ export default function ClienteHomePage() {
       {/* ── BOTTOM NAVBAR ─────────────────────────────────────────────────── */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-        background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(20px)',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(20px)',
         borderTop: '1px solid rgba(245,197,24,0.15)',
         padding: '8px 8px max(8px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 4, justifyContent: 'space-around',
@@ -1533,13 +1533,13 @@ export default function ClienteHomePage() {
         .map(item => (
             item.onClick ? (
               <button key={item.label} onClick={item.onClick}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer', color: 'rgba(255,255,255,0.45)' }}>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer', color: 'var(--nav-icon-inactive)' }}>
                 {item.icon}
                 <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
               </button>
             ) : (
               <Link key={item.label} href={item.path}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent', color: item.active ? '#F5C518' : 'rgba(255,255,255,0.45)' }}>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent', color: item.active ? '#F5C518' : 'var(--nav-icon-inactive)' }}>
                 {item.icon}
                 <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
                 {item.active && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5C518', marginTop: 1 }} />}
@@ -1550,10 +1550,10 @@ export default function ClienteHomePage() {
 
       {/* ── Loading overlay ──────────────────────────────────────────────── */}
       {loading && (
-        <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 5, background: 'rgba(15,23,42,0.9)', borderRadius: 40, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 5, background: 'var(--nav-bg)', borderRadius: 40, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(245,197,24,0.3)', borderTopColor: '#F5C518', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600 }}>Cargando…</span>
+          <span style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 600 }}>Cargando…</span>
         </div>
       )}
 
