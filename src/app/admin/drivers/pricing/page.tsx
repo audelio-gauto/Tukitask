@@ -299,7 +299,7 @@ export default function PricingConfigPage() {
 
       {/* Vehicle Pricing */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-1">🚗 Precios por Tipo de Vehículo</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-1">Precios por Tipo de Vehículo</h2>
         <p className="text-xs text-gray-400 mb-5">
           Configura precios base y precio por kilómetro para cada tipo de vehículo. Si vacío, se usa el precio global.
         </p>

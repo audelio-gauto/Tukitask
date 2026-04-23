@@ -692,7 +692,7 @@ export default function DriverDashboard() {
           }}>
             {/* Header */}
             <div style={{ background: 'rgba(250,204,21,0.1)', borderBottom: '1px solid rgba(250,204,21,0.2)', padding: '0.85rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>💰 Ganancias</span>
+              <span style={{ color: '#facc15', fontWeight: 800, fontSize: '1rem' }}>Ganancias</span>
               <button onClick={() => setShowEarnings(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 0 }} aria-label="Cerrar">✕</button>
             </div>
             {/* Period tabs */}

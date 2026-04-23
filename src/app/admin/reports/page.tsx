@@ -142,7 +142,7 @@ export default function AdminReportsPage() {
     <div className="max-w-5xl mx-auto">
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">🚨 Reportes y Reclamos</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Reportes y Reclamos</h1>
         <p className="text-sm text-gray-500 mt-1">Gestión de reportes enviados por clientes, drivers y técnicos.</p>
       </div>
 

@@ -593,7 +593,7 @@ export default function TecnicoActivoPage() {
         <>
           <div onClick={() => setExtraModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9998 }} />
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)', maxHeight: '85vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: 'var(--text-primary)' }}>💰 Cobros extras</h3>
+            <h3 style={{ margin: '0 0 14px', fontWeight: 800, color: 'var(--text-primary)' }}>Cobros extras</h3>
 
             {extraModal.items.length > 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -615,7 +615,7 @@ export default function TecnicoActivoPage() {
 
             <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px', marginBottom: 14, border: '1px solid var(--border-subtle)' }}>
               <p style={{ margin: '0 0 10px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                {extraModal.editIndex !== null ? `✏️ Editando ítem ${extraModal.editIndex + 1}` : '➕ Agregar ítem'}
+                {extraModal.editIndex !== null ? `Editando ítem ${extraModal.editIndex + 1}` : 'Agregar ítem'}
               </p>
               <label style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Monto (Gs.)</label>
               <input type="text" inputMode="numeric" value={extraModal.formAmountDisplay}

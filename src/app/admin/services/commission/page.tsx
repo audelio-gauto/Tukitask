@@ -204,7 +204,7 @@ export default function ServiceCommissionPage() {
   return (
     <div className="max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">🛠️ Comisión de Servicios</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Comisión de Servicios</h1>
         <p className="text-gray-500 text-sm mt-1">
           Configura precios sugeridos y comisiones por tipo de servicio, y gestiona la suscripción de cada técnico.
         </p>
@@ -221,7 +221,7 @@ export default function ServiceCommissionPage() {
             tab === 'pricing' ? 'bg-white border border-b-white border-gray-200 text-[#1C1C2E]' : 'text-gray-400 hover:text-gray-700'
           }`}
         >
-          💰 Precios por Servicio
+          Precios por Servicio
         </button>
         <button
           onClick={() => setTab('tecnicos')}
@@ -229,7 +229,7 @@ export default function ServiceCommissionPage() {
             tab === 'tecnicos' ? 'bg-white border border-b-white border-gray-200 text-[#1C1C2E]' : 'text-gray-400 hover:text-gray-700'
           }`}
         >
-          👤 Comisión por Técnico ({tecnicos.length})
+          Comisión por Técnico ({tecnicos.length})
         </button>
       </div>
 
@@ -237,7 +237,7 @@ export default function ServiceCommissionPage() {
       {tab === 'pricing' && (
         <div>
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-            <strong>ℹ️ Cómo funciona:</strong> Desde aquí gestionás las categorías de servicio que ven clientes y técnicos.
+            <strong>Cómo funciona:</strong> Desde aquí gestionás las categorías de servicio que ven clientes y técnicos.
             Podés agregar, editar, desactivar o eliminar categorías. El género determina a quién se muestra cada categoría.
           </div>
 

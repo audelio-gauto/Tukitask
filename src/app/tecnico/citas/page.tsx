@@ -267,7 +267,7 @@ export default function CitasPage() {
       <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', color: 'var(--text-primary)', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>📅 Citas Activas</h1>
+          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Citas Activas</h1>
           <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85 }}>Tus trabajos en curso</p>
         </div>
           <button onClick={loadJobs} style={{ marginLeft: 'auto', background: 'rgba(245,197,24,0.15)', border: 'none', color: '#F5C518', borderRadius: 8, padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>

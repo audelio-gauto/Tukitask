@@ -106,7 +106,7 @@ export default function AdminPromosPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">🏷️ Códigos Promocionales</h1>
+          <h1 className="text-2xl font-bold">Códigos Promocionales</h1>
           <p className="text-sm text-gray-400 mt-1">{promos.length} código(s) en total</p>
         </div>
         <button onClick={() => setShowForm(v => !v)}
