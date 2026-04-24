@@ -943,61 +943,11 @@ export default function ClienteHomePage() {
         </div>
       </div>
 
-      {/* ── Cancel pill — visible over the map when tracking, Bolt/inDrive style ── */}
-      {mode === 'tracking' && (() => {
-        const firstItem = [
-          ...trackingOrders.map(o => ({ id: o.id, type: 'delivery' as const })),
-          ...trackingJobs.map(j => ({ id: j.id, type: 'service' as const })),
-        ][0];
-        if (!firstItem) return null;
-        return (
-          <button
-            onClick={() => setCancelConfirm({ id: firstItem.id, type: firstItem.type })}
-            disabled={!!actionId}
-            style={{
-              position: 'fixed', top: 92, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 15, display: 'flex', alignItems: 'center', gap: 7,
-              background: 'rgba(20,10,10,0.88)', border: '1.5px solid rgba(239,68,68,0.6)',
-              borderRadius: 99, padding: '9px 22px',
-              color: '#f87171', fontWeight: 700, fontSize: '0.85rem',
-              cursor: actionId ? 'default' : 'pointer',
-              boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
-              whiteSpace: 'nowrap',
-              backdropFilter: 'blur(8px)',
-              opacity: actionId ? 0.6 : 1,
-              transition: 'opacity 0.2s',
-            }}
-          >
-            <span style={{ fontSize: '0.9rem' }}>✕</span>
-            Cancelar solicitud
-          </button>
-        );
-      })()}
-
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: (mode === 'idle' || mode === 'tracking') ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+        style={{ position: 'absolute', right: 16, bottom: 130, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
       >📍</button>
-
-      {/* ── Solicitar button when tracking (clean map, easy new request) ─── */}
-      {mode === 'tracking' && (
-        <button
-          onClick={() => setShowPublishModal(true)}
-          style={{
-            position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 5, display: 'flex', alignItems: 'center', gap: 8,
-            background: 'linear-gradient(135deg,#F5C518,#F58A07)',
-            border: 'none', borderRadius: 99, padding: '12px 28px',
-            color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem',
-            cursor: 'pointer', boxShadow: '0 4px 18px rgba(245,197,24,0.4)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          Pedir otro servicio
-        </button>
-      )}
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
       <div style={{
@@ -1391,7 +1341,7 @@ export default function ClienteHomePage() {
       </div>
 
       {/* ── IDLE — service selector ───────────────────────────────────────── */}
-      {mode === 'idle' && !loading && (
+      {(mode === 'idle' || mode === 'tracking') && !loading && (
         <div className="client-idle-overlay">
           {/* Hero illustration */}
           <div className="client-idle-hero">
