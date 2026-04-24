@@ -19,8 +19,10 @@ interface ActiveOrder {
   created_at: string;
   driver_name: string | null;
   driver_photo: string | null;
+  driver_rating: number | null;
   vehicle_type: string | null;
   order_type: string | null;
+  accepted_by: string | null;
 }
 
 interface ActiveJob {
@@ -32,11 +34,37 @@ interface ActiveJob {
   created_at: string;
   tecnico_name: string | null;
   tecnico_photo: string | null;
+  tecnico_rating: number | null;
+  tecnico_email: string | null;
+}
+
+interface DriverExtras {
+  vehicle_label: string;
+  vehicle_brand: string | null;
+  vehicle_plate: string | null;
 }
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 const ACTIVE_ORDER_STS = ['pending', 'negotiating', 'accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
 const ACTIVE_JOB_STS   = ['pending', 'accepted', 'in_progress'];
+
+const TRACKING_STATUS: Record<string, { text: string; color: string }> = {
+  pending:          { text: 'Buscando conductor…',                        color: '#f59e0b' },
+  negotiating:      { text: 'Negociando precio…',                          color: '#f59e0b' },
+  accepted:         { text: '¡Asignado! En camino a recoger',              color: '#22c55e' },
+  assigned:         { text: '¡Asignado! En camino a recoger',              color: '#22c55e' },
+  picking_up:       { text: 'Llegó al punto de recogida',                 color: '#f59e0b' },
+  in_transit:       { text: 'En camino al destino',                        color: '#3b82f6' },
+  returning:        { text: 'El conductor solicita devolver el paquete',   color: '#f97316' },
+  driver_returning: { text: 'El conductor va a devolverte el paquete',     color: '#f59e0b' },
+  return_delivered: { text: 'El conductor llegó a devolver el paquete',   color: '#a78bfa' },
+  // tecnico
+  'pending-job':    { text: 'Buscando técnico…',                           color: '#f59e0b' },
+  in_progress:      { text: 'Servicio en progreso',                        color: '#6366f1' },
+  en_camino:        { text: 'Técnico en camino',                           color: '#22c55e' },
+  llegue:           { text: 'Técnico llegó, listo para comenzar',          color: '#f59e0b' },
+  completion_pending: { text: 'Esperando confirmación',                   color: '#a78bfa' },
+};
 
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending:          { label: 'Buscando conductor', color: '#f59e0b' },
@@ -50,9 +78,12 @@ const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 const JOB_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending:     { label: 'Buscando técnico', color: '#f59e0b' },
-  accepted:    { label: 'Técnico asignado', color: '#22c55e' },
-  in_progress: { label: 'En progreso',      color: '#3b82f6' },
+  pending:            { label: 'Buscando técnico',      color: '#f59e0b' },
+  accepted:           { label: 'Técnico asignado',      color: '#22c55e' },
+  in_progress:        { label: 'En progreso',           color: '#3b82f6' },
+  en_camino:          { label: 'Técnico en camino',     color: '#22c55e' },
+  llegue:             { label: 'Técnico llegó',          color: '#f59e0b' },
+  completion_pending: { label: 'Por confirmar',         color: '#a78bfa' },
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -93,6 +124,7 @@ export default function MisOfertasPage() {
 
   const [orders, setOrders] = useState<ActiveOrder[]>([]);
   const [jobs,   setJobs]   = useState<ActiveJob[]>([]);
+  const [driverExtras, setDriverExtras] = useState<Record<string, DriverExtras>>({});
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -105,16 +137,41 @@ export default function MisOfertasPage() {
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
 
-      setOrders(
-        Array.isArray(ordersData)
-          ? ordersData.filter((o: ActiveOrder) => ACTIVE_ORDER_STS.includes(o.status))
-          : [],
-      );
+      const activeOrders: ActiveOrder[] = Array.isArray(ordersData)
+        ? ordersData.filter((o: ActiveOrder) => ACTIVE_ORDER_STS.includes(o.status))
+        : [];
+      setOrders(activeOrders);
       setJobs(
         Array.isArray(jobsData)
           ? jobsData.filter((j: ActiveJob) => ACTIVE_JOB_STS.includes(j.status))
           : [],
       );
+
+      // Fetch driver profile (vehicle details) for accepted+ orders
+      const VEHICLE_LABELS_MAP: Record<string, string> = { moto: 'Moto', auto: 'Auto', moto_carro: 'Moto Carro', camion: 'Camión' };
+      const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+      const extrasMap: Record<string, DriverExtras> = {};
+      await Promise.all(
+        activeOrders
+          .filter(o => TRACKING_STS.includes(o.status) && o.accepted_by)
+          .map(async o => {
+            try {
+              const r = await fetch(`/api/driver-profile?email=${encodeURIComponent(o.accepted_by!)}`);
+              const json = await r.json();
+              const p = json?.profile;
+              if (!p) return;
+              const vmode = p.transport_mode || '';
+              let vbrand = '';
+              try { const vd = JSON.parse(p.vehicle_type || '{}'); vbrand = vd[vmode]?.marca || ''; } catch { vbrand = ''; }
+              extrasMap[o.id] = {
+                vehicle_label: VEHICLE_LABELS_MAP[vmode] || vmode,
+                vehicle_brand: vbrand || null,
+                vehicle_plate: p.license_plate || null,
+              };
+            } catch { /* skip */ }
+          }),
+      );
+      setDriverExtras(prev => ({ ...prev, ...extrasMap }));
     } catch { /* keep previous data */ }
     setLoading(false);
   }, [email]);
@@ -142,17 +199,18 @@ export default function MisOfertasPage() {
 
   const total = orders.length + jobs.length;
 
-  /* ── Helpers ─────────────────────────────────────────────────────────── */
   function fmtDate(d: string) {
     return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
-  function WorkerAvatar({ photo, name }: { photo: string | null; name: string | null }) {
-    return photo ? (
-      <img src={photo} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-    ) : (
-      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--glass-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>{name?.[0]?.toUpperCase() || '?'}</span>
+  function StarRating({ rating }: { rating: number | null }) {
+    if (rating == null) return null;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
+        {'★★★★★'.split('').map((_, i) => (
+          <span key={i} style={{ color: i < Math.round(rating) ? '#F5C518' : 'rgba(156,163,175,0.4)', fontSize: '0.8rem' }}>★</span>
+        ))}
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginLeft: 2 }}>{Number(rating).toFixed(1)}</span>
       </div>
     );
   }
@@ -229,152 +287,227 @@ export default function MisOfertasPage() {
 
         {/* ── Driver orders ──────────────────────────────────────────── */}
         {orders.map(order => {
-          const st = ORDER_STATUS_CONFIG[order.status] ?? { label: order.status, color: '#9ca3af' };
+          const st = TRACKING_STATUS[order.status] ?? { text: order.status, color: '#9ca3af' };
           const price = order.offer ?? order.suggested_price;
-          const hasWorker = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
+          const hasWorker = ['accepted', 'assigned', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
           const typeLabel = ORDER_TYPE_LABELS[order.order_type || ''] ?? 'Envío';
-          const vehicleLabel = VEHICLE_LABELS[order.vehicle_type || ''] ?? '';
+          const extras = driverExtras[order.id];
 
           return (
-            <Link
-              key={order.id}
-              href={`/cliente/seguimiento/${order.id}`}
-              style={{ textDecoration: 'none', display: 'block', marginBottom: 12 }}
-            >
+            <div key={order.id} style={{ marginBottom: 16 }}>
+              {/* Card */}
               <div style={{
-                background: 'var(--surface-2)',
-                border: `1px solid ${st.color}30`,
-                borderRadius: 16,
-                padding: '14px 16px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.18)',
-                transition: 'transform 0.15s',
+                background: 'var(--glass-card)',
+                border: `1px solid ${st.color}40`,
+                borderRadius: 20,
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
               }}>
-                {/* Top row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon name="truck" size={18} color="#F5C518" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {typeLabel}{vehicleLabel ? ` · ${vehicleLabel}` : ''}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 1 }}>{fmtDate(order.created_at)}</div>
-                    </div>
+                {/* ── Status banner */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', borderBottom: `1px solid ${st.color}20` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {hasWorker
+                      ? <svg width="18" height="18" viewBox="0 0 20 20" fill={st.color}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      : <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.color, flexShrink: 0, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }} />
+                    }
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: st.color }}>{st.text}</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: st.color, background: `${st.color}18`, borderRadius: 8, padding: '3px 9px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {st.label}
-                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>{typeLabel}</span>
                 </div>
 
-                {/* Addresses */}
-                <div style={{ fontSize: '0.77rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                  {order.pickup_address && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                      <span style={{ display: 'inline-flex', flexShrink: 0, marginTop: 1, color: '#22c55e' }}><Icon name="map-pin" size={12} /></span>
-                      <span style={{ lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{order.pickup_address}</span>
+                {/* ── Worker row (only if assigned) */}
+                {hasWorker && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px 12px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    {/* Photo */}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      {order.driver_photo ? (
+                        <img src={order.driver_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${st.color}` }} />
+                      ) : (
+                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${st.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', border: `3px solid ${st.color}40` }}>
+                          <Icon name="user" size={28} />
+                        </div>
+                      )}
+                      {extras?.vehicle_label && (
+                        <div style={{ position: 'absolute', bottom: -4, right: -4, background: 'var(--surface-2)', borderRadius: 99, padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, border: `1px solid ${st.color}40`, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          {extras.vehicle_label.split(' ')[0]}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {order.delivery_address && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                      <span style={{ display: 'inline-flex', flexShrink: 0, marginTop: 1, color: '#3b82f6' }}><Icon name="map-pin" size={12} /></span>
-                      <span style={{ lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{order.delivery_address}</span>
+                    {/* Name + rating */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {order.driver_name || 'Conductor'}
+                      </div>
+                      <StarRating rating={order.driver_rating} />
                     </div>
-                  )}
-                </div>
-
-                {/* Bottom row: worker + price + chevron */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {hasWorker && order.driver_name ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <WorkerAvatar photo={order.driver_photo} name={order.driver_name} />
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{order.driver_name}</span>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Esperando conductor…</div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Price */}
                     {price != null && (
-                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#F5C518' }}>
-                        ₲{Number(price).toLocaleString('es-PY')}
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.25rem', lineHeight: 1 }}>
+                          {Number(price).toLocaleString('es-PY')}
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 2 }}>Guaraníes</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Vehicle tags (if available) */}
+                {hasWorker && extras && (extras.vehicle_label || extras.vehicle_brand || extras.vehicle_plate) && (
+                  <div style={{ display: 'flex', gap: 8, padding: '8px 16px 10px', flexWrap: 'wrap', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    {extras.vehicle_label && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(120,120,120,0.12)', borderRadius: 99, padding: '4px 11px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        <Icon name="truck" size={12} /> {extras.vehicle_label}
                       </span>
                     )}
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
+                    {extras.vehicle_brand && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(120,120,120,0.12)', borderRadius: 99, padding: '4px 11px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {extras.vehicle_brand}
+                      </span>
+                    )}
+                    {extras.vehicle_plate && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(59,130,246,0.12)', borderRadius: 99, padding: '4px 12px', fontSize: '0.76rem', color: '#60a5fa', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.06em' }}>
+                        {extras.vehicle_plate}
+                      </span>
+                    )}
                   </div>
+                )}
+
+                {/* ── Pending state worker row */}
+                {!hasWorker && (
+                  <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    {price != null && (
+                      <span style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.1rem' }}>{Number(price).toLocaleString('es-PY')} <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)' }}>Gs</span></span>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Addresses */}
+                {(order.pickup_address || order.delivery_address) && (
+                  <div style={{ padding: '10px 16px 12px', background: 'rgba(0,0,0,0.12)', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    {order.pickup_address && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 5, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }}>📍</span>
+                        <span style={{ lineHeight: 1.4 }}>{order.pickup_address}</span>
+                      </div>
+                    )}
+                    {order.delivery_address && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ color: '#f87171', flexShrink: 0, marginTop: 1 }}>🏁</span>
+                        <span style={{ lineHeight: 1.4 }}>{order.delivery_address}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Action buttons */}
+                <div style={{ display: 'flex', gap: 10, padding: '12px 16px' }}>
+                  <Link
+                    href={`/cliente/seguimiento/${order.id}?chat=1`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                  >
+                    <Icon name="chat" size={16} /> Chat
+                  </Link>
+                  <Link
+                    href={`/cliente/seguimiento/${order.id}`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(14,165,233,0.4)', background: 'rgba(14,165,233,0.1)', color: '#38bdf8', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                  >
+                    <Icon name="map" size={16} /> Ver mapa
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
 
         {/* ── Tecnico jobs ───────────────────────────────────────────── */}
         {jobs.map(job => {
-          const st = JOB_STATUS_CONFIG[job.status] ?? { label: job.status, color: '#9ca3af' };
+          const st = TRACKING_STATUS[job.status] ?? { text: job.status, color: '#9ca3af' };
           const serviceLabel = SERVICE_LABELS[job.service_type || ''] ?? job.service_type ?? 'Servicio';
-          const hasWorker = ['accepted', 'in_progress'].includes(job.status);
+          const hasWorker = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'].includes(job.status);
 
           return (
-            <Link
-              key={job.id}
-              href={`/cliente/seguimiento/${job.id}?type=service`}
-              style={{ textDecoration: 'none', display: 'block', marginBottom: 12 }}
-            >
+            <div key={job.id} style={{ marginBottom: 16 }}>
               <div style={{
-                background: 'var(--surface-2)',
-                border: `1px solid ${st.color}30`,
-                borderRadius: 16,
-                padding: '14px 16px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.18)',
+                background: 'var(--glass-card)',
+                border: `1px solid ${st.color}40`,
+                borderRadius: 20,
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
               }}>
-                {/* Top row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon name="tool" size={18} color="#8b5cf6" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{serviceLabel}</div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 1 }}>{job.created_at ? fmtDate(job.created_at) : '—'}</div>
-                    </div>
+                {/* ── Status banner */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', borderBottom: `1px solid ${st.color}20` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {hasWorker
+                      ? <svg width="18" height="18" viewBox="0 0 20 20" fill={st.color}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      : <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.color, flexShrink: 0, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }} />
+                    }
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: st.color }}>{st.text}</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: st.color, background: `${st.color}18`, borderRadius: 8, padding: '3px 9px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {st.label}
-                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>{serviceLabel}</span>
                 </div>
 
-                {/* Address */}
-                {job.address && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 10, fontSize: '0.77rem', color: 'var(--text-secondary)' }}>
-                    <span style={{ display: 'inline-flex', flexShrink: 0, marginTop: 1 }}><Icon name="map-pin" size={12} /></span>
-                    <span style={{ lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 240 }}>{job.address}</span>
+                {/* ── Worker row */}
+                {hasWorker && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px 12px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      {job.tecnico_photo ? (
+                        <img src={job.tecnico_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${st.color}` }} />
+                      ) : (
+                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${st.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${st.color}40` }}>
+                          <Icon name="tool" size={28} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {job.tecnico_name || 'Técnico'}
+                      </div>
+                      <StarRating rating={job.tecnico_rating} />
+                    </div>
+                    {job.agreed_price != null && (
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 900, color: '#F5C518', fontSize: '1.25rem', lineHeight: 1 }}>
+                          {Number(job.agreed_price).toLocaleString('es-PY')}
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 2 }}>Guaraníes</div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Bottom row: worker + price + chevron */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {hasWorker && job.tecnico_name ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <WorkerAvatar photo={job.tecnico_photo} name={job.tecnico_name} />
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{job.tecnico_name}</span>
-                    </div>
-                  ) : (
+                {/* ── Pending state */}
+                {!hasWorker && (
+                  <div style={{ padding: '10px 16px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Esperando técnico…</div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {job.agreed_price != null && (
-                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#F5C518' }}>
-                        ₲{Number(job.agreed_price).toLocaleString('es-PY')}
-                      </span>
-                    )}
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
                   </div>
+                )}
+
+                {/* ── Address */}
+                {job.address && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '10px 16px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.12)', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                    <span style={{ flexShrink: 0, marginTop: 1 }}>📍</span>
+                    <span style={{ lineHeight: 1.4 }}>{job.address}</span>
+                  </div>
+                )}
+
+                {/* ── Action buttons */}
+                <div style={{ display: 'flex', gap: 10, padding: '12px 16px' }}>
+                  <Link
+                    href={`/cliente/seguimiento/${job.id}?type=service&chat=1`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                  >
+                    <Icon name="chat" size={16} /> Chat
+                  </Link>
+                  <Link
+                    href={`/cliente/seguimiento/${job.id}?type=service`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(14,165,233,0.4)', background: 'rgba(14,165,233,0.1)', color: '#38bdf8', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                  >
+                    <Icon name="map" size={16} /> Ver mapa
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
