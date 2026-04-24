@@ -717,9 +717,9 @@ export default function ClienteHomePage() {
 
   const busy = !!actionId;
 
-  /* ─── Open sheet for searching, offers and tracking ────────────────── */
+  /* ─── Open sheet when offers arrive ────────────────────────────────────── */
   useEffect(() => {
-    if (mode === 'searching' || mode === 'offers' || mode === 'tracking') setSheetOpen(true);
+    if (mode !== 'idle') setSheetOpen(true);
     if (mode === 'idle') setSheetOpen(false);
   }, [mode]);
 
@@ -1479,7 +1479,6 @@ export default function ClienteHomePage() {
           </div>
         </div>
       )}
-
 
       {/* ── BOTTOM NAVBAR ─────────────────────────────────────────────────── */}
       <div style={{
