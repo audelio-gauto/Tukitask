@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -8,6 +9,15 @@ import { authFetch } from '@/lib/authFetch';
 import { useClientContext } from '../context';
 import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+
+const ChatModal = dynamic(() => import('@/components/ChatModal'), { ssr: false });
+
+interface ChatTarget {
+  orderId?: string;
+  jobId?: string;
+  otherName: string | null;
+  otherPhoto: string | null;
+}
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface ActiveOrder {
@@ -101,7 +111,7 @@ const PULSE_CSS = `@keyframes mis-ofertas-pulse { 0%,100%{opacity:1} 50%{opacity
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 export default function MisOfertasPage() {
-  const { email } = useClientContext();
+  const { email, displayName } = useClientContext();
   const router = useRouter();
 
   const [orders, setOrders] = useState<ActiveOrder[]>([]);
@@ -110,6 +120,7 @@ export default function MisOfertasPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
+  const [chatTarget, setChatTarget] = useState<ChatTarget | null>(null);
 
   const loadData = useCallback(async () => {
     if (!email) return;
@@ -413,13 +424,13 @@ export default function MisOfertasPage() {
 
                 {/* ── Action buttons */}
                 <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
-                  <Link
-                    href={`/cliente/seguimiento/${order.id}?chat=1`}
+                  <button
+                    onClick={() => setChatTarget({ orderId: order.id, otherName: order.driver_name, otherPhoto: order.driver_photo })}
                     className="tuki-btn tuki-btn-success"
-                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
+                    style={{ flex: 1, fontSize: '0.85rem' }}
                   >
                     <Icon name="chat" size={16} /> Chat
-                  </Link>
+                  </button>
                   <Link
                     href={`/cliente/seguimiento/${order.id}`}
                     className="tuki-btn tuki-btn-info"
@@ -517,13 +528,13 @@ export default function MisOfertasPage() {
 
                 {/* ── Action buttons */}
                 <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
-                  <Link
-                    href={`/cliente/seguimiento/${job.id}?type=service&chat=1`}
+                  <button
+                    onClick={() => setChatTarget({ jobId: job.id, otherName: job.tecnico_name, otherPhoto: job.tecnico_photo })}
                     className="tuki-btn tuki-btn-success"
-                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
+                    style={{ flex: 1, fontSize: '0.85rem' }}
                   >
                     <Icon name="chat" size={16} /> Chat
-                  </Link>
+                  </button>
                   <Link
                     href={`/cliente/seguimiento/${job.id}?type=service`}
                     className="tuki-btn tuki-btn-info"
@@ -535,7 +546,7 @@ export default function MisOfertasPage() {
                 {/* ── Cancel button */}
                 <div style={{ padding: '0 16px 14px' }}>
                   <button
-                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
+                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' }})
                     disabled={busy}
                     className="tuki-btn tuki-btn-danger tuki-btn-block"
                     style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
@@ -628,6 +639,20 @@ export default function MisOfertasPage() {
           <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cuenta</span>
         </Link>
       </div>
+
+      {/* ── Chat Modal ─────────────────────────────────────────────────── */}
+      {chatTarget && email && (
+        <ChatModal
+          open={true}
+          onClose={() => setChatTarget(null)}
+          orderId={chatTarget.orderId}
+          jobId={chatTarget.jobId}
+          myEmail={email}
+          myName={displayName || null}
+          otherName={chatTarget.otherName}
+          otherPhoto={chatTarget.otherPhoto}
+        />
+      )}
     </div>
   );
 }

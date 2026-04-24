@@ -164,7 +164,7 @@ export default function ChatModal({
     >
       <div style={{
         width: '100%', maxWidth: 480,
-        height: '85vh', maxHeight: 700,
+        height: '85dvh', maxHeight: '85dvh',
         background: 'var(--sheet-bg)',
         borderRadius: '24px 24px 0 0',
         border: '1px solid var(--border-subtle)',
