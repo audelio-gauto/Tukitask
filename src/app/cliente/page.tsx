@@ -717,10 +717,10 @@ export default function ClienteHomePage() {
 
   const busy = !!actionId;
 
-  /* ─── Open sheet when offers arrive ────────────────────────────────────── */
+  /* ─── Open sheet only for searching and offers (not tracking) ─────────── */
   useEffect(() => {
-    if (mode !== 'idle') setSheetOpen(true);
-    if (mode === 'idle') setSheetOpen(false);
+    if (mode === 'searching' || mode === 'offers') setSheetOpen(true);
+    if (mode === 'idle' || mode === 'tracking') setSheetOpen(false);
   }, [mode]);
 
   /* ─── Actions ───────────────────────────────────────────────────────────── */
@@ -977,8 +977,27 @@ export default function ClienteHomePage() {
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+        style={{ position: 'absolute', right: 16, bottom: (mode === 'idle' || mode === 'tracking') ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
       >📍</button>
+
+      {/* ── Solicitar button when tracking (clean map, easy new request) ─── */}
+      {mode === 'tracking' && (
+        <button
+          onClick={() => setShowPublishModal(true)}
+          style={{
+            position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 5, display: 'flex', alignItems: 'center', gap: 8,
+            background: 'linear-gradient(135deg,#F5C518,#F58A07)',
+            border: 'none', borderRadius: 99, padding: '12px 28px',
+            color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem',
+            cursor: 'pointer', boxShadow: '0 4px 18px rgba(245,197,24,0.4)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Pedir otro servicio
+        </button>
+      )}
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
       <div style={{
