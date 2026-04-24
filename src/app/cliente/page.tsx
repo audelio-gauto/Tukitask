@@ -716,8 +716,11 @@ export default function ClienteHomePage() {
     : 'idle';
 
   /* homeMode: el panel principal ignora el estado tracking completamente —
-     cuando hay una solicitud aceptada el Home se comporta como idle          */
-  const homeMode = mode === 'tracking' ? 'idle' : mode;
+     muestra searching/offers si los hay, sino idle (mapa + tarjetas de servicios) */
+  const homeMode: 'idle' | 'searching' | 'offers' =
+    allOffers.length > 0      ? 'offers'
+    : activeRequests.length > 0 ? 'searching'
+    : 'idle';
 
   const busy = !!actionId;
 
