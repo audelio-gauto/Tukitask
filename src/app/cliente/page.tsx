@@ -884,6 +884,10 @@ export default function ClienteHomePage() {
   }, [elapsed2]);
 
   /* ─── Render ─────────────────────────────────────────────────────────────── */
+  const acceptedBadge =
+    orders.filter(o => ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(o.status)).length +
+    jobs.filter(j => ['accepted', 'in_progress'].includes(j.status)).length;
+
   return (
     <div className="client-map-shell">
       {/* Map base */}
@@ -1488,34 +1492,43 @@ export default function ClienteHomePage() {
         {([
           {
             icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>),
-            label: 'Home', path: '/cliente', active: true, onClick: undefined as (() => void) | undefined,
+            label: 'Home', path: '/cliente', active: true, onClick: undefined as (() => void) | undefined, badge: undefined as number | undefined,
+          },
+          {
+            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5h6m-6 4h6m-6 4h6M7 5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1m-2-2h-4a2 2 0 0 0-2 2v0" /></svg>),
+            label: 'Mis ofertas', path: '/cliente/mis-ofertas', active: false, onClick: undefined as (() => void) | undefined, badge: acceptedBadge > 0 ? acceptedBadge : undefined,
           },
           {
             icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>),
-            label: 'Solicitar', path: '', active: false, onClick: () => setShowPublishModal(true),
+            label: 'Solicitar', path: '', active: false, onClick: () => setShowPublishModal(true), badge: undefined as number | undefined,
           },
           {
             icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>),
-            label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined,
+            label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined, badge: undefined as number | undefined,
           },
           {
             icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>),
-            label: 'Cuenta', path: '/cliente/settings', active: false, onClick: undefined as (() => void) | undefined,
+            label: 'Cuenta', path: '/cliente/settings', active: false, onClick: undefined as (() => void) | undefined, badge: undefined as number | undefined,
           },
-        ] as { icon: React.ReactNode; label: string; path: string; active: boolean; onClick: (() => void) | undefined }[])
+        ] as { icon: React.ReactNode; label: string; path: string; active: boolean; onClick: (() => void) | undefined; badge: number | undefined }[])
         .map(item => (
             item.onClick ? (
               <button key={item.label} onClick={item.onClick}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer', color: 'var(--nav-icon-inactive)' }}>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', background: 'transparent', border: 'none', borderRadius: 12, cursor: 'pointer', color: 'var(--nav-icon-inactive)', position: 'relative' }}>
                 {item.icon}
                 <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
               </button>
             ) : (
               <Link key={item.label} href={item.path}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent', color: item.active ? '#F5C518' : 'var(--nav-icon-inactive)' }}>
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', textDecoration: 'none', borderRadius: 12, background: item.active ? 'rgba(245,197,24,0.12)' : 'transparent', color: item.active ? '#F5C518' : 'var(--nav-icon-inactive)', position: 'relative' }}>
                 {item.icon}
                 <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>{item.label}</span>
                 {item.active && <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5C518', marginTop: 1 }} />}
+                {item.badge && (
+                  <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 20px)', minWidth: 16, height: 16, borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: '0.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
         ))}
