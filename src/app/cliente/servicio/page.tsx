@@ -461,7 +461,6 @@ export default function SolicitarServicioPage() {
             {step === 2 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">🛠️</span>
                   <div>
                     <div className="enviar-step-title-main">¿Qué tipo de servicio?</div>
                     <div className="enviar-step-title-sub">Elegí quién y qué necesitás</div>
