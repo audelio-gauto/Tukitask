@@ -717,10 +717,10 @@ export default function ClienteHomePage() {
 
   const busy = !!actionId;
 
-  /* ─── Open sheet when offers arrive (not for tracking — handled in Mis ofertas) ─── */
+  /* ─── Open sheet for searching, offers and tracking ────────────────── */
   useEffect(() => {
-    if (mode === 'searching' || mode === 'offers') setSheetOpen(true);
-    if (mode === 'idle' || mode === 'tracking') setSheetOpen(false);
+    if (mode === 'searching' || mode === 'offers' || mode === 'tracking') setSheetOpen(true);
+    if (mode === 'idle') setSheetOpen(false);
   }, [mode]);
 
   /* ─── Actions ───────────────────────────────────────────────────────────── */
@@ -1126,8 +1126,8 @@ export default function ClienteHomePage() {
           </div>
         )}
 
-        {/* ── TRACKING — moved to Mis ofertas page ────────────────────── */}
-        {false && (
+        {/* ── TRACKING ─────────────────────────────────────────────────── */}
+        {mode === 'tracking' && (
           <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(34,197,94,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: 40, height: 4, background: 'var(--handle-bar)', borderRadius: 2 }} />
@@ -1480,37 +1480,6 @@ export default function ClienteHomePage() {
         </div>
       )}
 
-      {/* ── TRACKING ACTIVE PILL (above footer) ─────────────────────────── */}
-      {mode === 'tracking' && (
-        <Link
-          href="/cliente/mis-ofertas"
-          style={{
-            position: 'absolute', bottom: 68, left: 12, right: 12, zIndex: 19,
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'linear-gradient(135deg,rgba(34,197,94,0.18),rgba(22,163,74,0.10))',
-            border: '1.5px solid rgba(34,197,94,0.45)',
-            borderRadius: 18, padding: '14px 18px',
-            textDecoration: 'none',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-            backdropFilter: 'blur(16px)',
-          }}
-        >
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="20" height="20" fill="none" stroke="#4ade80" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <path d="M9 5h6m-6 4h6m-6 4h6M7 5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1m-2-2h-4a2 2 0 0 0-2 2v0" />
-            </svg>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#4ade80', lineHeight: 1.2 }}>
-              {trackingOrders.length + trackingJobs.length} solicitud{(trackingOrders.length + trackingJobs.length) !== 1 ? 'es' : ''} activa{(trackingOrders.length + trackingJobs.length) !== 1 ? 's' : ''}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'rgba(74,222,128,0.7)', marginTop: 2 }}>Ver seguimiento en Mis ofertas</div>
-          </div>
-          <svg width="18" height="18" fill="none" stroke="#4ade80" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </Link>
-      )}
 
       {/* ── BOTTOM NAVBAR ─────────────────────────────────────────────────── */}
       <div style={{
