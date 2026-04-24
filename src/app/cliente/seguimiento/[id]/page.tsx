@@ -11,6 +11,7 @@ import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+import ChatModal from '@/components/ChatModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,13 +153,23 @@ export default function SeguimientoPage() {
   const [eta,      setEta]      = useState<{ distKm: number; etaMin: number; fromApi: boolean } | null>(null);
   const [routeTotals, setRouteTotals] = useState<{ distKm: number; etaMin: number; stops: number } | null>(null);
   const [error,    setError]    = useState('');
+  const [chatOpen, setChatOpen] = useState(false);
+  const [myEmail,  setMyEmail]  = useState('');
+  const [myName,   setMyName]   = useState<string | null>(null);
 
-  // ── Read type from query param ───────────────────────────────────────────
+  // ── Read type + chat from query param, get session ────────────────────────
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const q = new URLSearchParams(window.location.search);
       if (q.get('type') === 'service') setType('service');
+      if (q.get('chat') === '1') setChatOpen(true);
     }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setMyEmail(session.user.email ?? '');
+        setMyName(session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null);
+      }
+    });
   }, []);
 
   // ── Auth token ────────────────────────────────────────────────────────────
@@ -918,17 +929,41 @@ export default function SeguimientoPage() {
             </div>
           )}
 
-          {/* Back link */}
-          <Link
-            href="/cliente"
-            style={{ display: 'block', marginTop: 14, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}
-          >
-            ← Volver al inicio
-          </Link>
+          {/* Chat + Back row */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'center' }}>
+            {isActive && (
+              <button
+                onClick={() => setChatOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}
+              >
+                <Icon name="chat" size={16} color="#fff" /> Chat
+              </button>
+            )}
+            <Link
+              href="/cliente"
+              style={{ flex: 1, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}
+            >
+              ← Volver al inicio
+            </Link>
+          </div>
           </div>
           </div>
         </div>
       ) : null}
+
+      {/* ── Chat Modal ── */}
+      {chatOpen && myEmail && (
+        <ChatModal
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          orderId={type === 'delivery' ? id : undefined}
+          jobId={type === 'service' ? id : undefined}
+          myEmail={myEmail}
+          myName={myName}
+          otherName={workerName}
+          otherPhoto={workerPhoto}
+        />
+      )}
     </div>
   );
 }
