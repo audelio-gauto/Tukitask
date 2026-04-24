@@ -126,6 +126,8 @@ export default function MisOfertasPage() {
   const [jobs,   setJobs]   = useState<ActiveJob[]>([]);
   const [driverExtras, setDriverExtras] = useState<Record<string, DriverExtras>>({});
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!email) return;
@@ -198,6 +200,33 @@ export default function MisOfertasPage() {
   }, [loadData, email]);
 
   const total = orders.length + jobs.length;
+  const busy = !!actionId;
+
+  const cancelOrder = async (orderId: string) => {
+    if (busy || !email) return;
+    setActionId('cancel_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status: 'cancelled' }),
+      });
+      loadData();
+    } finally { setActionId(null); }
+  };
+
+  const cancelJob = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('cancel_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', jobId, clientEmail: email }),
+      });
+      loadData();
+    } finally { setActionId(null); }
+  };
 
   function fmtDate(d: string) {
     return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -401,7 +430,7 @@ export default function MisOfertasPage() {
                 )}
 
                 {/* ── Action buttons */}
-                <div style={{ display: 'flex', gap: 10, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
                   <Link
                     href={`/cliente/seguimiento/${order.id}?chat=1`}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
@@ -414,6 +443,16 @@ export default function MisOfertasPage() {
                   >
                     <Icon name="map" size={16} /> Ver mapa
                   </Link>
+                </div>
+                {/* ── Cancel button */}
+                <div style={{ padding: '0 16px 14px' }}>
+                  <button
+                    onClick={() => setCancelConfirm({ id: order.id, type: 'delivery' })}
+                    disabled={busy}
+                    style={{ width: '100%', padding: '11px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <span>✕</span> Cancelar solicitud
+                  </button>
                 </div>
               </div>
             </div>
@@ -492,7 +531,7 @@ export default function MisOfertasPage() {
                 )}
 
                 {/* ── Action buttons */}
-                <div style={{ display: 'flex', gap: 10, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
                   <Link
                     href={`/cliente/seguimiento/${job.id}?type=service&chat=1`}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
@@ -506,11 +545,55 @@ export default function MisOfertasPage() {
                     <Icon name="map" size={16} /> Ver mapa
                   </Link>
                 </div>
+                {/* ── Cancel button */}
+                <div style={{ padding: '0 16px 14px' }}>
+                  <button
+                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
+                    disabled={busy}
+                    style={{ width: '100%', padding: '11px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <span>✕</span> Cancelar solicitud
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ── Cancel confirm modal ─────────────────────────────────────────── */}
+      {cancelConfirm && (
+        <>
+          <div onClick={() => setCancelConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg,#1e1e2e)', borderRadius: '20px 20px 0 0', padding: '24px 18px 40px', zIndex: 10002, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid var(--modal-border,rgba(255,255,255,0.1))' }}>
+            <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, margin: '0 auto 20px' }} />
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: '2rem', marginBottom: 10 }}>⚠️</div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: 8 }}>¿Cancelar solicitud?</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Esta acción no se puede deshacer. El conductor será notificado.</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setCancelConfirm(null)}
+                style={{ flex: 1, padding: '14px 0', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => {
+                  if (cancelConfirm.type === 'delivery') cancelOrder(cancelConfirm.id);
+                  else cancelJob(cancelConfirm.id);
+                  setCancelConfirm(null);
+                }}
+                disabled={busy}
+                style={{ flex: 2, padding: '14px 0', borderRadius: 14, border: 'none', background: busy ? 'rgba(239,68,68,0.5)' : 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}
+              >
+                {busy ? 'Cancelando…' : 'Sí, cancelar'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Bottom Nav ─────────────────────────────────────────────────── */}
       <div style={{
