@@ -45,8 +45,9 @@ interface DriverExtras {
 }
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
-const ACTIVE_ORDER_STS = ['pending', 'negotiating', 'accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
-const ACTIVE_JOB_STS   = ['pending', 'accepted', 'in_progress'];
+// Solo pedidos ACEPTADOS (no pending/negotiating — esos se ven en el panel principal)
+const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+const ACTIVE_JOB_STS   = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string; color: string }> = {
   pending:          { text: 'Buscando conductor…',                        color: '#f59e0b' },

@@ -946,7 +946,7 @@ export default function ClienteHomePage() {
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: 130, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
       >📍</button>
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
@@ -1341,7 +1341,7 @@ export default function ClienteHomePage() {
       </div>
 
       {/* ── IDLE — service selector ───────────────────────────────────────── */}
-      {(mode === 'idle' || mode === 'tracking') && !loading && (
+      {mode === 'idle' && !loading && (
         <div className="client-idle-overlay">
           {/* Hero illustration */}
           <div className="client-idle-hero">
