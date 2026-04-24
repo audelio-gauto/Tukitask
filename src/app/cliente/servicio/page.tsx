@@ -355,7 +355,7 @@ export default function SolicitarServicioPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="enviar-page-title">🛠️ Solicitar Servicio</h1>
+          <h1 className="enviar-page-title">Solicitar Servicio</h1>
         </div>
 
         <div ref={formBodyRef} className="enviar-page-body">
