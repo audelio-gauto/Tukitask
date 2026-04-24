@@ -546,7 +546,6 @@ export default function SolicitarServicioPage() {
             {step === 3 && (
               <>
                 <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">📋</span>
                   <div>
                     <div className="enviar-step-title-main">Descripción y oferta</div>
                     <div className="enviar-step-title-sub">Contanos qué necesitás y cuánto pagás</div>
