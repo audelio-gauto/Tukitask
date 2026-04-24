@@ -430,3 +430,170 @@ button:active:not(:disabled), a[role="button"]:active {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* ── Unified cards/buttons for cross-role consistency ─────────────────── */
+.tuki-card {
+  background: var(--glass-card);
+  border: 1.5px solid var(--status-outline, var(--glass-card-border));
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.tuki-card-header {
+  background: var(--status-bg, transparent);
+  border-bottom: 1px solid var(--status-border, var(--border-subtle));
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tuki-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--status-color, var(--text-primary));
+}
+
+.tuki-card-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.tuki-card-body {
+  padding: 14px 16px;
+}
+
+.tuki-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border-strong);
+  background: var(--avatar-bg);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.tuki-price {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--price-color, #4ade80);
+}
+
+.tuki-price-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.tuki-address-box {
+  background: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.tuki-address-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--label-color, var(--text-muted));
+  margin-bottom: 2px;
+}
+
+.tuki-address-text {
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.tuki-btn {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.tuki-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tuki-btn-block {
+  width: 100%;
+}
+
+.tuki-btn-sm {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
+
+.tuki-btn-primary {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+  color: #1C1C2E;
+  border: none;
+}
+
+.tuki-btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+}
+
+.tuki-btn-info {
+  background: rgba(59,130,246,0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59,130,246,0.3);
+}
+
+.tuki-btn-warning {
+  background: rgba(245,197,24,0.12);
+  color: #F5C518;
+  border: 1px solid rgba(245,197,24,0.35);
+}
+
+.tuki-btn-danger {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.35);
+}
+
+.tuki-btn-neutral {
+  background: var(--glass-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+}
+
+[data-theme="light"] .tuki-btn-info {
+  color: #2563eb;
+  border-color: rgba(37,99,235,0.25);
+  background: rgba(37,99,235,0.08);
+}
+
+[data-theme="light"] .tuki-btn-warning {
+  color: #b45309;
+  border-color: rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.12);
+}
+
+[data-theme="light"] .tuki-btn-danger {
+  color: #b91c1c;
+  border-color: rgba(220,38,38,0.3);
+  background: rgba(239,68,68,0.08);
+}
+

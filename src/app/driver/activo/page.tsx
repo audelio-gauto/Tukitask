@@ -1,18 +1,20 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ComponentProps } from 'react';
 import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
+import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
 
-const STATUS_LABEL: Record<ActiveStatus, { label: string; color: string; bg: string; icon: string }> = {
-  accepted:   { label: 'Aceptado',   color: '#F5C518', bg: 'rgba(245,197,24,0.15)', icon: '✅' },
-  picking_up: { label: 'Recogiendo', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)', icon: '📦' },
-  in_transit: { label: 'En camino',  color: '#4ade80', bg: 'rgba(74,222,128,0.15)', icon: '🚗' },
+const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<typeof Icon>['name'] }> = {
+  accepted:   { label: 'Aceptado',   icon: 'check' },
+  picking_up: { label: 'Recogiendo', icon: 'package' },
+  in_transit: { label: 'En camino',  icon: 'car' },
 };
 
 const PROGRESS_ACTION: Record<'accepted' | 'picking_up', { label: string; nextStatus: string }> = {
@@ -216,6 +218,7 @@ export default function ActivoPage() {
   const renderCard = (order: any) => {
     const status = order.status as ActiveStatus;
     const statusInfo = STATUS_LABEL[status];
+    const statusTone = getStatusTone(status);
     const clientName = order.client_name || order.client_email?.split('@')[0] || 'Cliente';
     const clientPhoto = order.client_photo || null;
     const price = Number(order.offer ?? order.accepted_price ?? order.suggested_price ?? 0).toLocaleString('es-PY');
@@ -229,53 +232,51 @@ export default function ActivoPage() {
     const isActingProgress = status !== 'in_transit' && acting === order.id + (PROGRESS_ACTION[status as 'accepted' | 'picking_up']?.nextStatus ?? '');
 
     return (
-      <div key={order.id} style={{
-        background: 'var(--glass-card)',
-        border: `1.5px solid ${statusInfo.color}40`,
-        borderRadius: 18,
-        marginBottom: 16,
-        overflow: 'hidden',
-      }}>
+      <div
+        key={order.id}
+        className="tuki-card"
+        style={{
+          marginBottom: 16,
+          ['--status-color' as never]: statusTone.color,
+          ['--status-bg' as never]: statusTone.bg,
+          ['--status-border' as never]: statusTone.border,
+          ['--status-outline' as never]: statusTone.border,
+        }}
+      >
         {/* Status header */}
-        <div style={{
-          background: statusInfo.bg,
-          borderBottom: `1px solid ${statusInfo.color}30`,
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ color: statusInfo.color, fontWeight: 700, fontSize: '0.9rem' }}>
-            {statusInfo.icon} {statusInfo.label}
+        <div className="tuki-card-header">
+          <span className="tuki-card-title">
+            <Icon name={statusInfo.icon} size={14} color={statusTone.color} />
+            {statusInfo.label}
           </span>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>#{track}</span>
+          <span className="tuki-card-subtitle">#{track}</span>
         </div>
 
-        <div style={{ padding: '14px 16px' }}>
+        <div className="tuki-card-body">
           {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-              background: clientPhoto
-                ? `url(${clientPhoto}) center/cover`
-                : 'linear-gradient(135deg, #F5C518, #F58A07)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#1C1C2E', fontWeight: 700, fontSize: '1.2rem',
-              border: '2px solid var(--border-strong)',
-            }}>
+            <div
+              className="tuki-avatar"
+              style={{
+                background: clientPhoto
+                  ? `url(${clientPhoto}) center/cover`
+                  : 'linear-gradient(135deg, #F5C518, #F58A07)',
+                color: '#1C1C2E',
+              }}
+            >
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
               {phone && (
-                <a href={`tel:${phone}`} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none' }}>
-                  📞 {phone}
+                <a href={`tel:${phone}`} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="device-mobile" size={12} color="#60a5fa" /> {phone}
                 </a>
               )}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1.15rem' }}>₲{price}</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>acordado</div>
+              <div className="tuki-price" style={{ color: '#4ade80' }}>₲{price}</div>
+              <div className="tuki-price-label">acordado</div>
             </div>
           </div>
 
@@ -283,16 +284,15 @@ export default function ActivoPage() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <button
               onClick={() => setChatModal({ orderId: order.id, clientName, clientPhoto })}
+              className="tuki-btn tuki-btn-info"
               style={{
-                flex: 1, padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)',
-                background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : 'rgba(59,130,246,0.12)',
-                color: '#60a5fa', fontWeight: 700,
-                fontSize: '0.83rem', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                flex: 1,
+                fontSize: '0.83rem',
                 position: 'relative',
+                background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : undefined,
               }}
             >
-              💬 Chat con el cliente
+              <Icon name="chat" size={14} /> Chat con el cliente
               {!!unreadCounts[order.id] && (
                 <span style={{
                   background: '#ef4444', color: '#fff',
@@ -307,28 +307,22 @@ export default function ActivoPage() {
             {/* SOS — emergency call */}
             <a
               href="tel:911"
+              className="tuki-btn tuki-btn-danger"
               style={{
-                padding: '9px 12px', borderRadius: 10,
-                border: '1px solid rgba(239,68,68,0.4)',
-                background: 'rgba(239,68,68,0.12)', color: '#f87171',
-                fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                textDecoration: 'none', flexShrink: 0,
+                padding: '9px 12px',
+                flexShrink: 0,
+                textDecoration: 'none',
+                fontSize: '0.83rem',
               }}
               title="Llamar emergencias (911)"
             >
-              🆘
+              <Icon name="shield" size={14} /> SOS
             </a>
           </div>
 
           {/* Addresses */}
           {(order.pickup_address || order.delivery_address) && (
-            <div style={{
-              background: 'var(--surface-3)',
-              borderRadius: 12,
-              padding: '12px 14px',
-              marginBottom: 14,
-            }}>
+            <div className="tuki-address-box" style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -341,14 +335,14 @@ export default function ActivoPage() {
                 <div style={{ flex: 1 }}>
                   {order.pickup_address && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>Recogida</div>
-                      <div style={{ fontSize: '0.83rem', color: 'var(--text-primary)', lineHeight: 1.35 }}>{order.pickup_address}</div>
+                      <div className="tuki-address-label" style={{ color: '#F5C518' }}>Recogida</div>
+                      <div className="tuki-address-text">{order.pickup_address}</div>
                     </div>
                   )}
                   {order.delivery_address && (
                     <div>
-                      <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>Entrega</div>
-                      <div style={{ fontSize: '0.83rem', color: 'var(--text-primary)', lineHeight: 1.35 }}>{order.delivery_address}</div>
+                      <div className="tuki-address-label" style={{ color: '#4ade80' }}>Entrega</div>
+                      <div className="tuki-address-text">{order.delivery_address}</div>
                     </div>
                   )}
                 </div>
@@ -359,25 +353,19 @@ export default function ActivoPage() {
                 {order.pickup_address && (
                   <button
                     onClick={() => openMaps(navApp, order.pickup_address)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)',
-                      background: 'rgba(245,197,24,0.1)', color: '#F5C518',
-                      fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                    }}
+                    className="tuki-btn tuki-btn-warning tuki-btn-sm"
+                    style={{ flex: 1 }}
                   >
-                    🗺️ Ir a Recogida
+                    <Icon name="map" size={14} /> Ir a Recogida
                   </button>
                 )}
                 {order.delivery_address && (
                   <button
                     onClick={() => openMaps(navApp, order.delivery_address)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: 10, border: '1px solid rgba(74,222,128,0.3)',
-                      background: 'rgba(74,222,128,0.1)', color: '#4ade80',
-                      fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
-                    }}
+                    className="tuki-btn tuki-btn-success tuki-btn-sm"
+                    style={{ flex: 1 }}
                   >
-                    🗺️ Ir a Entrega
+                    <Icon name="map" size={14} /> Ir a Entrega
                   </button>
                 )}
               </div>
@@ -559,14 +547,7 @@ export default function ActivoPage() {
             <button
               disabled={!!acting}
               onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up'].nextStatus)}
-              style={{
-                width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-                cursor: acting ? 'not-allowed' : 'pointer',
-                background: acting ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #F5C518, #f59e0b)',
-                color: acting ? 'rgba(255,255,255,0.4)' : '#1C1C2E',
-                fontWeight: 700, fontSize: '0.95rem',
-                opacity: acting ? 0.7 : 1,
-              }}
+              className="tuki-btn tuki-btn-primary tuki-btn-block"
             >
               {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up'].label}
             </button>
@@ -576,13 +557,9 @@ export default function ActivoPage() {
             // "Finalizar servicio" button
             <button
               onClick={() => setFinalizeOpen(prev => new Set([...prev, order.id]))}
-              style={{
-                width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: '#fff', fontWeight: 700, fontSize: '0.95rem',
-              }}
+              className="tuki-btn tuki-btn-success tuki-btn-block"
             >
-              🏁 Finalizar servicio
+              <Icon name="flag" size={14} /> Finalizar servicio
             </button>
           )}
 
@@ -594,16 +571,10 @@ export default function ActivoPage() {
                 <button
                   disabled={!!acting}
                   onClick={() => setConfirmDelivery(prev => new Set([...prev, order.id]))}
-                  style={{
-                    flex: 1, padding: '13px', borderRadius: 12, border: 'none',
-                    cursor: acting ? 'not-allowed' : 'pointer',
-                    background: acting ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)',
-                    color: acting ? 'rgba(255,255,255,0.4)' : '#fff',
-                    fontWeight: 700, fontSize: '0.88rem',
-                    opacity: acting ? 0.7 : 1,
-                  }}
+                  className="tuki-btn tuki-btn-success"
+                  style={{ flex: 1, fontSize: '0.88rem' }}
                 >
-                  {isActingDelivered ? '...' : '✅ Entregado'}
+                  {isActingDelivered ? '...' : <><Icon name="check" size={14} /> Entregado</>}
                 </button>
                 <button
                   disabled={!!acting}
@@ -614,17 +585,14 @@ export default function ActivoPage() {
                       : { ...prev, [order.id]: '' }
                     );
                   }}
+                  className="tuki-btn tuki-btn-danger"
                   style={{
-                    flex: 1, padding: '13px', borderRadius: 12,
-                    border: '1.5px solid rgba(239,68,68,0.5)',
-                    cursor: acting ? 'not-allowed' : 'pointer',
-                    background: failReason[order.id] !== undefined ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
-                    color: '#f87171',
-                    fontWeight: 700, fontSize: '0.88rem',
-                    opacity: acting ? 0.7 : 1,
+                    flex: 1,
+                    fontSize: '0.88rem',
+                    background: failReason[order.id] !== undefined ? 'rgba(239,68,68,0.2)' : undefined,
                   }}
                 >
-                  {isActingFailed ? '...' : '❌ Entrega Fallida'}
+                  {isActingFailed ? '...' : <><Icon name="x" size={14} /> Entrega fallida</>}
                 </button>
               </div>
 
@@ -653,13 +621,7 @@ export default function ActivoPage() {
                   <button
                     disabled={!reason.trim() || !!acting}
                     onClick={() => updateStatus(order.id, 'failed', { fail_reason: reason.trim() })}
-                    style={{
-                      width: '100%', marginTop: 8, padding: '11px', borderRadius: 10, border: 'none',
-                      cursor: !reason.trim() || acting ? 'not-allowed' : 'pointer',
-                      background: !reason.trim() || acting ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
-                      color: !reason.trim() || acting ? 'rgba(255,255,255,0.3)' : '#fff',
-                      fontWeight: 700, fontSize: '0.88rem',
-                    }}
+                    className="tuki-btn tuki-btn-danger tuki-btn-block"
                   >
                     {isActingFailed ? 'Registrando...' : 'Confirmar entrega fallida'}
                   </button>

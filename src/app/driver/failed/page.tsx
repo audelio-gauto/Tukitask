@@ -4,6 +4,8 @@ import { useWorkerContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
+import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 function playReturnAlert() {
   try {
@@ -24,10 +26,10 @@ function playReturnAlert() {
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
-  moto: '🏍️ Moto Envíos',
-  auto: '🚗 Auto Envíos',
-  motocarro: '🛵 Moto Carro Fletes',
-  camion2t: '🚛 Camión Fletes',
+  moto: 'Moto Envios',
+  auto: 'Auto Envios',
+  motocarro: 'Moto Carro Fletes',
+  camion2t: 'Camion Fletes',
 };
 
 function genTrackingCode(id: string) {
@@ -117,9 +119,9 @@ export default function FailedPage() {
       )}
 
       {!loading && orders.length === 0 && (
-        <div className="tuki-order-card">
-          <div className="tuki-order-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-            <span style={{ fontSize: '3rem' }}>✅</span>
+        <div className="tuki-card">
+          <div className="tuki-card-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+            <Icon name="check" size={36} style={{ opacity: 0.4 }} />
             <p style={{ color: '#6b7280', marginTop: '1rem', fontWeight: 500 }}>Sin entregas fallidas</p>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.5rem' }}>
               Las entregas fallidas aparecerán aquí
@@ -139,46 +141,52 @@ export default function FailedPage() {
         const maxAttemptsReached = isRejected && attempts >= 3;
         const returnReason = returnReasonMap[order.id] ?? '';
         const showReturnForm = returnFormId === order.id;
+        const statusTone = getStatusTone(order.status);
+        const statusLabel = isRejected ? 'Devolucion rechazada' : 'Entrega fallida';
 
         return (
-          <div key={order.id} style={{
-            background: 'var(--tuki-surface)', borderRadius: 16,
-            border: `1.5px solid ${isRejected ? '#f59e0b' : '#ef4444'}`, marginBottom: 16,
-            overflow: 'hidden', boxShadow: 'var(--tuki-shadow-md)',
-          }}>
-            {/* Header */}
-            <div style={{
-              background: isRejected ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
-              borderBottom: `1px solid ${isRejected ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`,
-              padding: '0.65rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span style={{ color: isRejected ? '#fde68a' : '#fca5a5', fontWeight: 700, fontSize: '0.82rem' }}>
-                {isRejected ? '⚠️ DEVOLUCIÓN RECHAZADA' : '❌ ENTREGA FALLIDA'}
+          <div
+            key={order.id}
+            className="tuki-card"
+            style={{
+              marginBottom: 16,
+              ['--status-color' as never]: statusTone.color,
+              ['--status-bg' as never]: statusTone.bg,
+              ['--status-border' as never]: statusTone.border,
+              ['--status-outline' as never]: statusTone.border,
+            }}
+          >
+            <div className="tuki-card-header">
+              <span className="tuki-card-title">
+                <Icon name={isRejected ? 'refresh' : 'exclamation'} size={14} color={statusTone.color} />
+                {statusLabel}
               </span>
-              <span style={{ color: '#6b7280', fontSize: '0.78rem' }}>#{genTrackingCode(order.id)}</span>
+              <span className="tuki-card-subtitle">#{genTrackingCode(order.id)}</span>
             </div>
 
-            {/* Body */}
-            <div style={{ padding: '0.85rem 1rem' }}>
+            <div className="tuki-card-body">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ fontSize: '0.82rem', color: '#9ca3af' }}>
                   {VEHICLE_LABELS[order.vehicle_type] || order.vehicle_type}
                 </span>
-                <span style={{ color: '#c8ff00', fontWeight: 800, fontSize: '1.1rem' }}>
-                  ₲{price.toLocaleString()}
-                </span>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="tuki-price">₲{price.toLocaleString()}</div>
+                  <div className="tuki-price-label">total</div>
+                </div>
               </div>
 
               {/* Route */}
-              <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
-                  <div style={{ width: 2, flex: 1, background: 'var(--border-subtle)', margin: '3px 0', minHeight: 14 }} />
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.3 }}>{order.pickup_address}</div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{order.delivery_address}</div>
+              <div className="tuki-address-box" style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
+                    <div style={{ width: 2, flex: 1, background: 'var(--border-subtle)', margin: '3px 0', minHeight: 14 }} />
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="tuki-address-text" style={{ marginBottom: 8 }}>{order.pickup_address}</div>
+                    <div className="tuki-address-text">{order.delivery_address}</div>
+                  </div>
                 </div>
               </div>
 
@@ -236,19 +244,18 @@ export default function FailedPage() {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       onClick={() => setReturnFormId(null)}
-                      style={{ flex: 1, padding: '0.75rem', border: '1px solid #374151', borderRadius: 12, background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600 }}>
-                      ← Atrás
+                      className="tuki-btn tuki-btn-neutral"
+                      style={{ flex: 1 }}
+                    >
+                      Atras
                     </button>
                     <button
                       onClick={() => handleAction(order.id, 'returning', returnReason)}
                       disabled={!returnReason.trim() || isbusy}
-                      style={{
-                        flex: 2, padding: '0.75rem', border: 'none', borderRadius: 12,
-                        cursor: 'pointer', background: '#f59e0b', color: '#111',
-                        fontWeight: 800, fontSize: '0.9rem',
-                        opacity: (!returnReason.trim() || isbusy) ? 0.5 : 1,
-                      }}>
-                      {acting === returnKey ? '...' : '📦 Confirmar devolución'}
+                      className="tuki-btn tuki-btn-warning"
+                      style={{ flex: 2, opacity: (!returnReason.trim() || isbusy) ? 0.6 : 1 }}
+                    >
+                      {acting === returnKey ? '...' : (<><Icon name="package" size={14} /> Confirmar devolucion</>)}
                     </button>
                   </div>
                 </div>
@@ -259,18 +266,16 @@ export default function FailedPage() {
                     background: 'rgba(239,68,68,0.12)', border: '1.5px solid #ef4444', borderRadius: 12,
                     padding: '0.7rem 0.85rem', marginBottom: 12, fontSize: '0.82rem', color: '#fca5a5', lineHeight: 1.45,
                   }}>
-                    ⚠️ El cliente rechazó la devolución <strong>3 veces</strong>. Confirmá la incidencia para liberar el pedido y poder recibir nuevas solicitudes.
+                    <Icon name="exclamation" size={12} style={{ marginRight: 6 }} />
+                    El cliente rechazo la devolucion <strong>3 veces</strong>. Confirma la incidencia para liberar el pedido y poder recibir nuevas solicitudes.
                   </div>
                   <button
                     onClick={() => handleAction(order.id, 'incident_closed')}
                     disabled={isbusy}
-                    style={{
-                      width: '100%', padding: '0.8rem', border: 'none', borderRadius: 12,
-                      cursor: 'pointer', background: '#ef4444', color: '#fff',
-                      fontWeight: 800, fontSize: '0.95rem',
-                      opacity: isbusy ? 0.6 : 1,
-                    }}>
-                    {acting === incidentKey ? '...' : '⚠️ Confirmar incidencia'}
+                    className="tuki-btn tuki-btn-danger tuki-btn-block"
+                    style={{ opacity: isbusy ? 0.6 : 1 }}
+                  >
+                    {acting === incidentKey ? '...' : (<><Icon name="exclamation" size={14} /> Confirmar incidencia</>)}
                   </button>
                 </div>
               ) : (
@@ -279,22 +284,18 @@ export default function FailedPage() {
                   <button
                     onClick={() => handleAction(order.id, 'in_transit')}
                     disabled={isbusy}
-                    style={{
-                      flex: 1, padding: '0.75rem 0', border: 'none', borderRadius: 12,
-                      cursor: 'pointer', background: '#10b981', color: '#fff',
-                      fontWeight: 700, fontSize: '0.88rem', opacity: acting === retryKey ? 0.6 : 1,
-                    }}>
-                    {acting === retryKey ? '...' : '🔄 Volver a entregar'}
+                    className="tuki-btn tuki-btn-success"
+                    style={{ flex: 1, opacity: acting === retryKey ? 0.6 : 1 }}
+                  >
+                    {acting === retryKey ? '...' : (<><Icon name="refresh" size={14} /> Volver a entregar</>)}
                   </button>
                   <button
                     onClick={() => setReturnFormId(order.id)}
                     disabled={isbusy}
-                    style={{
-                      flex: 1, padding: '0.75rem 0', border: 'none', borderRadius: 12,
-                      cursor: 'pointer', background: '#f59e0b', color: '#111',
-                      fontWeight: 700, fontSize: '0.88rem',
-                    }}>
-                    📦 Devolver envío
+                    className="tuki-btn tuki-btn-warning"
+                    style={{ flex: 1 }}
+                  >
+                    <Icon name="package" size={14} /> Devolver envio
                   </button>
                 </div>
               )}

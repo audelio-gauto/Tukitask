@@ -4,11 +4,18 @@ import dynamic from 'next/dynamic';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
-import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
 import ChatModal from '@/components/ChatModal';
+import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
+
+const STATUS_LABELS: Record<string, string> = {
+  delivered: 'Entregado',
+  commission_charged: 'Completado',
+  client_confirmed: 'Confirmado',
+};
 
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -94,40 +101,49 @@ export default function DeliveredPage() {
     const chatAvailable = refDate
       ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000
       : false;
+    const statusTone = getStatusTone(order.status);
+    const statusLabel = STATUS_LABELS[order.status] ?? 'Entregado';
 
     return (
-      <div key={order.id} style={{
-        background: 'var(--glass-card)', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
-        border: '1px solid var(--glass-card-border)',
-      }}>
-        {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.18))',
-          borderBottom: '1px solid rgba(16,185,129,0.2)',
-          padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.85rem' }}>✅ Entregado #{track}</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{date}</span>
+      <div
+        key={order.id}
+        className="tuki-card"
+        style={{
+          marginBottom: 12,
+          ['--status-color' as never]: statusTone.color,
+          ['--status-bg' as never]: statusTone.bg,
+          ['--status-border' as never]: statusTone.border,
+          ['--status-outline' as never]: statusTone.border,
+        }}
+      >
+        <div className="tuki-card-header">
+          <span className="tuki-card-title">
+            <Icon name="check" size={14} color={statusTone.color} />
+            {statusLabel} #{track}
+          </span>
+          <span className="tuki-card-subtitle">{date}</span>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: '0.85rem 1rem' }}>
+        <div className="tuki-card-body">
           {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-              background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#1C1C2E', fontWeight: 700, fontSize: '1.1rem',
-              border: '2px solid var(--border-strong)',
-            }}>
+            <div
+              className="tuki-avatar"
+              style={{
+                background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
+                color: '#1C1C2E',
+              }}
+            >
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{clientName}</div>
               <StarRow rating={existingRating} />
             </div>
-            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem' }}>₲{price}</div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="tuki-price">₲{price}</div>
+              <div className="tuki-price-label">total</div>
+            </div>
           </div>
 
           {/* Addresses A → stops → B */}
@@ -138,7 +154,7 @@ export default function DeliveredPage() {
                 : [];
             const hasStops = stops.length > 0;
             return (
-              <div style={{ background: 'var(--surface-3)', borderRadius: 10, padding: '9px 12px', marginBottom: 10 }}>
+              <div className="tuki-address-box" style={{ marginBottom: 10 }}>
                 {/* Pickup A */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: hasStops ? 8 : 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
@@ -146,8 +162,8 @@ export default function DeliveredPage() {
                     <span style={{ width: 2, height: hasStops ? 14 : 18, background: 'var(--border-subtle)', display: 'block' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 1 }}>A</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{order.pickup_address || '—'}</div>
+                    <div className="tuki-address-label" style={{ color: '#F5C518' }}>A</div>
+                    <div className="tuki-address-text">{order.pickup_address || '—'}</div>
                   </div>
                 </div>
                 {/* Intermediate stops */}
@@ -170,7 +186,9 @@ export default function DeliveredPage() {
                         <div style={{ fontSize: '0.62rem', fontWeight: 700, color: dotColor, textTransform: 'uppercase', letterSpacing: 1 }}>P{s.sequence}</div>
                         <div style={{ fontSize: '0.78rem', color: labelColor, lineHeight: 1.3 }}>{s.address}</div>
                         {isFailed && s.fail_reason && (
-                          <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 2 }}>✗ {s.fail_reason}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 2 }}>
+                            <Icon name="x" size={12} /> {s.fail_reason}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -182,8 +200,8 @@ export default function DeliveredPage() {
                     <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 1 }}>B</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{order.delivery_address || '—'}</div>
+                    <div className="tuki-address-label" style={{ color: '#10b981' }}>B</div>
+                    <div className="tuki-address-text">{order.delivery_address || '—'}</div>
                   </div>
                 </div>
               </div>
@@ -194,9 +212,9 @@ export default function DeliveredPage() {
           {chatAvailable && (
             <button
               onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
-              style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              className="tuki-btn tuki-btn-info tuki-btn-block"
             >
-              💬 Chat con el cliente
+              <Icon name="chat" size={14} /> Chat con el cliente
             </button>
           )}
 
@@ -204,22 +222,20 @@ export default function DeliveredPage() {
           {existingRating == null && (
             <button
               onClick={() => openRating(order)}
-              style={{
-                width: '100%', padding: '0.6rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(135deg, #F5C518, #f59e0b)',
-                color: '#1C1C2E', fontWeight: 700, fontSize: '0.88rem', marginBottom: 6,
-              }}
+              className="tuki-btn tuki-btn-warning tuki-btn-block"
+              style={{ marginTop: chatAvailable ? 8 : 0 }}
             >
-              ⭐ Calificar Cliente
+              <Icon name="star" size={14} /> Calificar cliente
             </button>
           )}
           {/* Report button */}
           {order.client_email && (
             <button
               onClick={() => setReportModal({ orderId: order.id, clientEmail: order.client_email, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente' })}
-              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 12px', cursor: 'pointer', fontWeight: 600 }}
+              className="tuki-btn tuki-btn-danger tuki-btn-sm"
+              style={{ marginTop: 8 }}
             >
-              🚨 Reportar cliente
+              <Icon name="exclamation" size={12} /> Reportar cliente
             </button>
           )}
         </div>
@@ -239,9 +255,9 @@ export default function DeliveredPage() {
       )}
 
       {!loading && orders.length === 0 && (
-        <div className="tuki-order-card">
-          <div className="tuki-order-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-            <span style={{ fontSize: '3rem' }}>✅</span>
+        <div className="tuki-card">
+          <div className="tuki-card-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+            <Icon name="check" size={36} style={{ opacity: 0.4 }} />
             <p style={{ color: '#6b7280', marginTop: '1rem', fontWeight: 500 }}>
               Aún no has completado entregas
             </p>

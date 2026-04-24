@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { Icon, type IconName } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,22 +93,24 @@ function fmtGs(n: number | null) {
 }
 
 function statusLabel(status: string) {
-  const map: Record<string, { text: string; color: string; icon: IconName }> = {
-    accepted:            { text: 'Conductor asignado',        color: '#0ea5e9', icon: 'check' },
-    picking_up:          { text: 'Conductor en camino',       color: '#0ea5e9', icon: 'truck' },
-    in_transit:          { text: 'En transito',               color: '#22c55e', icon: 'truck' },
-    in_progress:         { text: 'En curso',                  color: '#22c55e', icon: 'tool' },
-    returning:           { text: 'Devolviendo paquete',       color: '#f59e0b', icon: 'refresh' },
-    driver_returning:    { text: 'Conductor regresando',      color: '#f59e0b', icon: 'refresh' },
-    en_route:            { text: 'Tecnico en camino',         color: '#0ea5e9', icon: 'tool' },
-    arrived:             { text: 'Tecnico llego',             color: '#22c55e', icon: 'map-pin' },
-    completion_pending:  { text: 'Completando servicio',      color: '#a78bfa', icon: 'clock' },
-    delivered:           { text: 'Entregado',                 color: '#22c55e', icon: 'package' },
-    completado:          { text: 'Servicio completado',       color: '#22c55e', icon: 'check' },
-    commission_charged:  { text: 'Completado',                color: '#22c55e', icon: 'check' },
-    cancelled:           { text: 'Cancelado',                 color: '#6b7280', icon: 'x' },
+  const map: Record<string, { text: string; icon: IconName }> = {
+    accepted: { text: 'Conductor asignado', icon: 'check' },
+    picking_up: { text: 'Conductor en camino', icon: 'truck' },
+    in_transit: { text: 'En transito', icon: 'truck' },
+    in_progress: { text: 'En curso', icon: 'tool' },
+    returning: { text: 'Devolviendo paquete', icon: 'refresh' },
+    driver_returning: { text: 'Conductor regresando', icon: 'refresh' },
+    en_route: { text: 'Tecnico en camino', icon: 'tool' },
+    arrived: { text: 'Tecnico llego', icon: 'map-pin' },
+    completion_pending: { text: 'Completando servicio', icon: 'clock' },
+    delivered: { text: 'Entregado', icon: 'package' },
+    completado: { text: 'Servicio completado', icon: 'check' },
+    commission_charged: { text: 'Completado', icon: 'check' },
+    cancelled: { text: 'Cancelado', icon: 'x' },
   };
-  return map[status] ?? { text: status, color: '#6b7280', icon: 'exclamation' };
+  const tone = getStatusTone(status);
+  const entry = map[status] ?? { text: status, icon: 'exclamation' };
+  return { ...entry, color: tone.color };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -763,7 +766,9 @@ export default function SeguimientoPage() {
           {error} — <Link href="/cliente" style={{ color: '#0ea5e9' }}>Volver al inicio</Link>
         </div>
       ) : order ? (
-        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '14px 16px 20px' }}>
+        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '12px 12px 16px' }}>
+          <div className="tuki-card" style={{ background: 'var(--sheet-bg)', boxShadow: 'none', border: '1px solid var(--border-subtle)' }}>
+          <div className="tuki-card-body" style={{ padding: '12px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
             {/* Worker avatar */}
@@ -778,11 +783,16 @@ export default function SeguimientoPage() {
                   style={{ borderRadius: '50%', objectFit: 'cover', border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}` }}
                 />
               ) : (
-                <div style={{
-                  width: 52, height: 52, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1.4rem', background: type === 'service' ? 'rgba(139,92,246,0.15)' : 'rgba(34,197,94,0.15)',
-                  border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`,
-                }}>
+                <div
+                  className="tuki-avatar"
+                  style={{
+                    width: 52,
+                    height: 52,
+                    fontSize: '1.1rem',
+                    background: type === 'service' ? 'rgba(139,92,246,0.15)' : 'rgba(34,197,94,0.15)',
+                    border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`,
+                  }}
+                >
                   <Icon name={type === 'service' ? 'tool' : 'car'} size={18} color={type === 'service' ? '#8b5cf6' : '#22c55e'} />
                 </div>
               )}
@@ -811,7 +821,7 @@ export default function SeguimientoPage() {
 
             {/* Price */}
             <div style={{ flexShrink: 0, textAlign: 'right' }}>
-              <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.1rem' }}>
+              <div className="tuki-price" style={{ color: '#22c55e' }}>
                 {fmtGs(priceVal)}
               </div>
               {order.type === 'service' && order.extra_charge != null && order.extra_charge > 0 && (
@@ -827,7 +837,7 @@ export default function SeguimientoPage() {
                   {order.extra_reason}
                 </div>
               )}
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: 2 }}>acordado</div>
+              <div className="tuki-price-label">acordado</div>
             </div>
           </div>
 
@@ -915,6 +925,8 @@ export default function SeguimientoPage() {
           >
             ← Volver al inicio
           </Link>
+          </div>
+          </div>
         </div>
       ) : null}
     </div>

@@ -4,13 +4,15 @@ import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import type { DriverOffer } from '@/types';
+import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'Pendiente',  color: '#f59e0b' },
-  accepted:  { label: 'Aceptada',   color: '#10b981' },
-  rejected:  { label: 'Rechazada',  color: '#ef4444' },
-  cancelled: { label: 'Cancelada',  color: '#6b7280' },
-  expired:   { label: 'Expirada',   color: '#9ca3af' },
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pendiente',
+  accepted: 'Aceptada',
+  rejected: 'Rechazada',
+  cancelled: 'Cancelada',
+  expired: 'Expirada',
 };
 
 function fmt(dateStr: string) {
@@ -46,19 +48,9 @@ export default function HistorialOfertasDriver() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            style={{
-              padding: '0.35rem 0.85rem',
-              borderRadius: 9999,
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              background: filter === f ? '#10b981' : 'var(--glass-card)',
-              color: filter === f ? '#fff' : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}
+            className={`tuki-btn tuki-btn-sm ${filter === f ? 'tuki-btn-success' : 'tuki-btn-neutral'}`}
           >
-            {f === 'all' ? 'Todas' : f === 'accepted' ? '✅ Aceptadas' : '❌ Rechazadas'}
+            {f === 'all' ? 'Todas' : f === 'accepted' ? 'Aceptadas' : 'Rechazadas'}
           </button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#9ca3af', alignSelf: 'center' }}>
@@ -74,7 +66,9 @@ export default function HistorialOfertasDriver() {
       {/* Empty state */}
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📋</div>
+          <div style={{ marginBottom: 12, opacity: 0.3 }}>
+            <Icon name="clipboard" size={40} />
+          </div>
           <div style={{ fontWeight: 700, fontSize: '1rem' }}>Sin ofertas</div>
           <div style={{ fontSize: '0.85rem', marginTop: 4 }}>No encontramos ofertas con este filtro</div>
         </div>
@@ -82,45 +76,49 @@ export default function HistorialOfertasDriver() {
 
       {/* Cards */}
       {!loading && filtered.map(of => {
-        const st = STATUS_LABEL[of.status] ?? { label: of.status, color: '#9ca3af' };
+        const statusLabel = STATUS_LABEL[of.status] ?? of.status;
+        const statusTone = getStatusTone(of.status);
         return (
           <div
             key={of.id}
+            className="tuki-card"
             style={{
-              background: 'var(--card-bg)',
-              borderRadius: 14,
-              padding: '0.85rem 1rem',
               marginBottom: 10,
-              border: '1px solid var(--glass-card-border)',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
+              ['--status-color' as never]: statusTone.color,
+              ['--status-bg' as never]: statusTone.bg,
+              ['--status-border' as never]: statusTone.border,
+              ['--status-outline' as never]: statusTone.border,
             }}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', marginBottom: 2 }}>
-                Pedido #{String(of.order_id).slice(-6).toUpperCase()}
+            <div className="tuki-card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', marginBottom: 2 }}>
+                  Pedido #{String(of.order_id).slice(-6).toUpperCase()}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {of.created_at ? fmt(of.created_at) : '—'}
+                </div>
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                {of.created_at ? fmt(of.created_at) : '—'}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div className="tuki-price" style={{ fontSize: '1rem' }}>
+                  ₲{Number(of.amount).toLocaleString('es-PY')}
+                </div>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: statusTone.bg,
+                  border: `1px solid ${statusTone.border}`,
+                  color: statusTone.color,
+                  borderRadius: 9999,
+                  padding: '2px 10px',
+                  fontSize: '0.73rem',
+                  fontWeight: 700,
+                  marginTop: 4,
+                }}>
+                  {statusLabel}
+                </span>
               </div>
-            </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem', marginBottom: 4 }}>
-                ₲{Number(of.amount).toLocaleString('es-PY')}
-              </div>
-              <span style={{
-                background: st.color + '1a',
-                color: st.color,
-                borderRadius: 9999,
-                padding: '2px 10px',
-                fontSize: '0.73rem',
-                fontWeight: 700,
-              }}>
-                {st.label}
-              </span>
             </div>
           </div>
         );

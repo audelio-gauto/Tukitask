@@ -7,6 +7,7 @@ import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import ReportModal from '@/components/ReportModal';
 import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -25,10 +26,10 @@ const SERVICE_LABELS: Record<string, string> = {
   otros:             'Otros',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  completado: { label: 'Completado',  color: '#10b981' },
-  cancelled:  { label: 'Cancelado',   color: '#ef4444' },
-  incidente:  { label: 'Incidente',   color: '#f59e0b' },
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ComponentProps<typeof Icon>['name'] }> = {
+  completado: { label: 'Completado', icon: 'check' },
+  cancelled: { label: 'Cancelado', icon: 'x' },
+  incidente: { label: 'Incidente', icon: 'exclamation' },
 };
 
 function StarRow({ rating }: { rating: number | null }) {
@@ -124,7 +125,8 @@ export default function TecnicoHistorialPage() {
     const clientPhoto = job.client_photo || null;
     const totalPrice = Number(job.total_price ?? job.agreed_price ?? 0);
     const date = fmtDate(job.completed_at || job.created_at);
-    const st = STATUS_CONFIG[job.status] ?? { label: job.status, color: '#9ca3af' };
+    const st = STATUS_CONFIG[job.status] ?? { label: job.status, icon: 'tag' };
+    const statusTone = getStatusTone(job.status);
     const serviceLabel = SERVICE_LABELS[job.service_type ?? ''] ?? (job.service_type ?? '—');
     const existingRating = job.client_rating_given ?? localRatings[job.id] ?? null;
 
@@ -134,44 +136,36 @@ export default function TecnicoHistorialPage() {
       : false;
 
     return (
-      <div key={job.id} style={{
-        background: 'var(--glass-card)',
-        borderRadius: 16,
-        marginBottom: 12,
-        overflow: 'hidden',
-        border: '1px solid var(--glass-card-border)',
-      }}>
-        {/* Header */}
-        <div style={{
-          background: job.status === 'completado'
-            ? 'linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.18))'
-            : job.status === 'incidente'
-              ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(217,119,6,0.18))'
-              : 'linear-gradient(135deg, rgba(239,68,68,0.18), rgba(220,38,38,0.12))',
-          borderBottom: `1px solid ${st.color}33`,
-          padding: '0.65rem 1rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ color: st.color, fontWeight: 700, fontSize: '0.85rem' }}>
+      <div
+        key={job.id}
+        className="tuki-card"
+        style={{
+          marginBottom: 12,
+          ['--status-color' as never]: statusTone.color,
+          ['--status-bg' as never]: statusTone.bg,
+          ['--status-border' as never]: statusTone.border,
+          ['--status-outline' as never]: statusTone.border,
+        }}
+      >
+        <div className="tuki-card-header">
+          <span className="tuki-card-title">
+            <Icon name={st.icon} size={14} color={statusTone.color} />
             {st.label} · {serviceLabel}
           </span>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{date}</span>
+          <span className="tuki-card-subtitle">{date}</span>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: '0.85rem 1rem' }}>
+        <div className="tuki-card-body">
           {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-              background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
-              backgroundSize: 'cover',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#1C1C2E', fontWeight: 700, fontSize: '1.1rem',
-              border: '2px solid var(--border-strong)',
-            }}>
+            <div
+              className="tuki-avatar"
+              style={{
+                background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
+                backgroundSize: 'cover',
+                color: '#1C1C2E',
+              }}
+            >
               {!clientPhoto && (clientName[0]?.toUpperCase() || '?')}
             </div>
             <div style={{ flex: 1 }}>
@@ -179,20 +173,18 @@ export default function TecnicoHistorialPage() {
               <StarRow rating={existingRating} />
             </div>
             {totalPrice > 0 && (
-              <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem' }}>
-                ₲{totalPrice.toLocaleString('es-PY')}
+              <div style={{ textAlign: 'right' }}>
+                <div className="tuki-price">₲{totalPrice.toLocaleString('es-PY')}</div>
+                <div className="tuki-price-label">total</div>
               </div>
             )}
           </div>
 
           {/* Address */}
           {job.address && (
-            <div style={{
-              background: 'var(--surface-3)', borderRadius: 10,
-              padding: '8px 12px', marginBottom: 10,
-              fontSize: '0.78rem', color: 'var(--text-secondary)',
-            }}>
-              <Icon name="map-pin" size={13} style={{ marginRight: 4 }} /> {job.address}
+            <div className="tuki-address-box" style={{ marginBottom: 10 }}>
+              <div className="tuki-address-label">Direccion</div>
+              <div className="tuki-address-text">{job.address}</div>
             </div>
           )}
 
@@ -226,14 +218,7 @@ export default function TecnicoHistorialPage() {
           {chatAvailable && (
             <button
               onClick={() => setChatModal({ jobId: job.id, clientName: clientName, clientPhoto: clientPhoto })}
-              style={{
-                width: '100%', padding: '9px', borderRadius: 10,
-                border: '1px solid rgba(99,180,255,0.3)',
-                background: 'rgba(59,130,246,0.12)',
-                color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem',
-                cursor: 'pointer', marginBottom: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
+              className="tuki-btn tuki-btn-info tuki-btn-block"
             >
               <Icon name="chat" size={15} /> Chat con el cliente
             </button>
@@ -243,13 +228,7 @@ export default function TecnicoHistorialPage() {
           {job.status === 'completado' && existingRating == null && (
             <button
               onClick={() => { setRatingJob(job); setRatingJobId(job.id); }}
-              style={{
-                width: '100%', padding: '0.6rem', borderRadius: 10, border: 'none',
-                cursor: 'pointer',
-                background: 'linear-gradient(135deg, #F5C518, #f59e0b)',
-                color: '#1C1C2E', fontWeight: 700, fontSize: '0.88rem', marginTop: 2,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
+              className="tuki-btn tuki-btn-warning tuki-btn-block"
             >
               <Icon name="star" size={15} /> Calificar Cliente
             </button>
@@ -258,19 +237,10 @@ export default function TecnicoHistorialPage() {
           {/* Report button */}
           <button
             onClick={() => setReportModal({ jobId: job.id, clientEmail: job.client_email, clientName: job.client_name })}
-            style={{
-              marginTop: 8, background: 'none',
-              border: '1px solid rgba(239,68,68,0.25)',
-              borderRadius: 8, color: 'rgba(239,68,68,0.65)',
-              fontSize: '0.72rem', padding: '5px 12px',
-              cursor: 'pointer', fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}
+            className="tuki-btn tuki-btn-danger tuki-btn-sm"
+            style={{ marginTop: 8 }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
+            <Icon name="exclamation" size={12} />
             Reportar cliente
           </button>
         </div>
@@ -286,17 +256,7 @@ export default function TecnicoHistorialPage() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            style={{
-              padding: '0.35rem 0.85rem',
-              borderRadius: 9999,
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              background: filter === f ? '#F5C518' : 'var(--glass-card)',
-              color: filter === f ? '#1C1C2E' : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}
+            className={`tuki-btn tuki-btn-sm ${filter === f ? 'tuki-btn-warning' : 'tuki-btn-neutral'}`}
           >
             {f === 'all' ? 'Todos' : f === 'completado' ? 'Completados' : 'Cancelados'}
           </button>

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { useClientContext } from '../context';
 import { Icon } from '@/components/Icon';
+import { getStatusTone } from '@/lib/statusPalette';
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface ActiveOrder {
@@ -49,42 +50,22 @@ interface DriverExtras {
 const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
 const ACTIVE_JOB_STS   = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'];
 
-const TRACKING_STATUS: Record<string, { text: string; color: string }> = {
-  pending:          { text: 'Buscando conductor…',                        color: '#f59e0b' },
-  negotiating:      { text: 'Negociando precio…',                          color: '#f59e0b' },
-  accepted:         { text: '¡Asignado! En camino a recoger',              color: '#22c55e' },
-  assigned:         { text: '¡Asignado! En camino a recoger',              color: '#22c55e' },
-  picking_up:       { text: 'Llegó al punto de recogida',                 color: '#f59e0b' },
-  in_transit:       { text: 'En camino al destino',                        color: '#3b82f6' },
-  returning:        { text: 'El conductor solicita devolver el paquete',   color: '#f97316' },
-  driver_returning: { text: 'El conductor va a devolverte el paquete',     color: '#f59e0b' },
-  return_delivered: { text: 'El conductor llegó a devolver el paquete',   color: '#a78bfa' },
+const TRACKING_STATUS: Record<string, { text: string }> = {
+  pending: { text: 'Buscando conductor...' },
+  negotiating: { text: 'Negociando precio...' },
+  accepted: { text: 'Asignado. En camino a recoger' },
+  assigned: { text: 'Asignado. En camino a recoger' },
+  picking_up: { text: 'Llego al punto de recogida' },
+  in_transit: { text: 'En camino al destino' },
+  returning: { text: 'El conductor solicita devolver el paquete' },
+  driver_returning: { text: 'El conductor va a devolverte el paquete' },
+  return_delivered: { text: 'El conductor llego a devolver el paquete' },
   // tecnico
-  'pending-job':    { text: 'Buscando técnico…',                           color: '#f59e0b' },
-  in_progress:      { text: 'Servicio en progreso',                        color: '#6366f1' },
-  en_camino:        { text: 'Técnico en camino',                           color: '#22c55e' },
-  llegue:           { text: 'Técnico llegó, listo para comenzar',          color: '#f59e0b' },
-  completion_pending: { text: 'Esperando confirmación',                   color: '#a78bfa' },
-};
-
-const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending:          { label: 'Buscando conductor', color: '#f59e0b' },
-  negotiating:      { label: 'Negociando',          color: '#f59e0b' },
-  accepted:         { label: 'Conductor asignado',  color: '#22c55e' },
-  picking_up:       { label: 'Recogiendo',          color: '#3b82f6' },
-  in_transit:       { label: 'En camino',           color: '#3b82f6' },
-  returning:        { label: 'Devolviendo',         color: '#f97316' },
-  driver_returning: { label: 'Conductor regresando',color: '#f97316' },
-  return_delivered: { label: 'Devuelto',            color: '#6b7280' },
-};
-
-const JOB_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending:            { label: 'Buscando técnico',      color: '#f59e0b' },
-  accepted:           { label: 'Técnico asignado',      color: '#22c55e' },
-  in_progress:        { label: 'En progreso',           color: '#3b82f6' },
-  en_camino:          { label: 'Técnico en camino',     color: '#22c55e' },
-  llegue:             { label: 'Técnico llegó',          color: '#f59e0b' },
-  completion_pending: { label: 'Por confirmar',         color: '#a78bfa' },
+  'pending-job': { text: 'Buscando tecnico...' },
+  in_progress: { text: 'Servicio en progreso' },
+  en_camino: { text: 'Tecnico en camino' },
+  llegue: { text: 'Tecnico llego, listo para comenzar' },
+  completion_pending: { text: 'Esperando confirmacion' },
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -317,7 +298,8 @@ export default function MisOfertasPage() {
 
         {/* ── Driver orders ──────────────────────────────────────────── */}
         {orders.map(order => {
-          const st = TRACKING_STATUS[order.status] ?? { text: order.status, color: '#9ca3af' };
+          const statusInfo = TRACKING_STATUS[order.status] ?? { text: order.status };
+          const statusTone = getStatusTone(order.status);
           const price = order.offer ?? order.suggested_price;
           const hasWorker = ['accepted', 'assigned', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
           const typeLabel = ORDER_TYPE_LABELS[order.order_type || ''] ?? 'Envío';
@@ -326,23 +308,22 @@ export default function MisOfertasPage() {
           return (
             <div key={order.id} style={{ marginBottom: 16 }}>
               {/* Card */}
-              <div style={{
-                background: 'var(--glass-card)',
-                border: `1px solid ${st.color}40`,
-                borderRadius: 20,
-                overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-              }}>
+              <div
+                className="tuki-card"
+                style={{
+                  ['--status-color' as never]: statusTone.color,
+                  ['--status-bg' as never]: statusTone.bg,
+                  ['--status-border' as never]: statusTone.border,
+                  ['--status-outline' as never]: statusTone.border,
+                }}
+              >
                 {/* ── Status banner */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', borderBottom: `1px solid ${st.color}20` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {hasWorker
-                      ? <svg width="18" height="18" viewBox="0 0 20 20" fill={st.color}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                      : <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.color, flexShrink: 0, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }} />
-                    }
-                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: st.color }}>{st.text}</span>
+                <div className="tuki-card-header" style={{ padding: '12px 16px 10px' }}>
+                  <div className="tuki-card-title" style={{ fontWeight: 800 }}>
+                    <Icon name={hasWorker ? 'check' : 'clock'} size={16} color={statusTone.color} />
+                    {statusInfo.text}
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>{typeLabel}</span>
+                  <span className="tuki-card-subtitle">{typeLabel}</span>
                 </div>
 
                 {/* ── Worker row (only if assigned) */}
@@ -351,14 +332,14 @@ export default function MisOfertasPage() {
                     {/* Photo */}
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       {order.driver_photo ? (
-                        <img src={order.driver_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${st.color}` }} />
+                        <img src={order.driver_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${statusTone.color}` }} />
                       ) : (
-                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${st.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', border: `3px solid ${st.color}40` }}>
+                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${statusTone.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', border: `3px solid ${statusTone.border}` }}>
                           <Icon name="user" size={28} />
                         </div>
                       )}
                       {extras?.vehicle_label && (
-                        <div style={{ position: 'absolute', bottom: -4, right: -4, background: 'var(--surface-2)', borderRadius: 99, padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, border: `1px solid ${st.color}40`, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        <div style={{ position: 'absolute', bottom: -4, right: -4, background: 'var(--surface-2)', borderRadius: 99, padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, border: `1px solid ${statusTone.border}`, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                           {extras.vehicle_label.split(' ')[0]}
                         </div>
                       )}
@@ -414,17 +395,17 @@ export default function MisOfertasPage() {
 
                 {/* ── Addresses */}
                 {(order.pickup_address || order.delivery_address) && (
-                  <div style={{ padding: '10px 16px 12px', background: 'rgba(0,0,0,0.12)', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                  <div className="tuki-address-box" style={{ padding: '10px 16px 12px', borderRadius: 0, border: 'none', background: 'var(--surface-3)', borderBottom: '1px solid var(--divider)' }}>
                     {order.pickup_address && (
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 5, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        <span style={{ color: '#4ade80', flexShrink: 0, marginTop: 1 }}>📍</span>
-                        <span style={{ lineHeight: 1.4 }}>{order.pickup_address}</span>
+                        <Icon name="map-pin" size={14} color="#4ade80" style={{ marginTop: 1, flexShrink: 0 }} />
+                        <span className="tuki-address-text" style={{ color: 'var(--text-secondary)' }}>{order.pickup_address}</span>
                       </div>
                     )}
                     {order.delivery_address && (
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        <span style={{ color: '#f87171', flexShrink: 0, marginTop: 1 }}>🏁</span>
-                        <span style={{ lineHeight: 1.4 }}>{order.delivery_address}</span>
+                        <Icon name="flag" size={14} color="#f87171" style={{ marginTop: 1, flexShrink: 0 }} />
+                        <span className="tuki-address-text" style={{ color: 'var(--text-secondary)' }}>{order.delivery_address}</span>
                       </div>
                     )}
                   </div>
@@ -434,13 +415,15 @@ export default function MisOfertasPage() {
                 <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
                   <Link
                     href={`/cliente/seguimiento/${order.id}?chat=1`}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                    className="tuki-btn tuki-btn-success"
+                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
                   >
                     <Icon name="chat" size={16} /> Chat
                   </Link>
                   <Link
                     href={`/cliente/seguimiento/${order.id}`}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(14,165,233,0.4)', background: 'rgba(14,165,233,0.1)', color: '#38bdf8', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                    className="tuki-btn tuki-btn-info"
+                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
                   >
                     <Icon name="map" size={16} /> Ver mapa
                   </Link>
@@ -450,9 +433,10 @@ export default function MisOfertasPage() {
                   <button
                     onClick={() => setCancelConfirm({ id: order.id, type: 'delivery' })}
                     disabled={busy}
-                    style={{ width: '100%', padding: '11px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    className="tuki-btn tuki-btn-danger tuki-btn-block"
+                    style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
                   >
-                    <span>✕</span> Cancelar solicitud
+                    <Icon name="x" size={14} /> Cancelar solicitud
                   </button>
                 </div>
               </div>
@@ -462,29 +446,29 @@ export default function MisOfertasPage() {
 
         {/* ── Tecnico jobs ───────────────────────────────────────────── */}
         {jobs.map(job => {
-          const st = TRACKING_STATUS[job.status] ?? { text: job.status, color: '#9ca3af' };
+          const statusInfo = TRACKING_STATUS[job.status] ?? { text: job.status };
+          const statusTone = getStatusTone(job.status);
           const serviceLabel = SERVICE_LABELS[job.service_type || ''] ?? job.service_type ?? 'Servicio';
           const hasWorker = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'].includes(job.status);
 
           return (
             <div key={job.id} style={{ marginBottom: 16 }}>
-              <div style={{
-                background: 'var(--glass-card)',
-                border: `1px solid ${st.color}40`,
-                borderRadius: 20,
-                overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-              }}>
+              <div
+                className="tuki-card"
+                style={{
+                  ['--status-color' as never]: statusTone.color,
+                  ['--status-bg' as never]: statusTone.bg,
+                  ['--status-border' as never]: statusTone.border,
+                  ['--status-outline' as never]: statusTone.border,
+                }}
+              >
                 {/* ── Status banner */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', borderBottom: `1px solid ${st.color}20` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {hasWorker
-                      ? <svg width="18" height="18" viewBox="0 0 20 20" fill={st.color}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                      : <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.color, flexShrink: 0, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }} />
-                    }
-                    <span style={{ fontWeight: 800, fontSize: '0.9rem', color: st.color }}>{st.text}</span>
+                <div className="tuki-card-header" style={{ padding: '12px 16px 10px' }}>
+                  <div className="tuki-card-title" style={{ fontWeight: 800 }}>
+                    <Icon name={hasWorker ? 'check' : 'clock'} size={16} color={statusTone.color} />
+                    {statusInfo.text}
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>{serviceLabel}</span>
+                  <span className="tuki-card-subtitle">{serviceLabel}</span>
                 </div>
 
                 {/* ── Worker row */}
@@ -492,9 +476,9 @@ export default function MisOfertasPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px 12px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       {job.tecnico_photo ? (
-                        <img src={job.tecnico_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${st.color}` }} />
+                        <img src={job.tecnico_photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${statusTone.color}` }} />
                       ) : (
-                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${st.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${st.color}40` }}>
+                        <div style={{ width: 60, height: 60, borderRadius: '50%', background: `linear-gradient(135deg,${statusTone.color},var(--surface-3))`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${statusTone.border}` }}>
                           <Icon name="tool" size={28} />
                         </div>
                       )}
@@ -525,9 +509,9 @@ export default function MisOfertasPage() {
 
                 {/* ── Address */}
                 {job.address && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '10px 16px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.12)', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-                    <span style={{ flexShrink: 0, marginTop: 1 }}>📍</span>
-                    <span style={{ lineHeight: 1.4 }}>{job.address}</span>
+                  <div className="tuki-address-box" style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '10px 16px 12px', borderRadius: 0, border: 'none', background: 'var(--surface-3)', borderBottom: '1px solid var(--divider)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    <Icon name="map-pin" size={14} color="#4ade80" style={{ marginTop: 1, flexShrink: 0 }} />
+                    <span className="tuki-address-text" style={{ color: 'var(--text-secondary)' }}>{job.address}</span>
                   </div>
                 )}
 
@@ -535,13 +519,15 @@ export default function MisOfertasPage() {
                 <div style={{ display: 'flex', gap: 10, padding: '12px 16px 8px' }}>
                   <Link
                     href={`/cliente/seguimiento/${job.id}?type=service&chat=1`}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                    className="tuki-btn tuki-btn-success"
+                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
                   >
                     <Icon name="chat" size={16} /> Chat
                   </Link>
                   <Link
                     href={`/cliente/seguimiento/${job.id}?type=service`}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', borderRadius: 14, border: '1px solid rgba(14,165,233,0.4)', background: 'rgba(14,165,233,0.1)', color: '#38bdf8', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none' }}
+                    className="tuki-btn tuki-btn-info"
+                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
                   >
                     <Icon name="map" size={16} /> Ver mapa
                   </Link>
@@ -551,9 +537,10 @@ export default function MisOfertasPage() {
                   <button
                     onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
                     disabled={busy}
-                    style={{ width: '100%', padding: '11px 0', borderRadius: 14, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    className="tuki-btn tuki-btn-danger tuki-btn-block"
+                    style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
                   >
-                    <span>✕</span> Cancelar solicitud
+                    <Icon name="x" size={14} /> Cancelar solicitud
                   </button>
                 </div>
               </div>

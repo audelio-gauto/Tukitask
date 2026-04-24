@@ -10,6 +10,7 @@ import ReportModal from '@/components/ReportModal';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
 import { authFetch } from '@/lib/authFetch';
+import { getStatusTone } from '@/lib/statusPalette';
 
 interface Order {
   id: string;
@@ -300,46 +301,72 @@ export default function ClienteHistorialPage() {
               <div style={{ marginBottom: 28 }}>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: '#F5C518', textTransform: 'uppercase', letterSpacing: 2 }}>En Progreso</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {paginatedActive.map(item => item.kind === 'job' ? (
-                    <div key={item.data.id} style={{ background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 16, padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ color: '#a5b4fc', display: 'inline-flex' }}>
-                          <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={18} />
-                        </span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color="var(--text-muted)" />
+                  {paginatedActive.map(item => {
+                    const statusTone = getStatusTone(item.data.status);
+                    return (item.kind === 'job' ? (
+                      <div
+                        key={item.data.id}
+                        className="tuki-card"
+                        style={{
+                          ['--status-color' as never]: statusTone.color,
+                          ['--status-bg' as never]: statusTone.bg,
+                          ['--status-border' as never]: statusTone.border,
+                          ['--status-outline' as never]: statusTone.border,
+                        }}
+                      >
+                        <div className="tuki-card-header">
+                          <span className="tuki-card-title">
+                            <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={16} color={statusTone.color} />
+                            {SERVICE_LABELS[item.data.service_type] || item.data.service_type}
+                          </span>
+                          <span className="tuki-card-subtitle">{fmtDate(item.data.created_at)}</span>
+                        </div>
+                        <div className="tuki-card-body">
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color={statusTone.color} />
                             {getStatusInfo(item.data.status).label}
                           </div>
+                          <Link
+                            href="/cliente"
+                            className="tuki-btn tuki-btn-block"
+                            style={{
+                              textDecoration: 'none',
+                              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                              color: '#fff',
+                              border: 'none',
+                            }}
+                          >
+                            <Icon name="map-pin" size={14} />
+                            Ver en inicio
+                          </Link>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
                       </div>
-                      <Link href="/cliente" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <Icon name="map-pin" size={14} />
-                          Ver en inicio
-                        </span>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div key={item.data.id} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 16, padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <span style={{ color: '#F5C518', display: 'inline-flex' }}>
-                          <Icon name="package" size={18} />
-                        </span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}</div>
-                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color="var(--text-muted)" />
+                    ) : (
+                      <div
+                        key={item.data.id}
+                        className="tuki-card"
+                        style={{
+                          ['--status-color' as never]: statusTone.color,
+                          ['--status-bg' as never]: statusTone.bg,
+                          ['--status-border' as never]: statusTone.border,
+                          ['--status-outline' as never]: statusTone.border,
+                        }}
+                      >
+                        <div className="tuki-card-header">
+                          <span className="tuki-card-title">
+                            <Icon name="package" size={16} color={statusTone.color} />
+                            {(item.data as Order).pickup_address?.slice(0, 28) || 'Envío'}
+                          </span>
+                          <span className="tuki-card-subtitle">{fmtDate(item.data.created_at)}</span>
+                        </div>
+                        <div className="tuki-card-body">
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Icon name={getStatusInfo(item.data.status).icon} size={12} color={statusTone.color} />
                             {getStatusInfo(item.data.status).label}
                           </div>
-                        </div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtDate(item.data.created_at)}</span>
-                      </div>
                       {/* Route A → stops → B — active order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div style={{ background: 'var(--glass-card)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                        <div className="tuki-address-box" style={{ marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
@@ -393,27 +420,33 @@ export default function ClienteHistorialPage() {
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <Link href="/cliente" style={{ flex: 1, display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.85rem', textAlign: 'center', textDecoration: 'none' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name="map-pin" size={14} />
-                            Ver en inicio
-                          </span>
+                        <Link
+                          href="/cliente"
+                          className="tuki-btn tuki-btn-primary"
+                          style={{ flex: 1, textDecoration: 'none' }}
+                        >
+                          <Icon name="map-pin" size={14} />
+                          Ver en inicio
                         </Link>
                         <button
                           onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
-                          style={{ width: 44, height: 44, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)', background: 'rgba(245,197,24,0.1)', color: '#F5C518', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                          className="tuki-btn tuki-btn-warning tuki-btn-sm"
+                          style={{ width: 44, height: 44, padding: 0, flexShrink: 0 }}
                           title="Chat 24h"
                         >
                           <Icon name="chat" size={16} />
                         </button>
                       </div>
+                      </div>
                     </div>
-                  ))}
+                  ));
+                  })}
                 </div>
                 {activeItems.length > paginatedActive.length && (
                   <button
                     onClick={() => setActivePage(p => p + 1)}
-                    style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.98rem', marginTop: 10, cursor: 'pointer' }}
+                    className="tuki-btn tuki-btn-warning tuki-btn-block"
+                    style={{ fontSize: '0.98rem', marginTop: 10 }}
                   >
                     Cargar más en progreso
                   </button>
@@ -425,21 +458,33 @@ export default function ClienteHistorialPage() {
               <div>
                 <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {paginatedDone.map(item => item.kind === 'job' ? (
-                    <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
+                  {paginatedDone.map(item => {
+                    const statusTone = getStatusTone(item.data.status);
+                    return item.kind === 'job' ? (
+                    <div
+                      key={item.data.id}
+                      className="tuki-card"
+                      style={{
+                        ['--status-color' as never]: statusTone.color,
+                        ['--status-bg' as never]: statusTone.bg,
+                        ['--status-border' as never]: statusTone.border,
+                        ['--status-outline' as never]: statusTone.border,
+                      }}
+                    >
+                      <div className="tuki-card-body">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
                         <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
                           <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={16} />
                         </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: item.data.status === 'completado' ? '#4ade80' : '#f87171' }}>
+                            <span style={{ fontSize: '0.73rem', color: statusTone.color }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 <Icon
                                   name={item.data.status === 'completado' ? 'check' : item.data.status === 'cancelled' ? 'x' : 'exclamation'}
                                   size={12}
-                                  color={item.data.status === 'completado' ? '#4ade80' : '#f87171'}
+                                  color={statusTone.color}
                                 />
                                 {item.data.status === 'completado' ? 'Completado' : item.data.status === 'cancelled' ? 'Cancelado' : 'Incidente'}
                               </span>
@@ -448,17 +493,22 @@ export default function ClienteHistorialPage() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {item.data.total_price != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs(item.data.total_price)}</div>}
+                          {item.data.total_price != null && (
+                            <div className="tuki-price" style={{ color: '#F5C518', fontSize: '0.92rem' }}>
+                              {fmtGs(item.data.total_price)}
+                            </div>
+                          )}
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
                       {item.data.status === 'completado' && !item.data.tecnico_rating && (
-                        <button onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
-                          style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name="star" size={14} />
-                            Calificar tecnico
-                          </span>
+                        <button
+                          onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
+                          className="tuki-btn tuki-btn-primary tuki-btn-block"
+                          style={{ fontSize: '0.83rem' }}
+                        >
+                          <Icon name="star" size={14} />
+                          Calificar tecnico
                         </button>
                       )}
                       {item.data.tecnico_rating != null && (
@@ -469,17 +519,27 @@ export default function ClienteHistorialPage() {
                       {item.data.status !== 'pending' && (
                         <button
                           onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
-                          style={{ marginTop: 6, background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
+                          className="tuki-btn tuki-btn-danger tuki-btn-sm"
+                          style={{ marginTop: 6, fontSize: '0.75rem' }}
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name="flag" size={12} />
-                            Reportar
-                          </span>
+                          <Icon name="flag" size={12} />
+                          Reportar
                         </button>
                       )}
                     </div>
+                    </div>
                   ) : (
-                    <div key={item.data.id} style={{ background: 'var(--sheet-bg)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '14px' }}>
+                    <div
+                      key={item.data.id}
+                      className="tuki-card"
+                      style={{
+                        ['--status-color' as never]: statusTone.color,
+                        ['--status-bg' as never]: statusTone.bg,
+                        ['--status-border' as never]: statusTone.border,
+                        ['--status-outline' as never]: statusTone.border,
+                      }}
+                    >
+                      <div className="tuki-card-body">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
                           <Icon name="package" size={16} />
@@ -487,12 +547,12 @@ export default function ClienteHistorialPage() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: ['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171' }}>
+                            <span style={{ fontSize: '0.73rem', color: statusTone.color }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 <Icon
                                   name={['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'check' : 'x'}
                                   size={12}
-                                  color={['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? '#4ade80' : '#f87171'}
+                                  color={statusTone.color}
                                 />
                                 {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'Entregado' : 'Cancelado'}
                               </span>
@@ -501,13 +561,17 @@ export default function ClienteHistorialPage() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {((item.data as Order).offer ?? (item.data as Order).suggested_price) != null && <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.92rem' }}>{fmtGs((item.data as Order).offer ?? (item.data as Order).suggested_price)}</div>}
+                          {((item.data as Order).offer ?? (item.data as Order).suggested_price) != null && (
+                            <div className="tuki-price" style={{ color: '#F5C518', fontSize: '0.92rem' }}>
+                              {fmtGs((item.data as Order).offer ?? (item.data as Order).suggested_price)}
+                            </div>
+                          )}
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate((item.data as Order).completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
                       {/* Route A → stops → B — completed order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div style={{ background: 'var(--glass-card)', borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
+                        <div className="tuki-address-box" style={{ marginBottom: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
@@ -585,7 +649,8 @@ export default function ClienteHistorialPage() {
                       {(item.data as Order).driver_name && (
                         <button
                           onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
-                          style={{ width: '100%', padding: '9px', borderRadius: 10, border: '1px solid rgba(99,180,255,0.3)', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                          className="tuki-btn tuki-btn-info tuki-btn-block"
+                          style={{ fontSize: '0.83rem', marginBottom: 6 }}
                         >
                           <Icon name="chat" size={14} />
                           Chat 24h con el driver
@@ -600,24 +665,22 @@ export default function ClienteHistorialPage() {
                         ) : (
                           <button
                             onClick={() => setDriverRatingModal({ orderId: item.data.id, driverName: (item.data as Order).driver_name, driverPhoto: (item.data as Order).driver_photo })}
-                            style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.83rem', cursor: 'pointer', marginBottom: 6 }}
+                            className="tuki-btn tuki-btn-primary tuki-btn-block"
+                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
                           >
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <Icon name="star" size={14} />
-                              Calificar driver
-                            </span>
+                            <Icon name="star" size={14} />
+                            Calificar driver
                           </button>
                         )
                       )}
                       {(item.data as Order).driver_name && (
                         <button
                           onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
-                          style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: 'rgba(239,68,68,0.7)', fontSize: '0.75rem', padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
+                          className="tuki-btn tuki-btn-danger tuki-btn-sm"
+                          style={{ fontSize: '0.75rem' }}
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Icon name="flag" size={12} />
-                            Reportar
-                          </span>
+                          <Icon name="flag" size={12} />
+                          Reportar
                         </button>
                       )}
                       {/* Tip + Favourite row */}
@@ -633,12 +696,15 @@ export default function ClienteHistorialPage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                    </div>
+                  );
+                  })}
                 </div>
                 {doneItems.length > paginatedDone.length && (
                   <button
                     onClick={() => setDonePage(p => p + 1)}
-                    style={{ width: '100%', padding: '11px', borderRadius: 14, border: '1px solid #F5C518', background: 'rgba(245,197,24,0.08)', color: '#F5C518', fontWeight: 800, fontSize: '0.98rem', marginTop: 10, cursor: 'pointer' }}
+                    className="tuki-btn tuki-btn-warning tuki-btn-block"
+                    style={{ fontSize: '0.98rem', marginTop: 10 }}
                   >
                     Cargar más completados
                   </button>
