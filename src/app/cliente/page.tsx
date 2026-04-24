@@ -715,13 +715,17 @@ export default function ClienteHomePage() {
     : activeRequests.length > 0                          ? 'searching'
     : 'idle';
 
+  /* homeMode: el panel principal ignora el estado tracking completamente —
+     cuando hay una solicitud aceptada el Home se comporta como idle          */
+  const homeMode = mode === 'tracking' ? 'idle' : mode;
+
   const busy = !!actionId;
 
-  /* ─── Open sheet only for searching and offers (not tracking) ─────────── */
+  /* ─── Open sheet for searching and offers (homeMode ignores tracking) ──── */
   useEffect(() => {
-    if (mode === 'searching' || mode === 'offers') setSheetOpen(true);
-    if (mode === 'idle' || mode === 'tracking') setSheetOpen(false);
-  }, [mode]);
+    if (homeMode === 'searching' || homeMode === 'offers') setSheetOpen(true);
+    if (homeMode === 'idle') setSheetOpen(false);
+  }, [homeMode]);
 
   /* ─── Actions ───────────────────────────────────────────────────────────── */
   const acceptDriverOffer = async (offerId: string) => {
@@ -946,7 +950,7 @@ export default function ClienteHomePage() {
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: mode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
+        style={{ position: 'absolute', right: 16, bottom: homeMode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
       >📍</button>
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
@@ -959,7 +963,7 @@ export default function ClienteHomePage() {
         {/* ── IDLE — hidden, only floating button shows ─────────────────── */}
 
         {/* ── SEARCHING ────────────────────────────────────────────────────── */}
-        {mode === 'searching' && (
+        {homeMode === 'searching' && (
           <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
             {/* Handle */}
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
@@ -1029,7 +1033,7 @@ export default function ClienteHomePage() {
         )}
 
         {/* ── OFFERS ─────────────────────────────────────────────────────── */}
-        {mode === 'offers' && (
+        {homeMode === 'offers' && (
           <div style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             {/* Count header */}
             <div style={{ padding: '6px 14px 2px', flexShrink: 0 }}>
@@ -1341,7 +1345,7 @@ export default function ClienteHomePage() {
       </div>
 
       {/* ── IDLE — service selector ───────────────────────────────────────── */}
-      {mode === 'idle' && !loading && (
+      {homeMode === 'idle' && !loading && (
         <div className="client-idle-overlay">
           {/* Hero illustration */}
           <div className="client-idle-hero">
