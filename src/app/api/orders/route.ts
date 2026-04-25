@@ -156,9 +156,12 @@ export async function GET(req: Request) {
     if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
 
     const feedIds = (feedRows ?? []).map((r: { order_id: string }) => r.order_id).filter(Boolean);
-    if (feedIds.length === 0) return NextResponse.json([]);
 
-    query = query.in('id', feedIds).in('status', ['pending', 'negotiating']).limit(100);
+    // If feed has entries use them; otherwise show all pending (driver has no GPS location yet)
+    if (feedIds.length > 0) {
+      query = query.in('id', feedIds);
+    }
+    query = query.in('status', ['pending', 'negotiating']).limit(100);
     const { data: fetched, error: qErr } = await query;
     if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
 

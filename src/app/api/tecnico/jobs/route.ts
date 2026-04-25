@@ -162,25 +162,25 @@ export async function GET(req: Request) {
         .limit(50);
       if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
 
-      const feedIds = (feedRows ?? []).map(r => r.job_id).filter(Boolean);
-      if (feedIds.length === 0) return NextResponse.json([]);
+      const feedIds = (feedRows ?? []).map((r: { job_id: string }) => r.job_id).filter(Boolean);
 
       const { data: settings } = await sb
         .from('tecnico_settings')
-        .select('gender, accepted_services, is_verified')
+        .select('gender, accepted_services, verified')
         .eq('email', email)
         .maybeSingle();
 
       const gender: string = settings?.gender ?? '';
       const accepted: Record<string, boolean> = settings?.accepted_services ?? {};
       const enabled = Object.entries(accepted).filter(([, v]) => v).map(([k]) => k);
-      const tecnicoIsVerified: boolean = settings?.is_verified === true;
+      const tecnicoIsVerified: boolean = settings?.verified === true;
 
       let q = sb.from('tecnico_jobs')
         .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price')
         .eq('status', 'pending')
-        .in('id', feedIds)
         .limit(50);
+      // If feed has entries, filter by them; otherwise show all (tecnico has no GPS location yet)
+      if (feedIds.length > 0) q = q.in('id', feedIds);
       if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
       if (enabled.length > 0) q = q.in('service_type', enabled);
       // If tecnico is not verified, exclude jobs that require verified professionals
