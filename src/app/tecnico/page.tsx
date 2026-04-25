@@ -816,7 +816,8 @@ export default function TecnicoDashboard() {
             <label className="tuki-toggle">
               <input type="checkbox" checked={available && !walletBlocked} onChange={() => {
                 if (walletBlocked) { showToast('Recarga tu billetera para activarte'); return; }
-                if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0)) return;
+                // Only block toggle if critical docs are EXPIRED or any doc REJECTED (not pending)
+                if (!available && (docAlerts.expired.length > 0 || docCounts.rejected > 0)) return;
                 if (!available) {
                   setAvailable(true);
                   try { localStorage.setItem('tecnico_available', 'true'); } catch {}
