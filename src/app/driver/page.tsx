@@ -14,7 +14,7 @@ import { Icon } from '@/components/Icon';
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
 export default function DriverDashboard() {
-  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings } = useWorkerContext();
+  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings, driverPos } = useWorkerContext();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -75,17 +75,8 @@ export default function DriverDashboard() {
     return () => { supabase.removeChannel(ch); };
   }, [email]);
 
-  // ── GPS position for distance calculation ──────────────────────────────
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: false, maximumAge: 15_000 },
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  // ── GPS position: consumed from layout context (no duplicate watchPosition) ──
+  // driverPos is set by driver/layout.tsx which has the authoritative watchPosition
 
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -245,13 +236,15 @@ export default function DriverDashboard() {
   }, [email]);
 
   // Fetch driver stats (delivered/failed counts + earnings)
-  // Refreshes every 30 s AND immediately when the tab becomes visible again
-  // (browsers throttle/suspend setInterval when tab is in background)
+  // Refreshes every 2 min (realtime handles instant status changes)
+  // Also refreshes immediately when the tab becomes visible again
   useEffect(() => {
     if (!email) return;
     const fetchStats = () => {
-      // cache-busting param so browsers never serve a stale cached response
-      authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`)
+      // Only last 90 days — avoids full-table scan on large history
+      const since = new Date();
+      since.setDate(since.getDate() - 90);
+      authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&since=${since.toISOString()}`)
         .then(r => r.json())
         .then((data: any[]) => {
           if (!Array.isArray(data)) { setStatsLoading(false); return; }
@@ -307,8 +300,8 @@ export default function DriverDashboard() {
 
     fetchStats();
 
-    // Regular interval (works while tab is focused)
-    const iv = setInterval(fetchStats, 30_000);
+    // Interval: 2 min (realtime handles instant updates for active orders)
+    const iv = setInterval(fetchStats, 120_000);
 
     // Refresh immediately whenever the user returns to this tab/app
     // This covers: switching tabs, app backgrounded on mobile, screen lock/unlock

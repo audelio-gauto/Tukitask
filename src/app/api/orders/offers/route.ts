@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     if (ids.length === 0) return NextResponse.json({});
     const { data, error } = await supabaseServer
       .from('driver_offers')
-      .select('*')
+      .select('id, order_id, driver_email, driver_name, driver_photo, amount, status, expires_at, created_at, client_email, distance_km, note')
       .in('order_id', ids)
       .in('status', ['pending', 'accepted'])   // accepted needed for tracking card
       .order('created_at', { ascending: false });

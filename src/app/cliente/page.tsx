@@ -503,9 +503,9 @@ export default function ClienteHomePage() {
       ? supabase.channel(`client-home-${email}`)
           .on('postgres_changes', { event: '*',      schema: 'public', table: 'orders',              filter: `client_email=eq.${email}` } as never, () => loadAll())
           .on('postgres_changes', { event: '*',      schema: 'public', table: 'tecnico_jobs',        filter: `client_email=eq.${email}` } as never, () => loadAll())
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers',       filter: `client_email=eq.${email}` } as never, () => loadAll())
-          // tecnico_job_offers has no client_email column — listen without filter, reload checks relevance via loadAll
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers' } as never, () => loadAll())
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers',       filter: `client_email=eq.${email}` } as never, () => { loadAll(); window.dispatchEvent(new Event('tuki-offer-insert')); })
+          // tecnico_job_offers now has client_email column (migration 027) — filter server-side
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers',  filter: `client_email=eq.${email}` } as never, () => { loadAll(); window.dispatchEvent(new Event('tuki-offer-insert')); })
           .subscribe()
       : null;
     return () => {

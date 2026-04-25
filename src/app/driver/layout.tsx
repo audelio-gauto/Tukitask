@@ -37,14 +37,17 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
 
   // ── GPS broadcast: always-on while driver app is open ──────────────────────
-  // 1. Broadcasts via Supabase Realtime (0 DB writes, < 1s latency for clients)
-  // 2. Writes to DB every 60s only (down from 10s) — for analytics / fallback
+  // 1. Broadcasts via Supabase Realtime Broadcast (0 DB writes, < 1s latency)
+  // 2. Writes to DB every 60s only — for clients that join late / fallback
+  // 3. Skips DB write when driver is offline (saves ~4 writes/min per driver)
+  // 4. Exposes driverPos via context — child pages must NOT create their own watchPosition
   useEffect(() => {
     if (!email) return;
     let lastLat: number | null = null;
@@ -66,10 +69,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       }).catch(() => {});
     };
 
-    // DB write (throttled to 60s) — keeps driver_locations table fresh for
-    // clients that open the page after the driver started moving
+    // DB write (throttled to 60s, skipped when offline)
+    // 'driver_available' === 'false' means driver toggled offline
     const postToDB = () => {
       if (lastLat == null || lastLng == null) return;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
         fetch('/api/driver-location', {
@@ -88,14 +92,16 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         (pos) => {
           lastLat = pos.coords.latitude;
           lastLng = pos.coords.longitude;
+          // Share position with child pages via context (eliminates duplicate watchPosition)
+          setDriverPos({ lat: lastLat, lng: lastLng });
           // Broadcast immediately on every GPS fix (< 1s for client)
           broadcastLocation(lastLat, lastLng);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      // DB write every 15s — keeps driver_locations fresh for polling fallback
-      dbIntervalId = setInterval(postToDB, 15_000);
+      // DB write every 60s (reduced from 15s — 75% fewer writes)
+      dbIntervalId = setInterval(postToDB, 60_000);
     }
 
     return () => {
@@ -208,7 +214,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/driver/delivered" scope="order" />
-      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm }}>
+      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, driverPos, setDriverPos }}>
         {children}
         <BottomNav tabs={DRIVER_TABS} accent="#F5C518" />
       </WorkerContext.Provider>

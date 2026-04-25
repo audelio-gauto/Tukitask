@@ -56,7 +56,7 @@ function buildDefaultFilters(catalogue: { key: string }[]) {
 }
 
 export default function TecnicoDashboard() {
-  const { openDrawer, email, profilePhoto, displayName, avgRating } = useWorkerContext();
+  const { openDrawer, email, profilePhoto, displayName, avgRating, driverPos } = useWorkerContext();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -163,17 +163,8 @@ export default function TecnicoDashboard() {
       .catch(() => {});
   }, [email]);
 
-  // ── GPS position for distance calculation ──────────────────────────────
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: false, maximumAge: 15_000 },
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  // ── GPS position: consumed from layout context (no duplicate watchPosition) ──
+  // driverPos is set by tecnico/layout.tsx which has the authoritative watchPosition
 
   // Keep mapPickup in sync with driverPos — if GPS arrives after card was shown, update A point
   useEffect(() => {
@@ -248,7 +239,8 @@ export default function TecnicoDashboard() {
 
   useEffect(() => {
     loadPendingJobs();
-    const iv = setInterval(loadPendingJobs, 8_000);
+    // Realtime handles instant new-job notifications; 60s fallback poll (was 8s)
+    const iv = setInterval(loadPendingJobs, 60_000);
     const ch = supabase.channel('tecnico-home-pending')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)

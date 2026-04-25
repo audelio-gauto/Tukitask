@@ -34,12 +34,15 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
 
   // ── GPS broadcast: always-on while tecnico app is open ─────────────────────
+  // DB write every 60s (reduced from 15s), skipped when tecnico is offline
+  // Exposes driverPos via context so child pages don't need their own watchPosition
   useEffect(() => {
     if (!email) return;
     let lastLat: number | null = null;
@@ -58,6 +61,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
     const postToDB = () => {
       if (lastLat == null || lastLng == null) return;
+      // Skip DB write when tecnico is offline
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('tecnico_available') === 'false') return;
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
         fetch('/api/driver-location', {
@@ -73,12 +78,15 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         (pos) => {
           lastLat = pos.coords.latitude;
           lastLng = pos.coords.longitude;
+          // Share with child pages via context
+          setDriverPos({ lat: lastLat, lng: lastLng });
           broadcastLocation(lastLat, lastLng);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      dbIntervalId = setInterval(postToDB, 15_000);
+      // DB write every 60s (reduced from 15s — 75% fewer writes)
+      dbIntervalId = setInterval(postToDB, 60_000);
     }
 
     return () => {
@@ -200,7 +208,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/tecnico/citas" scope="job" />
-      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {} }}>
+      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {}, driverPos, setDriverPos }}>
         <main>
           {children}
         </main>

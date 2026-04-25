@@ -10,7 +10,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await sbAdmin()
       .from('client_profiles')
-      .select('*')
+      .select('email, display_name, phone, photo_url, avg_rating, total_ratings, is_verified, created_at, updated_at')
       .ilike('email', email)
       .maybeSingle();
 

@@ -11,7 +11,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 
 /* ─── Web Audio ──────────────────────────────────────────────────────────── */
 let _gAC: AudioContext | null = null;
@@ -212,29 +211,17 @@ export default function OfferIncomingToast({ email }: Props) {
   useEffect(() => {
     if (!email) return;
     poll(); // Initial load
-    // Fallback polling at 60s; realtime is primary for instant offers
+    // Fallback polling at 60s; window event 'tuki-offer-insert' is primary for instant offers
     const iv = setInterval(poll, 60_000);
 
-    // Realtime: new driver offers + tecnico offers → instant toast
-    // Filter by client_email so this client only receives their own offers
-    const ch = supabase.channel(`offer-toast-${email}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'driver_offers',
-        filter: `client_email=eq.${email}`,
-      } as never, () => poll())
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tecnico_job_offers',
-        filter: `client_email=eq.${email}`,
-      } as never, () => poll())
-      .subscribe();
+    // Listen to window event dispatched by cliente/page.tsx when a new offer arrives
+    // This avoids opening a duplicate Supabase Realtime channel for the same tables
+    const onOfferInsert = () => poll();
+    window.addEventListener('tuki-offer-insert', onOfferInsert);
 
     return () => {
       clearInterval(iv);
-      supabase.removeChannel(ch);
+      window.removeEventListener('tuki-offer-insert', onOfferInsert);
       stopSound();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

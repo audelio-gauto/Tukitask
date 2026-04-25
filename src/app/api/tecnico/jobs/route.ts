@@ -160,7 +160,10 @@ export async function GET(req: Request) {
       const enabled = Object.entries(accepted).filter(([, v]) => v).map(([k]) => k);
       const tecnicoIsVerified: boolean = settings?.is_verified === true;
 
-      let q = sb.from('tecnico_jobs').select('*').eq('status', 'pending');
+      let q = sb.from('tecnico_jobs')
+        .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price')
+        .eq('status', 'pending')
+        .limit(50);
       if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
       if (enabled.length > 0) q = q.in('service_type', enabled);
       // If tecnico is not verified, exclude jobs that require verified professionals

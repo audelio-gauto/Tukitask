@@ -71,7 +71,18 @@ export async function GET(req: Request) {
   } else if (driverEmail && history === 'true') {
     const user = await getAuthUser(req);
     if (!user || user.email !== driverEmail) return unauthorized();
-    query = query.eq('accepted_by', driverEmail).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'failed', 'cancelled', 'returned', 'return_rejected']);
+    // Optimized history query: no order_stops JOIN, specific columns, date filter
+    const since = searchParams.get('since');
+    let histQ = db.from('orders')
+      .select('id, status, created_at, offer, offer_price, accepted_price, suggested_price, accepted_by, client_email, delivery_address, pickup_address')
+      .eq('accepted_by', driverEmail)
+      .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'failed', 'cancelled', 'returned', 'return_rejected'])
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (since) histQ = histQ.gte('created_at', since);
+    const { data: histData, error: histErr } = await histQ;
+    if (histErr) return NextResponse.json({ error: histErr.message }, { status: 500 });
+    return NextResponse.json(histData ?? []);
   } else if (driverEmail) {
     const user = await getAuthUser(req);
     if (!user || user.email !== driverEmail) return unauthorized();

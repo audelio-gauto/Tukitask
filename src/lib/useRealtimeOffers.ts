@@ -158,11 +158,12 @@ export function useRealtimeOffers(opts: UseRealtimeOffersOpts) {
 
     const ch = supabase.channel(`live-offers-${userEmail}`);
 
-    // Driver offers
+    // Driver offers — filtered by client_email (server-side: only this client's offers)
     ch.on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'driver_offers',
+      filter: `client_email=eq.${userEmail}`,
     }, (payload) => {
       const row = (payload.new ?? payload.old) as Record<string, unknown>;
       if (!row) return;
@@ -207,11 +208,12 @@ export function useRealtimeOffers(opts: UseRealtimeOffersOpts) {
       });
     });
 
-    // Tecnico offers
+    // Tecnico offers — filtered by client_email (server-side: only this client's offers)
     ch.on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'tecnico_job_offers',
+      filter: `client_email=eq.${userEmail}`,
     }, (payload) => {
       const row = (payload.new ?? payload.old) as Record<string, unknown>;
       if (!row) return;

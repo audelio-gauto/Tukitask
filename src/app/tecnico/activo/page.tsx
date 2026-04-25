@@ -151,13 +151,26 @@ export default function TecnicoActivoPage() {
     };
   }, [fetchActive, email]);
 
-  // Poll unread counts when jobs change
+  // Realtime unread counts — instant via postgres_changes, no polling
   useEffect(() => {
     const ids = jobs.map(j => j.id);
-    fetchUnreadCounts(ids);
-    const iv = setInterval(() => fetchUnreadCounts(ids), 10_000);
-    return () => clearInterval(iv);
-  }, [jobs, fetchUnreadCounts]);
+    if (ids.length === 0) return;
+    fetchUnreadCounts(ids); // initial load
+    let ch = supabase.channel(`tecnico-chat-unread-${email}`);
+    for (const jobId of ids) {
+      ch = ch.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `job_id=eq.${jobId}`,
+      } as never, (payload: { new: Record<string, unknown> }) => {
+        const msg = payload.new;
+        if (msg.sender_email === email) return;
+        if (chatModal?.jobId === jobId) return; // chat is open
+        setUnreadCounts(prev => ({ ...prev, [jobId]: (prev[jobId] ?? 0) + 1 }));
+      });
+    }
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [jobs.map(j => j.id).join(','), email, chatModal?.jobId, fetchUnreadCounts]);
 
   // Clear unread when chat opens
   useEffect(() => {
