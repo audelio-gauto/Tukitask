@@ -149,41 +149,40 @@ export async function GET(req: Request) {
         }
       }
 
+      // Fire-and-forget feed refresh (for realtime triggers only — not used for this query)
       const refreshFeed = url.searchParams.get('refresh') === '1' || url.searchParams.get('refresh') === 'true';
       if (refreshFeed) {
-        await sb.rpc('refresh_tecnico_feed', { p_tecnico_email: email });
+        sb.rpc('refresh_tecnico_feed', { p_tecnico_email: email }).then(() => {}).catch(() => {});
       }
 
-      const { data: feedRows, error: feedErr } = await sb
-        .from('tecnico_feed')
-        .select('job_id')
-        .eq('tecnico_email', email)
-        .order('matched_at', { ascending: false })
-        .limit(50);
-      if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
+      // ── Direct query: bypass feed table, filter by settings + distance ────
+      const [settingsRes, locRes] = await Promise.all([
+        sb.from('tecnico_settings')
+          .select('gender, accepted_services, verified, pickup_range')
+          .eq('email', email)
+          .maybeSingle(),
+        sb.from('driver_locations')
+          .select('lat, lng')
+          .eq('driver_email', email)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      const feedIds = (feedRows ?? []).map((r: { job_id: string }) => r.job_id).filter(Boolean);
-
-      const { data: settings } = await sb
-        .from('tecnico_settings')
-        .select('gender, accepted_services, verified')
-        .eq('email', email)
-        .maybeSingle();
-
+      const settings = settingsRes.data;
       const gender: string = settings?.gender ?? '';
       const accepted: Record<string, boolean> = settings?.accepted_services ?? {};
-      // Use BLACKLIST: only hide service types explicitly set to false.
-      // Whitelist (.in) would hide jobs whose service_type is not in the saved catalogue.
       const disabled = Object.entries(accepted).filter(([, v]) => !v).map(([k]) => k);
       const tecnicoIsVerified: boolean = settings?.verified === true;
+      const pickupRange: number = Number(settings?.pickup_range ?? 20);
+      const tecLat: number | null = locRes.data?.lat ? Number(locRes.data.lat) : null;
+      const tecLng: number | null = locRes.data?.lng ? Number(locRes.data.lng) : null;
 
       let q = sb.from('tecnico_jobs')
         .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price')
         .eq('status', 'pending')
         .limit(50);
-      // If feed has entries, filter by them; otherwise show all (tecnico has no GPS location yet)
-      if (feedIds.length > 0) q = q.in('id', feedIds);
-      // NULL service_gender means no gender restriction → always include
+      // Gender filter: NULL service_gender = no restriction → always include
       if (gender === 'mujer' || gender === 'hombre') {
         q = q.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
       }
@@ -193,8 +192,25 @@ export async function GET(req: Request) {
       if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
       q = q.order('created_at', { ascending: false });
 
-      const { data: jobs, error } = await q;
+      let jobsRaw: any[] = [];
+      const { data: allJobs, error } = await q;
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Distance filter: only when tecnico has GPS in driver_locations
+      if (tecLat !== null && tecLng !== null) {
+        jobsRaw = (allJobs ?? []).filter(j => {
+          if (j.lat == null || j.lng == null) return true; // no coords = always show
+          const dlat = (Number(j.lat) - tecLat) * Math.PI / 180;
+          const dlng = (Number(j.lng) - tecLng) * Math.PI / 180;
+          const a = Math.sin(dlat / 2) ** 2 + Math.cos(tecLat * Math.PI / 180) * Math.cos(Number(j.lat) * Math.PI / 180) * Math.sin(dlng / 2) ** 2;
+          const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return dist <= pickupRange;
+        });
+      } else {
+        jobsRaw = allJobs ?? [];
+      }
+
+      const jobs = jobsRaw;
 
       // Enrich with live client profile (photo + avg_rating) — works for old and new jobs
       const clientEmails = [...new Set((jobs ?? []).map(j => j.client_email).filter(Boolean))];

@@ -102,8 +102,11 @@ export default function TecnicoDashboard() {
         }
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, 4 - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
-        if (expired.length > 0 || notApproved.length > 0) {
-          // Force offline while docs are not fully approved
+        // Only block if critical docs expired OR any doc explicitly rejected
+        // Pending docs (awaiting review) do NOT block the tecnico from receiving work
+        const hasRejected = docs.filter((d: { status: string }) => d.status === 'rejected').length > 0;
+        if (expired.length > 0 || hasRejected) {
+          // Force offline — expired or rejected critical docs
           setAvailable(false);
           try {
             localStorage.setItem('tecnico_available', 'false');
