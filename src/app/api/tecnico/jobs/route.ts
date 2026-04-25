@@ -179,7 +179,7 @@ export async function GET(req: Request) {
       const tecLng: number | null = locRes.data?.lng ? Number(locRes.data.lng) : null;
 
       let q = sb.from('tecnico_jobs')
-        .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating')
+        .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, client_initial_price')
         .eq('status', 'pending')
         .limit(50);
       // Gender filter: NULL service_gender = no restriction → always include
