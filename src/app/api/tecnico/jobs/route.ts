@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       const gender: string = settings?.gender ?? '';
       const acceptedServices: Record<string, boolean> = settings?.accepted_services ?? {};
       const rangeKm: number = Number(settings?.pickup_range ?? 50);
-      const enabledServices = Object.entries(acceptedServices).filter(([, v]) => v).map(([k]) => k);
+      const disabledServices = Object.entries(acceptedServices).filter(([, v]) => !v).map(([k]) => k);
 
       // Fetch jobs where this tecnico already sent an offer (any status) to exclude rejected ones
       const { data: myOfferRows } = await sb
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
 
       let offerQ = sb.from('tecnico_jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
-      if (enabledServices.length > 0) offerQ = offerQ.in('service_type', enabledServices);
+      if (disabledServices.length > 0) offerQ = offerQ.not('service_type', 'in', `(${disabledServices.join(',')})`);
       if (rejectedJobIds.length > 0) offerQ = offerQ.not('id', 'in', `(${rejectedJobIds.map(id => `'${id}'`).join(',')})`);
       const { count: ofertasActivas } = await offerQ;
 
@@ -172,7 +172,9 @@ export async function GET(req: Request) {
 
       const gender: string = settings?.gender ?? '';
       const accepted: Record<string, boolean> = settings?.accepted_services ?? {};
-      const enabled = Object.entries(accepted).filter(([, v]) => v).map(([k]) => k);
+      // Use BLACKLIST: only hide service types explicitly set to false.
+      // Whitelist (.in) would hide jobs whose service_type is not in the saved catalogue.
+      const disabled = Object.entries(accepted).filter(([, v]) => !v).map(([k]) => k);
       const tecnicoIsVerified: boolean = settings?.verified === true;
 
       let q = sb.from('tecnico_jobs')
@@ -185,9 +187,10 @@ export async function GET(req: Request) {
       if (gender === 'mujer' || gender === 'hombre') {
         q = q.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
       }
-      if (enabled.length > 0) q = q.in('service_type', enabled);
-      // NULL require_verified_tecnico means no restriction → include for unverified tecnicos too
-      if (!tecnicoIsVerified) q = q.or('require_verified_tecnico.is.null,require_verified_tecnico.eq.false');
+      // Blacklist: exclude only explicitly disabled service types
+      if (disabled.length > 0) q = q.not('service_type', 'in', `(${disabled.join(',')})`);
+      // require_verified_tecnico is NOT NULL DEFAULT false per migration 041
+      if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
       q = q.order('created_at', { ascending: false });
 
       const { data: jobs, error } = await q;
