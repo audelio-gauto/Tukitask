@@ -152,7 +152,7 @@ export async function GET(req: Request) {
       // Fire-and-forget feed refresh (for realtime triggers only — not used for this query)
       const refreshFeed = url.searchParams.get('refresh') === '1' || url.searchParams.get('refresh') === 'true';
       if (refreshFeed) {
-        sb.rpc('refresh_tecnico_feed', { p_tecnico_email: email }).then(() => {}).catch(() => {});
+        void Promise.resolve(sb.rpc('refresh_tecnico_feed', { p_tecnico_email: email }));
       }
 
       // ── Direct query: bypass feed table, filter by settings + distance ────
