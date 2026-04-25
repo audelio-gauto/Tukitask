@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
-import { cacheGet, cacheSet, cacheDel } from '@/lib/cache';
+import { cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 
 // Saldo mínimo para poder ver pedidos disponibles.
@@ -142,48 +142,56 @@ export async function GET(req: Request) {
       allowedOrderVts.add(orderVt);
     }
 
-    // Cache available orders for 2s (reduces race-condition window vs 5s)
-    // v2 key: ensures old cache without client_is_verified is not served
-    const cachedOrders = await cacheGet<Record<string, unknown>[]>('orders:v2:available');
-    let allOrders: Record<string, unknown>[];
-    if (cachedOrders) {
-      allOrders = cachedOrders;
-    } else {
-      query = query.in('status', ['pending', 'negotiating']).limit(100);
-      const { data: fetched, error: qErr } = await query;
-      if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
-      // Enrich with client profile info + cache
-      const raw = (fetched || []) as Record<string, unknown>[];
-      const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
-      let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
-      if (emails.length > 0) {
-        const { data: profiles, error: profileErr } = await db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails);
-        if (!profileErr) {
-          (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
-            profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
-          });
-        } else {
-          const { data: fallback } = await db.from('client_profiles').select('email, photo_url, avg_rating').in('email', emails);
-          (fallback ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
-            profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
-          });
-        }
-      }
-      allOrders = raw.map(o => ({
-        ...o,
-        client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
-        client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
-        client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
-      }));
-      await cacheSet('orders:v2:available', allOrders, 2);
+    const refreshFeed = searchParams.get('refresh') === '1' || searchParams.get('refresh') === 'true';
+    if (refreshFeed) {
+      await db.rpc('refresh_driver_feed', { p_driver_email: user.email });
     }
+
+    const { data: feedRows, error: feedErr } = await db
+      .from('driver_feed')
+      .select('order_id')
+      .eq('driver_email', user.email)
+      .order('matched_at', { ascending: false })
+      .limit(100);
+    if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
+
+    const feedIds = (feedRows ?? []).map((r: { order_id: string }) => r.order_id).filter(Boolean);
+    if (feedIds.length === 0) return NextResponse.json([]);
+
+    query = query.in('id', feedIds).in('status', ['pending', 'negotiating']).limit(100);
+    const { data: fetched, error: qErr } = await query;
+    if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
+
+    // Enrich with client profile info
+    const raw = (fetched || []) as Record<string, unknown>[];
+    const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
+    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
+    if (emails.length > 0) {
+      const { data: profiles, error: profileErr } = await db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails);
+      if (!profileErr) {
+        (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
+          profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
+        });
+      } else {
+        const { data: fallback } = await db.from('client_profiles').select('email, photo_url, avg_rating').in('email', emails);
+        (fallback ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null }) => {
+          profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
+        });
+      }
+    }
+    const allOrders = raw.map(o => ({
+      ...o,
+      client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
+      client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
+      client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
+    }));
 
     // Server-side filter: vehicle type + service_filters + docs
     // New drivers with zero approved vehicle types can browse all orders
     // (acceptance is still enforced at offer POST time via doc check)
     const filtered = allOrders.filter(o => {
       if (approvedVts.size === 0) return true; // cold-start: let new drivers see work
-      const ovt = (o.vehicle_type as string) || '';
+      const ovt = ((o as Record<string, unknown>).vehicle_type as string) || '';
       if (ovt && !allowedOrderVts.has(ovt)) return false;
       return true;
     });

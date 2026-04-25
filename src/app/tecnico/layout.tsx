@@ -63,6 +63,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       if (lastLat == null || lastLng == null) return;
       // Skip DB write when tecnico is offline
       if (typeof localStorage !== 'undefined' && localStorage.getItem('tecnico_available') === 'false') return;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('tecnico_active_job_id')) return;
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
         fetch('/api/driver-location', {

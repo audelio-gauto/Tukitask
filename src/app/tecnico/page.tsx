@@ -190,10 +190,13 @@ export default function TecnicoDashboard() {
   });
   const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
   const knownJobIdsRef = useRef<Set<string>>(new Set());
+  const feedPrimedRef = useRef(false);
 
   const loadPendingJobs = useCallback(() => {
     if (!email) return;
-    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true`)
+    const refreshParam = feedPrimedRef.current ? '' : '&refresh=1';
+    feedPrimedRef.current = true;
+    authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&offers=true${refreshParam}`)
       .then(async r => {
         if (r.status === 402) {
           // Saldo insuficiente — bloquear acceso al mercado
@@ -238,15 +241,18 @@ export default function TecnicoDashboard() {
   }, [email]);
 
   useEffect(() => {
+    if (!email) return;
     loadPendingJobs();
-    // Realtime handles instant new-job notifications; 60s fallback poll (was 8s)
-    const iv = setInterval(loadPendingJobs, 60_000);
-    const ch = supabase.channel('tecnico-home-pending')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tecnico_jobs' } as never, loadPendingJobs)
+    // Realtime handles instant new-job notifications; 3 min fallback poll
+    const iv = setInterval(loadPendingJobs, 180_000);
+    const ch = supabase.channel(`tecnico-feed-${email}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'tecnico_feed',
+        filter: `tecnico_email=eq.${email}`,
+      } as never, loadPendingJobs)
       .subscribe();
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
-  }, [loadPendingJobs]);
+  }, [loadPendingJobs, email]);
 
   const sendTecnicoOffer = async (jobId: string, price: number, note: string, distanceKm: number | null = null) => {
     if (!price || !email || !!sendingJobId) return;
@@ -441,7 +447,7 @@ export default function TecnicoDashboard() {
     setFilterOpen(false);
   };
 
-  // Load dashboard stats from API (re-fetch every 30 s when available)
+  // Load dashboard stats from API (re-fetch every 2 min when available)
   useEffect(() => {
     if (!email) return;
     let cancelled = false;
@@ -456,7 +462,7 @@ export default function TecnicoDashboard() {
         .catch(() => { if (!cancelled) setStatsLoading(false); });
     };
     load();
-    const iv = setInterval(load, 30_000);
+    const iv = setInterval(load, 120_000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [email]);
 

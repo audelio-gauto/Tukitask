@@ -96,6 +96,7 @@ export default function TecnicoActivoPage() {
   const watchIdRef = useRef<number | null>(null);
   const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastSentAtRef = useRef(0);
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
@@ -134,7 +135,7 @@ export default function TecnicoActivoPage() {
   // Realtime subscription + polling
   useEffect(() => {
     fetchActive();
-    const iv = setInterval(fetchActive, 60_000);
+    const iv = setInterval(fetchActive, 180_000);
     const ch = email
       ? supabase.channel(`tecnico-activo-${email}`)
           .on('postgres_changes', {
@@ -186,8 +187,12 @@ export default function TecnicoActivoPage() {
     const trackingJob = jobs.find(j => TRACKING_STATUSES.includes(j.status));
 
     if (trackingJob) {
+      try {
+        localStorage.setItem('tecnico_active_job_id', trackingJob.id);
+        localStorage.setItem('tecnico_active_job_ts', String(Date.now()));
+      } catch {}
       if (!navigator.geolocation) return;
-      const MIN_DIST = 30;
+      const MIN_DIST = 50;
       const toRad = (d: number) => (d * Math.PI) / 180;
       const haversineDist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
         const R = 6371000;
@@ -196,6 +201,9 @@ export default function TecnicoActivoPage() {
       };
       const broadcast = (lat: number, lng: number) => {
         if (lastPosRef.current && haversineDist(lastPosRef.current, { lat, lng }) < MIN_DIST) return;
+        const now = Date.now();
+        if (now - lastSentAtRef.current < 15000) return;
+        lastSentAtRef.current = now;
         lastPosRef.current = { lat, lng };
         fetch('/api/driver-location', {
           method: 'POST',
@@ -217,9 +225,13 @@ export default function TecnicoActivoPage() {
             () => {},
             { enableHighAccuracy: true, timeout: 5000 },
           );
-        }, 10_000);
+        }, 30_000);
       }
     } else {
+      try {
+        localStorage.removeItem('tecnico_active_job_id');
+        localStorage.removeItem('tecnico_active_job_ts');
+      } catch {}
       if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
       if (gpsIntervalRef.current !== null) { clearInterval(gpsIntervalRef.current); gpsIntervalRef.current = null; }
     }

@@ -31,13 +31,13 @@ export async function GET(req: Request) {
 
     // ?count=1 → solo devuelve el nro de mensajes no leídos (para el badge)
     if (searchParams.get('count') === '1') {
-      const { count } = await db()
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
+      const { data: thread } = await db()
+        .from('chat_threads')
+        .select('unread_count')
+        .eq('user_email', user.email)
         .eq('order_id', orderId)
-        .neq('sender_email', user.email)
-        .is('read_at', null);
-      return NextResponse.json({ unread: count ?? 0 });
+        .maybeSingle();
+      return NextResponse.json({ unread: thread?.unread_count ?? 0 });
     }
 
     const { data, error } = await db()
@@ -61,13 +61,13 @@ export async function GET(req: Request) {
     if (!isParticipant) return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
 
     if (searchParams.get('count') === '1') {
-      const { count } = await db()
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
+      const { data: thread } = await db()
+        .from('chat_threads')
+        .select('unread_count')
+        .eq('user_email', user.email)
         .eq('job_id', jobId)
-        .neq('sender_email', user.email)
-        .is('read_at', null);
-      return NextResponse.json({ unread: count ?? 0 });
+        .maybeSingle();
+      return NextResponse.json({ unread: thread?.unread_count ?? 0 });
     }
 
     const { data, error } = await db()
@@ -172,6 +172,15 @@ export async function PATCH(req: Request) {
     .match(filter)
     .neq('sender_email', user.email)
     .is('read_at', null);
+
+  if (order_id || job_id) {
+    const threadFilter = order_id ? { order_id } : { job_id };
+    await db()
+      .from('chat_threads')
+      .update({ unread_count: 0, updated_at: new Date().toISOString() })
+      .eq('user_email', user.email)
+      .match(threadFilter);
+  }
 
   return NextResponse.json({ success: true });
 }

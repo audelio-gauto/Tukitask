@@ -52,6 +52,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     if (!email) return;
     let lastLat: number | null = null;
     let lastLng: number | null = null;
+    let lastDbLat: number | null = null;
+    let lastDbLng: number | null = null;
     let watchId: number | null = null;
     let dbIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -71,9 +73,22 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
     // DB write (throttled to 60s, skipped when offline)
     // 'driver_available' === 'false' means driver toggled offline
+    const distMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const R = 6371000;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    };
+
     const postToDB = () => {
       if (lastLat == null || lastLng == null) return;
       if (typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
+      if (lastDbLat != null && lastDbLng != null) {
+        const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, { lat: lastLat, lng: lastLng });
+        if (moved < 50) return;
+      }
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
         fetch('/api/driver-location', {
@@ -85,6 +100,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           body: JSON.stringify({ lat: lastLat, lng: lastLng }),
         }).catch(() => {});
       });
+      lastDbLat = lastLat;
+      lastDbLng = lastLng;
     };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {

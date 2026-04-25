@@ -75,6 +75,15 @@ export default function ActivoPage() {
         if (Array.isArray(data)) {
           const active = data.filter(o => (ACTIVE_STATUSES as readonly string[]).includes(o.status));
           setOrders(active);
+          try {
+            if (active.length > 0) {
+              localStorage.setItem('driver_active_order_id', String(active[0]?.id ?? ''));
+              localStorage.setItem('driver_active_order_ts', String(Date.now()));
+            } else {
+              localStorage.removeItem('driver_active_order_id');
+              localStorage.removeItem('driver_active_order_ts');
+            }
+          } catch {}
         }
         setLoading(false);
       })
@@ -99,7 +108,7 @@ export default function ActivoPage() {
     fetchActive();
     // Realtime subscription for instant updates; fallback poll every 60s
     // (covers edge cases where realtime misses an event)
-    const iv = setInterval(fetchActive, 60_000);
+    const iv = setInterval(fetchActive, 180_000);
     const ch = email
       ? supabase.channel(`driver-activo-${email}`)
           .on('postgres_changes', {
@@ -119,8 +128,12 @@ export default function ActivoPage() {
   // Poll unread counts when orders change
   useEffect(() => {
     const ids = orders.map(o => o.id);
+    if (ids.length === 0) {
+      setUnreadCounts({});
+      return;
+    }
     fetchUnreadCounts(ids);
-    const iv = setInterval(() => fetchUnreadCounts(ids), 10_000);
+    const iv = setInterval(() => fetchUnreadCounts(ids), 30_000);
     return () => clearInterval(iv);
   }, [orders, fetchUnreadCounts]);
 

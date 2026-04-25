@@ -91,6 +91,7 @@ export default function DriverDashboard() {
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const isLoadingOrdersRef = useRef(false);  // A-2: prevent concurrent mutations
   const activeOrderCountRef = useRef(0);     // always-fresh copy for loadPendingOrders
+  const feedPrimedRef = useRef(false);
 
   const loadPendingOrders = useCallback(() => {
     if (isLoadingOrdersRef.current) return;  // skip if already in-flight
@@ -100,7 +101,9 @@ export default function DriverDashboard() {
       return;
     }
     isLoadingOrdersRef.current = true;
-    authFetch('/api/orders')
+    const feedUrl = feedPrimedRef.current ? '/api/orders' : '/api/orders?refresh=1';
+    feedPrimedRef.current = true;
+    authFetch(feedUrl)
       .then(async r => {
         if (r.status === 402) {
           // Saldo insuficiente — bloquear acceso al mercado
@@ -148,15 +151,18 @@ export default function DriverDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!email) return;
     loadPendingOrders();
-    // Realtime for instant new-order notifications; 60s fallback poll
-    const iv = setInterval(loadPendingOrders, 60_000);
-    const ch = supabase.channel('driver-home-pending')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' } as never, loadPendingOrders)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' } as never, loadPendingOrders)
+    // Realtime for instant new-order notifications; 3 min fallback poll
+    const iv = setInterval(loadPendingOrders, 180_000);
+    const ch = supabase.channel(`driver-feed-${email}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'driver_feed',
+        filter: `driver_email=eq.${email}`,
+      } as never, loadPendingOrders)
       .subscribe();
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
-  }, [loadPendingOrders]);
+  }, [loadPendingOrders, email]);
 
   const sendDriverOffer = async (orderId: string, amount: number, note: string, distanceKm: number | null = null) => {
     if (!amount || !email || !!sendingOfferId) return;

@@ -25,31 +25,10 @@ export function ChatBadge({ email, href, scope }: Props) {
   const fetchCount = useCallback(async () => {
     if (!email) return;
     try {
-      // Get active order/job ids first, then count unread per job/order
-      const param = scope === 'order' ? 'driver_email' : 'email';
-      const activeParam = scope === 'order' ? '' : '&active=true';
-      const endpoint = scope === 'order'
-        ? `/api/orders?driver_email=${encodeURIComponent(email)}`
-        : `/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`;
-
-      const res = await authFetch(endpoint);
+      const res = await authFetch('/api/chat/threads?count=1');
       if (!res.ok) return;
-      const items = await res.json();
-      if (!Array.isArray(items) || items.length === 0) { setUnread(0); return; }
-
-      const idKey = scope === 'order' ? 'id' : 'id';
-      const countParam = scope === 'order' ? 'order_id' : 'job_id';
-
-      // Sum unread across all active jobs/orders
-      const counts = await Promise.all(
-        items.map(async (item: { id: string }) => {
-          const r = await authFetch(`/api/chat?${countParam}=${item.id}&count=1`);
-          if (!r.ok) return 0;
-          const j = await r.json();
-          return Number(j.unread ?? 0);
-        })
-      );
-      setUnread(counts.reduce((a, b) => a + b, 0));
+      const j = await res.json();
+      setUnread(Number(j.total_unread ?? 0));
     } catch {
       // silently ignore — badge is non-critical
     }
@@ -59,13 +38,20 @@ export function ChatBadge({ email, href, scope }: Props) {
     fetchCount();
     const iv = setInterval(fetchCount, 30_000);
 
-    // Realtime: re-count when any chat message arrives
+    // Realtime: re-count when any thread updates for this user
     const channel = email
-      ? supabase.channel(`chat-badge-${email}`)
+      ? supabase.channel(`chat-threads-${email}`)
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
-            table: 'chat_messages',
+            table: 'chat_threads',
+            filter: `user_email=eq.${email}`,
+          } as never, () => fetchCount())
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'chat_threads',
+            filter: `user_email=eq.${email}`,
           } as never, () => fetchCount())
           .subscribe()
       : null;

@@ -149,6 +149,22 @@ export async function GET(req: Request) {
         }
       }
 
+      const refreshFeed = url.searchParams.get('refresh') === '1' || url.searchParams.get('refresh') === 'true';
+      if (refreshFeed) {
+        await sb.rpc('refresh_tecnico_feed', { p_tecnico_email: email });
+      }
+
+      const { data: feedRows, error: feedErr } = await sb
+        .from('tecnico_feed')
+        .select('job_id')
+        .eq('tecnico_email', email)
+        .order('matched_at', { ascending: false })
+        .limit(50);
+      if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
+
+      const feedIds = (feedRows ?? []).map(r => r.job_id).filter(Boolean);
+      if (feedIds.length === 0) return NextResponse.json([]);
+
       const { data: settings } = await sb
         .from('tecnico_settings')
         .select('gender, accepted_services, is_verified')
@@ -163,6 +179,7 @@ export async function GET(req: Request) {
       let q = sb.from('tecnico_jobs')
         .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price')
         .eq('status', 'pending')
+        .in('id', feedIds)
         .limit(50);
       if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
       if (enabled.length > 0) q = q.in('service_type', enabled);

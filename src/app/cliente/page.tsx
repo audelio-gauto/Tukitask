@@ -492,7 +492,7 @@ export default function ClienteHomePage() {
 
   useEffect(() => {
     loadAll();
-    const iv = setInterval(loadAll, 30_000);
+    const iv = setInterval(loadAll, 120_000);
 
     // Re-load immediately when user returns to app (e.g. taps a push notification)
     const onVisible = () => { if (document.visibilityState === 'visible') loadAll(); };
@@ -516,7 +516,7 @@ export default function ClienteHomePage() {
     };
   }, [loadAll]);
 
-  // ── ETA polling: fetch driver location for active tracking orders every 15s ──
+  // ── ETA polling: fetch driver location for active tracking orders every 45s ──
   useEffect(() => {
     const TRACKING_FOR_ETA = ['accepted', 'picking_up', 'in_transit'];
 
@@ -569,7 +569,7 @@ export default function ClienteHomePage() {
     };
 
     fetchEtas();
-    const iv = setInterval(fetchEtas, 15_000);
+    const iv = setInterval(fetchEtas, 45_000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [orders]);
 

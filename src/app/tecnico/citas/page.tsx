@@ -90,6 +90,7 @@ export default function CitasPage() {
   const watchIdRef     = useRef<number | null>(null);
   const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPosRef     = useRef<{ lat: number; lng: number } | null>(null);
+  const lastSentAtRef  = useRef(0);
 
   // Start/stop GPS broadcast depending on active jobs
   useEffect(() => {
@@ -99,9 +100,13 @@ export default function CitasPage() {
     const trackingJob = jobs.find(j => TRACKING_STATUSES.includes(j.status));
 
     if (trackingJob) {
+      try {
+        localStorage.setItem('tecnico_active_job_id', trackingJob.id);
+        localStorage.setItem('tecnico_active_job_ts', String(Date.now()));
+      } catch {}
       if (!navigator.geolocation) return;
 
-      const MIN_DISTANCE_M = 30; // Only broadcast if moved > 30 meters
+      const MIN_DISTANCE_M = 50; // Only broadcast if moved > 50 meters
       const toRad = (d: number) => (d * Math.PI) / 180;
       const haversineDist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
         const R = 6371000;
@@ -112,6 +117,9 @@ export default function CitasPage() {
       };
       const broadcast = (lat: number, lng: number) => {
         if (lastPosRef.current && haversineDist(lastPosRef.current, { lat, lng }) < MIN_DISTANCE_M) return;
+        const now = Date.now();
+        if (now - lastSentAtRef.current < 15000) return;
+        lastSentAtRef.current = now;
         lastPosRef.current = { lat, lng };
         fetch('/api/driver-location', {
           method: 'POST',
@@ -129,7 +137,7 @@ export default function CitasPage() {
         );
       }
 
-      // Also poll every 6s in case watchPosition fires slowly
+      // Also poll every 30s in case watchPosition fires slowly
       if (gpsIntervalRef.current === null) {
         gpsIntervalRef.current = setInterval(() => {
           navigator.geolocation.getCurrentPosition(
@@ -137,9 +145,13 @@ export default function CitasPage() {
             () => {},
             { enableHighAccuracy: true, timeout: 5000 },
           );
-        }, 10_000);
+        }, 30_000);
       }
     } else {
+      try {
+        localStorage.removeItem('tecnico_active_job_id');
+        localStorage.removeItem('tecnico_active_job_ts');
+      } catch {}
       // No active tracking job — stop broadcasting
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -173,8 +185,8 @@ export default function CitasPage() {
 
   useEffect(() => {
     loadJobs();
-    // Fallback polling at 60s; realtime is primary
-    const iv = setInterval(loadJobs, 60_000);
+    // Fallback polling at 3 min; realtime is primary
+    const iv = setInterval(loadJobs, 180_000);
 
     // Realtime: job status changes for this técnico
     const ch = email
