@@ -508,13 +508,9 @@ export default function TecnicoDashboard() {
   ];
 
   // ── Filtrar por rango de trabajo ─────────────────────────────────────────
-  // Sin GPS: no mostrar trabajos con coordenadas (rango no calculable)
+  // Sin GPS: mostrar trabajos igual (solo se omite el filtro por distancia)
   const filteredJobs = pendingJobs.filter(j => {
-    if (!driverPos) {
-      // Si el trabajo tiene coordenadas, no pueden mostrarse sin GPS
-      if (j.lat != null && j.lng != null) return false;
-      return true;
-    }
+    if (!driverPos) return true;
     if (j.lat == null || j.lng == null) return true;
     const dist = haversineKm(driverPos.lat, driverPos.lng, Number(j.lat), Number(j.lng));
     return dist <= rangoKm;
