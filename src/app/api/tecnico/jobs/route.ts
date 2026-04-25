@@ -178,22 +178,32 @@ export async function GET(req: Request) {
       const tecLat: number | null = locRes.data?.lat ? Number(locRes.data.lat) : null;
       const tecLng: number | null = locRes.data?.lng ? Number(locRes.data.lng) : null;
 
-      let q = sb.from('tecnico_jobs')
-        .select('id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price')
-        .eq('status', 'pending')
-        .limit(50);
-      // Gender filter: NULL service_gender = no restriction → always include
-      if (gender === 'mujer' || gender === 'hombre') {
-        q = q.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
-      }
-      // Blacklist: exclude only explicitly disabled service types
-      if (disabled.length > 0) q = q.not('service_type', 'in', `(${disabled.join(',')})`);
-      // require_verified_tecnico is NOT NULL DEFAULT false per migration 041
-      if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
-      q = q.order('created_at', { ascending: false });
+      const selectCols = 'id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating, suggested_price';
+      const fallbackSelectCols = 'id, service_type, service_gender, address, client_email, require_verified_tecnico, created_at, scheduled_at, description, status, lat, lng, client_name, client_photo, client_rating';
+      const buildQuery = (cols: string) => {
+        let q = sb.from('tecnico_jobs')
+          .select(cols)
+          .eq('status', 'pending')
+          .limit(50);
+        // Gender filter: NULL service_gender = no restriction → always include
+        if (gender === 'mujer' || gender === 'hombre') {
+          q = q.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
+        }
+        // Blacklist: exclude only explicitly disabled service types
+        if (disabled.length > 0) q = q.not('service_type', 'in', `(${disabled.join(',')})`);
+        // require_verified_tecnico is NOT NULL DEFAULT false per migration 041
+        if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
+        return q.order('created_at', { ascending: false });
+      };
 
       let jobsRaw: any[] = [];
-      const { data: allJobs, error } = await q;
+      let { data: allJobs, error } = await buildQuery(selectCols);
+      // Fallback when suggested_price column does not exist in production schema
+      if (error?.message?.includes('suggested_price')) {
+        const retry = await buildQuery(fallbackSelectCols);
+        allJobs = retry.data;
+        error = retry.error;
+      }
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
       // Distance filter: only when tecnico has GPS in driver_locations
