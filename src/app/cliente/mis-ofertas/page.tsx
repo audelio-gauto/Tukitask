@@ -546,7 +546,7 @@ export default function MisOfertasPage() {
                 {/* ── Cancel button */}
                 <div style={{ padding: '0 16px 14px' }}>
                   <button
-                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' }})
+                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
                     disabled={busy}
                     className="tuki-btn tuki-btn-danger tuki-btn-block"
                     style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
