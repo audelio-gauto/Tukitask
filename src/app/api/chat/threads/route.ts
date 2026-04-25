@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (countOnly) {
-    const total = (data ?? []).reduce((sum: number, r) => sum + Number(r.unread_count ?? 0), 0);
+    const total = (data ?? []).reduce((sum: number, r: { unread_count: number | null }) => sum + Number(r.unread_count ?? 0), 0);
     return NextResponse.json({ total_unread: total });
   }
 
