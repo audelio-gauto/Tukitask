@@ -253,3 +253,13 @@ export function playStatusSound(status: string): void {
     else if (status === 'completado')     { beepSoft(c, t, 523); beepSoft(c, t+0.16, 659); beepSoft(c, t+0.32, 784); beepSoft(c, t+0.48, 1047); }
   } catch { /* silent */ }
 }
+
+/** Two-tone soft ping — new chat message received */
+export function playMessageAlert(): void {
+  try {
+    const c = getAC(); if (!c) return;
+    const t = c.currentTime;
+    beepSoft(c, t,        800, 0.10);
+    beepSoft(c, t + 0.13, 1050, 0.10);
+  } catch { /* silent */ }
+}

@@ -7,6 +7,7 @@ import DriverScreenLayout from '../components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+import { playMessageAlert } from '@/lib/audio';
 
 const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
@@ -60,6 +61,7 @@ export default function ActivoPage() {
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const prevUnreadRef = useRef<Record<string, number>>({});
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
@@ -75,15 +77,6 @@ export default function ActivoPage() {
         if (Array.isArray(data)) {
           const active = data.filter(o => (ACTIVE_STATUSES as readonly string[]).includes(o.status));
           setOrders(active);
-          try {
-            if (active.length > 0) {
-              localStorage.setItem('driver_active_order_id', String(active[0]?.id ?? ''));
-              localStorage.setItem('driver_active_order_ts', String(Date.now()));
-            } else {
-              localStorage.removeItem('driver_active_order_id');
-              localStorage.removeItem('driver_active_order_ts');
-            }
-          } catch {}
         }
         setLoading(false);
       })
@@ -108,7 +101,7 @@ export default function ActivoPage() {
     fetchActive();
     // Realtime subscription for instant updates; fallback poll every 60s
     // (covers edge cases where realtime misses an event)
-    const iv = setInterval(fetchActive, 180_000);
+    const iv = setInterval(fetchActive, 60_000);
     const ch = email
       ? supabase.channel(`driver-activo-${email}`)
           .on('postgres_changes', {
@@ -128,12 +121,8 @@ export default function ActivoPage() {
   // Poll unread counts when orders change
   useEffect(() => {
     const ids = orders.map(o => o.id);
-    if (ids.length === 0) {
-      setUnreadCounts({});
-      return;
-    }
     fetchUnreadCounts(ids);
-    const iv = setInterval(() => fetchUnreadCounts(ids), 30_000);
+    const iv = setInterval(() => fetchUnreadCounts(ids), 10_000);
     return () => clearInterval(iv);
   }, [orders, fetchUnreadCounts]);
 
@@ -143,6 +132,19 @@ export default function ActivoPage() {
       setUnreadCounts(prev => ({ ...prev, [chatModal.orderId]: 0 }));
     }
   }, [chatModal?.orderId]);
+
+  // Play sound when new unread messages arrive
+  const prevUnreadSnap = prevUnreadRef;
+  useEffect(() => {
+    const prev = prevUnreadSnap.current;
+    let hasNew = false;
+    for (const [id, count] of Object.entries(unreadCounts)) {
+      if (id === chatModal?.orderId) continue;
+      if (count > (prev[id] ?? 0)) { hasNew = true; break; }
+    }
+    if (hasNew) playMessageAlert();
+    prevUnreadSnap.current = { ...unreadCounts };
+  }, [unreadCounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateStatus = async (orderId: string, newStatus: string, extraBody?: Record<string, unknown>) => {
     const key = orderId + newStatus;

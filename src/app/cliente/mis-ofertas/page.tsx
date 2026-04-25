@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { authFetch } from '@/lib/authFetch';
 import { useClientContext } from '../context';
 import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+import { playMessageAlert } from '@/lib/audio';
 
 const ChatModal = dynamic(() => import('@/components/ChatModal'), { ssr: false });
 
@@ -121,6 +122,8 @@ export default function MisOfertasPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
   const [chatTarget, setChatTarget] = useState<ChatTarget | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const prevUnreadRef = useRef<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     if (!email) return;
@@ -191,6 +194,49 @@ export default function MisOfertasPage() {
       if (ch) supabase.removeChannel(ch);
     };
   }, [loadData, email]);
+
+  const fetchUnreadCounts = useCallback((orderIds: string[], jobIds: string[]) => {
+    orderIds.forEach(id => {
+      authFetch(`/api/chat?order_id=${id}&count=1`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && typeof d.unread === 'number') setUnreadCounts(prev => ({ ...prev, [id]: d.unread })); })
+        .catch(() => {});
+    });
+    jobIds.forEach(id => {
+      authFetch(`/api/chat?job_id=${id}&count=1`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && typeof d.unread === 'number') setUnreadCounts(prev => ({ ...prev, [id]: d.unread })); })
+        .catch(() => {});
+    });
+  }, []);
+
+  // Poll unread counts every 10s
+  useEffect(() => {
+    const orderIds = orders.map(o => o.id);
+    const jobIds = jobs.map(j => j.id);
+    fetchUnreadCounts(orderIds, jobIds);
+    const iv = setInterval(() => fetchUnreadCounts(orderIds, jobIds), 10_000);
+    return () => clearInterval(iv);
+  }, [orders, jobs, fetchUnreadCounts]);
+
+  // Play sound when new unread messages arrive (not from open chat)
+  useEffect(() => {
+    const prev = prevUnreadRef.current;
+    const openId = chatTarget?.orderId ?? chatTarget?.jobId;
+    let hasNew = false;
+    for (const [id, count] of Object.entries(unreadCounts)) {
+      if (id === openId) continue;
+      if (count > (prev[id] ?? 0)) { hasNew = true; break; }
+    }
+    if (hasNew) playMessageAlert();
+    prevUnreadRef.current = { ...unreadCounts };
+  }, [unreadCounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear unread count when chat opens
+  useEffect(() => {
+    const id = chatTarget?.orderId ?? chatTarget?.jobId;
+    if (id) setUnreadCounts(prev => ({ ...prev, [id]: 0 }));
+  }, [chatTarget?.orderId, chatTarget?.jobId]);
 
   const total = orders.length + jobs.length;
   const busy = !!actionId;
@@ -427,9 +473,14 @@ export default function MisOfertasPage() {
                   <button
                     onClick={() => setChatTarget({ orderId: order.id, otherName: order.driver_name, otherPhoto: order.driver_photo })}
                     className="tuki-btn tuki-btn-success"
-                    style={{ flex: 1, fontSize: '0.85rem' }}
+                    style={{ flex: 1, fontSize: '0.85rem', position: 'relative', background: unreadCounts[order.id] ? 'rgba(34,197,94,0.22)' : undefined }}
                   >
                     <Icon name="chat" size={16} /> Chat
+                    {!!unreadCounts[order.id] && (
+                      <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800, marginLeft: 4 }}>
+                        {unreadCounts[order.id]}
+                      </span>
+                    )}
                   </button>
                   <Link
                     href={`/cliente/seguimiento/${order.id}`}
@@ -531,9 +582,14 @@ export default function MisOfertasPage() {
                   <button
                     onClick={() => setChatTarget({ jobId: job.id, otherName: job.tecnico_name, otherPhoto: job.tecnico_photo })}
                     className="tuki-btn tuki-btn-success"
-                    style={{ flex: 1, fontSize: '0.85rem' }}
+                    style={{ flex: 1, fontSize: '0.85rem', position: 'relative', background: unreadCounts[job.id] ? 'rgba(34,197,94,0.22)' : undefined }}
                   >
                     <Icon name="chat" size={16} /> Chat
+                    {!!unreadCounts[job.id] && (
+                      <span style={{ background: '#ef4444', color: '#fff', borderRadius: 99, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 800, marginLeft: 4 }}>
+                        {unreadCounts[job.id]}
+                      </span>
+                    )}
                   </button>
                   <Link
                     href={`/cliente/seguimiento/${job.id}?type=service`}

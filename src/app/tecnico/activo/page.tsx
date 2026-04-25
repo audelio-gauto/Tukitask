@@ -8,6 +8,7 @@ import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+import { playMessageAlert } from '@/lib/audio';
 
 const ACTIVE_STATUSES = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
@@ -79,6 +80,7 @@ export default function TecnicoActivoPage() {
   // Chat
   const [chatModal, setChatModal] = useState<{ jobId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const prevUnreadRef = useRef<Record<string, number>>({});
 
   // Extra charge modal
   interface ExtraModalState {
@@ -96,7 +98,6 @@ export default function TecnicoActivoPage() {
   const watchIdRef = useRef<number | null>(null);
   const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
-  const lastSentAtRef = useRef(0);
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
@@ -135,7 +136,7 @@ export default function TecnicoActivoPage() {
   // Realtime subscription + polling
   useEffect(() => {
     fetchActive();
-    const iv = setInterval(fetchActive, 180_000);
+    const iv = setInterval(fetchActive, 60_000);
     const ch = email
       ? supabase.channel(`tecnico-activo-${email}`)
           .on('postgres_changes', {
@@ -152,26 +153,13 @@ export default function TecnicoActivoPage() {
     };
   }, [fetchActive, email]);
 
-  // Realtime unread counts — instant via postgres_changes, no polling
+  // Poll unread counts when jobs change
   useEffect(() => {
     const ids = jobs.map(j => j.id);
-    if (ids.length === 0) return;
-    fetchUnreadCounts(ids); // initial load
-    let ch = supabase.channel(`tecnico-chat-unread-${email}`);
-    for (const jobId of ids) {
-      ch = ch.on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'chat_messages',
-        filter: `job_id=eq.${jobId}`,
-      } as never, (payload: { new: Record<string, unknown> }) => {
-        const msg = payload.new;
-        if (msg.sender_email === email) return;
-        if (chatModal?.jobId === jobId) return; // chat is open
-        setUnreadCounts(prev => ({ ...prev, [jobId]: (prev[jobId] ?? 0) + 1 }));
-      });
-    }
-    ch.subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [jobs.map(j => j.id).join(','), email, chatModal?.jobId, fetchUnreadCounts]);
+    fetchUnreadCounts(ids);
+    const iv = setInterval(() => fetchUnreadCounts(ids), 10_000);
+    return () => clearInterval(iv);
+  }, [jobs, fetchUnreadCounts]);
 
   // Clear unread when chat opens
   useEffect(() => {
@@ -180,6 +168,19 @@ export default function TecnicoActivoPage() {
     }
   }, [chatModal?.jobId]);
 
+  // Play sound when new unread messages arrive
+  const prevUnreadSnap = prevUnreadRef;
+  useEffect(() => {
+    const prev = prevUnreadSnap.current;
+    let hasNew = false;
+    for (const [id, count] of Object.entries(unreadCounts)) {
+      if (id === chatModal?.jobId) continue;
+      if (count > (prev[id] ?? 0)) { hasNew = true; break; }
+    }
+    if (hasNew) playMessageAlert();
+    prevUnreadSnap.current = { ...unreadCounts };
+  }, [unreadCounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // GPS broadcast when en_camino, llegue, en_proceso
   useEffect(() => {
     if (!email) return;
@@ -187,12 +188,8 @@ export default function TecnicoActivoPage() {
     const trackingJob = jobs.find(j => TRACKING_STATUSES.includes(j.status));
 
     if (trackingJob) {
-      try {
-        localStorage.setItem('tecnico_active_job_id', trackingJob.id);
-        localStorage.setItem('tecnico_active_job_ts', String(Date.now()));
-      } catch {}
       if (!navigator.geolocation) return;
-      const MIN_DIST = 50;
+      const MIN_DIST = 30;
       const toRad = (d: number) => (d * Math.PI) / 180;
       const haversineDist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
         const R = 6371000;
@@ -201,9 +198,6 @@ export default function TecnicoActivoPage() {
       };
       const broadcast = (lat: number, lng: number) => {
         if (lastPosRef.current && haversineDist(lastPosRef.current, { lat, lng }) < MIN_DIST) return;
-        const now = Date.now();
-        if (now - lastSentAtRef.current < 15000) return;
-        lastSentAtRef.current = now;
         lastPosRef.current = { lat, lng };
         fetch('/api/driver-location', {
           method: 'POST',
@@ -225,13 +219,9 @@ export default function TecnicoActivoPage() {
             () => {},
             { enableHighAccuracy: true, timeout: 5000 },
           );
-        }, 30_000);
+        }, 10_000);
       }
     } else {
-      try {
-        localStorage.removeItem('tecnico_active_job_id');
-        localStorage.removeItem('tecnico_active_job_ts');
-      } catch {}
       if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
       if (gpsIntervalRef.current !== null) { clearInterval(gpsIntervalRef.current); gpsIntervalRef.current = null; }
     }
