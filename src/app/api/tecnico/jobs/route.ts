@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       const rejectedJobIds = (myOfferRows ?? []).filter(o => o.status === 'rejected').map(o => o.job_id);
 
       let offerQ = sb.from('tecnico_jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending');
-      if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.in('service_gender', [gender, 'indiferente']);
+      if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
       if (enabledServices.length > 0) offerQ = offerQ.in('service_type', enabledServices);
       if (rejectedJobIds.length > 0) offerQ = offerQ.not('id', 'in', `(${rejectedJobIds.map(id => `'${id}'`).join(',')})`);
       const { count: ofertasActivas } = await offerQ;
@@ -181,9 +181,12 @@ export async function GET(req: Request) {
         .limit(50);
       // If feed has entries, filter by them; otherwise show all (tecnico has no GPS location yet)
       if (feedIds.length > 0) q = q.in('id', feedIds);
-      if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
+      // NULL service_gender means no gender restriction → always include
+      if (gender === 'mujer' || gender === 'hombre') {
+        q = q.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
+      }
       if (enabled.length > 0) q = q.in('service_type', enabled);
-      // If tecnico is not verified, exclude jobs that explicitly require verified (NULL = no requirement)
+      // NULL require_verified_tecnico means no restriction → include for unverified tecnicos too
       if (!tecnicoIsVerified) q = q.or('require_verified_tecnico.is.null,require_verified_tecnico.eq.false');
       q = q.order('created_at', { ascending: false });
 
