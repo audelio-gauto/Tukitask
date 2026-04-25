@@ -183,8 +183,8 @@ export async function GET(req: Request) {
       if (feedIds.length > 0) q = q.in('id', feedIds);
       if (gender === 'mujer' || gender === 'hombre') q = q.in('service_gender', [gender, 'indiferente']);
       if (enabled.length > 0) q = q.in('service_type', enabled);
-      // If tecnico is not verified, exclude jobs that require verified professionals
-      if (!tecnicoIsVerified) q = q.eq('require_verified_tecnico', false);
+      // If tecnico is not verified, exclude jobs that explicitly require verified (NULL = no requirement)
+      if (!tecnicoIsVerified) q = q.or('require_verified_tecnico.is.null,require_verified_tecnico.eq.false');
       q = q.order('created_at', { ascending: false });
 
       const { data: jobs, error } = await q;

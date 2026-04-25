@@ -659,12 +659,10 @@ input:checked + .tuki-toggle-slider:before {
   width: 92vw;
   max-width: 380px;
   max-height: 85dvh;
-  display: flex;
-  flex-direction: column;
   padding: 1.25rem 1.25rem 1rem;
   box-shadow: 0 20px 60px rgba(0,0,0,0.30);
   animation: dfModalIn 0.25s cubic-bezier(0.4,0,0.2,1);
-  overflow: hidden;
+  overflow-y: auto;
 }
 @keyframes dfModalIn {
   from { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
@@ -703,9 +701,6 @@ input:checked + .tuki-toggle-slider:before {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow-y: auto;
-  flex: 1 1 0;
-  min-height: 0;
   padding-right: 2px;
 }
 
