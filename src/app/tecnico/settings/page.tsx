@@ -113,7 +113,7 @@ export default function TecnicoSettings() {
         // ignore
       }
     })();
-  }, []);
+  }, [email]);
 
   // Cargar estado de documentos cuando hay email disponible
   useEffect(() => {
