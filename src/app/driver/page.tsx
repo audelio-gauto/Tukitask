@@ -798,7 +798,6 @@ export default function DriverDashboard() {
               </span>
             ) : available ? (
               <>
-                <span className="tuki-sheet-hint-dot" />
                 <span className="tuki-sheet-hint-text">
                   {pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0
                     ? `${pendingOrders.filter(o => !dismissedHome.has(o.id)).length} solicitudes cerca de ti`
