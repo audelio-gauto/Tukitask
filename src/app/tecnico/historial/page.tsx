@@ -55,7 +55,6 @@ function isToday(dateStr: string | null): boolean {
   return d.toDateString() === now.toDateString();
 }
 
-type Filter = 'all' | 'completado' | 'cancelled';
 
 interface Job {
   id: string;
@@ -81,7 +80,6 @@ export default function TecnicoHistorialPage() {
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>('all');
   const [ratingJobId, setRatingJobId] = useState<string | null>(null);
   const [ratingJob, setRatingJob] = useState<Job | null>(null);
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
@@ -102,7 +100,7 @@ export default function TecnicoHistorialPage() {
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  const filtered = jobs.filter(j => filter === 'all' || j.status === filter);
+  const filtered = jobs;
   const todayJobs = filtered.filter(j => isToday(j.completed_at || j.created_at));
   const olderJobs = filtered.filter(j => !isToday(j.completed_at || j.created_at));
 
@@ -250,22 +248,6 @@ export default function TecnicoHistorialPage() {
 
   return (
     <DriverScreenLayout title="Historial">
-      {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {(['all', 'completado', 'cancelled'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`tuki-btn tuki-btn-sm ${filter === f ? 'tuki-btn-warning' : 'tuki-btn-neutral'}`}
-          >
-            {f === 'all' ? 'Todos' : f === 'completado' ? 'Completados' : 'Cancelados'}
-          </button>
-        ))}
-        <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#9ca3af', alignSelf: 'center' }}>
-          {filtered.length} {filtered.length === 1 ? 'trabajo' : 'trabajos'}
-        </span>
-      </div>
-
       {/* Skeleton */}
       {loading && [0, 1, 2].map(i => (
         <div key={i} className="tuki-skeleton" style={{ height: 100, borderRadius: 16, marginBottom: 12 }} />
@@ -279,9 +261,7 @@ export default function TecnicoHistorialPage() {
             Sin trabajos en el historial
           </div>
           <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: 6 }}>
-            {filter === 'all'
-              ? 'Los trabajos completados o cancelados aparecerán aquí'
-              : 'No hay trabajos con ese filtro'}
+            Los trabajos completados o cancelados aparecerán aquí
           </div>
         </div>
       )}
