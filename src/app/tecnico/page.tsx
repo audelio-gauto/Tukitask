@@ -502,12 +502,6 @@ export default function TecnicoDashboard() {
       href: '/tecnico/aceptacion',
       icon: 'trophy',
     },
-    {
-      label: 'Ganancias Hoy',
-      value: statsLoading ? '…' : fmtGs(statsData.gananciasHoy),
-      href: '/tecnico/ganancias',
-      icon: 'money',
-    },
   ];
 
   // ── Filtrar por rango de trabajo ─────────────────────────────────────────
@@ -940,6 +934,14 @@ export default function TecnicoDashboard() {
             </div>
           ) : (
           <div className="tuki-stats-grid">
+            {/* Ganancias Hoy — full width, first so always visible */}
+            <Link href="/tecnico/ganancias" className="tuki-stat-card" style={{ gridColumn: 'span 2' }}>
+              <span className="tuki-stat-icon"><Icon name="money" size={18} /></span>
+              <div className="tuki-stat-value">
+                {statsData.gananciasHoy.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
+              </div>
+              <div className="tuki-stat-label">Ganancias Hoy</div>
+            </Link>
             {stats.map((s) => (
               <Link key={s.label} href={s.href} className="tuki-stat-card">
                 <span className="tuki-stat-icon">
