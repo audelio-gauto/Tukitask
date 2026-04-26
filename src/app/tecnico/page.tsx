@@ -771,15 +771,15 @@ export default function TecnicoDashboard() {
               </span>
             ) : available ? (
               <>
-                <span className="tuki-sheet-hint-text">
-                  {filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0
-                    ? `${filteredJobs.filter(j => !dismissedHome.has(j.id)).length} solicitudes cerca de ti`
-                    : 'Buscando solicitudes…'}
-                </span>
                 {filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0 && (
-                  <span className="tuki-sheet-hint-badge">
-                    {filteredJobs.filter(j => !dismissedHome.has(j.id)).length}
-                  </span>
+                  <>
+                    <span className="tuki-sheet-hint-text">
+                      {`${filteredJobs.filter(j => !dismissedHome.has(j.id)).length} solicitudes cerca de ti`}
+                    </span>
+                    <span className="tuki-sheet-hint-badge">
+                      {filteredJobs.filter(j => !dismissedHome.has(j.id)).length}
+                    </span>
+                  </>
                 )}
               </>
             ) : (
