@@ -13,6 +13,7 @@ import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
+import { authFetch } from '@/lib/authFetch';
 
 const TECNICO_TABS = [
   { href: '/tecnico',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -188,7 +189,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
     if (!email) return;
     const ACTIVE_JOB_STATUSES = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
     const load = () => {
-      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`)
+      authFetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`)
         .then(r => r.json())
         .then((data: any) => {
           const jobs = Array.isArray(data) ? data : (Array.isArray(data?.jobs) ? data.jobs : []);

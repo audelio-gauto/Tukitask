@@ -795,6 +795,7 @@ input:checked + .tuki-toggle-slider:before {
   z-index: 200;
   box-shadow: 0 -8px 32px rgba(0,0,0,0.30);
   padding-bottom: env(safe-area-inset-bottom);
+  overflow: visible;
 }
 
 .tuki-bottom-nav-item {
@@ -806,6 +807,7 @@ input:checked + .tuki-toggle-slider:before {
   gap: 3px;
   text-decoration: none;
   position: relative;
+  overflow: visible;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s;
 }

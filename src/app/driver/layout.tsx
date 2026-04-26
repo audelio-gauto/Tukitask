@@ -13,6 +13,7 @@ import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
+import { authFetch } from '@/lib/authFetch';
 
 const DRIVER_TABS = [
   { href: '/driver',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -211,7 +212,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     if (!email) return;
     const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'];
     const load = () => {
-      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
+      authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
         .then(r => r.json())
         .then((data: any[]) => {
           if (Array.isArray(data)) {
