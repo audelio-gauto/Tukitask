@@ -226,17 +226,16 @@
   -webkit-backdrop-filter: blur(8px);
   position: relative;
   z-index: 5;
-  animation: radar-heartbeat 2.8s ease-in-out infinite;
+  animation: radar-heartbeat 4.5s ease-in-out infinite;
 }
 
 @keyframes radar-heartbeat {
-  0%   { opacity: 1;    transform: scale(1); }
-  10%  { opacity: 1;    transform: scale(1.04); }
-  20%  { opacity: 1;    transform: scale(1); }
-  30%  { opacity: 1;    transform: scale(1.03); }
-  40%  { opacity: 1;    transform: scale(1); }
-  70%  { opacity: 0.15; transform: scale(0.97); }
-  100% { opacity: 1;    transform: scale(1); }
+  0%   { opacity: 1;   transform: scale(1); }
+  15%  { opacity: 1;   transform: scale(1.04); }
+  30%  { opacity: 1;   transform: scale(1); }
+  50%  { opacity: 0;   transform: scale(0.96); }
+  80%  { opacity: 0;   transform: scale(0.96); }
+  100% { opacity: 1;   transform: scale(1); }
 }
 .tuki-radar-rings {
   /* rings centered on the dot, which sits 20px below label */
