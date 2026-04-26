@@ -28,7 +28,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (sbAdmin() as any)
         .from('orders')
-        .select('id, status, accepted_price, offer_price, created_at')
+        .select('id, status, offer, suggested_price, created_at')
         .eq('accepted_by', user.email)
         .order('created_at', { ascending: false })
         .limit(10),

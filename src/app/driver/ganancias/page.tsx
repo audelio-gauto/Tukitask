@@ -11,7 +11,7 @@ interface OrderRow {
   created_at: string;
   offer?: number;
   offer_price?: number;
-  accepted_price?: number;
+
   suggested_price?: number;
   origin?: string;
   destination?: string;
@@ -20,7 +20,7 @@ interface OrderRow {
 }
 
 function orderPrice(o: OrderRow) {
-  return Number(o.offer ?? o.offer_price ?? o.accepted_price ?? o.suggested_price ?? 0);
+  return Number(o.offer ?? o.suggested_price ?? 0);
 }
 
 function fmtGs(n: number) {

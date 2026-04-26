@@ -14,7 +14,7 @@ interface DriverDetail {
     custom_commission_pct?: number; custom_commission_fixed?: number;
   } | null;
   recent_orders: {
-    id: string; status: string; accepted_price?: number; offer_price?: number; created_at: string;
+    id: string; status: string; offer?: number; created_at: string;
   }[];
 }
 
@@ -242,7 +242,7 @@ export default function DriverDetailPage() {
               <div className="space-y-2">
                 {recent_orders.map(o => {
                   const st = STATUS_LABELS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-600' };
-                  const price = o.accepted_price ?? o.offer_price;
+                  const price = o.offer;
                   return (
                     <div key={o.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3">

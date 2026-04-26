@@ -70,7 +70,7 @@ export default function AdminDashboard() {
         supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['cancelled', 'failed', 'return_rejected']),
         // Revenue: solo últimos 30 días y solo campo de precio (mínimo de datos)
         supabase.from('orders')
-          .select('accepted_price, offer_price, suggested_price, created_at')
+          .select('offer, suggested_price, created_at')
           .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned'])
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
           .limit(2000),
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
 
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const getPrice = (o: any) => Number(o.accepted_price ?? o.offer_price ?? o.suggested_price ?? 0);
+      const getPrice = (o: any) => Number(o.offer ?? o.suggested_price ?? 0);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rev30: any[] = (allOrders as any) || [];
       setOrderMetrics({

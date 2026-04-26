@@ -11,7 +11,7 @@ interface ClientDetail {
     avg_rating?: number; total_ratings?: number;
   } | null;
   recent_orders: {
-    id: string; status: string; accepted_price?: number; offer_price?: number;
+    id: string; status: string; offer?: number;
     suggested_price?: number; pickup_address?: string; dropoff_address?: string; created_at: string;
   }[];
 }
@@ -234,7 +234,7 @@ export default function ClientDetailPage() {
               <div className="space-y-2">
                 {recent_orders.map(o => {
                   const st = STATUS_LABELS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-600' };
-                  const price = o.accepted_price ?? o.offer_price ?? o.suggested_price;
+                  const price = o.offer ?? o.suggested_price;
                   return (
                     <div key={o.id} className="py-2.5 px-3 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center justify-between mb-1">

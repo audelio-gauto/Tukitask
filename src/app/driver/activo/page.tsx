@@ -236,7 +236,7 @@ export default function ActivoPage() {
     const statusTone = getStatusTone(status);
     const clientName = order.client_name || order.client_email?.split('@')[0] || 'Cliente';
     const clientPhoto = order.client_photo || null;
-    const price = Number(order.offer ?? order.accepted_price ?? order.suggested_price ?? 0).toLocaleString('es-PY');
+    const price = Number(order.offer ?? order.suggested_price ?? 0).toLocaleString('es-PY');
     const track = genTrackingCode(order.id);
     const phone = order.client_phone || order.sender_phone || null;
 

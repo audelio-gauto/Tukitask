@@ -288,7 +288,7 @@ export default function DriverDashboard() {
 
           // Use whichever price field is available on the order
           const orderPrice = (o: any) =>
-            Number(o.offer ?? o.offer_price ?? o.accepted_price ?? o.suggested_price ?? 0);
+            Number(o.offer ?? o.suggested_price ?? 0);
           const sum = (from: Date) =>
             earnable
               .filter(o => new Date(o.created_at) >= from)
