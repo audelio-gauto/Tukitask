@@ -31,7 +31,7 @@ function StarRow({ rating }: { rating: number | null }) {
 }
 
 export default function DeliveredPage() {
-  const { email } = useWorkerContext();
+  const { email, displayName } = useWorkerContext();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingOrderId, setRatingOrderId] = useState<string | null>(null);
@@ -316,7 +316,7 @@ export default function DeliveredPage() {
           onClose={() => setChatModal(null)}
           orderId={chatModal.orderId}
           myEmail={email}
-          myName={null}
+          myName={displayName || null}
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />

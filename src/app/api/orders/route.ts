@@ -74,7 +74,7 @@ export async function GET(req: Request) {
     // Optimized history query: no order_stops JOIN, specific columns, date filter
     const since = searchParams.get('since');
     let histQ = db.from('orders')
-      .select('id, status, created_at, offer, suggested_price, accepted_by, client_email, delivery_address, pickup_address')
+      .select('id, status, created_at, completed_at, offer, suggested_price, accepted_by, client_email, client_name, client_photo, client_rating, delivery_address, pickup_address')
       .eq('accepted_by', driverEmail)
       .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'failed', 'cancelled', 'returned', 'return_rejected'])
       .order('created_at', { ascending: false })
