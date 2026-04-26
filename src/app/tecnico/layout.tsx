@@ -35,6 +35,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [role, setRole] = useState<string | null>(null);
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [activeJobCount, setActiveJobCount] = useState(0);
   usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
@@ -182,6 +183,24 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch active job count for the Activo tab badge
+  useEffect(() => {
+    if (!email) return;
+    const ACTIVE_JOB_STATUSES = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
+    const load = () => {
+      fetch(`/api/tecnico/jobs?email=${encodeURIComponent(email)}&active=true`)
+        .then(r => r.json())
+        .then((data: any) => {
+          const jobs = Array.isArray(data) ? data : (Array.isArray(data?.jobs) ? data.jobs : []);
+          setActiveJobCount(jobs.filter((j: any) => ACTIVE_JOB_STATUSES.includes(j.status)).length);
+        })
+        .catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
+  }, [email]);
+
   if (checking) {
     return (
       <div className="tuki-driver-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--surface-1)' }}>
@@ -213,7 +232,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         <main>
           {children}
         </main>
-        <BottomNav tabs={TECNICO_TABS} accent="#F5C518" />
+        <BottomNav tabs={TECNICO_TABS.map(t => t.href === '/tecnico/activo' ? { ...t, badge: activeJobCount } : t)} accent="#F5C518" />
       </WorkerContext.Provider>
     </div>
   );

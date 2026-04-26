@@ -38,6 +38,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [activeOrderCount, setActiveOrderCount] = useState(0);
   usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
@@ -205,6 +206,25 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch active order count for the Activo tab badge
+  useEffect(() => {
+    if (!email) return;
+    const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'];
+    const load = () => {
+      fetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
+        .then(r => r.json())
+        .then((data: any[]) => {
+          if (Array.isArray(data)) {
+            setActiveOrderCount(data.filter(o => ACTIVE_STATUSES.includes(o.status)).length);
+          }
+        })
+        .catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
+  }, [email]);
+
   if (checking) {
     return (
       <div className="tuki-driver-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-1)' }}>
@@ -233,7 +253,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       <ChatBadge email={email} href="/driver/delivered" scope="order" />
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, driverPos, setDriverPos }}>
         {children}
-        <BottomNav tabs={DRIVER_TABS} accent="#F5C518" />
+        <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="#F5C518" />
       </WorkerContext.Provider>
     </div>
   );
