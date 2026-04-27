@@ -59,7 +59,7 @@ interface DriverExtras {
 /* ── Config ─────────────────────────────────────────────────────────────── */
 // Solo pedidos ACEPTADOS (no pending/negotiating — esos se ven en el panel principal)
 const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
-const ACTIVE_JOB_STS   = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'];
+const ACTIVE_JOB_STS   = ['accepted', 'en_proceso', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string }> = {
   pending: { text: 'Buscando conductor...' },
@@ -269,6 +269,32 @@ export default function MisOfertasPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cancel', jobId, clientEmail: email }),
+      });
+      loadData();
+    } finally { setActionId(null); }
+  };
+
+  const acceptCompletion = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('accept_completion_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept_completion', jobId, clientEmail: email }),
+      });
+      loadData();
+    } finally { setActionId(null); }
+  };
+
+  const rejectCompletion = async (jobId: string) => {
+    if (busy || !email) return;
+    setActionId('reject_completion_' + jobId);
+    try {
+      await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject_completion', jobId, clientEmail: email }),
       });
       loadData();
     } finally { setActionId(null); }
@@ -612,14 +638,36 @@ export default function MisOfertasPage() {
                 </div>
                 {/* ── Cancel button */}
                 <div style={{ padding: '0 16px 14px' }}>
-                  <button
-                    onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
-                    disabled={busy}
-                    className="tuki-btn tuki-btn-danger tuki-btn-block"
-                    style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
-                  >
-                    <Icon name="x" size={14} /> Cancelar solicitud
-                  </button>
+                  {job.status === 'completion_pending' ? (
+                    // Confirm or reject completion
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => rejectCompletion(job.id)}
+                        disabled={busy}
+                        className="tuki-btn tuki-btn-danger"
+                        style={{ flex: 1, fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
+                      >
+                        {actionId === 'reject_completion_' + job.id ? 'Rechazando…' : <><Icon name="x" size={14} /> Rechazar</>}
+                      </button>
+                      <button
+                        onClick={() => acceptCompletion(job.id)}
+                        disabled={busy}
+                        className="tuki-btn tuki-btn-success"
+                        style={{ flex: 2, fontSize: '0.85rem', fontWeight: 800, opacity: busy ? 0.6 : 1 }}
+                      >
+                        {actionId === 'accept_completion_' + job.id ? 'Confirmando…' : <><Icon name="check" size={14} /> Confirmar servicio</>}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCancelConfirm({ id: job.id, type: 'service' })}
+                      disabled={busy}
+                      className="tuki-btn tuki-btn-danger tuki-btn-block"
+                      style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
+                    >
+                      <Icon name="x" size={14} /> Cancelar solicitud
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
