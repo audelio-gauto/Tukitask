@@ -187,7 +187,9 @@ export default function MisOfertasPage() {
 
   useEffect(() => {
     loadData();
-    const iv = setInterval(loadData, 20_000);
+    // Poll every 8s — fast enough to catch status changes even if realtime filter misses
+    // UPDATE events (requires REPLICA IDENTITY FULL on the orders table in Supabase)
+    const iv = setInterval(loadData, 8_000);
 
     const onVisible = () => { if (document.visibilityState === 'visible') loadData(); };
     document.addEventListener('visibilitychange', onVisible);
