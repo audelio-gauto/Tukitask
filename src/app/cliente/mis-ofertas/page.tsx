@@ -80,6 +80,12 @@ const TRACKING_STATUS: Record<string, { text: string }> = {
   completion_pending: { text: 'Esperando confirmacion' },
 };
 
+const JOB_TRACKING_STATUS: Record<string, { text: string }> = {
+  ...TRACKING_STATUS,
+  accepted: { text: 'Tasker asignado' },
+  assigned: { text: 'Tasker asignado' },
+};
+
 const SERVICE_LABELS: Record<string, string> = {
   limpieza:         'Limpieza',
   niera:            'Niñera',
@@ -511,7 +517,7 @@ export default function MisOfertasPage() {
 
         {/* ── Tecnico jobs ───────────────────────────────────────────── */}
         {jobs.map(job => {
-          const statusInfo = TRACKING_STATUS[job.status] ?? { text: job.status };
+          const statusInfo = JOB_TRACKING_STATUS[job.status] ?? { text: job.status };
           const statusTone = getStatusTone(job.status);
           const serviceLabel = SERVICE_LABELS[job.service_type || ''] ?? job.service_type ?? 'Servicio';
           const hasWorker = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'].includes(job.status);
