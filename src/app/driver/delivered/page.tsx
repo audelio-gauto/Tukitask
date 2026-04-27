@@ -15,6 +15,11 @@ const STATUS_LABELS: Record<string, string> = {
   delivered: 'Entregado',
   commission_charged: 'Completado',
   client_confirmed: 'Confirmado',
+  returned: 'Devuelto al remitente',
+  return_rejected: 'Devolución rechazada',
+  cancelled: 'Cancelado',
+  failed: 'Entrega fallida',
+  incident_closed: 'Incidente cerrado',
 };
 
 function genTrackingCode(id: string) {
@@ -45,7 +50,7 @@ export default function DeliveredPage() {
     authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setOrders(data.filter((o: any) => ['delivered', 'commission_charged', 'client_confirmed'].includes(o.status)));
+        if (Array.isArray(data)) setOrders(data.filter((o: any) => ['delivered', 'commission_charged', 'client_confirmed', 'returned', 'return_rejected', 'cancelled', 'failed', 'incident_closed'].includes(o.status)));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -218,8 +223,8 @@ export default function DeliveredPage() {
             </button>
           )}
 
-          {/* Rate button */}
-          {existingRating == null && (
+          {/* Rate button — only for successfully delivered orders */}
+          {existingRating == null && !['returned', 'return_rejected', 'cancelled', 'failed'].includes(order.status) && (
             <button
               onClick={() => openRating(order)}
               className="tuki-btn tuki-btn-warning tuki-btn-block"
