@@ -482,13 +482,15 @@ export default function MisOfertasPage() {
                       </span>
                     )}
                   </button>
-                  <Link
-                    href={`/cliente/seguimiento/${order.id}`}
-                    className="tuki-btn tuki-btn-info"
-                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
-                  >
-                    <Icon name="map" size={16} /> Ver mapa
-                  </Link>
+                  {['picking_up', 'in_transit'].includes(order.status) && (
+                    <Link
+                      href={`/cliente/seguimiento/${order.id}`}
+                      className="tuki-btn tuki-btn-info"
+                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
+                    >
+                      <Icon name="map" size={16} /> Ver mapa
+                    </Link>
+                  )}
                 </div>
                 {/* ── Cancel button */}
                 <div style={{ padding: '0 16px 14px' }}>
@@ -591,13 +593,15 @@ export default function MisOfertasPage() {
                       </span>
                     )}
                   </button>
-                  <Link
-                    href={`/cliente/seguimiento/${job.id}?type=service`}
-                    className="tuki-btn tuki-btn-info"
-                    style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
-                  >
-                    <Icon name="map" size={16} /> Ver mapa
-                  </Link>
+                  {job.status === 'en_camino' && (
+                    <Link
+                      href={`/cliente/seguimiento/${job.id}?type=service`}
+                      className="tuki-btn tuki-btn-info"
+                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
+                    >
+                      <Icon name="map" size={16} /> Ver mapa
+                    </Link>
+                  )}
                 </div>
                 {/* ── Cancel button */}
                 <div style={{ padding: '0 16px 14px' }}>
