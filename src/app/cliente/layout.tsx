@@ -11,6 +11,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfferIncomingToast from './components/OfferIncomingToast';
+import { getAppMode, saveRealRole, TASKER_ROLES } from '@/lib/modeSwitch';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -38,6 +39,8 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
       // Fast path: role verified recently — skip network check
       const cachedRole = getCachedRole(userEmail);
+      const isModeCliente = getAppMode() === 'cliente';
+
       if (cachedRole !== 'cliente') {
         try {
           const res = await fetch('/api/check-role', {
@@ -46,7 +49,12 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
             body: JSON.stringify({ email: userEmail }),
           });
           const json = await res.json();
-          if (json?.role !== 'cliente') { router.replace('/auth'); return; }
+          const realRole = (json?.role || '').toLowerCase();
+          // Allow driver/tecnico/servicio if they explicitly switched to client mode
+          if (realRole !== 'cliente' && !(isModeCliente && TASKER_ROLES.includes(realRole))) {
+            router.replace('/auth'); return;
+          }
+          if (TASKER_ROLES.includes(realRole)) saveRealRole(realRole);
           setCachedRole(userEmail, json.role);
         } catch {
           router.replace('/auth');

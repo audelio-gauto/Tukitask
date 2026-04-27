@@ -4,6 +4,8 @@ import type React from 'react';
 import { useTheme } from '@/lib/useTheme';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { useRouter } from 'next/navigation';
+import { setAppMode, saveRealRole } from '@/lib/modeSwitch';
 import { useWorkerContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { Icon } from '@/components/Icon';
@@ -37,6 +39,7 @@ const VEHICLE_DOCS: DocEntry[] = [
 
 export default function DriverSettingsPage() {
   const { setProfilePhoto: setCtxPhoto } = useWorkerContext();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
@@ -716,9 +719,33 @@ export default function DriverSettingsPage() {
             color: message.includes('correctamente') ? 'var(--stat-success-text)' : 'var(--alert-error-text)',
             border: `1px solid ${message.includes('correctamente') ? 'var(--stat-success-border)' : 'var(--alert-error-border)'}`,
           }}>
-            {message.includes('correctamente') ? '✅ ' : '⚠️ '}{message}
+            {message.includes('correctamente') ? '\u2705 ' : '\u26a0\ufe0f '}{message}
           </div>
         )}
+
+        {/* ── Modo cliente ── */}
+        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
+            ¿Querés pedir un servicio como cliente?
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              saveRealRole('driver');
+              setAppMode('cliente');
+              router.push('/cliente');
+            }}
+            style={{
+              width: '100%', padding: '0.85rem 1rem', borderRadius: 12,
+              background: 'var(--bg-card)', border: '1.5px solid var(--border-subtle)',
+              color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Icon name="user" size={16} />
+            Modo cliente
+          </button>
+        </div>
 
       </form>
     </DriverScreenLayout>

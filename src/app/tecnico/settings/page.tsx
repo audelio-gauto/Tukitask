@@ -4,6 +4,7 @@ import { useTheme } from '@/lib/useTheme';
 import { useWorkerContext } from '../../driver/context';
 import { authFetch } from '@/lib/authFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { setAppMode, saveRealRole } from '@/lib/modeSwitch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import { Icon } from '@/components/Icon';
 
@@ -16,6 +17,7 @@ const TECNICO_DOC_TYPES: { key: string; label: string; icon: React.ComponentProp
 
 export default function TecnicoSettings() {
   const { email, displayName, profilePhoto: ctxPhoto, setProfilePhoto: setCtxPhoto } = useWorkerContext();
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const docsRef = useRef<HTMLDivElement>(null);
@@ -522,6 +524,30 @@ export default function TecnicoSettings() {
             </>
           )}
         </button>
+
+        {/* ── Modo cliente ── */}
+        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
+            ¿Querés pedir un servicio como cliente?
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              saveRealRole('tecnico');
+              setAppMode('cliente');
+              router.push('/cliente');
+            }}
+            style={{
+              width: '100%', padding: '0.85rem 1rem', borderRadius: 12,
+              background: 'var(--bg-card)', border: '1.5px solid var(--border-subtle)',
+              color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Icon name="user" size={16} />
+            Modo cliente
+          </button>
+        </div>
 
       </form>
     </DriverScreenLayout>

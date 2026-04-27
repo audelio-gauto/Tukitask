@@ -5,6 +5,8 @@ import ClientScreenLayout from '../components/ClientScreenLayout';
 import { useClientContext } from '../context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { useRouter } from 'next/navigation';
+import { clearAppMode, getRealRole, TASKER_ROLES } from '@/lib/modeSwitch';
 import { Icon, type IconName } from '@/components/Icon';
 
 function StarDisplay({ rating, total }: { rating: number; total: number }) {
@@ -46,6 +48,12 @@ export default function ClientSettingsPage() {
     email, displayName, profilePhoto, setProfilePhoto,
     phone, setPhone, avgRating, totalRatings,
   } = useClientContext();
+
+  const router = useRouter();
+  const [realRole] = useState<string | null>(() => {
+    try { return getRealRole(); } catch { return null; }
+  });
+  const isTasker = realRole !== null && TASKER_ROLES.includes(realRole);
 
   const [nameInput, setNameInput] = useState(displayName);
   const [phoneInput, setPhoneInput] = useState(phone);
@@ -395,6 +403,32 @@ export default function ClientSettingsPage() {
             </>
           )}
         </button>
+
+        {/* ── Modo Tasker — solo visible para driver/tecnico en modo cliente ── */}
+        {isTasker && (
+          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
+              Volver a tu panel de trabajo
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                clearAppMode();
+                router.push(realRole === 'driver' ? '/driver' : '/tecnico');
+              }}
+              style={{
+                width: '100%', padding: '0.85rem 1rem', borderRadius: 12,
+                background: 'linear-gradient(135deg, #F5C518, #F58A07)',
+                border: 'none', color: '#1C1C2E', fontSize: '0.95rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: '0 4px 14px rgba(245,197,24,0.35)',
+              }}
+            >
+              <Icon name="bolt" size={16} />
+              Modo Tasker
+            </button>
+          </div>
+        )}
 
       </form>
     </ClientScreenLayout>
