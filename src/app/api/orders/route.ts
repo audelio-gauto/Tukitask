@@ -522,13 +522,13 @@ export async function PATCH(req: Request) {
     in_transit: 'Tu paquete está en tránsito',
     delivered: '¡Tu paquete fue entregado!',
     failed: 'Hubo un problema con la entrega',
-    returning: 'Tu paquete está siendo devuelto',
+    returning: '⚠️ El conductor solicita devolver tu paquete — acción requerida',
     returned: 'Tu paquete fue devuelto',
     cancelled: 'El pedido fue cancelado',
     client_confirmed: 'El cliente confirmó la recepción',
   };
   // Urgent statuses deserve popup + sound
-  const urgentStatuses = ['picking_up', 'delivered', 'failed', 'returned'];
+  const urgentStatuses = ['picking_up', 'delivered', 'failed', 'returned', 'returning'];
   const label = statusLabels[status];
   if (label) {
     const targetEmail = isDriverStatus ? order.client_email : order.accepted_by;

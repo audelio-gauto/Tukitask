@@ -58,7 +58,9 @@ interface DriverExtras {
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 // Solo pedidos ACEPTADOS (no pending/negotiating — esos se ven en el panel principal)
-const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+// 'failed' y 'return_rejected' se incluyen para que el cliente no pierda de vista el pedido
+// mientras el conductor solicita/gestiona la devolución.
+const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'];
 const ACTIVE_JOB_STS   = ['accepted', 'en_proceso', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string }> = {
@@ -69,9 +71,11 @@ const TRACKING_STATUS: Record<string, { text: string }> = {
   picking_up: { text: 'En camino al punto de recogida' },
   at_pickup:  { text: 'Driver en punto de recogida' },
   in_transit: { text: 'En camino al destino' },
-  returning: { text: 'El conductor solicita devolver el paquete' },
+  failed: { text: 'Entrega fallida — pendiente de resolución' },
+  returning: { text: '⚠️ El conductor solicita devolver el paquete' },
+  return_rejected: { text: 'Devolución rechazada — el conductor puede solicitar de nuevo' },
   driver_returning: { text: 'El conductor va a devolverte el paquete' },
-  return_delivered: { text: 'El conductor llego a devolver el paquete' },
+  return_delivered: { text: 'El conductor llegó a devolver el paquete' },
   // tecnico
   'pending-job': { text: 'Buscando tecnico...' },
   in_progress: { text: 'Servicio en progreso' },
@@ -404,7 +408,7 @@ export default function MisOfertasPage() {
           const statusInfo = TRACKING_STATUS[order.status] ?? { text: order.status };
           const statusTone = getStatusTone(order.status);
           const price = order.offer ?? order.suggested_price;
-          const hasWorker = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
+          const hasWorker = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'return_rejected', 'driver_returning', 'return_delivered'].includes(order.status);
           const typeLabel = ORDER_TYPE_LABELS[order.order_type || ''] ?? 'Envío';
           const extras = driverExtras[order.id];
 
@@ -540,7 +544,17 @@ export default function MisOfertasPage() {
                 </div>
                 {/* ── Return / confirm / cancel buttons */}
                 <div style={{ padding: '0 16px 14px' }}>
-                  {order.status === 'returning' ? (
+                  {order.status === 'failed' ? (
+                    // Delivery failed — waiting for driver to request return or retry
+                    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '10px 14px', fontSize: '0.82rem', color: '#fca5a5', textAlign: 'center' }}>
+                      <Icon name="exclamation" size={14} /> Entrega fallida — el conductor resolverá la situación pronto
+                    </div>
+                  ) : order.status === 'return_rejected' ? (
+                    // Client rejected return — driver may ask again
+                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '10px 14px', fontSize: '0.82rem', color: '#fde68a', textAlign: 'center' }}>
+                      <Icon name="clock" size={14} /> Rechazaste la devolución — el conductor puede solicitar nuevamente
+                    </div>
+                  ) : order.status === 'returning' ? (
                     // Driver requested return — client accepts or rejects
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 2 }}>
