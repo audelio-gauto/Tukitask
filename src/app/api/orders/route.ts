@@ -486,6 +486,7 @@ export async function PATCH(req: Request) {
   // Columnas opcionales — fallan silenciosamente si la columna no existe en producción
   const extraUpdates: Record<string, unknown> = {};
   if (status === 'delivered') extraUpdates.completed_at = new Date().toISOString();
+  if (status === 'failed') extraUpdates.completed_at = new Date().toISOString();
   if (status === 'client_confirmed') extraUpdates.confirmed_at = new Date().toISOString();
   if (status === 'failed' && fail_reason) extraUpdates.fail_reason = fail_reason;
   if (status === 'returning' && return_reason) extraUpdates.return_reason = return_reason;

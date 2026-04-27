@@ -267,23 +267,17 @@ export default function DriverDashboard() {
           const CANCELLED_STATUSES = ['failed', 'cancelled', 'returned', 'return_rejected'];
           const delivered = data.filter(o => DELIVERED_STATUSES.includes(o.status));
           const failed = data.filter(o => CANCELLED_STATUSES.includes(o.status));
-          // Cards: only today
+          // Cards: only today (use completed_at when available, fallback to created_at)
           const deliveredToday = delivered.filter(isToday);
-          const failedToday    = failed.filter(isToday);
           const totalToday     = data.filter(isToday);
 
           // For earnings: include delivered + commission_charged + client_confirmed + returned
           const earnable = data.filter(o => [...DELIVERED_STATUSES, 'returned'].includes(o.status));
-          const ACTIVE_DRIVER_STATUSES = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
-          const activeOrders = data.filter(o => ACTIVE_DRIVER_STATUSES.includes(o.status));
-          setDeliveredCount(deliveredToday.length);
-          setFailedCount(failedToday.length);
-          setTotalShipments(totalToday.length);
-          setActiveOrderCount(activeOrders.length);
-          activeOrderCountRef.current = activeOrders.length;
-          // InDrive-style: clear pending feed immediately when driver goes active
-          if (activeOrders.length > 0) setPendingOrders([]);
+          // Active orders come from the non-history query (fetched separately in activo page)
+          // Here we just keep activeOrderCount in sync via realtime
           const total = delivered.length + failed.length;
+          setDeliveredCount(deliveredToday.length);
+          setTotalShipments(totalToday.length);
           setAcceptanceRate(total > 0 ? Math.round((delivered.length / total) * 100) : null);
 
           // Use whichever price field is available on the order
@@ -302,6 +296,14 @@ export default function DriverDashboard() {
           setStatsLoading(false);
         })
         .catch(() => { setStatsLoading(false); });
+
+      // Fetch pending failed count — matches what /driver/failed page shows
+      authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&only_failed=true`)
+        .then(r => r.json())
+        .then((failedOrders: any[]) => {
+          if (Array.isArray(failedOrders)) setFailedCount(failedOrders.length);
+        })
+        .catch(() => {});
     };
 
     fetchStats();
@@ -1032,7 +1034,7 @@ export default function DriverDashboard() {
             <Link href="/driver/failed" className="tuki-stat-card">
               <span className="tuki-stat-icon"><Icon name="x" size={18} /></span>
               <div className="tuki-stat-value">{failedCount}</div>
-              <div className="tuki-stat-label">Fallidos Hoy</div>
+              <div className="tuki-stat-label">Fallidos</div>
             </Link>
           </div>
           )}
