@@ -48,7 +48,7 @@ export default function FailedPage() {
 
   const fetchFailed = useCallback(() => {
     if (!email) return;
-    fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&only_failed=true`)
+    authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&only_failed=true`)
       .then(r => r.json())
       .then((data: any[]) => {
         if (Array.isArray(data)) {
