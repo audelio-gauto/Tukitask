@@ -58,7 +58,7 @@ interface DriverExtras {
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 // Solo pedidos ACEPTADOS (no pending/negotiating — esos se ven en el panel principal)
-const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
 const ACTIVE_JOB_STS   = ['accepted', 'in_progress', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string }> = {
@@ -66,7 +66,8 @@ const TRACKING_STATUS: Record<string, { text: string }> = {
   negotiating: { text: 'Negociando precio...' },
   accepted: { text: 'Asignado. En camino a recoger' },
   assigned: { text: 'Asignado. En camino a recoger' },
-  picking_up: { text: 'Llego al punto de recogida' },
+  picking_up: { text: 'En camino al punto de recogida' },
+  at_pickup:  { text: 'Driver en punto de recogida' },
   in_transit: { text: 'En camino al destino' },
   returning: { text: 'El conductor solicita devolver el paquete' },
   driver_returning: { text: 'El conductor va a devolverte el paquete' },
@@ -147,7 +148,7 @@ export default function MisOfertasPage() {
 
       // Fetch driver profile (vehicle details) for accepted+ orders
       const VEHICLE_LABELS_MAP: Record<string, string> = { moto: 'Moto', auto: 'Auto', moto_carro: 'Moto Carro', camion: 'Camión' };
-      const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
+      const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'];
       const extrasMap: Record<string, DriverExtras> = {};
       await Promise.all(
         activeOrders
@@ -358,7 +359,7 @@ export default function MisOfertasPage() {
           const statusInfo = TRACKING_STATUS[order.status] ?? { text: order.status };
           const statusTone = getStatusTone(order.status);
           const price = order.offer ?? order.suggested_price;
-          const hasWorker = ['accepted', 'assigned', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
+          const hasWorker = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(order.status);
           const typeLabel = ORDER_TYPE_LABELS[order.order_type || ''] ?? 'Envío';
           const extras = driverExtras[order.id];
 
@@ -482,7 +483,7 @@ export default function MisOfertasPage() {
                       </span>
                     )}
                   </button>
-                  {['picking_up', 'in_transit'].includes(order.status) && (
+                  {['picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
                     <Link
                       href={`/cliente/seguimiento/${order.id}`}
                       className="tuki-btn tuki-btn-info"

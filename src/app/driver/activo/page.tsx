@@ -9,18 +9,20 @@ import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import { playMessageAlert } from '@/lib/audio';
 
-const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'] as const;
+const ACTIVE_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
 
 const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<typeof Icon>['name'] }> = {
-  accepted:   { label: 'Aceptado',   icon: 'check' },
-  picking_up: { label: 'Recogiendo', icon: 'package' },
-  in_transit: { label: 'En camino',  icon: 'car' },
+  accepted:   { label: 'Aceptado',                      icon: 'check'    },
+  picking_up: { label: 'En camino al punto de recogida', icon: 'car'      },
+  at_pickup:  { label: 'En punto de recogida',           icon: 'package'  },
+  in_transit: { label: 'En camino al destino',           icon: 'car'      },
 };
 
-const PROGRESS_ACTION: Record<'accepted' | 'picking_up', { label: string; nextStatus: string }> = {
-  accepted:   { label: 'Iniciar recogida', nextStatus: 'picking_up' },
-  picking_up: { label: 'Iniciar entrega',  nextStatus: 'in_transit'  },
+const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: string; nextStatus: string }> = {
+  accepted:   { label: 'Ir a recoger',    nextStatus: 'picking_up' },
+  picking_up: { label: 'Ya llegué',       nextStatus: 'at_pickup'  },
+  at_pickup:  { label: 'Iniciar entrega', nextStatus: 'in_transit' },
 };
 
 function genTrackingCode(id: string) {
@@ -244,7 +246,7 @@ export default function ActivoPage() {
     const reason = failReason[order.id] ?? '';
     const isActingDelivered = acting === order.id + 'delivered';
     const isActingFailed = acting === order.id + 'failed';
-    const isActingProgress = status !== 'in_transit' && acting === order.id + (PROGRESS_ACTION[status as 'accepted' | 'picking_up']?.nextStatus ?? '');
+    const isActingProgress = status !== 'in_transit' && acting === order.id + (PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup']?.nextStatus ?? '');
 
     return (
       <div
@@ -558,13 +560,13 @@ export default function ActivoPage() {
 
           {/* ── Action buttons ── */}
           {status !== 'in_transit' && (
-            // Progress buttons: accepted → picking_up → in_transit
+            // Progress buttons: accepted → picking_up → at_pickup → in_transit
             <button
               disabled={!!acting}
-              onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up'].nextStatus)}
+              onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
               className="tuki-btn tuki-btn-primary tuki-btn-block"
             >
-              {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up'].label}
+              {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
             </button>
           )}
 

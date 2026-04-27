@@ -86,7 +86,7 @@ export async function GET(req: Request) {
   } else if (driverEmail) {
     const user = await getAuthUser(req);
     if (!user || user.email !== driverEmail) return unauthorized();
-    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
+    query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
   } else {
     // Pedidos disponibles para drivers — requiere auth
     const user = await getAuthUser(req);
@@ -427,7 +427,8 @@ export async function PATCH(req: Request) {
   // Driver-initiated transitions
   const driverAllowed: Record<string, string[]> = {
     picking_up: ['accepted'],
-    in_transit: ['picking_up', 'failed', 'return_rejected'], // retry delivery
+    at_pickup:  ['picking_up'],
+    in_transit: ['at_pickup', 'picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
     failed: ['in_transit'],
     returning: ['failed', 'return_rejected'],
