@@ -274,6 +274,19 @@ export default function MisOfertasPage() {
     } finally { setActionId(null); }
   };
 
+  const transitionOrder = async (orderId: string, status: string, extra?: Record<string, string>) => {
+    if (busy) return;
+    setActionId(status + '_' + orderId);
+    try {
+      await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status, ...extra }),
+      });
+      loadData();
+    } finally { setActionId(null); }
+  };
+
   const acceptCompletion = async (jobId: string) => {
     if (busy || !email) return;
     setActionId('accept_completion_' + jobId);
@@ -525,16 +538,61 @@ export default function MisOfertasPage() {
                     </Link>
                   )}
                 </div>
-                {/* ── Cancel button */}
+                {/* ── Return / confirm / cancel buttons */}
                 <div style={{ padding: '0 16px 14px' }}>
-                  <button
-                    onClick={() => setCancelConfirm({ id: order.id, type: 'delivery' })}
-                    disabled={busy}
-                    className="tuki-btn tuki-btn-danger tuki-btn-block"
-                    style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
-                  >
-                    <Icon name="x" size={14} /> Cancelar solicitud
-                  </button>
+                  {order.status === 'returning' ? (
+                    // Driver requested return — client accepts or rejects
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 2 }}>
+                        El conductor solicita devolver el paquete
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                          onClick={() => transitionOrder(order.id, 'return_rejected')}
+                          disabled={busy}
+                          className="tuki-btn tuki-btn-warning"
+                          style={{ flex: 1, fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
+                        >
+                          {actionId === 'return_rejected_' + order.id ? 'Procesando…' : <><Icon name="x" size={14} /> Rechazar</>}
+                        </button>
+                        <button
+                          onClick={() => transitionOrder(order.id, 'driver_returning')}
+                          disabled={busy}
+                          className="tuki-btn tuki-btn-success"
+                          style={{ flex: 2, fontSize: '0.85rem', fontWeight: 800, opacity: busy ? 0.6 : 1 }}
+                        >
+                          {actionId === 'driver_returning_' + order.id ? 'Procesando…' : <><Icon name="check" size={14} /> Aceptar devolución</>}
+                        </button>
+                      </div>
+                    </div>
+                  ) : order.status === 'return_delivered' ? (
+                    // Driver arrived to return — client confirms receipt
+                    <button
+                      onClick={() => transitionOrder(order.id, 'returned')}
+                      disabled={busy}
+                      className="tuki-btn tuki-btn-success tuki-btn-block"
+                      style={{ fontSize: '0.85rem', fontWeight: 800, opacity: busy ? 0.6 : 1 }}
+                    >
+                      {actionId === 'returned_' + order.id ? 'Confirmando…' : <><Icon name="check" size={14} /> Confirmar recepción del paquete</>}
+                    </button>
+                  ) : ['driver_returning'].includes(order.status) ? (
+                    // Waiting for driver to arrive — no action needed, just info
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
+                      El conductor va en camino a devolverte el paquete
+                    </div>
+                  ) : (
+                    // Default: show cancel button (only for cancellable statuses)
+                    ['accepted', 'picking_up', 'in_transit'].includes(order.status) && (
+                      <button
+                        onClick={() => setCancelConfirm({ id: order.id, type: 'delivery' })}
+                        disabled={busy}
+                        className="tuki-btn tuki-btn-danger tuki-btn-block"
+                        style={{ fontSize: '0.85rem', opacity: busy ? 0.6 : 1 }}
+                      >
+                        <Icon name="x" size={14} /> Cancelar solicitud
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             </div>
