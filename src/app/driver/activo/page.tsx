@@ -9,14 +9,17 @@ import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import { playMessageAlert } from '@/lib/audio';
 
-const ACTIVE_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit'] as const;
+const ACTIVE_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
 
 const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<typeof Icon>['name'] }> = {
-  accepted:   { label: 'Aceptado',                      icon: 'check'    },
-  picking_up: { label: 'En camino al punto de recogida', icon: 'car'      },
-  at_pickup:  { label: 'En punto de recogida',           icon: 'package'  },
-  in_transit: { label: 'En camino al destino',           icon: 'car'      },
+  accepted:          { label: 'Aceptado',                           icon: 'check'    },
+  picking_up:        { label: 'En camino al punto de recogida',     icon: 'car'      },
+  at_pickup:         { label: 'En punto de recogida',               icon: 'package'  },
+  in_transit:        { label: 'En camino al destino',               icon: 'car'      },
+  returning:         { label: 'Devolución solicitada (esperando cliente)', icon: 'clock' },
+  driver_returning:  { label: 'Cliente aceptó — Ir a devolver',    icon: 'package'  },
+  return_delivered:  { label: 'Esperando confirmación del cliente', icon: 'clock'    },
 };
 
 const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: string; nextStatus: string }> = {
@@ -559,8 +562,28 @@ export default function ActivoPage() {
           )}
 
           {/* ── Action buttons ── */}
-          {status !== 'in_transit' && (
-            // Progress buttons: accepted → picking_up → at_pickup → in_transit
+          {/* Return flow statuses */}
+          {status === 'returning' && (
+            <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '12px 14px', textAlign: 'center', fontSize: '0.85rem', color: '#fde68a' }}>
+              <Icon name="clock" size={14} /> Esperando respuesta del cliente para devolver el paquete...
+            </div>
+          )}
+          {status === 'driver_returning' && (
+            <button
+              disabled={!!acting}
+              onClick={() => updateStatus(order.id, 'return_delivered')}
+              className="tuki-btn tuki-btn-warning tuki-btn-block"
+            >
+              {acting === order.id + 'return_delivered' ? 'Actualizando...' : <><Icon name="package" size={14} /> Llegué a devolver el paquete</>}
+            </button>
+          )}
+          {status === 'return_delivered' && (
+            <div style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 12, padding: '12px 14px', textAlign: 'center', fontSize: '0.85rem', color: '#93c5fd' }}>
+              <Icon name="clock" size={14} /> Esperando que el cliente confirme la recepción...
+            </div>
+          )}
+          {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
+          {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
             <button
               disabled={!!acting}
               onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
