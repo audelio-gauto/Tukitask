@@ -40,6 +40,7 @@ interface Job {
   tecnico_photo: string | null;
   tecnico_rating: number | null;
   total_price: number | null;
+  warranty_days: number | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -501,6 +502,21 @@ export default function ClienteHistorialPage() {
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
                         </div>
                       </div>
+                      {(item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', marginBottom: 6, fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
+                          🛡️ Garantía: {(item.data as Job).warranty_days} {(item.data as Job).warranty_days === 1 ? 'día' : 'días'}
+                        </div>
+                      )}
+                      {item.data.tecnico_name && (
+                        <button
+                          onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
+                          className="tuki-btn tuki-btn-info tuki-btn-block"
+                          style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                        >
+                          <Icon name="chat" size={14} />
+                          Chat con el tecnico
+                        </button>
+                      )}
                       {item.data.status === 'completado' && !item.data.tecnico_rating && (
                         <button
                           onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
