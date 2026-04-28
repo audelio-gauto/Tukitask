@@ -507,16 +507,21 @@ export default function ClienteHistorialPage() {
                           🛡️ Garantía: {(item.data as Job).warranty_days} {(item.data as Job).warranty_days === 1 ? 'día' : 'días'}
                         </div>
                       )}
-                      {item.data.tecnico_name && (
-                        <button
-                          onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
-                          className="tuki-btn tuki-btn-info tuki-btn-block"
-                          style={{ fontSize: '0.83rem', marginBottom: 6 }}
-                        >
-                          <Icon name="chat" size={14} />
-                          Chat con el tecnico
-                        </button>
-                      )}
+                      {item.data.tecnico_name && (() => {
+                        const refDate = item.data.completed_at ?? item.data.created_at;
+                        const chatDays = (item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 ? (item.data as Job).warranty_days! : 1;
+                        const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000 : false;
+                        return chatOk ? (
+                          <button
+                            onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
+                            className="tuki-btn tuki-btn-info tuki-btn-block"
+                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                          >
+                            <Icon name="chat" size={14} />
+                            Chat con el tecnico
+                          </button>
+                        ) : null;
+                      })()}
                       {item.data.status === 'completado' && !item.data.tecnico_rating && (
                         <button
                           onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}

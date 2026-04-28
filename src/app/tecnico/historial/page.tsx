@@ -130,8 +130,9 @@ export default function TecnicoHistorialPage() {
     const existingRating = job.client_rating_given ?? localRatings[job.id] ?? null;
 
     const refDate = job.completed_at || job.created_at;
+    const chatDays = job.warranty_days != null && job.warranty_days > 0 ? job.warranty_days : 1;
     const chatAvailable = refDate
-      ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000
+      ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000
       : false;
 
     return (
