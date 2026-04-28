@@ -224,7 +224,7 @@ export default function ClienteHistorialPage() {
   };
 
   const activeStatuses = ['pending', 'negotiating', 'assigned', 'accepted', 'in_progress', 'picking_up', 'in_transit', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
-  const doneStatuses = ['completado', 'completed', 'delivered', 'cancelled', 'failed', 'incidente', 'return_delivered', 'returned', 'client_confirmed', 'commission_charged'];
+  const doneStatuses = ['completado', 'completed', 'delivered', 'cancelled', 'failed', 'incidente', 'return_delivered', 'returned', 'return_rejected', 'client_confirmed', 'commission_charged'];
 
   type UnifiedItem =
     | { kind: 'job';   data: Job;   date: string }
@@ -550,11 +550,11 @@ export default function ClienteHistorialPage() {
                             <span style={{ fontSize: '0.73rem', color: statusTone.color }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 <Icon
-                                  name={['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'check' : 'x'}
+                                  name={getStatusInfo(item.data.status).icon}
                                   size={12}
                                   color={statusTone.color}
                                 />
-                                {['delivered','client_confirmed','commission_charged'].includes(item.data.status) ? 'Entregado' : 'Cancelado'}
+                                {getStatusInfo(item.data.status).label}
                               </span>
                             </span>
                             {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(item.data as Order).driver_name}</span>}
