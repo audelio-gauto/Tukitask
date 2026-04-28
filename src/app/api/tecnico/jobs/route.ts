@@ -631,6 +631,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ job: data });
     }
 
+    // ── set_warranty (tecnico sets warranty days before marking complete) ──────
+    if (action === 'set_warranty') {
+      const { jobId, tecnicoEmail, warrantyDays } = body;
+      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const days = warrantyDays != null ? Number(warrantyDays) : null;
+      const { data, error } = await sb
+        .from('tecnico_jobs')
+        .update({ warranty_days: days })
+        .eq('id', jobId)
+        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .select()
+        .maybeSingle();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ job: data });
+    }
+
     // ── completion_pending (tecnico marks job done, client must confirm) ──────
     if (action === 'completion_pending') {
       const { jobId, tecnicoEmail } = body;

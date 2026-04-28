@@ -31,6 +31,7 @@ interface Job {
   accepted_at: string | null;
   completion_attempts: number;
   last_rejection_reason: string | null;
+  warranty_days: number | null;
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -73,6 +74,10 @@ export default function CitasPage() {
 
   // Confirm action modal
   const [confirmModal, setConfirmModal] = useState<{ jobId: string; action: string; message: string } | null>(null);
+
+  // Warranty modal
+  const [warrantyModal, setWarrantyModal] = useState<{ jobId: string; input: string } | null>(null);
+  const [warrantySending, setWarrantySending] = useState(false);
 
   // Extra charge modal
   interface ExtraModalState {
@@ -249,6 +254,24 @@ export default function CitasPage() {
     if (!extraModal) return;
     const item = extraModal.items[index];
     setExtraModal(prev => prev ? { ...prev, editIndex: index, formAmount: item.amount, formAmountDisplay: Number(item.amount).toLocaleString('es-PY'), formReason: item.reason } : null);
+  };
+
+  const submitWarranty = async () => {
+    if (!warrantyModal || !email || warrantySending) return;
+    const days = parseInt(warrantyModal.input, 10);
+    if (isNaN(days) || days <= 0) return;
+    setWarrantySending(true);
+    try {
+      const res = await authFetch('/api/tecnico/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set_warranty', jobId: warrantyModal.jobId, tecnicoEmail: email, warrantyDays: days }),
+      });
+      const json = await res.json();
+      if (json.job) setJobs(prev => prev.map(j => j.id === warrantyModal!.jobId ? { ...j, ...json.job } : j));
+    } catch {}
+    setWarrantySending(false);
+    setWarrantyModal(null);
   };
 
   const submitExtra = async () => {
@@ -433,14 +456,22 @@ export default function CitasPage() {
                   )}
 
                   {job.status === 'en_proceso' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {/* Row 1: Extras + Garantía */}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => openExtraModal(job)}
+                          style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                          💰 Extras
+                        </button>
+                        <button onClick={() => setWarrantyModal({ jobId: job.id, input: job.warranty_days != null ? String(job.warranty_days) : '' })}
+                          style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: `1.5px solid ${job.warranty_days ? '#6366f1' : 'rgba(99,102,241,0.4)'}`, background: job.warranty_days ? 'rgba(99,102,241,0.22)' : 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                          🛡️ {job.warranty_days ? `${job.warranty_days}d` : 'Garantía'}
+                        </button>
+                      </div>
+                      {/* Row 2: Marcar completado full width */}
                       <button onClick={() => doActionConfirmed(job.id, 'completion_pending', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')} disabled={busy}
-                        style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
+                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: busy ? 'default' : 'pointer' }}>
                         ✅ Marcar completado
-                      </button>
-                      <button onClick={() => openExtraModal(job)}
-                        style={{ padding: '10px 12px', borderRadius: 12, border: '1.5px solid #f59e0b', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
-                        💰 Extras
                       </button>
                     </div>
                   )}
@@ -487,6 +518,39 @@ export default function CitasPage() {
         otherName={chatOtherName}
         otherPhoto={chatOtherPhoto}
       />
+
+      {/* Warranty modal */}
+      {warrantyModal && (
+        <>
+          <div onClick={() => setWarrantyModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ margin: '0 0 6px', fontWeight: 800, color: 'var(--text-primary)' }}>🛡️ Días de garantía</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.83rem', color: 'var(--text-secondary)' }}>Ingresá la cantidad de días de garantía del trabajo (ej: 15, 30, 90).</p>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={warrantyModal.input}
+              onChange={e => setWarrantyModal(prev => prev ? { ...prev, input: e.target.value } : null)}
+              placeholder="Ej: 30"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 16, boxSizing: 'border-box', outline: 'none', textAlign: 'center' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={submitWarranty}
+                disabled={warrantySending || !warrantyModal.input || Number(warrantyModal.input) <= 0}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: warrantySending || !warrantyModal.input || Number(warrantyModal.input) <= 0 ? 'rgba(99,102,241,0.3)' : '#6366f1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {warrantySending ? 'Guardando…' : '💾 Guardar garantía'}
+              </button>
+              <button onClick={() => setWarrantyModal(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Extra charge modal */}
       {extraModal && (

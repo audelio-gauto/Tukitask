@@ -73,6 +73,7 @@ interface Job {
   total_price: number | null;
   description: string | null;
   tecnico_rating: number | null;
+  warranty_days: number | null;
 }
 
 export default function TecnicoHistorialPage() {
@@ -211,6 +212,13 @@ export default function TecnicoHistorialPage() {
               <strong style={{ color: '#F5C518' }}>₲{totalPrice.toLocaleString('es-PY')}</strong>
             </div>
           ) : null}
+
+          {/* Warranty */}
+          {job.warranty_days != null && job.warranty_days > 0 && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', marginBottom: 10, fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
+              🛡️ Garantía: {job.warranty_days} {job.warranty_days === 1 ? 'día' : 'días'}
+            </div>
+          )}
 
           {/* Chat — solo disponible las primeras 24h */}
           {chatAvailable && (

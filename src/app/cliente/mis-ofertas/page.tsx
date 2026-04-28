@@ -48,6 +48,7 @@ interface ActiveJob {
   tecnico_photo: string | null;
   tecnico_rating: number | null;
   tecnico_email: string | null;
+  warranty_days: number | null;
 }
 
 interface DriverExtras {
@@ -683,6 +684,15 @@ export default function MisOfertasPage() {
                   <div className="tuki-address-box" style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '10px 16px 12px', borderRadius: 0, border: 'none', background: 'var(--surface-3)', borderBottom: '1px solid var(--divider)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                     <Icon name="map-pin" size={14} color="#4ade80" style={{ marginTop: 1, flexShrink: 0 }} />
                     <span className="tuki-address-text" style={{ color: 'var(--text-secondary)' }}>{job.address}</span>
+                  </div>
+                )}
+
+                {/* ── Warranty badge */}
+                {job.warranty_days != null && job.warranty_days > 0 && (
+                  <div style={{ padding: '8px 16px 0' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
+                      🛡️ Garantía: {job.warranty_days} {job.warranty_days === 1 ? 'día' : 'días'}
+                    </span>
                   </div>
                 )}
 
