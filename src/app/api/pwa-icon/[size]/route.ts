@@ -36,11 +36,18 @@ export async function GET(
     const key = `pwa_icon_${size}`;
     const { data } = await sb
       .from('app_config')
-      .select('value')
-      .eq('key', key)
-      .maybeSingle();
+      .select('key, value')
+      .in('key', [key, 'logo_url']);
 
-    if (data?.value) iconUrl = data.value;
+    let logoUrl: string | null = null;
+    (data ?? []).forEach((row: { key: string; value: string }) => {
+      if (row.key === 'logo_url' && row.value) logoUrl = row.value;
+      if (row.key === key && row.value) iconUrl = row.value;
+    });
+    // If no dedicated PWA icon is configured, use the admin logo as fallback
+    if (iconUrl === FALLBACK[size as ValidSize] && logoUrl) {
+      iconUrl = logoUrl;
+    }
   } catch {
     // DB unavailable — use static fallback
   }

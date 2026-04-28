@@ -22,15 +22,23 @@ export async function GET() {
     const { data } = await sb()
       .from('app_config')
       .select('key, value')
-      .in('key', ['pwa_icon_192', 'pwa_icon_512']);
+      .in('key', ['pwa_icon_192', 'pwa_icon_512', 'logo_url']);
 
+    let logoUrl: string | null = null;
     (data ?? []).forEach(row => {
+      if (row.key === 'logo_url' && row.value) logoUrl = row.value;
       if (row.key === 'pwa_icon_192' && row.value) icon192 = row.value;
       if (row.key === 'pwa_icon_512' && row.value) {
         icon512 = row.value;
         iconMaskable = row.value; // custom icon is used as maskable too
       }
     });
+    // If no dedicated PWA icons are configured, fall back to the admin-uploaded logo
+    if (logoUrl) {
+      if (icon192 === '/icons/icon-192x192.png') icon192 = logoUrl;
+      if (icon512 === '/icons/icon-512x512.png') icon512 = logoUrl;
+      if (iconMaskable === '/icons/icon-maskable-512x512.png') iconMaskable = logoUrl;
+    }
   } catch {
     // Fallback to static if DB unavailable
   }
