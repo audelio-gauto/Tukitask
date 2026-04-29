@@ -5,6 +5,9 @@ import { playKaChing } from '@/lib/audio';
 import { Icon } from '@/components/Icon';
 
 const CARD_TIMER = 100;
+// ── Brand token — single source of truth for this component
+const BRAND        = '#F5C518';
+const BRAND_SHADOW = 'rgba(245,197,24,0.35)';
 
 function getRemaining(createdAt: string): number {
   return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
@@ -17,16 +20,20 @@ function CountdownRing({ createdAt }: { createdAt: string }) {
     const iv = setInterval(() => setSeconds(getRemaining(createdAt)), 1000);
     return () => clearInterval(iv);
   }, [createdAt]);
-  const r = 14, circ = 2 * Math.PI * r;
+  const r = 16, circ = 2 * Math.PI * r;
   const dash = circ * (seconds / CARD_TIMER);
+  const urgent = seconds <= 15;
   const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
   return (
-    <svg width="36" height="36" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
-      <circle cx="18" cy="18" r={r} fill="none" stroke="var(--border-strong)" strokeWidth="3"/>
-      <circle cx="18" cy="18" r={r} fill="none" stroke={c} strokeWidth="3"
+    <svg
+      width="40" height="40" viewBox="0 0 40 40"
+      style={{ flexShrink: 0, filter: urgent ? `drop-shadow(0 0 5px ${c}88)` : 'none', transition: 'filter 0.5s' }}
+    >
+      <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3.5"/>
+      <circle cx="20" cy="20" r={r} fill="none" stroke={c} strokeWidth="3.5"
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        transform="rotate(-90 18 18)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
-      <text x="18" y="23" textAnchor="middle" fontSize="10" fontWeight="800" fill={c}>{seconds}</text>
+        transform="rotate(-90 20 20)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
+      <text x="20" y="25" textAnchor="middle" fontSize="11" fontWeight="900" fill={c}>{seconds}</text>
     </svg>
   );
 }
@@ -105,6 +112,7 @@ export default memo(function RequestsFeed({
   onActiveItem,
 }: Props) {
   const [offerNote, setOfferNote] = useState('');
+  const [noteOpen, setNoteOpen] = useState(false);
   const [customPrice, setCustomPrice] = useState('');
   const [customOpen, setCustomOpen] = useState(false);
   const [stopsOpen, setStopsOpen] = useState(false);
@@ -185,6 +193,7 @@ export default memo(function RequestsFeed({
   // Reset per-card form state when card changes
   useEffect(() => {
     setOfferNote('');
+    setNoteOpen(false);
     setCustomPrice('');
     setCustomOpen(false);
     setStopsOpen(false);
@@ -228,190 +237,249 @@ export default memo(function RequestsFeed({
     }}>
       <div style={{
         margin: '0 8px',
-        paddingBottom: 'calc(var(--tuki-nav-h, 64px) + 8px)',
+        paddingBottom: 'calc(var(--tuki-nav-h, 64px) + 6px)',
         pointerEvents: 'auto',
       }}>
 
-        {/* ── Top bar: counter + navigation ── */}
+        {/* ── Top bar: dots + nav arrows ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '6px 4px 6px',
+          padding: '4px 2px 6px',
         }}>
-          {/* Prev */}
+          {/* Prev arrow */}
           <button
             onClick={goPrev}
             disabled={safeIdx === 0}
             style={{
-              background: safeIdx === 0 ? 'var(--glass-card)' : 'rgba(200,255,0,0.12)',
-              border: '1px solid rgba(200,255,0,0.25)',
-              color: safeIdx === 0 ? 'var(--text-muted)' : '#c8ff00',
-              borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem',
-              fontWeight: 800, cursor: safeIdx === 0 ? 'default' : 'pointer',
+              background: safeIdx === 0 ? 'rgba(255,255,255,0.04)' : `rgba(245,197,24,0.12)`,
+              border: `1px solid ${safeIdx === 0 ? 'rgba(255,255,255,0.08)' : BRAND_SHADOW}`,
+              color: safeIdx === 0 ? 'var(--text-muted)' : BRAND,
+              borderRadius: 99, width: 34, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: safeIdx === 0 ? 'default' : 'pointer', flexShrink: 0,
             }}
-          >← Ant</button>
+            aria-label="Anterior"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
 
-          {/* Counter pill */}
-          <span style={{
-            background: '#c8ff00', color: '#111',
-            borderRadius: 99, padding: '3px 14px',
-            fontSize: '0.78rem', fontWeight: 800,
-          }}>
-            {safeIdx + 1} de {total} solicitud{total !== 1 ? 'es' : ''}
-          </span>
+          {/* Dot indicators + counter */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {total > 1 && (
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                {Array.from({ length: Math.min(total, 7) }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCardIdx(i)}
+                    style={{
+                      width: i === safeIdx ? 18 : 6,
+                      height: 6,
+                      borderRadius: 99,
+                      background: i === safeIdx ? BRAND : 'rgba(255,255,255,0.2)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'width 0.25s ease, background 0.25s ease',
+                    }}
+                    aria-label={`Solicitud ${i + 1}`}
+                  />
+                ))}
+                {total > 7 && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700 }}>+{total - 7}</span>}
+              </div>
+            )}
+            <span style={{
+              background: `linear-gradient(135deg,${BRAND},#F58A07)`,
+              color: '#1C1C2E',
+              borderRadius: 99, padding: '2px 12px',
+              fontSize: '0.72rem', fontWeight: 800,
+              boxShadow: `0 2px 8px ${BRAND_SHADOW}`,
+            }}>
+              {safeIdx + 1} / {total} solicitud{total !== 1 ? 'es' : ''}
+            </span>
+          </div>
 
-          {/* Next */}
+          {/* Next arrow */}
           <button
             onClick={goNext}
             disabled={safeIdx >= total - 1}
             style={{
-              background: safeIdx >= total - 1 ? 'var(--glass-card)' : 'rgba(200,255,0,0.12)',
-              border: '1px solid rgba(200,255,0,0.25)',
-              color: safeIdx >= total - 1 ? 'var(--text-muted)' : '#c8ff00',
-              borderRadius: 99, padding: '4px 14px', fontSize: '0.8rem',
-              fontWeight: 800, cursor: safeIdx >= total - 1 ? 'default' : 'pointer',
+              background: safeIdx >= total - 1 ? 'rgba(255,255,255,0.04)' : `rgba(245,197,24,0.12)`,
+              border: `1px solid ${safeIdx >= total - 1 ? 'rgba(255,255,255,0.08)' : BRAND_SHADOW}`,
+              color: safeIdx >= total - 1 ? 'var(--text-muted)' : BRAND,
+              borderRadius: 99, width: 34, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: safeIdx >= total - 1 ? 'default' : 'pointer', flexShrink: 0,
             }}
-          >Sig →</button>
+            aria-label="Siguiente"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
         </div>
 
         {/* ── Single card ── */}
         <div style={{
           background: 'var(--sheet-bg)',
           borderRadius: 20,
-          border: `1.5px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.4)' : 'var(--border-strong)'}`,
-          boxShadow: '0 -4px 32px rgba(0,0,0,0.35)',
+          border: `1.5px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.45)' : `rgba(245,197,24,0.22)`}`,
+          boxShadow: `0 -6px 40px rgba(0,0,0,0.40), 0 0 0 1px rgba(245,197,24,0.06)`,
           overflow: 'hidden',
+          position: 'relative',
         }}>
 
-          {/* ── Offer-sent overlay: while waiting for client response ── */}
+          {/* ── Offer-sent overlay ── */}
           {isSending && !offerSentForThis && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 10,
-              background: 'rgba(17,24,39,0.85)', borderRadius: 20,
+              background: 'rgba(17,24,39,0.88)', borderRadius: 20,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-              backdropFilter: 'blur(4px)',
+              backdropFilter: 'blur(6px)',
             }}>
-              <div style={{ color: '#c8ff00' }}>
-                <Icon name="refresh" size={26} />
+              <div style={{ color: BRAND }}>
+                <Icon name="refresh" size={28} />
               </div>
-              <div style={{ color: '#c8ff00', fontWeight: 800, fontSize: '1rem', textAlign: 'center' }}>Oferta enviada</div>
+              <div style={{ color: BRAND, fontWeight: 800, fontSize: '1rem', textAlign: 'center' }}>Oferta enviada</div>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', maxWidth: 200 }}>Esperando respuesta del cliente…</div>
             </div>
           )}
 
-          <div style={{ padding: '14px 14px 6px' }}>
+          {/* ── Info zone ── */}
+          <div style={{ padding: '12px 14px 10px' }}>
 
-            {/* Row 1: photo + label + client info + price + timer + close */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-              {/* Client avatar */}
-              {item.clientPhoto
-                ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async"
-                    style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover',
-                      border: `2.5px solid ${stopCount >= 5 ? '#f59e0b' : '#c8ff00'}`, flexShrink: 0 }} />
-                : <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--surface-3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
-                    flexShrink: 0, border: '2px solid var(--border-strong)' }}>
-                    <Icon name="user" size={20} />
-                  </div>
-              }
+            {/* Row 1: avatar + info + price/timer/close */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+
+              {/* Client avatar — 58px with brand ring */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                {item.clientPhoto
+                  ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async"
+                      style={{
+                        width: 58, height: 58, borderRadius: '50%', objectFit: 'cover',
+                        border: `2.5px solid ${stopCount >= 5 ? '#f59e0b' : BRAND}`,
+                        boxShadow: `0 0 0 3px ${stopCount >= 5 ? 'rgba(245,158,11,0.2)' : BRAND_SHADOW}`,
+                      }} />
+                  : <div style={{
+                      width: 58, height: 58, borderRadius: '50%',
+                      background: 'linear-gradient(135deg,rgba(245,197,24,0.15),rgba(245,138,7,0.15))',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: `2px solid ${BRAND_SHADOW}`,
+                      boxShadow: `0 0 0 3px rgba(245,197,24,0.08)`,
+                    }}>
+                      <Icon name="user" size={24} color={BRAND} />
+                    </div>
+                }
+              </div>
 
               {/* Name + service + meta */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
-                  <span>{item.clientName || 'Cliente'}</span>
+                {/* Service type label */}
+                <div style={{
+                  fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  lineHeight: 1.2, marginBottom: 3,
+                }}>{label}</div>
+                {/* Client name + meta */}
+                <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600 }}>{item.clientName || 'Cliente'}</span>
                   {item.clientVerified && (
                     <span title="Verificado" style={{ color: '#22c55e', display: 'inline-flex' }}>
                       <Icon name="shield" size={12} />
                     </span>
                   )}
                   {item.clientRating != null && item.clientRating > 0 && (
-                    <span style={{ color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="star" size={12} color="#f59e0b" />
-                      {Number(item.clientRating).toFixed(1)}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#f59e0b' }}>
+                      <Icon name="star" size={11} color="#f59e0b" />
+                      <span style={{ fontWeight: 700 }}>{Number(item.clientRating).toFixed(1)}</span>
                     </span>
                   )}
                   {distKm != null && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="map" size={12} color="#94a3b8" />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--text-muted)' }}>
+                      <Icon name="map" size={11} color="#94a3b8" />
                       {distKm.toFixed(1)} km
                     </span>
                   )}
                 </div>
                 {/* Badges */}
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
                   {item.orderType === 'mandadito' && (
-                    <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="package" size={12} />
-                      Mandadito
+                    <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name="package" size={11} /> Mandadito
                     </span>
                   )}
                   {item.orderType === 'flete' && (
-                    <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="truck" size={12} />
-                      Flete
+                    <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name="truck" size={11} /> Flete
                     </span>
                   )}
                   {stopCount >= 2 && (
-                    <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="package" size={12} color="#fbbf24" />
-                      {stopCount} paradas
+                    <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name="package" size={11} color="#fbbf24" /> {stopCount} paradas
                     </span>
                   )}
                   {item.dateScheduled && (
-                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 99, padding: '1px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(99,102,241,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <Icon name="calendar" size={12} color="#818cf8" />
+                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(99,102,241,0.3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name="calendar" size={11} color="#818cf8" />
                       {new Date(item.dateScheduled).toLocaleString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Price + timer + close */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 900, color: '#c8ff00', fontSize: '1.25rem', lineHeight: 1 }}>{clientPrice.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Gs</div>
-                  {pricePerStop && <div style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
+              {/* Price block + timer + dismiss */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                {/* Price pill */}
+                <div style={{
+                  background: 'rgba(245,197,24,0.10)',
+                  border: `1px solid rgba(245,197,24,0.28)`,
+                  borderRadius: 12, padding: '5px 10px', textAlign: 'right',
+                }}>
+                  <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.3rem', lineHeight: 1 }}>
+                    {clientPrice.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Guaraníes</div>
+                  {pricePerStop && <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
                 </div>
+                {/* Timer + dismiss */}
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <CountdownRing createdAt={item.createdAt} />
                   <button
                     onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
-                    style={{ background: 'var(--glass-card)', border: 'none', color: 'var(--text-muted)',
-                      borderRadius: 99, width: 28, height: 28, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem' }}
-                    aria-label="Cerrar"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+                      color: 'var(--text-muted)', borderRadius: 99,
+                      width: 32, height: 32, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem',
+                    }}
+                    aria-label="Omitir solicitud"
                   >✕</button>
                 </div>
               </div>
             </div>
 
             {/* ── Addresses ── */}
-            <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)', borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.07)',
+              padding: '8px 10px', marginBottom: 8,
+              fontSize: '0.76rem', color: 'var(--text-secondary)',
+              display: 'flex', flexDirection: 'column', gap: 5,
+            }}>
               {item.from && (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#10b981', flexShrink: 0, marginTop: 6 }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#10b981', flexShrink: 0, marginTop: 5 }} />
                   <span style={{ lineHeight: 1.4 }}>{item.from}</span>
                 </div>
               )}
               {/* Multi-stop toggle */}
               {item.stops && item.stops.length > 0 && (
-                <div style={{ borderRadius: 10, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
+                <div style={{ borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', overflow: 'hidden' }}>
                   <button
                     onClick={() => setStopsOpen(o => !o)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-                      background: 'rgba(245,158,11,0.1)', padding: '5px 10px', cursor: 'pointer', border: 'none' }}
+                      background: 'rgba(245,158,11,0.08)', padding: '5px 10px', cursor: 'pointer', border: 'none' }}
                   >
-                    <span style={{ display: 'inline-flex', color: '#fbbf24' }}>
-                      <Icon name="package" size={12} />
-                    </span>
+                    <span style={{ display: 'inline-flex', color: '#fbbf24' }}><Icon name="package" size={12} /></span>
                     <span style={{ flex: 1, fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>
                       {item.stops.length} parada{item.stops.length !== 1 ? 's' : ''} de entrega
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700 }}>
-                      {stopsOpen ? '▲' : '▼'}
-                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700 }}>{stopsOpen ? '▲' : '▼'}</span>
                   </button>
                   {stopsOpen && (
                     <div style={{ maxHeight: 160, overflowY: 'auto', padding: '6px 10px 8px',
@@ -432,16 +500,14 @@ export default memo(function RequestsFeed({
                 </div>
               )}
               {item.to && (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#ef4444', flexShrink: 0, marginTop: 6 }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#ef4444', flexShrink: 0, marginTop: 5 }} />
                   <span style={{ lineHeight: 1.4 }}>{item.to}</span>
                 </div>
               )}
               {item.location && (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                  <span style={{ flexShrink: 0, marginTop: 2, color: '#94a3b8' }}>
-                    <Icon name="map-pin" size={12} />
-                  </span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ flexShrink: 0, marginTop: 2, color: '#94a3b8' }}><Icon name="map-pin" size={12} /></span>
                   <span style={{ lineHeight: 1.4 }}>{item.location}</span>
                 </div>
               )}
@@ -449,7 +515,7 @@ export default memo(function RequestsFeed({
 
             {/* Photos */}
             {item.photos && item.photos.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, marginBottom: 10, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never }}>
                 {item.photos.slice(0, 4).map((url, i) => (
                   <img key={i} src={url} alt={`foto ${i+1}`} onClick={() => window.open(url, '_blank')}
                     style={{ width: 50, height: 50, borderRadius: 8, objectFit: 'cover',
@@ -467,27 +533,26 @@ export default memo(function RequestsFeed({
 
             {/* Mandadito extras */}
             {item.orderType === 'mandadito' && item.shoppingList && (
-              <div style={{ fontSize: '0.82rem', marginBottom: 8, padding: '7px 10px',
-                background: 'rgba(245,158,11,0.1)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.3)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 3, color: '#fbbf24', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="clipboard" size={12} color="#fbbf24" />
-                  Lista de compras
+              <div style={{ fontSize: '0.82rem', marginBottom: 6, padding: '7px 10px',
+                background: 'rgba(245,158,11,0.08)', borderRadius: 10, border: '1px solid rgba(245,158,11,0.25)' }}>
+                <div style={{ fontWeight: 700, marginBottom: 3, color: '#fbbf24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="clipboard" size={12} color="#fbbf24" /> Lista de compras
                 </div>
                 <div style={{ whiteSpace: 'pre-wrap', color: '#fde68a', fontSize: '0.78rem' }}>{item.shoppingList}</div>
               </div>
             )}
             {item.orderType === 'mandadito' && item.maxBudget != null && (
-              <div style={{ fontSize: '0.82rem', color: '#34d399', marginBottom: 8, padding: '6px 10px',
-                background: 'rgba(52,211,153,0.08)', borderRadius: 10, border: '1px solid rgba(52,211,153,0.2)' }}>
+              <div style={{ fontSize: '0.82rem', color: '#34d399', marginBottom: 6, padding: '6px 10px',
+                background: 'rgba(52,211,153,0.07)', borderRadius: 10, border: '1px solid rgba(52,211,153,0.2)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="money" size={12} color="#34d399" />
-                  Presupuesto max.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
+                  Presupuesto máx.: <strong>{Number(item.maxBudget).toLocaleString('es-PY')} Gs</strong>
                 </span>
               </div>
             )}
             {item.instructions && (
-              <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 8, padding: '7px 10px',
-                background: 'rgba(245,197,24,0.08)', borderRadius: 10, border: '1px solid rgba(245,197,24,0.2)',
+              <div style={{ fontSize: '0.78rem', color: '#C8960A', marginBottom: 6, padding: '7px 10px',
+                background: `rgba(245,197,24,0.07)`, borderRadius: 10, border: `1px solid rgba(245,197,24,0.18)`,
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="pencil" size={12} color="#C8960A" />
@@ -497,75 +562,82 @@ export default memo(function RequestsFeed({
             )}
           </div>
 
-          {/* ── Actions ── */}
-          <div style={{ padding: '4px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <textarea
-              value={offerNote}
-              onChange={e => setOfferNote(e.target.value)}
-              placeholder="Mensaje opcional para el cliente…"
-              maxLength={300}
-              rows={2}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: 12,
-                border: '1px solid var(--border-strong)', background: 'var(--input-bg)',
-                color: 'var(--input-text)', fontSize: '0.8rem', resize: 'none',
-                outline: 'none', boxSizing: 'border-box' }}
-            />
+          {/* ── Divider ── */}
+          <div style={{ height: 1, background: 'rgba(245,197,24,0.10)', margin: '0 14px' }} />
 
-            {/* Accept at client price */}
+          {/* ── Action zone ── */}
+          <div style={{ padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+            {/* Accept at client price — primary CTA */}
             <button
               onClick={() => onAccept(item.id, clientPrice, offerNote, distKm)}
               disabled={isSending}
-              style={{ width: '100%', padding: '13px 0', border: 'none', borderRadius: 14,
+              style={{
+                width: '100%', padding: '14px 0', border: 'none', borderRadius: 14,
                 cursor: isSending ? 'not-allowed' : 'pointer',
-                background: isSending ? 'rgba(200,255,0,0.3)' : '#c8ff00',
-                color: '#111', fontWeight: 900, fontSize: '1.05rem',
-                opacity: isSending ? 0.6 : 1 }}
+                background: isSending
+                  ? 'rgba(245,197,24,0.25)'
+                  : `linear-gradient(135deg,${BRAND},#F58A07)`,
+                color: '#1C1C2E', fontWeight: 900, fontSize: '1.08rem',
+                opacity: isSending ? 0.6 : 1,
+                boxShadow: isSending ? 'none' : `0 4px 16px ${BRAND_SHADOW}`,
+                letterSpacing: '0.01em',
+              }}
             >
-              Aceptar · ₲{clientPrice.toLocaleString()}
+              {isSending && offerSentForThis ? 'Enviando…' : `Aceptar · ₲${clientPrice.toLocaleString()}`}
             </button>
 
-            {/* Counter-offers */}
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569',
-              textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Ofrece tu tarifa
+            {/* Counter-offers section */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>
+                o propone tu tarifa
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
             </div>
+
             <div style={{ display: 'flex', gap: 6 }}>
               {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
                 <button
                   key={pct}
                   onClick={() => onAccept(item.id, amount, offerNote, distKm)}
                   disabled={isSending}
-                  style={{ flex: 1, padding: '8px 0', border: '1px solid #334155', borderRadius: 12,
-                    background: 'rgba(200,255,0,0.07)', color: '#c8ff00', fontWeight: 700,
-                    fontSize: '0.75rem', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}
+                  style={{
+                    flex: 1, padding: '8px 0',
+                    border: `1px solid rgba(245,197,24,0.25)`,
+                    borderRadius: 12,
+                    background: 'rgba(245,197,24,0.07)',
+                    color: BRAND, fontWeight: 700,
+                    fontSize: '0.74rem', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  }}
                 >
-                  <span>₲{amount.toLocaleString()}</span>
-                  <span style={{ fontSize: '0.6rem', color: '#475569' }}>{pct}</span>
+                  <span style={{ fontSize: '0.76rem' }}>₲{amount.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600 }}>{pct}</span>
                 </button>
               ))}
               {/* Custom price */}
               <button
                 onClick={() => setCustomOpen(o => !o)}
                 disabled={isSending}
-                style={{ width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
-                  border: `1px solid ${customOpen ? '#818cf8' : 'var(--border-strong)'}`,
-                  background: customOpen ? 'rgba(129,140,248,0.15)' : 'var(--glass-card)',
+                style={{
+                  width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
+                  border: `1px solid ${customOpen ? '#818cf8' : 'rgba(255,255,255,0.10)'}`,
+                  background: customOpen ? 'rgba(129,140,248,0.14)' : 'rgba(255,255,255,0.04)',
                   color: customOpen ? '#818cf8' : 'var(--text-muted)', fontWeight: 700,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 2 }}
+                  alignItems: 'center', justifyContent: 'center', gap: 2,
+                }}
                 title="Precio personalizado"
               >
-                <span style={{ display: 'flex', color: customOpen ? '#818cf8' : 'var(--text-muted)' }}>
-                  <Icon name="pencil" size={14} />
-                </span>
+                <Icon name="pencil" size={14} color={customOpen ? '#818cf8' : undefined} />
                 <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
               </button>
             </div>
 
             {customOpen && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
                 <input
                   type="text" inputMode="numeric" placeholder="Ej: 50000"
                   value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
@@ -581,11 +653,39 @@ export default memo(function RequestsFeed({
                   style={{ padding: '9px 14px', borderRadius: 12, border: 'none',
                     background: '#818cf8', color: '#fff', fontWeight: 800,
                     fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
-                    opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.45 : 1 }}
+                    opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.4 : 1 }}
                 >
                   Enviar
                 </button>
               </div>
+            )}
+
+            {/* Note toggle — collapsible */}
+            <button
+              onClick={() => setNoteOpen(o => !o)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: noteOpen ? 'var(--text-secondary)' : 'var(--text-muted)',
+                fontSize: '0.76rem', fontWeight: 600, padding: '2px 0',
+                alignSelf: 'flex-start',
+              }}
+            >
+              <Icon name="pencil" size={13} />
+              {noteOpen ? 'Ocultar mensaje' : '+ Agregar mensaje al cliente'}
+            </button>
+            {noteOpen && (
+              <textarea
+                value={offerNote}
+                onChange={e => setOfferNote(e.target.value)}
+                placeholder="Mensaje para el cliente (opcional)…"
+                maxLength={300}
+                rows={2}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 12,
+                  border: `1px solid rgba(245,197,24,0.22)`, background: 'var(--input-bg)',
+                  color: 'var(--input-text)', fontSize: '0.8rem', resize: 'none',
+                  outline: 'none', boxSizing: 'border-box' }}
+              />
             )}
           </div>
         </div>
