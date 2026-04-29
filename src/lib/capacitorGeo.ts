@@ -1,14 +1,20 @@
 /**
  * Capacitor Background Geolocation wrapper.
  *
- * - On web browsers: all functions are no-ops. Zero impact on existing behavior.
- * - Inside the APK (Capacitor native): starts a Foreground Service that keeps
- *   GPS alive even when the screen is off or the user switches to Google Maps.
+ * - On web browsers: no-op. Zero impact on existing behavior, zero build errors.
+ * - Inside the APK (Capacitor native): accesses BackgroundGeolocation via
+ *   window.Capacitor.Plugins (injected by the Android native bridge at runtime).
+ *   This avoids importing the npm package entirely, so Next.js/webpack never
+ *   tries to bundle a native-only module.
  *
- * Dynamic imports are used so web bundles are not affected by this file.
+ * When running inside the APK the Capacitor bridge injects all registered
+ * plugins into window.Capacitor.Plugins before the WebView executes any JS.
  */
 
 type LocationCallback = (lat: number, lng: number) => void;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyPlugin = Record<string, (...args: any[]) => any>;
 
 /**
  * Starts the background GPS watcher.
@@ -18,26 +24,30 @@ export async function startBackgroundGeo(
   onLocation: LocationCallback,
 ): Promise<(() => void) | null> {
   try {
-    // Guard: only activate inside Capacitor native runtime (APK).
-    // In web browsers Capacitor.isNativePlatform() returns false.
-    const { Capacitor } = await import('@capacitor/core');
-    if (!Capacitor.isNativePlatform()) return null;
+    if (typeof window === 'undefined') return null;
 
-    const { BackgroundGeolocation } = await import(
-      '@capacitor-community/background-geolocation'
-    );
+    // window.Capacitor is only present inside the native APK WebView.
+    // On regular browsers this object does not exist → safe no-op.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cap = (window as any).Capacitor;
+    if (!cap?.isNativePlatform?.()) return null;
 
-    const watcherId = await BackgroundGeolocation.addWatcher(
+    const BackgroundGeolocation: AnyPlugin | undefined =
+      cap.Plugins?.BackgroundGeolocation;
+    if (!BackgroundGeolocation) return null;
+
+    const watcherId: string = await BackgroundGeolocation.addWatcher(
       {
         // Notification shown in Android status bar while tracking is active
         backgroundMessage: 'TukiTask está usando tu ubicación en segundo plano.',
         backgroundTitle: 'TukiTask activo',
         requestPermissions: true,
         stale: false,
-        // Only fire callback when driver moved at least 15 m (reduces battery use)
+        // Fire callback only when driver moved ≥ 15 m (reduces battery use)
         distanceFilter: 15,
       },
-      (location, error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (location: any, error: any) => {
         if (error || !location) return;
         onLocation(location.latitude, location.longitude);
       },
@@ -45,10 +55,10 @@ export async function startBackgroundGeo(
 
     // Return cleanup so the caller can stop the watcher on unmount
     return () => {
-      BackgroundGeolocation.removeWatcher({ id: watcherId }).catch(() => {});
+      BackgroundGeolocation.removeWatcher({ id: watcherId }).catch?.(() => {});
     };
   } catch {
-    // If the plugin is missing (e.g. browser build) fail silently
+    // Fail silently — never break the web app
     return null;
   }
 }
