@@ -122,6 +122,63 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
 /* ── Pulse animation injected once ─────────────────────────────────────── */
 const PULSE_CSS = `@keyframes mis-ofertas-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`;
 
+const BRAND = '#F5C518';
+const BRAND_SHADOW = 'rgba(245,197,24,0.35)';
+
+const DELIVERY_STEPS = [
+  { key: 'accepted',   label: 'Aceptado'  },
+  { key: 'picking_up', label: 'En camino' },
+  { key: 'at_pickup',  label: 'Recogida'  },
+  { key: 'in_transit', label: 'Tránsito'  },
+  { key: 'delivered',  label: 'Entregado' },
+] as const;
+
+const JOB_STEPS = [
+  { key: 'accepted',           label: 'Aceptado'  },
+  { key: 'en_camino',          label: 'En camino' },
+  { key: 'llegue',             label: 'Llegué'    },
+  { key: 'en_proceso',         label: 'En servicio'},
+  { key: 'completion_pending', label: 'Completado'},
+] as const;
+
+function ProgressStepper({ steps, currentKey }: { steps: readonly { key: string; label: string }[]; currentKey: string }) {
+  const activeIdx = steps.findIndex(s => s.key === currentKey);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', padding: '4px 16px 14px' }}>
+      {steps.map((step, i) => {
+        const done   = i < activeIdx;
+        const active = i === activeIdx;
+        return (
+          <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+            {i > 0 && (
+              <div style={{
+                position: 'absolute', top: 5, right: '50%', left: '-50%',
+                height: 2,
+                background: done ? BRAND : active ? 'rgba(245,197,24,0.4)' : 'rgba(255,255,255,0.1)',
+                transition: 'background 0.3s',
+              }} />
+            )}
+            <div style={{
+              width: 12, height: 12, borderRadius: '50%', zIndex: 1, position: 'relative',
+              background: done || active ? BRAND : 'rgba(255,255,255,0.15)',
+              boxShadow: active ? `0 0 0 3px ${BRAND_SHADOW}` : 'none',
+              transition: 'all 0.3s',
+            }} />
+            <span style={{
+              fontSize: '0.58rem',
+              color: active ? BRAND : done ? 'rgba(245,197,24,0.6)' : 'rgba(255,255,255,0.25)',
+              fontWeight: active ? 700 : 400,
+              marginTop: 4,
+              textAlign: 'center',
+              lineHeight: 1.2,
+            }}>{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────────────────────── */
 export default function MisOfertasPage() {
   const { email, displayName } = useClientContext();
@@ -436,6 +493,11 @@ export default function MisOfertasPage() {
                   <span className="tuki-card-subtitle">{typeLabel}</span>
                 </div>
 
+                {/* ── Progress stepper (only for active delivery statuses) */}
+                {['accepted', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
+                  <ProgressStepper steps={DELIVERY_STEPS} currentKey={order.status} />
+                )}
+
                 {/* ── Worker row (only if assigned) */}
                 {hasWorker && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px 12px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
@@ -642,6 +704,11 @@ export default function MisOfertasPage() {
                   </div>
                   <span className="tuki-card-subtitle">{serviceLabel}</span>
                 </div>
+
+                {/* ── Progress stepper (only for active job statuses) */}
+                {['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'].includes(job.status) && (
+                  <ProgressStepper steps={JOB_STEPS} currentKey={job.status} />
+                )}
 
                 {/* ── Worker row */}
                 {hasWorker && (
