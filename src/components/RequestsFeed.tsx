@@ -218,6 +218,9 @@ export default memo(function RequestsFeed({
   const distKm = (driverLat != null && driverLng != null && item.pickupLat != null && item.pickupLng != null)
     ? haversineKm(driverLat, driverLng, item.pickupLat, item.pickupLng)
     : null;
+  const routeKm = (item.pickupLat != null && item.pickupLng != null && item.deliveryLat != null && item.deliveryLng != null)
+    ? haversineKm(item.pickupLat, item.pickupLng, item.deliveryLat, item.deliveryLng)
+    : null;
   const label = labels[item.title] || item.title;
   const stopCount = item.stops?.length ?? 0;
   const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
@@ -369,35 +372,36 @@ export default memo(function RequestsFeed({
 
               {/* Name + service + meta */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Service type label */}
-                <div style={{
-                  fontWeight: 800, color: 'var(--text-primary)', fontSize: '1rem',
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  lineHeight: 1.2, marginBottom: 3,
-                }}>{label}</div>
-                {/* Client name + meta */}
-                <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 600 }}>{item.clientName || 'Cliente'}</span>
+                {/* Client name — PRIMARY, large */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                  <div style={{
+                    fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.15rem',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    lineHeight: 1.2,
+                  }}>{item.clientName || 'Cliente'}</div>
                   {item.clientVerified && (
-                    <span title="Verificado" style={{ color: '#22c55e', display: 'inline-flex' }}>
-                      <Icon name="shield" size={12} />
-                    </span>
-                  )}
-                  {item.clientRating != null && item.clientRating > 0 && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#f59e0b' }}>
-                      <Icon name="star" size={11} color="#f59e0b" />
-                      <span style={{ fontWeight: 700 }}>{Number(item.clientRating).toFixed(1)}</span>
-                    </span>
-                  )}
-                  {distKm != null && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--text-muted)' }}>
-                      <Icon name="map" size={11} color="#94a3b8" />
-                      {distKm.toFixed(1)} km
+                    <span title="Verificado" style={{ color: '#22c55e', display: 'inline-flex', flexShrink: 0 }}>
+                      <Icon name="shield" size={14} />
                     </span>
                   )}
                 </div>
-                {/* Badges */}
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+                {/* Rating row — prominent */}
+                {item.clientRating != null && item.clientRating > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+                    {'★★★★★'.split('').map((_, i) => (
+                      <span key={i} style={{ fontSize: '0.82rem', color: i < Math.round(Number(item.clientRating)) ? '#F5C518' : 'rgba(156,163,175,0.35)', lineHeight: 1 }}>★</span>
+                    ))}
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#F5C518', marginLeft: 1 }}>
+                      {Number(item.clientRating).toFixed(1)}
+                    </span>
+                  </div>
+                )}
+                {/* Service type chip + order badges */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {/* Service label chip */}
+                  <span style={{ background: 'rgba(245,197,24,0.10)', color: '#F5C518', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 99, padding: '2px 8px', fontSize: '0.63rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    {label}
+                  </span>
                   {item.orderType === 'mandadito' && (
                     <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       <Icon name="package" size={11} /> Mandadito
@@ -452,6 +456,38 @@ export default memo(function RequestsFeed({
                 </div>
               </div>
             </div>
+
+            {/* ── Km badges row ── */}
+            {(distKm != null || routeKm != null) && (
+              <div style={{ display: 'flex', gap: 7, marginBottom: 8 }}>
+                {distKm != null && (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'rgba(34,197,94,0.09)', border: '1px solid rgba(34,197,94,0.22)',
+                    borderRadius: 10, padding: '7px 10px',
+                  }}>
+                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>📍</span>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>Recogida</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: '#fff', lineHeight: 1.1, marginTop: 1 }}>{distKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80' }}>km</span></div>
+                    </div>
+                  </div>
+                )}
+                {routeKm != null && (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'rgba(59,130,246,0.09)', border: '1px solid rgba(59,130,246,0.22)',
+                    borderRadius: 10, padding: '7px 10px',
+                  }}>
+                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>🏁</span>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>Entrega</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: '#fff', lineHeight: 1.1, marginTop: 1 }}>{routeKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa' }}>km</span></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Addresses ── */}
             <div style={{
