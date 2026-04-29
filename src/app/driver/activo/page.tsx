@@ -28,6 +28,17 @@ const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: 
   at_pickup:  { label: 'Iniciar entrega', nextStatus: 'in_transit' },
 };
 
+const BRAND = '#F5C518';
+const BRAND_SHADOW = 'rgba(245,197,24,0.35)';
+
+const DELIVERY_STEPS = [
+  { key: 'accepted',   label: 'Aceptado'  },
+  { key: 'picking_up', label: 'En camino' },
+  { key: 'at_pickup',  label: 'Recogida'  },
+  { key: 'in_transit', label: 'Tránsito'  },
+  { key: 'delivered',  label: 'Entregado' },
+] as const;
+
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
 }
@@ -269,19 +280,67 @@ export default function ActivoPage() {
             <Icon name={statusInfo.icon} size={14} color={statusTone.color} />
             {statusInfo.label}
           </span>
-          <span className="tuki-card-subtitle">#{track}</span>
+          <span
+            className="tuki-card-subtitle"
+            onClick={() => { navigator.clipboard?.writeText(track).catch(() => {}); }}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            title="Toca para copiar"
+          >#{track}</span>
         </div>
 
         <div className="tuki-card-body">
+          {/* Progress stepper */}
+          {(() => {
+            const returnMode = ['returning', 'driver_returning', 'return_delivered'].includes(status);
+            const activeIdx = returnMode ? 3 : DELIVERY_STEPS.findIndex(s => s.key === status);
+            return (
+              <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 18, padding: '4px 0 0' }}>
+                {DELIVERY_STEPS.map((step, i) => {
+                  const done = i < activeIdx;
+                  const active = i === activeIdx;
+                  return (
+                    <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                      {i > 0 && (
+                        <div style={{
+                          position: 'absolute', top: 5, right: '50%', left: '-50%',
+                          height: 2,
+                          background: done ? BRAND : active ? 'rgba(245,197,24,0.4)' : 'rgba(255,255,255,0.1)',
+                          transition: 'background 0.3s',
+                        }} />
+                      )}
+                      <div style={{
+                        width: 12, height: 12, borderRadius: '50%', zIndex: 1, position: 'relative',
+                        background: done || active ? BRAND : 'rgba(255,255,255,0.15)',
+                        boxShadow: active ? `0 0 0 3px ${BRAND_SHADOW}` : 'none',
+                        transition: 'all 0.3s',
+                      }} />
+                      <span style={{
+                        fontSize: '0.58rem',
+                        color: active ? BRAND : done ? 'rgba(245,197,24,0.6)' : 'rgba(255,255,255,0.25)',
+                        fontWeight: active ? 700 : 400,
+                        marginTop: 4,
+                        textAlign: 'center',
+                        lineHeight: 1.2,
+                      }}>{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <div
               className="tuki-avatar"
               style={{
+                width: 58, height: 58, fontSize: '1.45rem', flexShrink: 0,
                 background: clientPhoto
-                  ? `url(${clientPhoto}) center/cover`
-                  : 'linear-gradient(135deg, #F5C518, #F58A07)',
+                  ? `url(${clientPhoto}) center/cover no-repeat`
+                  : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
                 color: '#1C1C2E',
+                boxShadow: `0 0 0 3px ${BRAND_SHADOW}, 0 2px 10px rgba(0,0,0,0.4)`,
+                border: `2px solid ${BRAND}`,
               }}
             >
               {!clientPhoto && clientName[0]?.toUpperCase()}
@@ -295,7 +354,7 @@ export default function ActivoPage() {
               )}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div className="tuki-price" style={{ color: '#4ade80' }}>₲{price}</div>
+              <div className="tuki-price" style={{ color: BRAND }}>₲{price}</div>
               <div className="tuki-price-label">acordado</div>
             </div>
           </div>
@@ -587,19 +646,33 @@ export default function ActivoPage() {
             <button
               disabled={!!acting}
               onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
-              className="tuki-btn tuki-btn-primary tuki-btn-block"
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                color: acting ? '#6b7280' : '#1C1C2E',
+                fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                letterSpacing: '0.3px',
+                transition: 'all 0.2s',
+              }}
             >
               {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
             </button>
           )}
 
           {status === 'in_transit' && !isFinOpen && (
-            // "Finalizar servicio" button
             <button
               onClick={() => setFinalizeOpen(prev => new Set([...prev, order.id]))}
-              className="tuki-btn tuki-btn-success tuki-btn-block"
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.5)',
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.28))',
+                color: '#4ade80', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: '0 4px 16px rgba(16,185,129,0.2)',
+              }}
             >
-              <Icon name="flag" size={14} /> Finalizar servicio
+              <Icon name="flag" size={16} color="#4ade80" />
+              Finalizar entrega
             </button>
           )}
 

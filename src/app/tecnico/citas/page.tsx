@@ -57,7 +57,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   completion_pending: { label: 'Esperando cliente',    color: '#C8960A', bg: '#FEF9E7' },
   incidente:          { label: 'Incidente',            color: '#ef4444', bg: '#fee2e2' },
 };
+const BRAND = '#F5C518';
+const BRAND_SHADOW = 'rgba(245,197,24,0.35)';
 
+const JOB_STEPS = [
+  { key: 'accepted',           label: 'Aceptado'  },
+  { key: 'en_camino',          label: 'En camino' },
+  { key: 'llegue',             label: 'Llegüé'    },
+  { key: 'en_proceso',         label: 'Trabajando'},
+  { key: 'completion_pending', label: 'Completado'},
+] as const;
 export default function CitasPage() {
   const router = useRouter();
   const { email, displayName } = useWorkerContext();
@@ -359,34 +368,88 @@ export default function CitasPage() {
               const st = STATUS_CONFIG[job.status] ?? { label: job.status, color: '#64748b', bg: '#f1f5f9' };
               const busy = !!actionId;
               return (
-                <div key={job.id} style={{ background: 'var(--card-bg)', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)' }}>
-                  {/* Title row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                <div key={job.id} style={{
+                  background: 'var(--card-bg)',
+                  borderRadius: 16,
+                  border: `1.5px solid ${st.color}33`,
+                  boxShadow: `0 2px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
+                  overflow: 'hidden',
+                }}>
+                  {/* Status header strip */}
+                  <div style={{
+                    background: `linear-gradient(135deg, ${st.color}22, ${st.color}10)`,
+                    borderBottom: `1px solid ${st.color}30`,
+                    padding: '10px 14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                  }}>
                     <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {SERVICE_LABELS[job.service_type] ?? job.service_type}
                     </span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: '3px 10px' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: st.color, background: `${st.color}22`, borderRadius: 8, padding: '3px 10px', border: `1px solid ${st.color}40`, flexShrink: 0 }}>
                       {st.label}
                     </span>
-                    <button
-                      onClick={() => { setChatJobId(job.id); setChatOtherName(job.client_name); setChatOtherPhoto(job.client_photo ?? null); setChatOpen(true); }}
-                      style={{ padding: '3px 10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#16a34a', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      💬 Chat
-                    </button>
                   </div>
 
+                  <div style={{ padding: '14px 16px 16px' }}>
+                  {/* Progress stepper */}
+                  {job.status !== 'incidente' && (() => {
+                    const activeIdx = JOB_STEPS.findIndex(s => s.key === job.status);
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 16, padding: '2px 0 0' }}>
+                        {JOB_STEPS.map((step, i) => {
+                          const done = i < activeIdx;
+                          const active = i === activeIdx;
+                          return (
+                            <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                              {i > 0 && (
+                                <div style={{
+                                  position: 'absolute', top: 5, right: '50%', left: '-50%',
+                                  height: 2,
+                                  background: done ? BRAND : active ? 'rgba(245,197,24,0.35)' : 'rgba(255,255,255,0.1)',
+                                  transition: 'background 0.3s',
+                                }} />
+                              )}
+                              <div style={{
+                                width: 12, height: 12, borderRadius: '50%', zIndex: 1, position: 'relative',
+                                background: done || active ? BRAND : 'rgba(255,255,255,0.15)',
+                                boxShadow: active ? `0 0 0 3px ${BRAND_SHADOW}` : 'none',
+                                transition: 'all 0.3s',
+                              }} />
+                              <span style={{
+                                fontSize: '0.58rem',
+                                color: active ? BRAND : done ? 'rgba(245,197,24,0.6)' : 'rgba(255,255,255,0.25)',
+                                fontWeight: active ? 700 : 400,
+                                marginTop: 4,
+                                textAlign: 'center',
+                                lineHeight: 1.2,
+                              }}>{step.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   {/* Client info row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     {job.client_photo
-                      ? <img src={job.client_photo} alt={job.client_name ?? 'Cliente'} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
-                      : <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👤</div>
+                      ? <img src={job.client_photo} alt={job.client_name ?? 'Cliente'} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${BRAND}`, boxShadow: `0 0 0 3px ${BRAND_SHADOW}`, flexShrink: 0 }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: '50%', background: `linear-gradient(135deg, ${BRAND}, #F58A07)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0, border: `2px solid ${BRAND}`, boxShadow: `0 0 0 3px ${BRAND_SHADOW}`, color: '#1C1C2E', fontWeight: 800 }}>
+                          {(job.client_name ?? 'C')[0].toUpperCase()}
+                        </div>
                     }
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {job.client_name && <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{job.client_name}</span>}
+                      {job.client_name && <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{job.client_name}</span>}
                       {job.address && <span>📍 {job.address}</span>}
                       {job.scheduled_at && <span>📅 {fmtDate(job.scheduled_at)}</span>}
                     </div>
+                    {/* Chat button */}
+                    <button
+                      onClick={() => { setChatJobId(job.id); setChatOtherName(job.client_name); setChatOtherPhoto(job.client_photo ?? null); setChatOpen(true); }}
+                      style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#16a34a', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      💬 Chat
+                    </button>
                   </div>
 
                   {/* Audio del cliente */}
@@ -470,7 +533,7 @@ export default function CitasPage() {
                       </div>
                       {/* Row 2: Marcar completado full width */}
                       <button onClick={() => doActionConfirmed(job.id, 'completion_pending', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')} disabled={busy}
-                        style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: busy ? 'default' : 'pointer' }}>
+                        style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', background: busy ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? '#6b7280' : '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(16,185,129,0.3)' }}>
                         ✅ Marcar completado
                       </button>
                     </div>
@@ -501,6 +564,7 @@ export default function CitasPage() {
                       Cancelar trabajo
                     </button>
                   )}
+                  </div>{/* end inner padding */}
                 </div>
               );
             })}

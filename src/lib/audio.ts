@@ -238,6 +238,16 @@ export function playClientOfferAlert(): void {
   } catch { /* silent */ }
 }
 
+/** Double soft beep — new chat message received */
+export function playMessageAlert(): void {
+  try {
+    const c = getAC(); if (!c) return;
+    const t = c.currentTime;
+    beepSoft(c, t, 880, 0.12);
+    beepSoft(c, t + 0.18, 1100, 0.1);
+  } catch { /* silent */ }
+}
+
 /** Status-specific notification sounds for tecnico job transitions */
 export function playStatusSound(status: string): void {
   try {
@@ -251,15 +261,5 @@ export function playStatusSound(status: string): void {
       beepSoft(c, t, 1000); beepSoft(c, t+0.14, 1200); beepSoft(c, t+0.28, 1000); beepSoft(c, t+0.42, 1200);
     }
     else if (status === 'completado')     { beepSoft(c, t, 523); beepSoft(c, t+0.16, 659); beepSoft(c, t+0.32, 784); beepSoft(c, t+0.48, 1047); }
-  } catch { /* silent */ }
-}
-
-/** Two-tone soft ping — new chat message received */
-export function playMessageAlert(): void {
-  try {
-    const c = getAC(); if (!c) return;
-    const t = c.currentTime;
-    beepSoft(c, t,        800, 0.10);
-    beepSoft(c, t + 0.13, 1050, 0.10);
   } catch { /* silent */ }
 }
