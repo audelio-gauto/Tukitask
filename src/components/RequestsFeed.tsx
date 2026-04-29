@@ -604,16 +604,17 @@ export default memo(function RequestsFeed({
                   disabled={isSending}
                   style={{
                     flex: 1, padding: '8px 0',
-                    border: `1px solid rgba(245,197,24,0.25)`,
+                    border: 'none',
                     borderRadius: 12,
-                    background: 'rgba(245,197,24,0.07)',
-                    color: BRAND, fontWeight: 700,
+                    background: `linear-gradient(135deg,${BRAND},#F58A07)`,
+                    color: '#1C1C2E', fontWeight: 800,
                     fontSize: '0.74rem', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    boxShadow: `0 2px 8px ${BRAND_SHADOW}`,
                   }}
                 >
-                  <span style={{ fontSize: '0.76rem' }}>₲{amount.toLocaleString()}</span>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600 }}>{pct}</span>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 900 }}>₲{amount.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'rgba(28,28,46,0.65)', fontWeight: 700 }}>{pct}</span>
                 </button>
               ))}
               {/* Custom price */}
