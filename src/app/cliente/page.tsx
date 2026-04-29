@@ -188,12 +188,13 @@ const OFFER_TIMER = 50;
 
 /* ─── Offer card (inDrive style) ─────────────────────────────────────────── */
 function OfferCard({
-  offer, onAccept, onReject, busy,
+  offer, onAccept, onReject, busy, isTop,
 }: {
   offer: UnifiedOffer;
   onAccept: () => void;
   onReject: () => void;
   busy: boolean;
+  isTop?: boolean;
 }) {
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, OFFER_TIMER - Math.floor((Date.now() - new Date(offer.createdAt).getTime()) / 1000))
@@ -221,8 +222,14 @@ function OfferCard({
       overflow: 'hidden',
       boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
     }}>
-      {/* BRAND accent top strip */}
-      <div style={{ height: 3, background: 'linear-gradient(90deg, #F5C518, #F58A07)' }} />
+      {/* BRAND accent top strip / Recommended banner */}
+      {isTop && isPending && offer.matchScore != null ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '5px 16px', background: 'linear-gradient(90deg, rgba(245,197,24,0.16), rgba(245,130,7,0.10))', borderBottom: '1px solid rgba(245,197,24,0.28)' }}>
+          <span style={{ fontSize: '0.71rem', fontWeight: 900, color: '#F5C518', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🏅 Mejor opción para ti</span>
+        </div>
+      ) : (
+        <div style={{ height: 3, background: 'linear-gradient(90deg, #F5C518, #F58A07)' }} />
+      )}
       <div style={{ padding: '14px 16px 12px' }}>
 
         {/* ── TOP ROW: price + ETA (big, like inDrive) ── */}
@@ -261,15 +268,6 @@ function OfferCard({
           )}
         </div>
 
-        {/* Badge "Tu tarifa" */}
-        {isSuggestedPrice && isPending && (
-          <div style={{ marginBottom: 10 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#16a34a', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>
-              👍 Tu tarifa
-            </span>
-          </div>
-        )}
-
         {/* ── DRIVER ROW: photo + name + rating + trips ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
           {offer.photo ? (
@@ -306,23 +304,41 @@ function OfferCard({
                 {offer.vehicleModel}
               </div>
             )}
-            {/* Match score badge */}
+            {/* Match score with mini progress bar */}
             {offer.matchScore != null && isPending && (
-              <div style={{ marginTop: 4 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: `${offer.matchColor ?? '#6b7280'}22`,
-                  border: `1px solid ${offer.matchColor ?? '#6b7280'}55`,
-                  borderRadius: 6, padding: '2px 8px',
-                  fontSize: '0.72rem', fontWeight: 800,
-                  color: offer.matchColor ?? '#9ca3af',
-                }}>
-                  ⚡ {offer.matchScore}/100 · {offer.matchLabel}
-                </span>
+              <div style={{ marginTop: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: offer.matchColor ?? '#9ca3af' }}>
+                    ⚡ {offer.matchLabel}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                    {offer.matchScore}/100
+                  </span>
+                </div>
+                <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${offer.matchScore}%`, background: `linear-gradient(90deg, ${offer.matchColor ?? '#6b7280'}, ${offer.matchColor ?? '#6b7280'}aa)`, borderRadius: 4 }} />
+                </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* ── Fortaleza chips ── */}
+        {isPending && (() => {
+          const chips: React.ReactNode[] = [];
+          if (offer.distanceKm != null && offer.distanceKm < 3)
+            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km · Muy cercano</span>);
+          else if (offer.distanceKm != null && offer.distanceKm < 8)
+            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(59,130,246,0.10)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.22)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km</span>);
+          if (offer.rating != null && Number(offer.rating) >= 4.7)
+            chips.push(<span key="rating" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(245,197,24,0.12)', color: '#F5C518', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 6, padding: '2px 8px' }}>⭐ Top rated</span>);
+          if (offer.totalJobs != null && offer.totalJobs >= 50)
+            chips.push(<span key="jobs" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 6, padding: '2px 8px' }}>🏆 {offer.totalJobs >= 200 ? 'Muy experimentado' : 'Experimentado'}</span>);
+          if (isSuggestedPrice)
+            chips.push(<span key="price" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 6, padding: '2px 8px' }}>👍 Tu tarifa exacta</span>);
+          if (chips.length === 0) return null;
+          return <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', margin: '8px 0 2px' }}>{chips}</div>;
+        })()}
 
         {/* Note */}
         {offer.note && (
@@ -1053,11 +1069,12 @@ export default function ClienteHomePage() {
             {/* Scrollable offer cards */}
             <div style={{ overflowY: 'auto', padding: '4px 10px 24px', display: 'flex', flexDirection: 'column', gap: 8, WebkitOverflowScrolling: 'touch' as never, overscrollBehavior: 'contain' }}>
 
-              {paginatedOffers.map(offer => (
+              {paginatedOffers.map((offer, idx) => (
                 <OfferCard
                   key={offer.id}
                   offer={offer}
                   busy={busy}
+                  isTop={idx === 0 && offer.status === 'pending' && offer.matchScore != null && paginatedOffers.filter(o => o.status === 'pending').length > 1}
                   onAccept={() => offer.requestType === 'delivery'
                     ? acceptDriverOffer(offer.id)
                     : acceptJobOffer(offer.requestId, offer.id)
