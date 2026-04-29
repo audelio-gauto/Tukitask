@@ -241,7 +241,7 @@ export default memo(function RequestsFeed({
     : gsPerKm! >= (vehicleRates!.rate_good_gspm ?? Infinity) ? '#22c55e'
     : vehicleRates!.rate_ok_gspm != null && gsPerKm! >= vehicleRates!.rate_ok_gspm ? '#f59e0b'
     : '#ef4444';
-  const rateLabel = rateColor === '#22c55e' ? 'Buena oferta' : rateColor === '#f59e0b' ? 'Aceptable' : 'No conviene';
+  const rateLabel = rateColor === '#22c55e' ? 'Buena oferta' : rateColor === '#f59e0b' ? 'Oferta Aceptable' : 'Oferta baja';
 
   const label = labels[item.title] || item.title;
   const stopCount = item.stops?.length ?? 0;

@@ -131,9 +131,9 @@ export default function DriverRatesPage() {
         <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '0.85rem', marginBottom: 8 }}>¿Cómo funciona?</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {[
-            { color: '#22c55e', label: '🟢 Buena oferta', desc: '≥ Gs/km "Buena" — conviene aceptar' },
-            { color: '#f59e0b', label: '🟡 Aceptable',    desc: '≥ Gs/km "Aceptable" pero < "Buena"' },
-            { color: '#ef4444', label: '🔴 No conviene',  desc: '< Gs/km "Aceptable" — mejor contra-ofertar' },
+            { color: '#22c55e', label: '🟢 Buena oferta',     desc: '≥ Gs/km "Buena" — conviene aceptar' },
+            { color: '#f59e0b', label: '🟡 Oferta Aceptable', desc: '≥ Gs/km "Aceptable" pero < "Buena"' },
+            { color: '#ef4444', label: '🔴 Oferta baja',       desc: '< Gs/km "Aceptable" — mejor contra-ofertar' },
           ].map(item => (
             <div key={item.color} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
