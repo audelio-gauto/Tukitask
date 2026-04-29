@@ -109,18 +109,18 @@ export default function DriverRatesPage() {
     <div>
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-        <Link href="/admin/drivers" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', textDecoration: 'none' }}>
+        <Link href="/admin/drivers" style={{ color: 'var(--adm-text-muted)', fontSize: '0.85rem', textDecoration: 'none' }}>
           Conductores
         </Link>
-        <span style={{ color: 'rgba(255,255,255,0.25)' }}>›</span>
+        <span style={{ color: 'var(--adm-text-muted)' }}>›</span>
         <span style={{ color: '#F5C518', fontSize: '0.85rem', fontWeight: 700 }}>Rentabilidad Gs/km</span>
       </div>
 
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', marginBottom: 6 }}>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--adm-text-primary)', marginBottom: 6 }}>
           💰 Rentabilidad Gs/km por Vehículo
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+        <p style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
           Configurá los umbrales de Gs por km que verá cada conductor al recibir una solicitud.
           Si dejás ambos campos vacíos, el indicador no se mostrará para ese tipo de vehículo.
         </p>
@@ -138,25 +138,25 @@ export default function DriverRatesPage() {
             <div key={item.color} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
               <span style={{ fontWeight: 700, color: item.color, fontSize: '0.78rem', width: 110 }}>{item.label}</span>
-              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>{item.desc}</span>
+              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.78rem' }}>{item.desc}</span>
             </div>
           ))}
         </div>
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#f87171', fontSize: '0.85rem' }}>
+        <div style={{ background: 'var(--adm-danger-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: 'var(--adm-danger)', fontSize: '0.85rem' }}>
           {error}
         </div>
       )}
       {success && (
-        <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#4ade80', fontSize: '0.85rem' }}>
+        <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#16a34a', fontSize: '0.85rem' }}>
           ✓ {success}
         </div>
       )}
 
       {loading ? (
-        <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 40 }}>Cargando…</div>
+        <div style={{ color: 'var(--adm-text-muted)', textAlign: 'center', padding: 40 }}>Cargando…</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {rates.map(r => {
@@ -169,16 +169,14 @@ export default function DriverRatesPage() {
 
             return (
               <div key={r.vehicle_type} style={{
-                background: 'var(--card-bg, rgba(255,255,255,0.04))',
-                border: `1.5px solid ${isActive ? 'rgba(245,197,24,0.28)' : 'rgba(255,255,255,0.08)'}`,
+                background: 'var(--adm-surface)',
+                border: `1.5px solid ${isActive ? 'rgba(245,197,24,0.35)' : 'var(--adm-border)'}`,
                 borderRadius: 18,
                 padding: '20px',
                 position: 'relative',
                 overflow: 'hidden',
+                boxShadow: 'var(--adm-shadow-soft)',
               }}>
-                {/* Shimmer */}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%)', pointerEvents: 'none' }} />
-
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -190,8 +188,8 @@ export default function DriverRatesPage() {
                       {r.emoji}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 900, color: '#fff', fontSize: '1rem' }}>{r.label}</div>
-                      <div style={{ fontSize: '0.72rem', color: isActive ? '#4ade80' : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
+                      <div style={{ fontWeight: 900, color: 'var(--adm-text-primary)', fontSize: '1rem' }}>{r.label}</div>
+                      <div style={{ fontSize: '0.72rem', color: isActive ? '#16a34a' : 'var(--adm-text-muted)', fontWeight: 700 }}>
                         {isActive ? '● Activo' : '○ Sin configurar'}
                       </div>
                     </div>
@@ -200,7 +198,7 @@ export default function DriverRatesPage() {
                     <button
                       onClick={() => handleClear(r.vehicle_type)}
                       disabled={saving === r.vehicle_type}
-                      style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', color: '#f87171', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ background: 'var(--adm-danger-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '4px 10px', color: 'var(--adm-danger)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                     >
                       Desactivar
                     </button>
@@ -214,15 +212,15 @@ export default function DriverRatesPage() {
                     { label: '🟡 Aceptable', color: '#f59e0b', val: okNum },
                   ].map(b => (
                     <div key={b.label} style={{
-                      flex: 1, background: b.val != null ? `${b.color}18` : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${b.val != null ? `${b.color}40` : 'rgba(255,255,255,0.08)'}`,
+                      flex: 1, background: b.val != null ? `${b.color}18` : 'var(--adm-surface-2)',
+                      border: `1px solid ${b.val != null ? `${b.color}40` : 'var(--adm-border)'}`,
                       borderRadius: 8, padding: '6px 8px', textAlign: 'center',
                     }}>
-                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, marginBottom: 2 }}>{b.label}</div>
-                      <div style={{ fontWeight: 900, color: b.val != null ? b.color : 'rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--adm-text-muted)', fontWeight: 700, marginBottom: 2 }}>{b.label}</div>
+                      <div style={{ fontWeight: 900, color: b.val != null ? b.color : 'var(--adm-text-muted)', fontSize: '0.9rem' }}>
                         {b.val != null ? `₲${b.val.toLocaleString('es-PY')}` : '—'}
                       </div>
-                      {b.val != null && <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)' }}>Gs/km</div>}
+                      {b.val != null && <div style={{ fontSize: '0.6rem', color: 'var(--adm-text-muted)' }}>Gs/km</div>}
                     </div>
                   ))}
                 </div>
@@ -234,11 +232,11 @@ export default function DriverRatesPage() {
                     { key: 'ok'   as const, label: '🟡 Tarifa aceptable (Gs/km)', placeholder: 'Ej: 1200', hint: 'Amarillo — puede contra-ofertar' },
                   ].map(field => (
                     <div key={field.key}>
-                      <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--adm-text-secondary)', display: 'block', marginBottom: 4 }}>
                         {field.label}
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', fontWeight: 700 }}>₲</span>
+                        <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.85rem', fontWeight: 700 }}>₲</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -250,12 +248,14 @@ export default function DriverRatesPage() {
                           }}
                           style={{
                             flex: 1, padding: '9px 12px', borderRadius: 10,
-                            border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)',
-                            color: '#fff', fontSize: '0.9rem', fontWeight: 700, outline: 'none',
+                            border: '1px solid var(--adm-input-border)',
+                            background: 'var(--adm-input-bg)',
+                            color: 'var(--adm-text-primary)',
+                            fontSize: '0.9rem', fontWeight: 700, outline: 'none',
                           }}
                         />
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>{field.hint}</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--adm-text-muted)', marginTop: 3 }}>{field.hint}</div>
                     </div>
                   ))}
                 </div>
@@ -269,8 +269,8 @@ export default function DriverRatesPage() {
                     borderRadius: 12, border: 'none',
                     background: isDirty && saving !== r.vehicle_type
                       ? 'linear-gradient(135deg, #F5C518, #F58A07)'
-                      : 'rgba(255,255,255,0.06)',
-                    color: isDirty && saving !== r.vehicle_type ? '#1C1C2E' : 'rgba(255,255,255,0.3)',
+                      : 'var(--adm-surface-2)',
+                    color: isDirty && saving !== r.vehicle_type ? '#0f172a' : 'var(--adm-text-muted)',
                     fontWeight: 900, fontSize: '0.9rem',
                     cursor: isDirty && saving !== r.vehicle_type ? 'pointer' : 'default',
                     transition: 'background 0.2s',

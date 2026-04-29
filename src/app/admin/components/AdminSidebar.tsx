@@ -189,9 +189,9 @@ export default function AdminSidebar() {
   useEffect(() => {
     const autoOpen = new Set<string>();
     menuItems.forEach(item => {
-      const subMatch = item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/'));
-      const rootMatch = item.groupRootPath ? (pathname === item.groupRootPath || pathname.startsWith(item.groupRootPath + '/')) : false;
-      if (subMatch || rootMatch) autoOpen.add(item.label);
+      if (item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/'))) {
+        autoOpen.add(item.label);
+      }
     });
     setOpenMenus(autoOpen);
   }, [pathname]);
@@ -232,8 +232,7 @@ export default function AdminSidebar() {
         {menuItems.map(item => {
           const hasSubItems = !!(item.subItems && item.subItems.length > 0);
           const isOpen = openMenus.has(item.label);
-          const isChildActive = (item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/')) ?? false)
-            || (item.groupRootPath ? (pathname === item.groupRootPath || pathname.startsWith(item.groupRootPath + '/')) : false);
+          const isChildActive = (item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/')) ?? false);
           const isActive = !hasSubItems && !!item.href && (pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/')));
 
           if (hasSubItems) {
