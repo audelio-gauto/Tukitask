@@ -210,15 +210,15 @@ export async function GET(req: Request) {
     const driverEmails = [...new Set(
       (data as Record<string, unknown>[]).map(o => o.accepted_by as string).filter(Boolean)
     )];
-    let driverMap: Record<string, { name: string; photo: string | null; avg_rating: number | null }> = {};
+    let driverMap: Record<string, { name: string; photo: string | null; avg_rating: number | null; total_ratings: number | null }> = {};
     if (driverEmails.length > 0) {
       const { data: profiles } = await db
         .from('driver_profiles')
-        .select('email, first_name, last_name, profile_photo, avg_rating')
+        .select('email, first_name, last_name, profile_photo, avg_rating, total_ratings')
         .in('email', driverEmails);
-      (profiles ?? []).forEach((p: { email: string; first_name: string | null; last_name: string | null; profile_photo: string | null; avg_rating: number | null }) => {
+      (profiles ?? []).forEach((p: { email: string; first_name: string | null; last_name: string | null; profile_photo: string | null; avg_rating: number | null; total_ratings: number | null }) => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email.split('@')[0];
-        driverMap[p.email] = { name, photo: p.profile_photo ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null };
+        driverMap[p.email] = { name, photo: p.profile_photo ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, total_ratings: p.total_ratings != null ? Number(p.total_ratings) : null };
       });
     }
     const enriched = (data as Record<string, unknown>[]).map(o => ({
@@ -226,6 +226,8 @@ export async function GET(req: Request) {
       driver_email: o.accepted_by ?? null,
       driver_name: (o.accepted_by && driverMap[o.accepted_by as string]?.name) ? driverMap[o.accepted_by as string].name : (o.driver_name ?? null),
       driver_photo: (o.accepted_by && driverMap[o.accepted_by as string]?.photo) ? driverMap[o.accepted_by as string].photo : (o.driver_photo ?? null),
+      driver_avg_rating: (o.accepted_by && driverMap[o.accepted_by as string]?.avg_rating != null) ? driverMap[o.accepted_by as string].avg_rating : null,
+      driver_total_ratings: (o.accepted_by && driverMap[o.accepted_by as string]?.total_ratings != null) ? driverMap[o.accepted_by as string].total_ratings : null,
     }));
     return NextResponse.json(enriched);
   }

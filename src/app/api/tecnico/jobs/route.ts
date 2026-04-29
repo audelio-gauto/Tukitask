@@ -294,7 +294,24 @@ export async function GET(req: Request) {
         .in('status', ['pending', ...ACTIVE_STATUSES])
         .order('created_at', { ascending: false });
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json(data ?? []);
+      const jobs = data ?? [];
+      // Enrich with tecnico avg_rating + total_ratings from tecnico_settings
+      if (jobs.length > 0) {
+        const tecnicoEmails = [...new Set(jobs.map((j: Record<string, unknown>) => j.tecnico_email as string).filter(Boolean))];
+        if (tecnicoEmails.length > 0) {
+          const { data: settings } = await sb
+            .from('tecnico_settings')
+            .select('email, avg_rating, total_ratings')
+            .in('email', tecnicoEmails);
+          const settingsMap = Object.fromEntries((settings ?? []).map((s: Record<string, unknown>) => [s.email, s]));
+          return NextResponse.json(jobs.map((j: Record<string, unknown>) => ({
+            ...j,
+            tecnico_avg_rating: settingsMap[j.tecnico_email as string]?.avg_rating != null ? Number(settingsMap[j.tecnico_email as string].avg_rating) : null,
+            total_services: settingsMap[j.tecnico_email as string]?.total_ratings != null ? Number(settingsMap[j.tecnico_email as string].total_ratings) : null,
+          })));
+        }
+      }
+      return NextResponse.json(jobs);
     }
 
     // ── Client: service history (completado / incidente / cancelled) ──────────

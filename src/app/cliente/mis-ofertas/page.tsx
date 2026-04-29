@@ -32,6 +32,8 @@ interface ActiveOrder {
   driver_name: string | null;
   driver_photo: string | null;
   driver_rating: number | null;
+  driver_avg_rating: number | null;
+  driver_total_ratings: number | null;
   vehicle_type: string | null;
   order_type: string | null;
   accepted_by: string | null;
@@ -47,6 +49,8 @@ interface ActiveJob {
   tecnico_name: string | null;
   tecnico_photo: string | null;
   tecnico_rating: number | null;
+  tecnico_avg_rating: number | null;
+  total_services: number | null;
   tecnico_email: string | null;
   warranty_days: number | null;
 }
@@ -381,14 +385,17 @@ export default function MisOfertasPage() {
     return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
-  function StarRating({ rating }: { rating: number | null }) {
+  function StarRating({ rating, count, label }: { rating: number | null; count?: number | null; label?: string }) {
     if (rating == null) return null;
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
         {'★★★★★'.split('').map((_, i) => (
-          <span key={i} style={{ color: i < Math.round(rating) ? '#F5C518' : 'rgba(156,163,175,0.4)', fontSize: '0.8rem' }}>★</span>
+          <span key={i} style={{ color: i < Math.round(rating) ? '#F5C518' : 'rgba(156,163,175,0.4)', fontSize: '0.78rem' }}>★</span>
         ))}
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginLeft: 2 }}>{Number(rating).toFixed(1)}</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 2 }}>{Number(rating).toFixed(1)}</span>
+        {count != null && count > 0 && (
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', marginLeft: 3, opacity: 0.8 }}>· {count} {label ?? 'envíos'}</span>
+        )}
       </div>
     );
   }
@@ -521,7 +528,7 @@ export default function MisOfertasPage() {
                       <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {order.driver_name || 'Conductor'}
                       </div>
-                      <StarRating rating={order.driver_rating} />
+                      <StarRating rating={order.driver_avg_rating ?? order.driver_rating} count={order.driver_total_ratings} label="envíos" />
                     </div>
                     {/* Price */}
                     {price != null && (
@@ -726,7 +733,7 @@ export default function MisOfertasPage() {
                       <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {job.tecnico_name || 'Técnico'}
                       </div>
-                      <StarRating rating={job.tecnico_rating} />
+                      <StarRating rating={job.tecnico_avg_rating ?? job.tecnico_rating} count={job.total_services} label="servicios" />
                     </div>
                     {job.agreed_price != null && (
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
