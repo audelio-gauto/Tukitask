@@ -38,4 +38,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Capacitor Android — build outputs and local gradle cache
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
 next-env.d.ts

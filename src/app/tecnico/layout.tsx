@@ -92,10 +92,23 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       dbIntervalId = setInterval(postToDB, 60_000);
     }
 
+    // Background GPS — only activates inside the Capacitor APK.
+    // On web browsers startBackgroundGeo() returns null (no-op).
+    let bgGeoStop: (() => void) | null = null;
+    import('@/lib/capacitorGeo').then(({ startBackgroundGeo }) =>
+      startBackgroundGeo((lat, lng) => {
+        lastLat = lat;
+        lastLng = lng;
+        setDriverPos({ lat, lng });
+        broadcastLocation(lat, lng);
+      }),
+    ).then(cleanup => { bgGeoStop = cleanup; });
+
     return () => {
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
       if (dbIntervalId != null) clearInterval(dbIntervalId);
       supabase.removeChannel(broadcastCh);
+      bgGeoStop?.();
     };
   }, [email]);
 
