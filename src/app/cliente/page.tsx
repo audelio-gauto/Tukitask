@@ -216,23 +216,25 @@ function OfferCard({
   return (
     <div style={{
       background: 'var(--sheet-bg)',
-      borderRadius: 14,
-      border: '1px solid var(--border-subtle)',
+      borderRadius: 16,
+      border: '1.5px solid rgba(245,197,24,0.20)',
       overflow: 'hidden',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
     }}>
+      {/* BRAND accent top strip */}
+      <div style={{ height: 3, background: 'linear-gradient(90deg, #F5C518, #F58A07)' }} />
       <div style={{ padding: '14px 16px 12px' }}>
 
         {/* ── TOP ROW: price + ETA (big, like inDrive) ── */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             {/* Price */}
-            <span style={{ fontSize: '1.7rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-1px', lineHeight: 1 }}>
+            <span style={{ fontSize: '1.7rem', fontWeight: 900, color: '#F5C518', letterSpacing: '-1px', lineHeight: 1 }}>
               ₲{Number(offer.price).toLocaleString()}
             </span>
             {/* ETA */}
             {eta != null && (
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>
+              <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-muted)', lineHeight: 1 }}>
                 {eta} min
               </span>
             )}
@@ -271,33 +273,36 @@ function OfferCard({
         {/* ── DRIVER ROW: photo + name + rating + trips ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
           {offer.photo ? (
-            <img src={offer.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+            <img src={offer.photo} alt="" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 0 0 3px rgba(245,197,24,0.25)', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--avatar-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+            <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 0 0 3px rgba(245,197,24,0.25)', flexShrink: 0 }}>
               {isDriver ? '🚗' : '🛠'}
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Name */}
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
             </div>
             {/* Rating + trips on same line */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               {offer.rating != null && (
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24' }}>
-                  ★ {Number(offer.rating).toFixed(2)}
-                </span>
+                <>
+                  {'★★★★★'.split('').map((_, i) => (
+                    <span key={i} style={{ color: i < Math.round(Number(offer.rating)) ? '#F5C518' : 'rgba(156,163,175,0.4)', fontSize: '0.75rem', lineHeight: 1 }}>★</span>
+                  ))}
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginLeft: 1 }}>{Number(offer.rating).toFixed(1)}</span>
+                </>
               )}
               {offer.totalJobs != null && offer.totalJobs > 0 && (
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {offer.totalJobs.toLocaleString()} {isDriver ? 'viajes' : 'servicios'}
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', opacity: 0.8 }}>
+                  · {offer.totalJobs.toLocaleString()} {isDriver ? 'viajes' : 'servicios'}
                 </span>
               )}
             </div>
             {/* Vehicle model */}
             {offer.vehicleModel && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+              <div style={{ fontSize: '0.77rem', color: 'var(--text-muted)', marginTop: 2 }}>
                 {offer.vehicleModel}
               </div>
             )}
@@ -321,7 +326,7 @@ function OfferCard({
 
         {/* Note */}
         {offer.note && (
-          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '6px 10px', background: 'var(--glass-card)', borderRadius: 8, borderLeft: '2px solid var(--border-strong)' }}>
+          <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '6px 10px', background: 'var(--glass-card)', borderRadius: 8, borderLeft: '2px solid rgba(245,197,24,0.4)' }}>
             "{offer.note}"
           </div>
         )}
@@ -332,14 +337,14 @@ function OfferCard({
             <button
               onClick={onReject}
               disabled={busy}
-              style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--surface-3)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
             >
               Rechazar
             </button>
             <button
               onClick={onAccept}
               disabled={busy}
-              style={{ flex: 2, padding: '12px 0', borderRadius: 10, border: 'none', background: busy ? '#15803d' : 'linear-gradient(90deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer' }}
+              style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', background: busy ? '#15803d' : 'linear-gradient(90deg, #22c55e, #16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 14px rgba(34,197,94,0.35)' }}
             >
               Aceptar
             </button>
@@ -348,7 +353,7 @@ function OfferCard({
           <button
             onClick={onReject}
             disabled={busy}
-            style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', marginTop: 4 }}
+            style={{ width: '100%', padding: '10px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', fontWeight: 700, fontSize: '0.85rem', cursor: busy ? 'default' : 'pointer', marginTop: 4 }}
           >
             ✕ Cancelar oferta
           </button>

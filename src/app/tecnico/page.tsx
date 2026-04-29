@@ -934,13 +934,43 @@ export default function TecnicoDashboard() {
             </div>
           ) : (
           <div className="tuki-stats-grid">
-            {/* Ganancias Hoy — full width, first so always visible */}
-            <Link href="/tecnico/ganancias" className="tuki-stat-card" style={{ gridColumn: 'span 2' }}>
-              <span className="tuki-stat-icon"><Icon name="money" size={18} /></span>
-              <div className="tuki-stat-value">
-                {statsData.gananciasHoy.toLocaleString('es-PY')} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tuki-text-secondary)' }}>Gs</span>
+            {/* Ganancias Hoy — full width, premium BRAND hero card */}
+            <Link href="/tecnico/ganancias" style={{
+              gridColumn: 'span 2',
+              background: 'linear-gradient(135deg, rgba(245,197,24,0.14) 0%, rgba(245,130,7,0.08) 100%)',
+              border: '1.5px solid rgba(245,197,24,0.35)',
+              borderRadius: 20,
+              padding: '14px 18px',
+              boxShadow: '0 4px 20px rgba(245,197,24,0.10), 0 2px 8px rgba(0,0,0,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              color: 'inherit',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'transform 0.18s, box-shadow 0.18s',
+            }}>
+              {/* Subtle top-left glow */}
+              <div style={{ position: 'absolute', top: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(245,197,24,0.18)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+              <div style={{
+                width: 48, height: 48, borderRadius: 15,
+                background: 'linear-gradient(135deg, #F5C518, #F58A07)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(245,197,24,0.4)',
+                flexShrink: 0,
+              }}>
+                <Icon name="money" size={22} color="#1C1C2E" />
               </div>
-              <div className="tuki-stat-label">Ganancias Hoy</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C8960A', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Ganancias Hoy</div>
+                <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#F5C518', lineHeight: 1, letterSpacing: '-0.5px' }}>
+                  {statsData.gananciasHoy.toLocaleString('es-PY')}
+                  <span style={{ fontSize: '1rem', fontWeight: 600, color: 'rgba(245,197,24,0.7)', marginLeft: 6 }}>Gs</span>
+                </div>
+              </div>
+              <div style={{ flexShrink: 0, color: 'rgba(245,197,24,0.6)', fontSize: '1.3rem' }}>›</div>
             </Link>
             {stats.map((s) => (
               <Link key={s.label} href={s.href} className="tuki-stat-card">
