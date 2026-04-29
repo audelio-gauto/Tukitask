@@ -34,6 +34,14 @@ const SECTIONS: Array<{
     color: 'rgba(96,165,250,0.1)',
     border: 'rgba(96,165,250,0.3)',
   },
+  {
+    href: '/admin/drivers/rates',
+    icon: 'money',
+    title: 'Rentabilidad Gs/km',
+    desc: 'Umbrales de Gs por km por tipo de vehículo — ayuda al driver a decidir si aceptar o contra-ofertar.',
+    color: 'rgba(245,197,24,0.08)',
+    border: 'rgba(245,197,24,0.25)',
+  },
 ];
 
 export default function DriversPage() {

@@ -7,7 +7,7 @@ import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
 import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
-import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
+import RequestsFeed, { type FeedItem, type RateConfig } from '@/components/RequestsFeed';
 import { Icon } from '@/components/Icon';
 
 // Mapbox GL must be loaded client-side only (no SSR)
@@ -77,6 +77,15 @@ export default function DriverDashboard() {
 
   // ── GPS position: consumed from layout context (no duplicate watchPosition) ──
   // driverPos is set by driver/layout.tsx which has the authoritative watchPosition
+
+  // ── Gs/km profitability rate config (from admin) ─────────────────────────
+  const [rateConfig, setRateConfig] = useState<RateConfig[]>([]);
+  useEffect(() => {
+    authFetch('/api/driver/rates')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rates) setRateConfig(d.rates as RateConfig[]); })
+      .catch(() => {});
+  }, []);
 
   // ── Requests feed state ──────────────────────────────────────────────────
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -771,6 +780,7 @@ export default function DriverDashboard() {
         sendingId={sendingOfferId}
         driverLat={driverPos?.lat}
         driverLng={driverPos?.lng}
+        rateConfig={rateConfig}
         onActiveItem={(item) => {
           setMapPickup(item?.pickupLat != null && item?.pickupLng != null ? { lat: Number(item.pickupLat), lng: Number(item.pickupLng) } : null);
           setMapDelivery(item?.deliveryLat != null && item?.deliveryLng != null ? { lat: Number(item.deliveryLat), lng: Number(item.deliveryLng) } : null);

@@ -85,6 +85,13 @@ export type FeedItem = {
   stops?: Array<{ sequence: number; address: string }> | null;
 };
 
+/** Per-vehicle Gs/km profitability thresholds (from admin config) */
+export interface RateConfig {
+  vehicle_type: string;
+  rate_good_gspm: number | null;
+  rate_ok_gspm: number | null;
+}
+
 type Props = {
   items: FeedItem[];
   available: boolean;
@@ -97,6 +104,8 @@ type Props = {
   driverLng?: number | null;
   /** Called whenever the active card changes — parent updates map route */
   onActiveItem?: (item: FeedItem | null) => void;
+  /** Gs/km profitability thresholds — if empty/null, badge is hidden */
+  rateConfig?: RateConfig[];
 };
 
 export default memo(function RequestsFeed({
@@ -110,6 +119,7 @@ export default memo(function RequestsFeed({
   driverLat,
   driverLng,
   onActiveItem,
+  rateConfig = [],
 }: Props) {
   const [offerNote, setOfferNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
@@ -221,6 +231,18 @@ export default memo(function RequestsFeed({
   const routeKm = (item.pickupLat != null && item.pickupLng != null && item.deliveryLat != null && item.deliveryLng != null)
     ? haversineKm(item.pickupLat, item.pickupLng, item.deliveryLat, item.deliveryLng)
     : null;
+
+  // Gs/km profitability badge
+  const totalKm = (distKm ?? 0) + (routeKm ?? 0);
+  const vehicleRates = rateConfig.find(r => r.vehicle_type === item.title);
+  const gsPerKm = totalKm > 0 && clientPrice > 0 ? Math.round(clientPrice / totalKm) : null;
+  const showRateBadge = gsPerKm != null && vehicleRates != null && (vehicleRates.rate_good_gspm != null || vehicleRates.rate_ok_gspm != null);
+  const rateColor = !showRateBadge ? null
+    : gsPerKm! >= (vehicleRates!.rate_good_gspm ?? Infinity) ? '#22c55e'
+    : vehicleRates!.rate_ok_gspm != null && gsPerKm! >= vehicleRates!.rate_ok_gspm ? '#f59e0b'
+    : '#ef4444';
+  const rateLabel = rateColor === '#22c55e' ? 'Buena oferta' : rateColor === '#f59e0b' ? 'Aceptable' : 'No conviene';
+
   const label = labels[item.title] || item.title;
   const stopCount = item.stops?.length ?? 0;
   const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
@@ -486,6 +508,23 @@ export default memo(function RequestsFeed({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Gs/km profitability badge ── */}
+            {showRateBadge && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: `${rateColor}18`, border: `1px solid ${rateColor}40`,
+                borderRadius: 10, padding: '7px 12px', marginBottom: 8,
+              }}>
+                <span style={{ fontSize: '1rem' }}>💰</span>
+                <div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{rateLabel}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>
+                    {gsPerKm!.toLocaleString('es-PY')} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: rateColor! }}>Gs/km</span>
+                  </div>
+                </div>
               </div>
             )}
 
