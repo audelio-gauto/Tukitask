@@ -72,6 +72,7 @@ const menuItems: MenuItem[] = [
       { label: 'Lista de Conductores', href: '/admin/drivers/driver' },
       { label: 'Configuración de Precios', href: '/admin/drivers/pricing' },
       { label: 'Comisión por Driver', href: '/admin/drivers/commission' },
+      { label: 'Rentabilidad Gs/km', href: '/admin/drivers/rates' },
     ],
   },
   {
