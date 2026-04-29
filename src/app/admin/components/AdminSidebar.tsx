@@ -11,6 +11,8 @@ interface SubItem {
 interface MenuItem {
   label: string;
   href?: string;
+  /** Auto-expands the group whenever pathname starts with this prefix */
+  groupRootPath?: string;
   icon: React.ReactNode;
   subItems?: SubItem[];
 }
@@ -63,6 +65,7 @@ const menuItems: MenuItem[] = [
   },
   {
     label: 'Conductores',
+    groupRootPath: '/admin/drivers',
     icon: (
       <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h4m4 6H6a2 2 0 01-2-2V6a2 2 0 012-2h8l6 6v6a2 2 0 01-2 2z" />
@@ -77,6 +80,7 @@ const menuItems: MenuItem[] = [
   },
   {
     label: 'Servicios',
+    groupRootPath: '/admin/services',
     icon: (
       <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -185,9 +189,9 @@ export default function AdminSidebar() {
   useEffect(() => {
     const autoOpen = new Set<string>();
     menuItems.forEach(item => {
-      if (item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/'))) {
-        autoOpen.add(item.label);
-      }
+      const subMatch = item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/'));
+      const rootMatch = item.groupRootPath ? (pathname === item.groupRootPath || pathname.startsWith(item.groupRootPath + '/')) : false;
+      if (subMatch || rootMatch) autoOpen.add(item.label);
     });
     setOpenMenus(autoOpen);
   }, [pathname]);
@@ -228,7 +232,8 @@ export default function AdminSidebar() {
         {menuItems.map(item => {
           const hasSubItems = !!(item.subItems && item.subItems.length > 0);
           const isOpen = openMenus.has(item.label);
-          const isChildActive = item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/')) ?? false;
+          const isChildActive = (item.subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/')) ?? false)
+            || (item.groupRootPath ? (pathname === item.groupRootPath || pathname.startsWith(item.groupRootPath + '/')) : false);
           const isActive = !hasSubItems && !!item.href && (pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/')));
 
           if (hasSubItems) {
