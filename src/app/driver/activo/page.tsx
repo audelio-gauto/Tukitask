@@ -359,43 +359,53 @@ export default function ActivoPage() {
             </div>
           </div>
 
-          {/* Chat button — always visible once order is accepted */}
+          {/* Chat + SOS row */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {/* Chat button */}
             <button
               onClick={() => setChatModal({ orderId: order.id, clientName, clientPhoto })}
-              className="tuki-btn tuki-btn-info"
               style={{
-                flex: 1,
-                fontSize: '0.83rem',
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                padding: '11px 14px', borderRadius: 13, border: 'none', cursor: 'pointer',
+                background: unreadCounts[order.id]
+                  ? 'linear-gradient(135deg, rgba(59,130,246,0.30), rgba(37,99,235,0.25))'
+                  : 'rgba(59,130,246,0.14)',
+                color: '#60a5fa',
+                fontWeight: 700, fontSize: '0.88rem',
                 position: 'relative',
-                background: unreadCounts[order.id] ? 'rgba(59,130,246,0.22)' : undefined,
+                boxShadow: unreadCounts[order.id] ? '0 0 0 1.5px rgba(59,130,246,0.5)' : '0 0 0 1px rgba(59,130,246,0.2)',
               }}
             >
-              <Icon name="chat" size={14} /> Chat con el cliente
+              <Icon name="chat" size={15} color="#60a5fa" />
+              Chat
               {!!unreadCounts[order.id] && (
                 <span style={{
                   background: '#ef4444', color: '#fff',
-                  borderRadius: 99, padding: '1px 7px',
-                  fontSize: '0.72rem', fontWeight: 800,
-                  marginLeft: 4,
+                  borderRadius: 99, padding: '2px 7px',
+                  fontSize: '0.7rem', fontWeight: 800, lineHeight: 1,
+                  boxShadow: '0 0 0 2px rgba(239,68,68,0.35)',
                 }}>
                   {unreadCounts[order.id]}
                 </span>
               )}
             </button>
+
             {/* SOS — emergency call */}
             <a
               href="tel:911"
-              className="tuki-btn tuki-btn-danger"
               style={{
-                padding: '9px 12px',
-                flexShrink: 0,
-                textDecoration: 'none',
-                fontSize: '0.83rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '11px 18px', borderRadius: 13,
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.18))',
+                boxShadow: '0 0 0 1.5px rgba(239,68,68,0.45)',
+                color: '#f87171', fontWeight: 800, fontSize: '0.9rem',
+                textDecoration: 'none', flexShrink: 0,
+                letterSpacing: '0.5px',
               }}
               title="Llamar emergencias (911)"
             >
-              <Icon name="shield" size={14} /> SOS
+              <Icon name="shield" size={15} color="#f87171" />
+              SOS
             </a>
           </div>
 
