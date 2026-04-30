@@ -462,6 +462,19 @@ export default memo(function RequestsFeed({
                   <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Guaraníes</div>
                   {pricePerStop && <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
                 </div>
+
+                {/* Gs/km profitability badge — next to price */}
+                {showRateBadge && (
+                  <div style={{
+                    background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
+                    borderRadius: 10, padding: '4px 8px', textAlign: 'right',
+                  }}>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>{rateLabel}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
+                      {gsPerKm!.toLocaleString('es-PY')} <span style={{ fontSize: '0.58rem', fontWeight: 700, color: rateColor! }}>Gs/km</span>
+                    </div>
+                  </div>
+                )}
                 {/* Timer + dismiss */}
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <CountdownRing createdAt={item.createdAt} />
@@ -508,23 +521,6 @@ export default memo(function RequestsFeed({
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* ── Gs/km profitability badge ── */}
-            {showRateBadge && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                background: `${rateColor}18`, border: `1px solid ${rateColor}40`,
-                borderRadius: 10, padding: '7px 12px', marginBottom: 8,
-              }}>
-                <span style={{ fontSize: '1rem' }}>💰</span>
-                <div>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{rateLabel}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>
-                    {gsPerKm!.toLocaleString('es-PY')} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: rateColor! }}>Gs/km</span>
-                  </div>
-                </div>
               </div>
             )}
 
