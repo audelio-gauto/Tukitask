@@ -1393,42 +1393,67 @@
 .enviar-order-toggle {
   display: flex;
   flex-direction: row;
-  gap: 6px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 20px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 5px;
-  border-radius: 14px;
-  background: var(--client-action-active);
-  border: 1px solid var(--client-border);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 .enviar-order-toggle::-webkit-scrollbar { display: none; }
 .enviar-order-tab {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: none;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--client-border);
   cursor: pointer;
-  gap: 2px;
-  background: transparent;
+  background: var(--client-surface);
   color: var(--client-text-secondary);
-  transition: all 0.15s;
+  transition: all 0.18s;
   flex-shrink: 0;
   white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  min-width: 100px;
+}
+.enviar-order-tab .enviar-order-tab-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--client-action-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.18s;
 }
 .enviar-order-tab.active {
   background: var(--client-surface);
   color: var(--client-text);
-  box-shadow: var(--shadow-card);
+  border-color: #F5C518;
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.18), 0 2px 8px rgba(0,0,0,0.10);
+}
+.enviar-order-tab.active .enviar-order-tab-icon {
+  background: rgba(245,197,24,0.18);
+  color: #b45309;
 }
 .enviar-order-tab-label {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
+  line-height: 1;
+}
+.enviar-order-tab-sublabel {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--client-text-secondary);
+  line-height: 1;
+  margin-top: 1px;
 }
 
 /* ── Enviar: step pill ── */
