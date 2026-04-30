@@ -85,7 +85,7 @@ const SERVICE_LABELS: Record<string, string> = {
 export type FeedItem = {
   id: string;
   title: string;
-  orderType?: 'envio' | 'mandadito' | 'flete' | null;
+  orderType?: 'envio' | 'mandadito' | 'flete' | 'viaje' | null;
   from?: string;
   to?: string;
   location?: string;
@@ -454,6 +454,11 @@ export default memo(function RequestsFeed({
                   {item.orderType === 'flete' && (
                     <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       <Icon name="truck" size={11} /> Flete
+                    </span>
+                  )}
+                  {item.orderType === 'viaje' && (
+                    <span style={{ background: '#3b82f6', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name="car" size={11} /> Viaje
                     </span>
                   )}
                   {stopCount >= 2 && (

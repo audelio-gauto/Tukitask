@@ -121,6 +121,7 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
   envio:      'Envío',
   mandadito:  'Mandadito',
   flete:      'Flete',
+  viaje:      'Viaje',
 };
 
 /* ── Pulse animation injected once ─────────────────────────────────────── */
