@@ -112,6 +112,7 @@ export type FeedItem = {
   shoppingList?: string | null;
   maxBudget?: number | null;
   stops?: Array<{ sequence: number; address: string }> | null;
+  clientTotalOrders?: number | null;
 };
 
 /** Per-vehicle Gs/km profitability thresholds (from admin config) */
@@ -446,6 +447,19 @@ export default memo(function RequestsFeed({
                     ))}
                     <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#F5C518', marginLeft: 1 }}>
                       {Number(item.clientRating).toFixed(1)}
+                    </span>
+                    {item.clientTotalOrders != null && item.clientTotalOrders > 0 && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 4, fontWeight: 600 }}>
+                        · {item.clientTotalOrders} {item.clientTotalOrders === 1 ? 'pedido' : 'pedidos'}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Total orders when no rating yet */}
+                {(item.clientRating == null || item.clientRating === 0) && item.clientTotalOrders != null && item.clientTotalOrders > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {item.clientTotalOrders} {item.clientTotalOrders === 1 ? 'pedido' : 'pedidos'}
                     </span>
                   </div>
                 )}

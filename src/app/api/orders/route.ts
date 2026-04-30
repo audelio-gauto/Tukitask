@@ -169,10 +169,14 @@ export async function GET(req: Request) {
     const raw = (fetched || []) as Record<string, unknown>[];
     const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
     let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
+    let orderCountMap: Record<string, number> = {};
     if (emails.length > 0) {
-      const { data: profiles, error: profileErr } = await db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails);
-      if (!profileErr) {
-        (profiles ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
+      const [profilesRes, countRes] = await Promise.all([
+        db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails),
+        db.from('orders').select('client_email').in('client_email', emails).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned']),
+      ]);
+      if (!profilesRes.error) {
+        (profilesRes.data ?? []).forEach((p: { email: string; photo_url: string | null; avg_rating: number | null; is_verified: boolean | null }) => {
           profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: p.is_verified === true };
         });
       } else {
@@ -181,12 +185,18 @@ export async function GET(req: Request) {
           profileMap[p.email] = { photo_url: p.photo_url ?? null, avg_rating: p.avg_rating != null ? Number(p.avg_rating) : null, is_verified: false };
         });
       }
+      if (!countRes.error) {
+        (countRes.data ?? []).forEach((r: { client_email: string }) => {
+          orderCountMap[r.client_email] = (orderCountMap[r.client_email] ?? 0) + 1;
+        });
+      }
     }
     const allOrders = raw.map(o => ({
       ...o,
-      client_photo:       profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
-      client_avg_rating:  profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
-      client_is_verified: profileMap[o.client_email as string]?.is_verified ?? false,
+      client_photo:        profileMap[o.client_email as string]?.photo_url  ?? o.client_photo  ?? null,
+      client_avg_rating:   profileMap[o.client_email as string]?.avg_rating ?? o.client_avg_rating ?? null,
+      client_is_verified:  profileMap[o.client_email as string]?.is_verified ?? false,
+      client_total_orders: orderCountMap[o.client_email as string] ?? 0,
     }));
 
     // Server-side filter: vehicle type + service_filters + docs

@@ -508,6 +508,7 @@ export default function DriverDashboard() {
       stops: Array.isArray(o.order_stops) && o.order_stops.length > 0
         ? o.order_stops.map((s: any) => ({ sequence: s.sequence, address: s.address }))
         : null,
+      clientTotalOrders: o.client_total_orders ?? null,
     }));
 
   return (
