@@ -818,7 +818,6 @@ export default function EnviarPaquetePage() {
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
                     orderType === 'flete' ? ['motocarro', 'camion2t'].includes(v.value) :
-                    orderType === 'viaje' ? ['auto'].includes(v.value) :
                     ['moto', 'auto'].includes(v.value)
                   ).map(v => {
                     const vp = pricing[v.value];

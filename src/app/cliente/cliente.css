@@ -1391,21 +1391,25 @@
 
 /* ── Enviar: order type tabs ── */
 .enviar-order-toggle {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
   margin-bottom: 18px;
-  background: var(--client-action-active);
-  border-radius: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   padding: 5px;
+  border-radius: 14px;
+  background: var(--client-action-active);
   border: 1px solid var(--client-border);
 }
+.enviar-order-toggle::-webkit-scrollbar { display: none; }
 .enviar-order-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 4px;
+  padding: 10px 14px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
@@ -1413,6 +1417,8 @@
   background: transparent;
   color: var(--client-text-secondary);
   transition: all 0.15s;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .enviar-order-tab.active {
   background: var(--client-surface);
