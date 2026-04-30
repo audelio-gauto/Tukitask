@@ -720,33 +720,37 @@ export default function SeguimientoPage() {
           ))}
         </div>
 
-        {/* ETA badge — center top */}
+        {/* ETA badge — bottom-left (Bolt/Uber style) */}
         {eta && isActive && (
           <div style={{
-            position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-            borderRadius: 14, padding: '8px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-            border: '1px solid rgba(255,255,255,0.12)', gap: 4,
+            position: 'absolute', bottom: 16, left: 12,
+            zIndex: 1000, background: 'rgba(15,15,20,0.88)', backdropFilter: 'blur(10px)',
+            borderRadius: 14, padding: '7px 12px',
+            border: '1px solid rgba(255,255,255,0.10)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', gap: 10,
           }}>
-            <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>{eta.etaMin}</div>
-                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>MIN</div>
+            <div style={{ textAlign: 'center', lineHeight: 1 }}>
+              <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>{eta.etaMin}</div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>MIN</div>
+            </div>
+            <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.13)' }} />
+            <div style={{ textAlign: 'center', lineHeight: 1 }}>
+              <div style={{ color: '#38bdf8', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>
+                {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
               </div>
-              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.15)' }} />
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: '#0ea5e9', fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
-                  {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginTop: 2 }}>
-                  {routeTotals ? 'PRÓX. PARADA' : 'DISTANCIA'}
-                </div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>
+                {routeTotals ? 'PRÓX.' : 'DIST.'}
               </div>
             </div>
             {routeTotals && (
-              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.38)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 4, width: '100%', textAlign: 'center' }}>
-                Ruta completa: {routeTotals.stops} parada{routeTotals.stops !== 1 ? 's' : ''} · {routeTotals.etaMin} min · {routeTotals.distKm.toFixed(1)} km
-              </div>
+              <>
+                <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.13)' }} />
+                <div style={{ textAlign: 'center', lineHeight: 1 }}>
+                  <div style={{ color: '#f59e0b', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>{routeTotals.etaMin}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>TOTAL</div>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -777,103 +781,72 @@ export default function SeguimientoPage() {
           {error} — <Link href="/cliente" style={{ color: '#0ea5e9' }}>Volver al inicio</Link>
         </div>
       ) : order ? (
-        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '12px 12px 16px' }}>
-          <div className="tuki-card" style={{ background: 'var(--sheet-bg)', boxShadow: 'none', border: '1px solid var(--border-subtle)' }}>
-          <div className="tuki-card-body" style={{ padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '14px 14px 18px' }}>
 
-            {/* Worker avatar */}
-            <div style={{ flexShrink: 0 }}>
-              {workerPhoto ? (
-                <Image
-                  src={workerPhoto}
-                  alt={workerName}
-                  width={52}
-                  height={52}
-                  unoptimized
-                  style={{ borderRadius: '50%', objectFit: 'cover', border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}` }}
-                />
-              ) : (
-                <div
-                  className="tuki-avatar"
-                  style={{
-                    width: 52,
-                    height: 52,
-                    fontSize: '1.1rem',
-                    background: type === 'service' ? 'rgba(139,92,246,0.15)' : 'rgba(34,197,94,0.15)',
-                    border: `3px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`,
-                  }}
-                >
-                  <Icon name={type === 'service' ? 'tool' : 'car'} size={18} color={type === 'service' ? '#8b5cf6' : '#22c55e'} />
-                </div>
-              )}
-            </div>
-
-            {/* Worker info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {workerName}
+          {/* ── Status pill + price row ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            {st && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${st.color}18`, border: `1px solid ${st.color}50`, borderRadius: 20, padding: '4px 12px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color, display: 'inline-block', boxShadow: `0 0 6px ${st.color}` }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: st.color }}>{st.text}</span>
               </div>
-              {workerRating != null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Icon key={i} name="star" size={12} color={i < Math.round(Number(workerRating)) ? '#F5C518' : 'var(--border-strong)'} />
-                  ))}
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: 3 }}>{Number(workerRating).toFixed(1)}</span>
-                </div>
-              )}
-              {/* Address */}
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {type === 'service'
-                  ? (order.client_address ?? order.delivery_address ?? '—')
-                  : (order.delivery_address ?? '—')}
-              </div>
-            </div>
-
-            {/* Price */}
-            <div style={{ flexShrink: 0, textAlign: 'right' }}>
-              <div className="tuki-price" style={{ color: '#22c55e' }}>
-                {fmtGs(priceVal)}
-              </div>
+            )}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1 }}>{fmtGs(priceVal)}</div>
               {order.type === 'service' && order.extra_charge != null && order.extra_charge > 0 && (
-                <div style={{ color: '#f59e0b', fontWeight: 800, fontSize: '0.9rem', marginTop: 2 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Icon name="plus" size={12} color="#f59e0b" />
-                    {fmtGs(order.extra_charge)}
-                  </span>
-                </div>
+                <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: '0.78rem', marginTop: 2 }}>+ {fmtGs(order.extra_charge)}</div>
               )}
-              {order.type === 'service' && order.extra_reason && (
-                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.68rem', marginTop: 2, maxWidth: 100, textAlign: 'right', lineHeight: 1.3 }}>
-                  {order.extra_reason}
-                </div>
-              )}
-              <div className="tuki-price-label">acordado</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.6rem', marginTop: 1 }}>acordado</div>
             </div>
           </div>
 
-          {/* Vehicle chips */}
-          {vehicle && (vehicle.label || vehicle.brand || vehicle.plate) && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              {vehicle.label && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--glass-card)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {vehicle.label}
-                </span>
+          {/* ── Driver row ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            {/* Avatar */}
+            <div style={{ flexShrink: 0, position: 'relative' }}>
+              {workerPhoto ? (
+                <Image src={workerPhoto} alt={workerName} width={50} height={50} unoptimized
+                  style={{ borderRadius: '50%', objectFit: 'cover', border: `2.5px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`, boxShadow: `0 0 0 3px ${type === 'service' ? 'rgba(139,92,246,0.2)' : 'rgba(34,197,94,0.2)'}` }}
+                />
+              ) : (
+                <div style={{ width: 50, height: 50, borderRadius: '50%', background: type === 'service' ? 'rgba(139,92,246,0.15)' : 'rgba(34,197,94,0.15)', border: `2.5px solid ${type === 'service' ? '#8b5cf6' : '#22c55e'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name={type === 'service' ? 'tool' : 'car'} size={18} color={type === 'service' ? '#8b5cf6' : '#22c55e'} />
+                </div>
               )}
-              {vehicle.brand && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--glass-card)', borderRadius: 99, padding: '4px 10px', fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  <Icon name="tag" size={12} color="var(--text-secondary)" />
-                  {vehicle.brand}
-                </span>
-              )}
-              {vehicle.plate && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(59,130,246,0.15)', borderRadius: 99, padding: '4px 12px', fontSize: '0.73rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.04em' }}>
-                  <Icon name="document" size={12} color="#93c5fd" />
-                  {vehicle.plate}
-                </span>
+              {/* Live dot */}
+              {isActive && <span style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--sheet-bg)' }} />}
+            </div>
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workerName}</div>
+              {workerRating != null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                  {'★★★★★'.split('').map((_, i) => (
+                    <span key={i} style={{ color: i < Math.round(Number(workerRating)) ? '#F5C518' : 'rgba(156,163,175,0.3)', fontSize: '0.75rem' }}>★</span>
+                  ))}
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginLeft: 2 }}>{Number(workerRating).toFixed(1)}</span>
+                </div>
               )}
             </div>
-          )}
+
+            {/* Vehicle chips */}
+            {vehicle && (vehicle.label || vehicle.brand || vehicle.plate) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+                {vehicle.label && (
+                  <span style={{ background: 'var(--glass-card)', borderRadius: 99, padding: '2px 9px', fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700 }}>{vehicle.label}</span>
+                )}
+                {vehicle.plate && (
+                  <span style={{ background: 'rgba(59,130,246,0.13)', borderRadius: 99, padding: '2px 9px', fontSize: '0.68rem', color: '#93c5fd', fontWeight: 800, border: '1px solid rgba(59,130,246,0.25)', letterSpacing: '0.04em' }}>{vehicle.plate}</span>
+                )}
+                {vehicle.brand && !vehicle.plate && (
+                  <span style={{ background: 'var(--glass-card)', borderRadius: 99, padding: '2px 9px', fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{vehicle.brand}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+
 
           {/* Address row A → stops → B (delivery only) */}
           {type === 'delivery' && (order.pickup_address || order.delivery_address) && (
@@ -945,8 +918,6 @@ export default function SeguimientoPage() {
             >
               ← Volver al inicio
             </Link>
-          </div>
-          </div>
           </div>
         </div>
       ) : null}
