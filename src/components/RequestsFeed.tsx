@@ -452,19 +452,9 @@ export default memo(function RequestsFeed({
                 {/* Service type chip + order badges */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {/* Service label chip */}
-                  <span style={{ background: 'rgba(245,197,24,0.10)', color: '#F5C518', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 99, padding: '2px 8px', fontSize: '0.63rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ background: '#3b82f6', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.63rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {label}
                   </span>
-                  {item.orderType === 'mandadito' && (
-                    <span style={{ background: '#f59e0b', color: '#111', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <Icon name="package" size={11} /> Mandadito
-                    </span>
-                  )}
-                  {item.orderType === 'flete' && (
-                    <span style={{ background: '#6366f1', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <Icon name="truck" size={11} /> Flete
-                    </span>
-                  )}
                   {stopCount >= 2 && (
                     <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       <Icon name="package" size={11} color="#fbbf24" /> {stopCount} paradas
