@@ -990,7 +990,7 @@ export default function EnviarPaquetePage() {
                     <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                     <textarea
                       className="enviar-field-textarea"
-                      placeholder="Ej: Dejar en portería, tocar timbre 2 veces, es frágil..."
+                      placeholder={orderType === 'viaje' ? 'Ej: Viajo con mascota, llevo equipaje, u otras condiciones' : 'Ej: Dejar en portería, tocar timbre 2 veces, es frágil...'}
                       value={form.instructions}
                       onChange={e => update('instructions', e.target.value)}
                       rows={2}
