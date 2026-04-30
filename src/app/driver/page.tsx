@@ -488,7 +488,7 @@ export default function DriverDashboard() {
     .map((o): FeedItem => ({
       id: o.id,
       title: o.vehicle_type || 'moto',
-      orderType: (o.order_type as 'envio' | 'mandadito' | 'flete' | 'viaje') || 'envio',
+      orderType: (o.order_type as 'envio' | 'mandadito' | 'flete') || 'envio',
       from: o.pickup_address,
       to: o.delivery_address,
       price: o.offer ?? o.suggested_price,
