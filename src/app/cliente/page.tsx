@@ -16,6 +16,8 @@ const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false }
 interface Order {
   id: string;
   status: string;
+  order_type: string | null;
+  vehicle_type: string | null;
   pickup_address: string | null;
   delivery_address: string | null;
   offer: number | null;
@@ -106,9 +108,27 @@ interface ActiveRequest {
   type: 'delivery' | 'service';
   icon: string;
   label: string;
+  orderType: string;
   subtitle: string;
   createdAt: string;
 }
+
+/* ─── Order type config for searching card ───────────────────────────────── */
+const ORDER_CFG: Record<string, { color: string; badge: string; gradient: string; icon: string }> = {
+  envio:     { color: '#3b82f6', badge: 'Envío',     gradient: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', icon: '📦' },
+  mandadito: { color: '#f59e0b', badge: 'Mandadito', gradient: 'linear-gradient(135deg, #b45309, #f59e0b)', icon: '🛵' },
+  flete:     { color: '#8b5cf6', badge: 'Flete',     gradient: 'linear-gradient(135deg, #6d28d9, #8b5cf6)', icon: '🚛' },
+  viaje:     { color: '#22c55e', badge: 'Viaje',     gradient: 'linear-gradient(135deg, #15803d, #22c55e)', icon: '🚗' },
+  service:   { color: '#06b6d4', badge: 'Servicio',  gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)', icon: '🔧' },
+};
+const DEFAULT_ORDER_CFG = { color: '#3b82f6', badge: 'Solicitud', gradient: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', icon: '📦' };
+
+const DELIVERY_ORDER_LABELS: Record<string, { label: string }> = {
+  envio:     { label: 'Envío de paquete' },
+  mandadito: { label: 'Mandadito' },
+  flete:     { label: 'Flete' },
+  viaje:     { label: 'Viaje' },
+};
 
 const SERVICE_LABELS: Record<string, string> = {
   limpieza: '🧹 Limpieza', niera: '👶 Niñera', cocina: '🍳 Cocina',
@@ -716,15 +736,22 @@ export default function ClienteHomePage() {
   const trackingJobs   = jobs.filter(j => TRACKING_STS.includes(j.status));
 
   const activeRequests: ActiveRequest[] = [
-    ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => ({
-      id: o.id, type: 'delivery' as const, icon: '📦',
-      label: 'Envío de paquete',
-      subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
-      createdAt: o.created_at,
-    })),
+    ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => {
+      const ot = o.order_type ?? 'envio';
+      const cfg = ORDER_CFG[ot] ?? DEFAULT_ORDER_CFG;
+      const lbl = DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete';
+      return {
+        id: o.id, type: 'delivery' as const, icon: cfg.icon,
+        label: lbl,
+        orderType: ot,
+        subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
+        createdAt: o.created_at,
+      };
+    }),
     ...jobs.filter(j => SEARCHING_STS.includes(j.status)).map(j => ({
-      id: j.id, type: 'service' as const, icon: '🛠',
+      id: j.id, type: 'service' as const, icon: '🔧',
       label: SERVICE_LABELS[j.service_type] ?? j.service_type,
+      orderType: 'service',
       subtitle: j.address ?? 'Sin dirección',
       createdAt: j.created_at ?? new Date().toISOString(),
     })),
@@ -996,58 +1023,129 @@ export default function ClienteHomePage() {
 
             {/* Searching content */}
             <div style={{ padding: '16px 20px 28px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              {/* Header radar row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                 <RadarPulse />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: 4 }}>
+                  <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.08rem', marginBottom: 3, letterSpacing: '-0.01em' }}>
                     Buscando cerca de ti…
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                    Te notificamos cuando lleguen ofertas
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 600 }}>Cancela en</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ef4444' }}>
-                    {(() => {
-                      const earliest = activeRequests.reduce((min, r) => {
-                        const s = Math.floor((Date.now() - new Date(r.createdAt).getTime()) / 1000);
-                        return s < min ? s : min;
-                      }, Infinity);
-                      void elapsed2;
-                      const cd = Math.max(0, REQUEST_TIMEOUT_SEC - (earliest === Infinity ? 0 : earliest));
-                      return `${Math.floor(cd/60).toString().padStart(2,'0')}:${(cd%60).toString().padStart(2,'0')}`;
-                    })()}
+                  <div style={{ fontSize: '0.77rem', color: '#64748b', fontWeight: 500 }}>
+                    Te avisamos cuando lleguen ofertas
                   </div>
                 </div>
               </div>
 
-              {/* Active requests */}
+              {/* Active request cards — premium */}
               {activeRequests.map(req => {
                 const secElapsed = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
-                void elapsed2; // re-render trigger
-                const countdown = Math.max(0, REQUEST_TIMEOUT_SEC - secElapsed);
-                const pct = countdown / REQUEST_TIMEOUT_SEC;
-                const barColor = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                void elapsed2;
+                const cd = Math.max(0, REQUEST_TIMEOUT_SEC - secElapsed);
+                const pct = cd / REQUEST_TIMEOUT_SEC;
+                const cfg = ORDER_CFG[req.orderType] ?? DEFAULT_ORDER_CFG;
+                const barColor = pct > 0.5 ? cfg.color : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                const isUrgent = cd < 30;
                 return (
-                  <div key={req.id} style={{ background: 'var(--surface-2)', borderRadius: 16, padding: '10px 14px 8px', marginBottom: 10, border: '1px solid var(--border-strong)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: '1.4rem' }}>{req.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{req.label}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.subtitle}</div>
+                  <div key={req.id} style={{
+                    background: 'var(--surface-2)',
+                    borderRadius: 20,
+                    marginBottom: 12,
+                    border: `1.5px solid ${cfg.color}35`,
+                    overflow: 'hidden',
+                    boxShadow: `0 6px 28px ${cfg.color}18`,
+                  }}>
+                    {/* Top gradient accent */}
+                    <div style={{ height: 3, background: cfg.gradient }} />
+
+                    <div style={{ padding: '14px 16px 14px' }}>
+                      {/* Icon + type badge + countdown */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                        {/* Service icon circle */}
+                        <div style={{
+                          width: 52, height: 52, borderRadius: '50%',
+                          background: cfg.gradient,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.55rem', flexShrink: 0,
+                          boxShadow: `0 4px 16px ${cfg.color}45`,
+                        }}>
+                          {cfg.icon}
+                        </div>
+
+                        {/* Label column */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Type badge */}
+                          <span style={{
+                            display: 'inline-block',
+                            background: `${cfg.color}20`,
+                            color: cfg.color,
+                            border: `1px solid ${cfg.color}50`,
+                            borderRadius: 7,
+                            padding: '2px 10px',
+                            fontSize: '0.68rem',
+                            fontWeight: 900,
+                            letterSpacing: '0.07em',
+                            textTransform: 'uppercase',
+                            marginBottom: 5,
+                          }}>
+                            {cfg.badge}
+                          </span>
+                          {/* Main label */}
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.97rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {req.label}
+                          </div>
+                        </div>
+
+                        {/* Countdown (top-right) */}
+                        <div style={{ textAlign: 'center', flexShrink: 0, background: isUrgent ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.15)', borderRadius: 10, padding: '5px 9px', border: isUrgent ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.07)' }}>
+                          <div style={{ fontSize: '0.6rem', color: '#ef4444', fontWeight: 700, letterSpacing: '0.03em', marginBottom: 1 }}>Cancela en</div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ef4444', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                            {Math.floor(cd / 60).toString().padStart(2, '0')}:{(cd % 60).toString().padStart(2, '0')}
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Route row */}
+                      {req.subtitle && (
+                        <div style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          borderRadius: 11,
+                          padding: '8px 12px',
+                          marginBottom: 12,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 7,
+                        }}>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.55, flexShrink: 0 }}>📍</span>
+                          <span style={{ fontSize: '0.74rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                            {req.subtitle}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Progress bar */}
+                      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden', marginBottom: 13 }}>
+                        <div style={{ height: '100%', width: `${pct * 100}%`, background: barColor, borderRadius: 4, transition: 'width 1s linear, background 0.5s' }} />
+                      </div>
+
+                      {/* Cancel button */}
                       <button
                         onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                         disabled={busy}
-                        style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#f87171', cursor: busy ? 'default' : 'pointer', flexShrink: 0 }}
+                        style={{
+                          width: '100%',
+                          padding: '11px',
+                          borderRadius: 13,
+                          border: '1px solid rgba(239,68,68,0.28)',
+                          background: 'rgba(239,68,68,0.07)',
+                          color: '#f87171',
+                          fontWeight: 700,
+                          fontSize: '0.86rem',
+                          cursor: busy ? 'default' : 'pointer',
+                          letterSpacing: '0.01em',
+                        }}
                       >
-                        Cancelar
+                        ✕ Cancelar solicitud
                       </button>
-                    </div>
-                    {/* Countdown bar */}
-                    <div style={{ marginTop: 8, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct * 100}%`, background: barColor, borderRadius: 4, transition: 'width 1s linear, background 0.5s' }} />
                     </div>
                   </div>
                 );
