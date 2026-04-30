@@ -82,10 +82,17 @@ const SERVICE_LABELS: Record<string, string> = {
   otros: 'Otros',
 };
 
+const VIAJE_VEHICLE_LABELS: Record<string, string> = {
+  moto:      'Viaje Moto',
+  auto:      'Viaje Auto',
+  motocarro: 'Viaje Moto Carro',
+  camion2t:  'Viaje Camión',
+};
+
 export type FeedItem = {
   id: string;
   title: string;
-  orderType?: 'envio' | 'mandadito' | 'flete' | null;
+  orderType?: 'envio' | 'mandadito' | 'flete' | 'viaje' | null;
   from?: string;
   to?: string;
   location?: string;
@@ -265,7 +272,9 @@ export default memo(function RequestsFeed({
     : '#ef4444';
   const rateLabel = rateColor === '#22c55e' ? 'Buena oferta' : rateColor === '#f59e0b' ? 'Oferta Aceptable' : 'Oferta baja';
 
-  const label = labels[item.title] || item.title;
+  const label = item.orderType === 'viaje'
+    ? (VIAJE_VEHICLE_LABELS[item.title] || `Viaje ${item.title}`)
+    : (labels[item.title] || item.title);
   const stopCount = item.stops?.length ?? 0;
   const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
 
