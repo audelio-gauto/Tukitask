@@ -322,6 +322,7 @@ export default function DeliveredPage() {
           orderId={chatModal.orderId}
           myEmail={email}
           myName={displayName || null}
+          myRole="driver"
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />

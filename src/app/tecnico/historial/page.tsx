@@ -303,6 +303,7 @@ export default function TecnicoHistorialPage() {
           jobId={chatModal.jobId}
           myEmail={email}
           myName={displayName || null}
+          myRole="tecnico"
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />

@@ -29,6 +29,14 @@ interface Message {
   read_at: string | null;
 }
 
+type ChatRole = 'client' | 'driver' | 'tecnico';
+
+const QUICK_MESSAGES: Record<ChatRole, string[]> = {
+  driver: ['Estoy en camino 🚗', 'Ya llegué 📍', '¿Dónde estás? 🤔', 'Espérame 5 min ⏱️'],
+  tecnico: ['Estoy en camino 🔧', 'Ya llegué 📍', '¿Dónde estás? 🤔', 'En unos minutos llego ⏱️'],
+  client: ['¿Dónde estás? 🤔', 'Estoy en el punto 📍', '¿Cuánto falta? ⏱️', 'Ok, voy bajando 👍'],
+};
+
 interface ChatModalProps {
   open: boolean;
   onClose: () => void;
@@ -36,6 +44,7 @@ interface ChatModalProps {
   jobId?: string;
   myEmail: string;
   myName: string | null;
+  myRole?: ChatRole;
   otherName: string | null;
   otherPhoto: string | null;
 }
@@ -45,7 +54,7 @@ function formatTime(iso: string) {
 }
 
 export default function ChatModal({
-  open, onClose, orderId, jobId, myEmail, myName, otherName, otherPhoto,
+  open, onClose, orderId, jobId, myEmail, myName, myRole = 'client', otherName, otherPhoto,
 }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
@@ -264,6 +273,53 @@ export default function ChatModal({
             );
           })}
           <div ref={bottomRef} />
+        </div>
+
+        {/* ── Mensajes rápidos ── */}
+        <div style={{
+          padding: '8px 12px 4px',
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--surface-3)',
+          flexShrink: 0,
+          display: 'flex', gap: 6, overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}>
+          {QUICK_MESSAGES[myRole].map((msg) => (
+            <button
+              key={msg}
+              onClick={() => {
+                const content = msg;
+                if (sending) return;
+                setSending(true);
+                authFetch('/api/chat', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    order_id: orderId || undefined,
+                    job_id: jobId || undefined,
+                    content,
+                    sender_name: myName,
+                  }),
+                }).finally(() => setSending(false));
+              }}
+              disabled={sending}
+              style={{
+                flexShrink: 0,
+                padding: '6px 12px',
+                borderRadius: 20,
+                border: '1px solid rgba(34,197,94,0.4)',
+                background: 'rgba(34,197,94,0.08)',
+                color: '#22c55e',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: sending ? 'default' : 'pointer',
+                whiteSpace: 'nowrap',
+                opacity: sending ? 0.5 : 1,
+                transition: 'background 0.15s',
+              }}
+            >
+              {msg}
+            </button>
+          ))}
         </div>
 
         {/* ── Input ── */}

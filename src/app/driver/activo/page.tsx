@@ -933,6 +933,7 @@ export default function ActivoPage() {
           orderId={chatModal.orderId}
           myEmail={email}
           myName={displayName || null}
+          myRole="driver"
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />
