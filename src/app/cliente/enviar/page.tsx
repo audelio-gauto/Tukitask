@@ -27,6 +27,7 @@ const ORDER_TYPE_ICONS = {
   envio: 'package',
   mandadito: 'package',
   flete: 'truck',
+  viaje: 'car',
 } as const;
 
 // ── Multi-stop types ──────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ function emptyStop(): DeliveryStop {
 export default function EnviarPaquetePage() {
   const { openDrawer, email, displayName, profilePhoto, avgRating, phone } = useClientContext();
   const router = useRouter();
-  const [orderType, setOrderType] = useState<'envio' | 'mandadito' | 'flete'>('envio');
+  const [orderType, setOrderType] = useState<'envio' | 'mandadito' | 'flete' | 'viaje'>('envio');
   const [shoppingList, setShoppingList] = useState('');
   const [maxBudget, setMaxBudget] = useState('');
   const [sending, setSending] = useState(false);
@@ -550,7 +551,7 @@ export default function EnviarPaquetePage() {
           <h1 className="enviar-page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name={ORDER_TYPE_ICONS[orderType]} size={18} />
             <span>
-              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : 'Nuevo Envio'}
+              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : orderType === 'viaje' ? 'Nuevo Viaje' : 'Nuevo Envio'}
             </span>
           </h1>
         </div>
@@ -563,6 +564,7 @@ export default function EnviarPaquetePage() {
                   { key: 'envio',     icon: 'package', sublabel: 'Envio' },
                   { key: 'mandadito', icon: 'package', sublabel: 'Mandaditos' },
                   { key: 'flete',     icon: 'truck', sublabel: 'Fletes' },
+                  { key: 'viaje',     icon: 'car', sublabel: 'Viaje' },
                 ] as const).map(tab => (
                 <button
                   key={tab.key}
@@ -571,6 +573,7 @@ export default function EnviarPaquetePage() {
                     setOrderType(tab.key);
                     if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
                     if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
+                    if (tab.key === 'viaje') update('vehicleType', 'auto');
                     if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
                   }}
                   className={`enviar-order-tab ${orderType === tab.key ? 'active' : ''}`}
@@ -587,7 +590,7 @@ export default function EnviarPaquetePage() {
               <span className={`enviar-step-pill ${orderType}`}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name={ORDER_TYPE_ICONS[orderType]} size={12} />
-                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Fletes' : 'Envio'}
+                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Fletes' : orderType === 'viaje' ? 'Viaje' : 'Envio'}
                 </span>
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--client-text-secondary)' }}>Paso {step} de 3</span>
@@ -615,17 +618,19 @@ export default function EnviarPaquetePage() {
               <>
                 <div className="enviar-step-title">
                   <span className="enviar-step-title-icon">
-                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'package' : 'map-pin'} size={16} />
+                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'package' : orderType === 'viaje' ? 'car' : 'map-pin'} size={16} />
                   </span>
                   <div>
                     <div className="enviar-step-title-main">
-                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : orderType === 'flete' ? '¿Dónde recogemos y entregamos el flete?' : '¿Dónde recogemos y entregamos?'}
+                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : orderType === 'flete' ? '¿Dónde recogemos y entregamos el flete?' : orderType === 'viaje' ? '¿Desde dónde y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
                     </div>
                     <div className="enviar-step-title-sub">
                       {orderType === 'mandadito'
                         ? 'Almacén (Punto A) → Tu dirección (Punto B)'
                         : orderType === 'flete'
                         ? 'Moto Carro o Camión para cargas grandes'
+                        : orderType === 'viaje'
+                        ? 'Solo Auto · conductor te lleva al destino'
                         : stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
                     </div>
                   </div>
@@ -637,7 +642,7 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-dot green" />
                     <input
                       className="enviar-address-input"
-                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacen / Tienda donde comprar' : 'Punto de recogida'}
+                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacen / Tienda donde comprar' : orderType === 'viaje' ? 'Tu ubicación (punto de salida)' : 'Punto de recogida'}
                       value={form.pickupAddress}
                       onClick={() => { if (!pickupLoading) openSearch('pickup'); }}
                       readOnly
@@ -671,7 +676,7 @@ export default function EnviarPaquetePage() {
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                             <input
                               className="enviar-address-input"
-                              placeholder={`Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
+                              placeholder={orderType === 'viaje' ? '¿A dónde vas?' : `Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
                               value={stop.address}
                               onClick={() => openSearch(`stop_${idx}`)}
                               readOnly
@@ -696,8 +701,8 @@ export default function EnviarPaquetePage() {
                     </div>
                   ))}
 
-                  {/* Add stop button */}
-                  {stops.length < MAX_STOPS && (
+                  {/* Add stop button — hidden for viaje (no multi-stop for rides) */}
+                  {stops.length < MAX_STOPS && orderType !== 'viaje' && (
                     <button
                       type="button"
                       onClick={addStop}
@@ -805,7 +810,7 @@ export default function EnviarPaquetePage() {
                   </span>
                   <div>
                     <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
-                    <div className="enviar-step-title-sub">Los conductores verán tu precio y aceptarán</div>
+                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'El conductor te llevará al destino en Auto' : 'Los conductores verán tu precio y aceptarán'}</div>
                   </div>
                 </div>
 
@@ -813,6 +818,7 @@ export default function EnviarPaquetePage() {
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
                     orderType === 'flete' ? ['motocarro', 'camion2t'].includes(v.value) :
+                    orderType === 'viaje' ? ['auto'].includes(v.value) :
                     ['moto', 'auto'].includes(v.value)
                   ).map(v => {
                     const vp = pricing[v.value];
@@ -940,14 +946,14 @@ export default function EnviarPaquetePage() {
                     <Icon name="user" size={16} />
                   </span>
                   <div>
-                    <div className="enviar-step-title-main">Confirmar datos del remitente</div>
-                    <div className="enviar-step-title-sub">Revisá tu nombre y teléfono</div>
+                    <div className="enviar-step-title-main">{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmar datos del remitente'}</div>
+                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'El conductor verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
                   </div>
                 </div>
 
                 <div className="enviar-contact-card">
                   <div className="enviar-contact-header">
-                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
+                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> {orderType === 'viaje' ? 'Pasajero' : 'Remitente'}
                   </div>
                   <div className="enviar-field-row">
                     <div className="enviar-field">
