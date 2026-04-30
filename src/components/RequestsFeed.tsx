@@ -480,17 +480,17 @@ export default memo(function RequestsFeed({
               {showRateBadge && (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, marginInline: 6,
+                  flexShrink: 0, marginInline: 4,
                 }}>
                   <div style={{
-                    background: `${rateColor}18`, border: `1.5px solid ${rateColor}55`,
-                    borderRadius: 12, padding: '6px 10px', textAlign: 'center',
+                    background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
+                    borderRadius: 9, padding: '3px 7px', textAlign: 'center',
                   }}>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 3 }}>
+                    <div style={{ fontSize: '0.52rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
                       {gsPerKm!.toLocaleString('es-PY')}
                     </div>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 700, color: rateColor! }}>Gs/km</div>
+                    <div style={{ fontSize: '0.5rem', fontWeight: 700, color: rateColor! }}>Gs/km</div>
                   </div>
                 </div>
               )}
