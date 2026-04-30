@@ -25,15 +25,28 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Enrich with driver_profiles (avg_rating, total_ratings, vehicle info)
+    // Enrich with driver_profiles (avg_rating, vehicle info) + real completed-order count
     const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
     const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }> = {};
     if (driverEmails.length > 0) {
-      const { data: profiles } = await supabaseServer
-        .from('driver_profiles')
-        .select('email, avg_rating, total_ratings, vehicle_type, transport_mode, acceptance_rate, avg_response_seconds')
-        .in('email', driverEmails);
-      (profiles ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }) => {
+      const [profilesRes, completedRes] = await Promise.all([
+        supabaseServer
+          .from('driver_profiles')
+          .select('email, avg_rating, total_ratings, vehicle_type, transport_mode, acceptance_rate, avg_response_seconds')
+          .in('email', driverEmails),
+        supabaseServer
+          .from('orders')
+          .select('accepted_by')
+          .in('accepted_by', driverEmails)
+          .in('status', ['delivered', 'commission_charged', 'client_confirmed']),
+      ]);
+      // Count completed orders per driver (real live count)
+      const completedCountMap: Record<string, number> = {};
+      for (const row of (completedRes.data ?? [])) {
+        const e = row.accepted_by as string;
+        completedCountMap[e] = (completedCountMap[e] ?? 0) + 1;
+      }
+      (profilesRes.data ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }) => {
         let vbrand: string | null = null;
         let vmodel: string | null = null;
         try {
@@ -42,7 +55,9 @@ export async function GET(req: Request) {
           vbrand = vd[mode]?.marca || null;
           vmodel = vd[mode]?.modelo || null;
         } catch { /* noop */ }
-        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel, acceptance_rate: p.acceptance_rate ?? null, avg_response_seconds: p.avg_response_seconds ?? null };
+        // Use live completed-order count; fall back to total_ratings if not available
+        const liveCount = completedCountMap[p.email] ?? null;
+        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: liveCount ?? p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel, acceptance_rate: p.acceptance_rate ?? null, avg_response_seconds: p.avg_response_seconds ?? null };
       });
     }
 
