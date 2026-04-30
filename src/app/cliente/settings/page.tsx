@@ -59,6 +59,10 @@ export default function ClientSettingsPage() {
   const [phoneInput, setPhoneInput] = useState(phone);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Sync inputs when context values load asynchronously (async profile fetch in layout)
+  useEffect(() => { if (phone) setPhoneInput(phone); }, [phone]);
+  useEffect(() => { if (displayName) setNameInput(displayName); }, [displayName]);
+
   const [newPass, setNewPass] = useState('');
 
   const [toast, setToast] = useState('');
