@@ -430,18 +430,36 @@ export default function EnviarPaquetePage() {
   const handleUseGPS = (field: 'pickup' | 'delivery' | `stop_${number}`) => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lon = pos.coords.longitude.toFixed(6);
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const latStr = lat.toFixed(6);
+        const lngStr = lng.toFixed(6);
+        // Reverse geocode to get a human-readable address
+        let address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        try {
+          const res = await fetch('/api/maps/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reverse: true, lat, lng }),
+          });
+          const data = await res.json();
+          if (data.result?.display_name) address = data.result.display_name;
+        } catch { /* use coordinates as fallback */ }
+
         if (field === 'pickup') {
-          update('pickupAddress', `${lat}, ${lon}`);
-          update('pickupLat', lat);
-          update('pickupLng', lon);
+          update('pickupAddress', address);
+          update('pickupLat', latStr);
+          update('pickupLng', lngStr);
+        } else if (field === 'delivery') {
+          update('deliveryAddress', address);
+          update('deliveryLat', latStr);
+          update('deliveryLng', lngStr);
         } else if (field.startsWith('stop_')) {
           const idx = parseInt(field.split('_')[1]);
-          updateStop(idx, 'lat', lat);
-          updateStop(idx, 'lng', lon);
-          updateStop(idx, 'address', `${lat}, ${lon}`);
+          updateStop(idx, 'lat', latStr);
+          updateStop(idx, 'lng', lngStr);
+          updateStop(idx, 'address', address);
         }
         setSearchMode(null);
       },
