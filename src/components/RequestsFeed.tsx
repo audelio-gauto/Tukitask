@@ -539,7 +539,12 @@ export default memo(function RequestsFeed({
                     <span style={{ fontSize: '1rem', lineHeight: 1 }}>📍</span>
                     <div>
                       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>Recogida</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>{distKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80' }}>km</span></div>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>
+                        {distKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80' }}>km</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', marginLeft: 5 }}>
+                          {Math.max(1, Math.round(distKm * 2.5))} <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#4ade80' }}>min</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -552,7 +557,12 @@ export default memo(function RequestsFeed({
                     <span style={{ fontSize: '1rem', lineHeight: 1 }}>🏁</span>
                     <div>
                       <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>Entrega</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>{routeKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa' }}>km</span></div>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 1 }}>
+                        {routeKm.toFixed(1)} <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa' }}>km</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', marginLeft: 5 }}>
+                          {Math.max(1, Math.round(routeKm * 2.5))} <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#60a5fa' }}>min</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
