@@ -448,27 +448,20 @@ export default memo(function RequestsFeed({
                     <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#F5C518', marginLeft: 1 }}>
                       {Number(item.clientRating).toFixed(1)}
                     </span>
-                    {item.clientTotalOrders != null && item.clientTotalOrders > 0 && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 4, fontWeight: 600 }}>
-                        · {item.clientTotalOrders} {item.clientTotalOrders === 1 ? 'pedido' : 'pedidos'}
-                      </span>
-                    )}
                   </div>
                 )}
-                {/* Total orders when no rating yet */}
-                {(item.clientRating == null || item.clientRating === 0) && item.clientTotalOrders != null && item.clientTotalOrders > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                      {item.clientTotalOrders} {item.clientTotalOrders === 1 ? 'pedido' : 'pedidos'}
-                    </span>
-                  </div>
-                )}
-                {/* Service type chip + order badges */}
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {/* Service type chip + pedidos badge */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                   {/* Service label chip */}
                   <span style={{ background: '#3b82f6', color: '#fff', borderRadius: 99, padding: '2px 8px', fontSize: '0.63rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {label}
                   </span>
+                  {/* Total orders — always visible next to label */}
+                  {item.clientTotalOrders != null && item.clientTotalOrders > 0 && (
+                    <span style={{ background: 'rgba(99,102,241,0.13)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.28)', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      {item.clientTotalOrders} {item.clientTotalOrders === 1 ? 'pedido' : 'pedidos'}
+                    </span>
+                  )}
                   {stopCount >= 2 && (
                     <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderRadius: 99, padding: '2px 8px', fontSize: '0.62rem', fontWeight: 800, border: '1px solid rgba(245,158,11,0.35)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                       <Icon name="package" size={11} color="#fbbf24" /> {stopCount} paradas
