@@ -13,6 +13,28 @@ function getRemaining(createdAt: string): number {
   return Math.max(0, CARD_TIMER - Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
 }
 
+// Horizontal countdown progress bar — synced with ring
+function CountdownBar({ createdAt }: { createdAt: string }) {
+  const [seconds, setSeconds] = useState(() => getRemaining(createdAt));
+  useEffect(() => {
+    const iv = setInterval(() => setSeconds(getRemaining(createdAt)), 1000);
+    return () => clearInterval(iv);
+  }, [createdAt]);
+  const pct = (seconds / CARD_TIMER) * 100;
+  const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
+  return (
+    <div style={{ width: '100%', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
+      <div style={{
+        height: '100%', width: `${pct}%`,
+        background: `linear-gradient(90deg,${c}cc,${c})`,
+        borderRadius: 6,
+        transition: 'width 1s linear, background 0.5s',
+        boxShadow: seconds <= 15 ? `0 0 6px ${c}88` : 'none',
+      }} />
+    </div>
+  );
+}
+
 // Self-contained countdown ring — only this re-renders every second
 function CountdownRing({ createdAt }: { createdAt: string }) {
   const [seconds, setSeconds] = useState(() => getRemaining(createdAt));
@@ -645,6 +667,9 @@ export default memo(function RequestsFeed({
 
           {/* ── Action zone ── */}
           <div style={{ padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+            {/* Countdown progress bar — shrinks as timer runs */}
+            <CountdownBar createdAt={item.createdAt} />
 
             {/* Accept at client price — primary CTA */}
             <button
