@@ -666,7 +666,6 @@ export default function CitasPage() {
         jobId={chatJobId}
         myEmail={email ?? ''}
         myName={displayName ?? ''}
-        myRole="tecnico"
         otherName={chatOtherName}
         otherPhoto={chatOtherPhoto}
       />

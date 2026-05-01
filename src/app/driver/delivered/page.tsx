@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
@@ -346,7 +346,6 @@ export default function DeliveredPage() {
           orderId={chatModal.orderId}
           myEmail={email}
           myName={displayName || null}
-          myRole="driver"
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />

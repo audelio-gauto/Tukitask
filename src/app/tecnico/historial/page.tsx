@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useWorkerContext } from '../../driver/context';
@@ -303,7 +303,6 @@ export default function TecnicoHistorialPage() {
           jobId={chatModal.jobId}
           myEmail={email}
           myName={displayName || null}
-          myRole="tecnico"
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
         />
