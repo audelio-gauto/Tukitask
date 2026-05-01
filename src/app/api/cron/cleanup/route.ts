@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const sb = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+);
+
+// Vercel Cron Jobs envía automáticamente:
+//   Authorization: Bearer <CRON_SECRET>
+// donde CRON_SECRET está definido en las env vars del proyecto Vercel.
+// Ver: https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs
+function isAuthorized(req: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  // Sin secreto configurado → solo permitir en desarrollo local
+  if (!cronSecret) {
+    return process.env.NODE_ENV === 'development';
+  }
+  const authHeader = req.headers.get('authorization') ?? '';
+  return authHeader === `Bearer ${cronSecret}`;
+}
+
+export async function GET(req: Request) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    // Llamar a la función PostgreSQL que hace toda la limpieza atómica
+    const { data, error } = await sb.rpc('fn_cleanup_stale_data');
+
+    if (error) {
+      console.error('[cron/cleanup] DB error:', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const result = data as {
+      driver_feed_deleted:   number;
+      tecnico_feed_deleted:  number;
+      notifications_deleted: number;
+      offers_deleted:        number;
+      executed_at:           string;
+    };
+
+    console.log('[cron/cleanup] Completado:', result);
+
+    return NextResponse.json({
+      ok: true,
+      summary: {
+        driver_feed_deleted:   result.driver_feed_deleted,
+        tecnico_feed_deleted:  result.tecnico_feed_deleted,
+        notifications_deleted: result.notifications_deleted,
+        offers_deleted:        result.offers_deleted,
+        executed_at:           result.executed_at,
+      },
+    });
+  } catch (err) {
+    console.error('[cron/cleanup] Error inesperado:', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}
