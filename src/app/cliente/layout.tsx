@@ -8,6 +8,7 @@ import './cliente.css';
 import { initTheme } from '@/lib/useTheme';
 import { ClientDrawer } from './components/ClientDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfferIncomingToast from './components/OfferIncomingToast';
@@ -134,6 +135,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         profilePhoto={profilePhoto}
       />
       <NotificationBell userEmail={email} className="" />
+      {email && <ChatBadge email={email} href="/cliente" scope="order" />}
       {email && <OfferIncomingToast email={email} />}
       <ClientContext.Provider value={{
         openDrawer: () => setDrawerOpen(true),
