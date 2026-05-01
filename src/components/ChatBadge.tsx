@@ -34,6 +34,7 @@ export function ChatBadge({ email, href, scope }: Props) {
       const newCount = Number(j.total_unread ?? 0);
       if (!initialLoadRef.current && newCount > prevUnreadRef.current) {
         playMessageAlert();
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([150]);
       }
       prevUnreadRef.current = newCount;
       initialLoadRef.current = false;
@@ -41,7 +42,7 @@ export function ChatBadge({ email, href, scope }: Props) {
     } catch {
       // silently ignore — badge is non-critical
     }
-  }, [email, scope]);
+  }, [email]);
 
   useEffect(() => {
     fetchCount();
@@ -74,8 +75,16 @@ export function ChatBadge({ email, href, scope }: Props) {
   if (unread === 0) return null;
 
   return (
+    <>
+    <style>{`
+      @keyframes chat-badge-ping {
+        0%   { transform: scale(1);   box-shadow: 0 4px 16px rgba(34,197,94,0.5); }
+        50%  { transform: scale(1.1); box-shadow: 0 4px 28px rgba(34,197,94,0.85); }
+        100% { transform: scale(1);   box-shadow: 0 4px 16px rgba(34,197,94,0.5); }
+      }
+    `}</style>
     <button
-      onClick={() => router.push(`${href}?openChat=1`)}
+      onClick={() => { setUnread(0); router.push(`${href}?openChat=1`); }}
       title={`${unread} mensaje${unread !== 1 ? 's' : ''} sin leer`}
       style={{
         position: 'fixed',
@@ -91,7 +100,7 @@ export function ChatBadge({ email, href, scope }: Props) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 4px 16px rgba(34,197,94,0.5)',
+        animation: 'chat-badge-ping 2s ease-in-out infinite',
         fontSize: '1.3rem',
         flexDirection: 'column',
         gap: 0,
@@ -118,5 +127,6 @@ export function ChatBadge({ email, href, scope }: Props) {
         {unread > 99 ? '99+' : unread}
       </span>
     </button>
+    </>
   );
 }

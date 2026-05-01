@@ -29,14 +29,6 @@ interface Message {
   read_at: string | null;
 }
 
-type ChatRole = 'client' | 'driver' | 'tecnico';
-
-const QUICK_MESSAGES: Record<ChatRole, string[]> = {
-  driver: ['Estoy en camino 🚗', 'Ya llegué 📍', '¿Dónde estás? 🤔', 'Espérame 5 min ⏱️'],
-  tecnico: ['Estoy en camino 🔧', 'Ya llegué 📍', '¿Dónde estás? 🤔', 'En unos minutos llego ⏱️'],
-  client: ['¿Dónde estás? 🤔', 'Estoy en el punto 📍', '¿Cuánto falta? ⏱️', 'Ok, voy bajando 👍'],
-};
-
 interface ChatModalProps {
   open: boolean;
   onClose: () => void;
@@ -44,7 +36,6 @@ interface ChatModalProps {
   jobId?: string;
   myEmail: string;
   myName: string | null;
-  myRole?: ChatRole;
   otherName: string | null;
   otherPhoto: string | null;
 }
@@ -54,16 +45,23 @@ function formatTime(iso: string) {
 }
 
 export default function ChatModal({
-  open, onClose, orderId, jobId, myEmail, myName, myRole = 'client', otherName, otherPhoto,
+  open, onClose, orderId, jobId, myEmail, myName, otherName, otherPhoto,
 }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [unread, setUnread] = useState(0);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const isMobileRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
   const scope = orderId ? `order_id=${orderId}` : `job_id=${jobId}`;
+
+  // Detect touch device once on mount
+  useEffect(() => {
+    isMobileRef.current = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -113,8 +111,10 @@ export default function ChatModal({
       } as never, (payload: { new: Message }) => {
         const msg = payload.new;
         setMessages(prev => {
-          if (prev.find(m => m.id === msg.id)) return prev;
-          return [...prev, msg];
+          // Remove optimistic placeholder from same sender, then add real message
+          const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.sender_email === msg.sender_email));
+          if (filtered.find(m => m.id === msg.id)) return filtered;
+          return [...filtered, msg];
         });
         if (msg.sender_email !== myEmail) {
           setUnread(u => u + 1);
@@ -135,7 +135,23 @@ export default function ChatModal({
     const content = text.trim();
     if (!content || sending) return;
     setSending(true);
+    setSendError(null);
     setText('');
+
+    // Optimistic: show message immediately before server confirms
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
+      created_at: new Date().toISOString(),
+      sender_email: myEmail,
+      sender_name: myName,
+      sender_role: 'client',
+      content,
+      read_at: null,
+    };
+    setMessages(prev => [...prev, optimistic]);
+    scrollToBottom();
+
     try {
       const res = await authFetch('/api/chat', {
         method: 'POST',
@@ -148,16 +164,23 @@ export default function ChatModal({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(j?.error || 'No se pudo enviar el mensaje.');
-        setText(content); // restaurar texto
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setText(content);
+        setSendError(j?.error || 'No se pudo enviar el mensaje.');
       }
-    } catch { alert('Error de red al enviar.'); setText(content); }
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setText(content);
+      setSendError('Error de red al enviar.');
+    }
     setSending(false);
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    // On desktop Enter sends; on mobile Enter inserts a newline
+    if (e.key === 'Enter' && !e.shiftKey && !isMobileRef.current) { e.preventDefault(); sendMessage(); }
   };
 
   if (!open) return null;
@@ -194,7 +217,7 @@ export default function ChatModal({
           <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, background: '#334155', borderRadius: 2 }} />
 
           {otherPhoto ? (
-            <img src={otherPhoto} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e', flexShrink: 0 }} />
+            <img src={otherPhoto} alt="" loading="eager" decoding="sync" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e', flexShrink: 0 }} />
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0', flexShrink: 0 }}>
               <Icon name={orderId ? 'truck' : 'tool'} size={20} />
@@ -266,8 +289,9 @@ export default function ChatModal({
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.25)', marginTop: 3, paddingLeft: 4, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   {formatTime(msg.created_at)}
-                  {isMe && msg.read_at && <span style={{ color: '#22c55e' }}>✓✓</span>}
-                  {isMe && !msg.read_at && <span>✓</span>}
+                  {isMe && msg.id.startsWith('temp-') && <span style={{ color: 'rgba(255,255,255,0.3)' }}>enviando…</span>}
+                  {isMe && !msg.id.startsWith('temp-') && msg.read_at && <span style={{ color: '#22c55e' }}>✓✓</span>}
+                  {isMe && !msg.id.startsWith('temp-') && !msg.read_at && <span>✓</span>}
                 </div>
               </div>
             );
@@ -275,65 +299,30 @@ export default function ChatModal({
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Mensajes rápidos ── */}
-        <div style={{
-          padding: '8px 12px 4px',
-          borderTop: '1px solid var(--border-subtle)',
-          background: 'var(--surface-3)',
-          flexShrink: 0,
-          display: 'flex', gap: 6, overflowX: 'auto',
-          scrollbarWidth: 'none',
-        }}>
-          {QUICK_MESSAGES[myRole].map((msg) => (
-            <button
-              key={msg}
-              onClick={() => {
-                const content = msg;
-                if (sending) return;
-                setSending(true);
-                authFetch('/api/chat', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    order_id: orderId || undefined,
-                    job_id: jobId || undefined,
-                    content,
-                    sender_name: myName,
-                  }),
-                }).finally(() => setSending(false));
-              }}
-              disabled={sending}
-              style={{
-                flexShrink: 0,
-                padding: '6px 12px',
-                borderRadius: 20,
-                border: '1px solid rgba(34,197,94,0.4)',
-                background: 'rgba(34,197,94,0.08)',
-                color: '#22c55e',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: sending ? 'default' : 'pointer',
-                whiteSpace: 'nowrap',
-                opacity: sending ? 0.5 : 1,
-                transition: 'background 0.15s',
-              }}
-            >
-              {msg}
-            </button>
-          ))}
-        </div>
-
         {/* ── Input ── */}
         <div style={{
-          padding: '10px 12px 16px',
+          padding: '8px 12px 16px',
           borderTop: '1px solid var(--border-subtle)',
           background: 'var(--surface-3)',
           flexShrink: 0,
-          display: 'flex', gap: 8, alignItems: 'flex-end',
         }}>
+          {/* Error message */}
+          {sendError && (
+            <div style={{ fontSize: '0.75rem', color: '#f87171', marginBottom: 6, padding: '6px 10px', background: 'rgba(239,68,68,0.1)', borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)' }}>
+              ⚠️ {sendError}
+            </div>
+          )}
+          {/* Char counter — only show when near limit */}
+          {text.length > 400 && (
+            <div style={{ fontSize: '0.68rem', color: text.length >= 490 ? '#f87171' : 'rgba(255,255,255,0.35)', textAlign: 'right', marginBottom: 4 }}>
+              {500 - text.length} caracteres restantes
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
             ref={inputRef}
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={e => { setText(e.target.value); if (sendError) setSendError(null); }}
             onKeyDown={handleKeyDown}
             placeholder="Escribí un mensaje..."
             rows={1}
@@ -373,6 +362,7 @@ export default function ChatModal({
           >
             {sending ? '⏳' : '➤'}
           </button>
+          </div>
         </div>
       </div>
     </div>

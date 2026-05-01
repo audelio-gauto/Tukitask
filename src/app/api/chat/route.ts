@@ -175,8 +175,8 @@ export async function POST(req: Request) {
       {
         type: 'chat_message',
         url: order_id
-          ? (senderRole === 'driver' ? `/cliente/seguimiento/${order_id}` : '/driver/activo')
-          : (senderRole === 'tecnico' ? `/cliente/seguimiento/${job_id}` : '/tecnico/citas'),
+          ? (senderRole === 'driver' ? `/cliente/seguimiento/${order_id}?openChat=1` : '/driver/activo?openChat=1')
+          : (senderRole === 'tecnico' ? `/cliente/seguimiento/${job_id}?openChat=1` : '/tecnico/citas?openChat=1'),
         ...(order_id ? { order_id: String(order_id) } : { job_id: String(job_id) }),
       }
     ).catch(() => { /* non-critical */ });
