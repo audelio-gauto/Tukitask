@@ -21,8 +21,7 @@ BEGIN
     AND o.status NOT IN ('pending', 'negotiating');
   GET DIAGNOSTICS v_driver_feed_deleted = ROW_COUNT;
 
-  -- 2. driver_feed: eliminar rows de órdenes creadas hace más de 4 horas
-  --    (protección por si CASCADE ON DELETE no alcanzó)
+  -- 2. driver_feed: eliminar rows de órdenes que ya no existen (huérfanas)
   DELETE FROM driver_feed
   WHERE order_id NOT IN (
     SELECT id FROM orders WHERE status IN ('pending', 'negotiating')
@@ -52,7 +51,6 @@ BEGIN
   WHERE created_at < now() - INTERVAL '60 days';
 
   -- 7. tecnico_job_offers: eliminar ofertas de jobs ya cancelados/completados
-  --    (estado rejected/pending sobre jobs en estados terminales)
   DELETE FROM tecnico_job_offers o
   USING tecnico_jobs j
   WHERE j.id = o.job_id
