@@ -4,11 +4,12 @@
  * Rendered at layout level for driver and tecnico.
  * Clicking navigates to the active job page where the ChatModal lives.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { Icon } from '@/components/Icon';
+import { playMessageAlert } from '@/lib/audio';
 
 interface Props {
   email: string;
@@ -21,6 +22,8 @@ interface Props {
 export function ChatBadge({ email, href, scope }: Props) {
   const router = useRouter();
   const [unread, setUnread] = useState(0);
+  const prevUnreadRef = useRef(0);
+  const initialLoadRef = useRef(true);
 
   const fetchCount = useCallback(async () => {
     if (!email) return;
@@ -28,7 +31,13 @@ export function ChatBadge({ email, href, scope }: Props) {
       const res = await authFetch('/api/chat/threads?count=1');
       if (!res.ok) return;
       const j = await res.json();
-      setUnread(Number(j.total_unread ?? 0));
+      const newCount = Number(j.total_unread ?? 0);
+      if (!initialLoadRef.current && newCount > prevUnreadRef.current) {
+        playMessageAlert();
+      }
+      prevUnreadRef.current = newCount;
+      initialLoadRef.current = false;
+      setUnread(newCount);
     } catch {
       // silently ignore — badge is non-critical
     }

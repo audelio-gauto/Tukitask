@@ -97,7 +97,10 @@ async function sendFCM(tokens: string[], payload: PushPayload): Promise<number> 
         tokens: chunk,
         notification: { title: payload.title, body: payload.body },
         data: payload.data,
-        android: { priority: payload.priority === 'high' ? 'high' : 'normal' },
+        android: {
+          priority: payload.priority === 'high' ? 'high' : 'normal',
+          notification: { sound: 'default' },
+        },
         webpush: payload.priority === 'high'
           ? { headers: { Urgency: 'high' } }
           : undefined,

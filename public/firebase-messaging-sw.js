@@ -33,6 +33,7 @@ messaging.onBackgroundMessage((payload) => {
     data: payload.data || {},
     tag: payload.data?.group_key || notifTitle, // dedup by group_key
     renotify: true,
+    sound: 'default',
   };
   self.registration.showNotification(notifTitle, notifOptions);
 });

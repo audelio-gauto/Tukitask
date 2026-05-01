@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
+import { dispatchPush } from '@/lib/pushService';
 
 const db = () => sbAdmin();
 
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
 
   // Verificar participación y determinar rol
   let senderRole: 'client' | 'driver' | 'tecnico' = 'client';
+  let recipientEmail: string | null = null;
 
   if (order_id) {
     const { data: order } = await db()
@@ -120,6 +122,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El pedido no está activo. No se puede chatear.' }, { status: 409 });
     }
     senderRole = order.client_email?.toLowerCase() === user.email ? 'client' : 'driver';
+    recipientEmail = senderRole === 'client'
+      ? (order.accepted_by?.toLowerCase() ?? null)
+      : (order.client_email?.toLowerCase() ?? null);
   }
 
   if (job_id) {
@@ -137,6 +142,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El trabajo no está activo. No se puede chatear.' }, { status: 409 });
     }
     senderRole = job.client_email?.toLowerCase() === user.email ? 'client' : 'tecnico';
+    recipientEmail = senderRole === 'client'
+      ? (job.tecnico_email?.toLowerCase() ?? null)
+      : (job.client_email?.toLowerCase() ?? null);
   }
 
   const { data, error } = await db()
@@ -153,6 +161,27 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Send push notification to the recipient (screen-off sound support)
+  if (recipientEmail) {
+    const senderLabel = typeof sender_name === 'string' && sender_name.trim()
+      ? sender_name.trim().slice(0, 30)
+      : senderRole === 'driver' ? 'Driver' : senderRole === 'tecnico' ? 'Técnico' : 'Cliente';
+    dispatchPush(
+      recipientEmail,
+      `💬 ${senderLabel}`,
+      text.length > 80 ? text.slice(0, 77) + '…' : text,
+      'high',
+      {
+        type: 'chat_message',
+        url: order_id
+          ? (senderRole === 'driver' ? `/cliente/seguimiento/${order_id}` : '/driver/activo')
+          : (senderRole === 'tecnico' ? `/cliente/seguimiento/${job_id}` : '/tecnico/citas'),
+        ...(order_id ? { order_id: String(order_id) } : { job_id: String(job_id) }),
+      }
+    ).catch(() => { /* non-critical */ });
+  }
+
   return NextResponse.json(data, { status: 201 });
 }
 

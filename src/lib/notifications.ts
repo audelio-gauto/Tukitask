@@ -19,7 +19,8 @@ export type NotifType =
   | 'job_status'
   | 'commission'
   | 'wallet'
-  | 'rating';
+  | 'rating'
+  | 'chat_message';
 
 /**
  * Default priority per notification type.
@@ -38,6 +39,7 @@ export const NOTIF_PRIORITY: Record<NotifType, NotifPriority> = {
   commission:      'normal',
   wallet:          'normal',
   rating:          'silent',
+  chat_message:    'high',
 };
 
 export interface AppNotification {
