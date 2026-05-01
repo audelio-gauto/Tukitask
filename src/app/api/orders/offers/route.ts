@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
     // Enrich with driver_profiles (avg_rating, vehicle info) + real completed-order count
     const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
-    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }> = {};
+    const profileMap: Record<string, { avg_rating: number | null; total_ratings: number | null; vehicle_brand: string | null; vehicle_model: string | null; acceptance_rate: number | null; avg_response_seconds: number | null; profile_name: string | null; profile_photo: string | null }> = {};
     if (driverEmails.length > 0) {
       const [profilesRes, completedRes] = await Promise.all([
         supabaseServer
