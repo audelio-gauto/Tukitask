@@ -54,8 +54,9 @@ export default function ChatModal({
   const [unread, setUnread] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
   const isMobileRef = useRef(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLTextAreaElement>(null);
+  const bottomRef   = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const inputRef    = useRef<HTMLTextAreaElement>(null);
   const scope = orderId ? `order_id=${orderId}` : `job_id=${jobId}`;
 
   // Detect touch device once on mount
@@ -63,8 +64,20 @@ export default function ChatModal({
     isMobileRef.current = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   }, []);
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+  const scrollToBottom = useCallback((instant = false) => {
+    const el = messagesRef.current;
+    if (!el) return;
+    if (instant) {
+      el.scrollTop = el.scrollHeight;
+    } else {
+      // Smooth only if we're close to the bottom (< 200px away)
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+      if (nearBottom) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
   }, []);
 
   const loadMessages = useCallback(async () => {
@@ -92,8 +105,11 @@ export default function ChatModal({
 
   // Scroll al último mensaje cuando cambian
   useEffect(() => {
-    if (open && messages.length > 0) scrollToBottom();
-  }, [messages, open, scrollToBottom]);
+    if (!open || messages.length === 0) return;
+    // Use instant scroll on initial load (loading just turned false)
+    scrollToBottom(loading ? false : true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, open]);
 
   // Realtime subscription
   useEffect(() => {
@@ -124,7 +140,7 @@ export default function ChatModal({
             body: JSON.stringify(orderId ? { order_id: orderId } : { job_id: jobId }),
           }).catch(() => {});
         }
-        scrollToBottom();
+        scrollToBottom(false);
       })
       .subscribe();
 
@@ -150,7 +166,7 @@ export default function ChatModal({
       read_at: null,
     };
     setMessages(prev => [...prev, optimistic]);
-    scrollToBottom();
+    scrollToBottom(true);
 
     try {
       const res = await authFetch('/api/chat', {
@@ -212,6 +228,7 @@ export default function ChatModal({
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--glass-card)',
           flexShrink: 0,
+          position: 'sticky', top: 0, zIndex: 10,
         }}>
           {/* Drag handle */}
           <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, background: '#334155', borderRadius: 2 }} />
@@ -244,7 +261,7 @@ export default function ChatModal({
         </div>
 
         {/* ── Mensajes ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div ref={messagesRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, overscrollBehavior: 'contain' }}>
           {loading && (
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: '40px 0', fontSize: '0.85rem' }}>
               Cargando mensajes...
