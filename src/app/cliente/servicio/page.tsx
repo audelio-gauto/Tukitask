@@ -559,9 +559,11 @@ export default function SolicitarServicioPage() {
                   </div>
                 </div>
 
-                {/* Description */}
-                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem' }}>
-                  <div className="enviar-contact-header" style={{ marginBottom: '0.5rem' }}>Describí el problema</div>
+                {/* Description — obligatorio */}
+                <div className="enviar-contact-card" style={{ marginBottom: '0.75rem', border: (!details.trim() && !audioBlob) ? '1.5px solid rgba(239,68,68,0.35)' : undefined }}>
+                  <div className="enviar-contact-header" style={{ marginBottom: '0.5rem' }}>
+                    Describí el problema <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span>
+                  </div>
                   <ServiceChatInput
                     placeholder="Ej: reparar aire acondicionado, limpiar casa 3 habitaciones..."
                     value={details}
@@ -701,6 +703,13 @@ export default function SolicitarServicioPage() {
                   </div>
                 )}
 
+                {!details.trim() && !audioBlob && (
+                  <div style={{ margin: '0 0 8px', padding: '9px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    Describ\u00ed el problema para poder enviar la solicitud
+                  </div>
+                )}
+
                 <div className="enviar-step-actions">
                   <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -709,7 +718,7 @@ export default function SolicitarServicioPage() {
                     type="submit"
                     form="servicio-form"
                     className="enviar-submit-final"
-                    disabled={sending || !category}
+                    disabled={sending || !category || (!details.trim() && !audioBlob)}
                     style={{ flex: 1 }}
                   >
                     {sending ? (

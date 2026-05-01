@@ -253,6 +253,11 @@ export default function TecnicoDashboard() {
         event: '*', schema: 'public', table: 'tecnico_feed',
         filter: `tecnico_email=eq.${email}`,
       } as never, loadPendingJobs)
+      // También escuchar UPDATE en tecnico_jobs: detecta cancelaciones del cliente
+      // (el cliente cancela un job 'pending' → status → 'cancelled', sin tocar tecnico_feed)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'tecnico_jobs',
+      } as never, loadPendingJobs)
       .subscribe();
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
   }, [loadPendingJobs, email]);
