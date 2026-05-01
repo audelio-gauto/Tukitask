@@ -66,7 +66,7 @@ export function ChatBadge({ email, href, scope }: Props) {
 
   return (
     <button
-      onClick={() => router.push(href)}
+      onClick={() => router.push(`${href}?openChat=1`)}
       title={`${unread} mensaje${unread !== 1 ? 's' : ''} sin leer`}
       style={{
         position: 'fixed',

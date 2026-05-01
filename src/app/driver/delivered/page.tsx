@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
@@ -44,6 +45,29 @@ export default function DeliveredPage() {
   const [localRatings, setLocalRatings] = useState<Record<string, number>>({});
   const [reportModal, setReportModal] = useState<{ orderId: string; clientEmail: string; clientName: string } | null>(null);
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
+  const searchParams = useSearchParams();
+
+  // Auto-open most recent unread chat when badge redirects here
+  useEffect(() => {
+    if (!searchParams.get('openChat') || orders.length === 0 || chatModal) return;
+    authFetch('/api/chat/threads')
+      .then(r => r.json())
+      .then((threads: Array<{ order_id: string | null; unread_count: number; last_message_at: string }>) => {
+        const target = threads
+          .filter(t => t.order_id && t.unread_count > 0)
+          .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime())[0];
+        if (!target) return;
+        const order = orders.find(o => o.id === target.order_id);
+        if (order) {
+          setChatModal({
+            orderId: order.id,
+            clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente',
+            clientPhoto: order.client_photo || null,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [searchParams, orders, chatModal]);
 
   const fetchDelivered = useCallback(() => {
     if (!email) return;

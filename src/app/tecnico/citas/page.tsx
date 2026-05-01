@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useWorkerContext } from '../../driver/context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
@@ -69,6 +70,7 @@ const JOB_STEPS = [
 ] as const;
 export default function CitasPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { email, displayName } = useWorkerContext();
   const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +82,27 @@ export default function CitasPage() {
   const [chatJobId, setChatJobId]           = useState<string | undefined>(undefined);
   const [chatOtherName, setChatOtherName]   = useState<string | null>(null);
   const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
+
+  // Auto-open most recent unread chat when badge redirects here
+  useEffect(() => {
+    if (!searchParams.get('openChat') || jobs.length === 0 || chatOpen) return;
+    authFetch('/api/chat/threads')
+      .then(r => r.json())
+      .then((threads: Array<{ job_id: string | null; unread_count: number; last_message_at: string }>) => {
+        const target = threads
+          .filter(t => t.job_id && t.unread_count > 0)
+          .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime())[0];
+        const targetJobId = target?.job_id ?? jobs[0]?.id;
+        const job = jobs.find(j => j.id === targetJobId) ?? jobs[0];
+        if (job) {
+          setChatJobId(job.id);
+          setChatOtherName(job.client_name);
+          setChatOtherPhoto(job.client_photo ?? null);
+          setChatOpen(true);
+        }
+      })
+      .catch(() => {});
+  }, [searchParams, jobs, chatOpen]);
 
   // Confirm action modal
   const [confirmModal, setConfirmModal] = useState<{ jobId: string; action: string; message: string } | null>(null);
