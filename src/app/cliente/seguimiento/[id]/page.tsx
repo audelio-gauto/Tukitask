@@ -12,6 +12,7 @@ import { haversineKm } from '@/lib/geo';
 import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import ChatModal from '@/components/ChatModal';
+import { playMessageAlert } from '@/lib/audio';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -683,6 +684,7 @@ export default function SeguimientoPage() {
         if (msg.sender_email?.toLowerCase() === myEmail.toLowerCase()) return;
         if (chatOpen) return; // modal is open, messages load there
         setChatUnread(prev => prev + 1);
+        playMessageAlert();
         if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
         setChatToast({ from: msg.sender_name, text: msg.content.slice(0, 70) });
         chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
@@ -991,7 +993,6 @@ export default function SeguimientoPage() {
           jobId={type === 'service' ? id : undefined}
           myEmail={myEmail}
           myName={myName}
-          myRole="client"
           otherName={workerName}
           otherPhoto={workerPhoto}
         />

@@ -10,6 +10,7 @@ import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import ChatModal from '@/components/ChatModal';
+import { playMessageAlert } from '@/lib/audio';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
@@ -677,6 +678,7 @@ export default function ClienteHomePage() {
           if (msg.sender_email === email) return;
           if (currentChatIdRef.current === id) return; // ya está abierto
           setUnreadChats(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+          playMessageAlert();
           // Toast de notificación
           if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
           setChatToast({ id, isJob, from: msg.sender_name, text: msg.content.slice(0, 70) });

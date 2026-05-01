@@ -7,6 +7,7 @@ import { useWorkerContext } from '../../driver/context';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import ChatModal from '@/components/ChatModal';
+import { playMessageAlert } from '@/lib/audio';
 
 interface ExtraItem { amount: number; reason: string }
 
@@ -261,6 +262,7 @@ export default function CitasPage() {
           if (msg.sender_email?.toLowerCase() === email.toLowerCase()) return;
           if (chatOpen && chatJobId === job.id) return;
           if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+          playMessageAlert();
           setChatToast({ jobId: job.id, clientName: job.client_name || 'Cliente', text: msg.content.slice(0, 70) });
           chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
         })
