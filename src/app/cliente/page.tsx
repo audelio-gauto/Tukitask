@@ -460,8 +460,8 @@ export default function ClienteHomePage() {
       const ordersData = await ordersRes.json();
       const jobsData   = await jobsRes.json();
 
-      const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
-      const TRACKING_STS_LOAD = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
+      const ALL_ACTIVE_STS = ['pending', 'negotiating', 'accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
+      const TRACKING_STS_LOAD = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress', 'returning', 'driver_returning', 'return_delivered'];
       const activeOrders: Order[] = Array.isArray(ordersData)
         ? ordersData.filter((o: Order) => ALL_ACTIVE_STS.includes(o.status))
         : [];
@@ -559,7 +559,7 @@ export default function ClienteHomePage() {
 
   // ── ETA polling: fetch driver location for active tracking orders every 45s ──
   useEffect(() => {
-    const TRACKING_FOR_ETA = ['accepted', 'picking_up', 'in_transit'];
+    const TRACKING_FOR_ETA = ['accepted', 'picking_up', 'at_pickup', 'in_transit'];
 
     const trackingOrders = orders.filter(o => TRACKING_FOR_ETA.includes(o.status));
     if (!trackingOrders.length) { setDriverEta({}); return; }
@@ -617,7 +617,7 @@ export default function ClienteHomePage() {
   /* ─── Chat: carga contadores iniciales + suscripción Realtime ───────────── */
   useEffect(() => {
     if (!email) return;
-    const TRACKING_ST = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress',
+    const TRACKING_ST = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress',
       'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
     const tOrders = orders.filter(o => TRACKING_ST.includes(o.status));
     const tJobs   = jobs.filter(j => TRACKING_ST.includes(j.status));
@@ -730,7 +730,7 @@ export default function ClienteHomePage() {
   });
   const paginatedOffers = allOffers.slice(0, offersPage * OFFERS_PER_PAGE);
 
-  const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
+  const TRACKING_STS = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress', 'en_camino', 'llegue', 'en_proceso', 'completion_pending', 'returning', 'driver_returning', 'return_delivered'];
   const SEARCHING_STS = ['pending', 'negotiating'];
   const trackingOrders = orders.filter(o => TRACKING_STS.includes(o.status));
   const trackingJobs   = jobs.filter(j => TRACKING_STS.includes(j.status));
@@ -940,7 +940,7 @@ export default function ClienteHomePage() {
 
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   const acceptedBadge =
-    orders.filter(o => ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(o.status)).length +
+    orders.filter(o => ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'].includes(o.status)).length +
     jobs.filter(j => ['accepted', 'in_progress'].includes(j.status)).length;
 
   return (

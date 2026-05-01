@@ -82,7 +82,7 @@ const TILES: Record<MapStyle, { url: string; attr: string }> = {
 };
 
 const STATUS_ACTIVE = new Set([
-  'accepted', 'assigned', 'picking_up', 'in_transit', 'in_progress',
+  'accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress',
   'returning', 'driver_returning',
   'en_route', 'arrived', 'completion_pending',
 ]);
