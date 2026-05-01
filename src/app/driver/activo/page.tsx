@@ -75,6 +75,9 @@ export default function ActivoPage() {
   const [stopFailReason, setStopFailReason] = useState<Record<string, string>>({}); // stopId → reason text
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
+  // Chat toast for incoming messages
+  const [chatToast, setChatToast] = useState<{ orderId: string; clientName: string | null; text: string } | null>(null);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Unread message counts per order
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const prevUnreadRef = useRef<Record<string, number>>({});
@@ -142,25 +145,39 @@ export default function ActivoPage() {
     return () => clearInterval(iv);
   }, [orders, fetchUnreadCounts]);
 
+  // Realtime subscription for incoming chat messages → show toast
+  useEffect(() => {
+    if (!email || orders.length === 0) return;
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    orders.forEach(order => {
+      const ch = supabase
+        .channel(`driver-chat-${order.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'chat_messages',
+          filter: `order_id=eq.${order.id}`,
+        } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+          const msg = payload.new;
+          if (msg.sender_email?.toLowerCase() === email.toLowerCase()) return;
+          if (chatModal?.orderId === order.id) return;
+          setUnreadCounts(prev => ({ ...prev, [order.id]: (prev[order.id] ?? 0) + 1 }));
+          playMessageAlert();
+          if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+          setChatToast({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', text: msg.content.slice(0, 70) });
+          chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+        })
+        .subscribe();
+      channels.push(ch);
+    });
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, email]);
+
   // When chat opens: clear unread count for that order
   useEffect(() => {
     if (chatModal?.orderId) {
       setUnreadCounts(prev => ({ ...prev, [chatModal.orderId]: 0 }));
     }
   }, [chatModal?.orderId]);
-
-  // Play sound when new unread messages arrive
-  const prevUnreadSnap = prevUnreadRef;
-  useEffect(() => {
-    const prev = prevUnreadSnap.current;
-    let hasNew = false;
-    for (const [id, count] of Object.entries(unreadCounts)) {
-      if (id === chatModal?.orderId) continue;
-      if (count > (prev[id] ?? 0)) { hasNew = true; break; }
-    }
-    if (hasNew) playMessageAlert();
-    prevUnreadSnap.current = { ...unreadCounts };
-  }, [unreadCounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateStatus = async (orderId: string, newStatus: string, extraBody?: Record<string, unknown>) => {
     const key = orderId + newStatus;
@@ -774,6 +791,39 @@ export default function ActivoPage() {
 
   return (
     <DriverScreenLayout title="Envío Activo">
+      {/* Chat toast — new message incoming */}
+      {chatToast && (
+        <div
+          onClick={() => {
+            if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+            setChatToast(null);
+            const order = orders.find(o => o.id === chatToast.orderId);
+            setChatModal({ orderId: chatToast.orderId, clientName: chatToast.clientName, clientPhoto: order?.client_photo || null });
+          }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · CLIENTE</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.clientName ? `${chatToast.clientName}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
+
       {/* Toast queue */}
       {toasts.map((t, i) => (
         <div key={t.id} style={{

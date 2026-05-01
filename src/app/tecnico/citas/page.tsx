@@ -82,6 +82,9 @@ export default function CitasPage() {
   const [chatJobId, setChatJobId]           = useState<string | undefined>(undefined);
   const [chatOtherName, setChatOtherName]   = useState<string | null>(null);
   const [chatOtherPhoto, setChatOtherPhoto] = useState<string | null>(null);
+  // Chat toast for incoming messages
+  const [chatToast, setChatToast] = useState<{ jobId: string; clientName: string | null; text: string } | null>(null);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-open most recent unread chat when badge redirects here
   useEffect(() => {
@@ -243,6 +246,31 @@ export default function CitasPage() {
     };
   }, [loadJobs, email]);
 
+  // Realtime subscription for incoming chat messages → show toast
+  useEffect(() => {
+    if (!email || jobs.length === 0) return;
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    jobs.forEach(job => {
+      const ch = supabase
+        .channel(`tecnico-chat-${job.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'chat_messages',
+          filter: `job_id=eq.${job.id}`,
+        } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+          const msg = payload.new;
+          if (msg.sender_email?.toLowerCase() === email.toLowerCase()) return;
+          if (chatOpen && chatJobId === job.id) return;
+          if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+          setChatToast({ jobId: job.id, clientName: job.client_name || 'Cliente', text: msg.content.slice(0, 70) });
+          chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+        })
+        .subscribe();
+      channels.push(ch);
+    });
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, email]);
+
   const doAction = async (jobId: string, action: string) => {
     if (!email || actionId) return;
     setActionId(jobId + action);
@@ -330,7 +358,41 @@ export default function CitasPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--content-bg)', paddingBottom: 80 }}>
-      {/* Header */}
+      {/* Chat toast — new message incoming */}
+      {chatToast && (
+        <div
+          onClick={() => {
+            if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+            setChatToast(null);
+            const job = jobs.find(j => j.id === chatToast.jobId);
+            setChatJobId(chatToast.jobId);
+            setChatOtherName(chatToast.clientName);
+            setChatOtherPhoto(job?.client_photo ?? null);
+            setChatOpen(true);
+          }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · CLIENTE</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.clientName ? `${chatToast.clientName}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
       <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', color: 'var(--text-primary)', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
         <div>

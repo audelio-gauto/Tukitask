@@ -115,7 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Sin acceso a este chat' }, { status: 403 });
     }
     // Solo permitir chat si el pedido está activo
-    const ACTIVE = ['accepted','picking_up','in_transit','returning','driver_returning','return_delivered'];
+    const ACTIVE = ['accepted','picking_up','at_pickup','in_transit','returning','driver_returning','return_delivered'];
     if (!ACTIVE.includes(order.status)) {
       return NextResponse.json({ error: 'El pedido no está activo. No se puede chatear.' }, { status: 409 });
     }
