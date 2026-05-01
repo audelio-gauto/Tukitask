@@ -497,18 +497,29 @@ export default memo(function RequestsFeed({
 
               {/* Price block + timer + dismiss */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                {/* Price pill */}
-                <div style={{
-                  background: 'rgba(245,197,24,0.10)',
-                  border: `1px solid rgba(245,197,24,0.28)`,
-                  borderRadius: 12, padding: '5px 10px', textAlign: 'right',
-                }}>
-                  <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.3rem', lineHeight: 1 }}>
-                    {clientPrice.toLocaleString()}
+                {/* Price pill — en modo tecnico solo se muestra si el cliente puso precio (backward compat) */}
+                {mode === 'driver' || clientPrice > 0 ? (
+                  <div style={{
+                    background: 'rgba(245,197,24,0.10)',
+                    border: `1px solid rgba(245,197,24,0.28)`,
+                    borderRadius: 12, padding: '5px 10px', textAlign: 'right',
+                  }}>
+                    <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.3rem', lineHeight: 1 }}>
+                      {clientPrice.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Guaraníes</div>
+                    {pricePerStop && <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
                   </div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Guaraníes</div>
-                  {pricePerStop && <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
-                </div>
+                ) : (
+                  <div style={{
+                    background: 'rgba(99,102,241,0.10)',
+                    border: '1px solid rgba(99,102,241,0.28)',
+                    borderRadius: 12, padding: '5px 10px', textAlign: 'right',
+                  }}>
+                    <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '0.78rem', lineHeight: 1.3 }}>A cotizar</div>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Ponés tu precio</div>
+                  </div>
+                )}
 
                 {/* Timer + dismiss */}
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -687,97 +698,160 @@ export default memo(function RequestsFeed({
             {/* Countdown progress bar — shrinks as timer runs */}
             <CountdownBar createdAt={item.createdAt} />
 
-            {/* Accept at client price — primary CTA */}
-            <button
-              onClick={() => onAccept(item.id, clientPrice, offerNote, distKm)}
-              disabled={isSending}
-              style={{
-                width: '100%', padding: '14px 0', border: 'none', borderRadius: 14,
-                cursor: isSending ? 'not-allowed' : 'pointer',
-                background: isSending
-                  ? 'rgba(245,197,24,0.25)'
-                  : `linear-gradient(135deg,${BRAND},#F58A07)`,
-                color: '#1C1C2E', fontWeight: 900, fontSize: '1.08rem',
-                opacity: isSending ? 0.6 : 1,
-                boxShadow: isSending ? 'none' : `0 4px 16px ${BRAND_SHADOW}`,
-                letterSpacing: '0.01em',
-              }}
-            >
-              {isSending && offerSentForThis ? 'Enviando…' : `Aceptar · ₲${clientPrice.toLocaleString()}`}
-            </button>
-
-            {/* Counter-offers section */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>
-                o propone tu tarifa
-              </span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-            </div>
-
-            <div style={{ display: 'flex', gap: 6 }}>
-              {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
+            {/* ── Acciones según modo ── */}
+            {mode === 'driver' ? (
+              <>
+                {/* Accept at client price — primary CTA */}
                 <button
-                  key={pct}
-                  onClick={() => onAccept(item.id, amount, offerNote, distKm)}
+                  onClick={() => onAccept(item.id, clientPrice, offerNote, distKm)}
                   disabled={isSending}
                   style={{
-                    flex: 1, padding: '8px 0',
-                    border: 'none',
-                    borderRadius: 12,
-                    background: `linear-gradient(135deg,${BRAND},#F58A07)`,
-                    color: '#1C1C2E', fontWeight: 800,
-                    fontSize: '0.74rem', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    boxShadow: `0 2px 8px ${BRAND_SHADOW}`,
+                    width: '100%', padding: '14px 0', border: 'none', borderRadius: 14,
+                    cursor: isSending ? 'not-allowed' : 'pointer',
+                    background: isSending
+                      ? 'rgba(245,197,24,0.25)'
+                      : `linear-gradient(135deg,${BRAND},#F58A07)`,
+                    color: '#1C1C2E', fontWeight: 900, fontSize: '1.08rem',
+                    opacity: isSending ? 0.6 : 1,
+                    boxShadow: isSending ? 'none' : `0 4px 16px ${BRAND_SHADOW}`,
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  <span style={{ fontSize: '0.76rem', fontWeight: 900 }}>₲{amount.toLocaleString()}</span>
-                  <span style={{ fontSize: '0.6rem', color: 'rgba(28,28,46,0.65)', fontWeight: 700 }}>{pct}</span>
+                  {isSending && offerSentForThis ? 'Enviando…' : `Aceptar · ₲${clientPrice.toLocaleString()}`}
                 </button>
-              ))}
-              {/* Custom price */}
-              <button
-                onClick={() => setCustomOpen(o => !o)}
-                disabled={isSending}
-                style={{
-                  width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
-                  border: `1px solid ${customOpen ? '#818cf8' : 'rgba(255,255,255,0.10)'}`,
-                  background: customOpen ? 'rgba(129,140,248,0.14)' : 'rgba(255,255,255,0.04)',
-                  color: customOpen ? '#818cf8' : 'var(--text-muted)', fontWeight: 700,
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 2,
-                }}
-                title="Precio personalizado"
-              >
-                <Icon name="pencil" size={14} color={customOpen ? '#818cf8' : undefined} />
-                <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
-              </button>
-            </div>
 
-            {customOpen && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
-                <input
-                  type="text" inputMode="numeric" placeholder="Ej: 50000"
-                  value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
-                  onChange={e => setCustomPrice(e.target.value.replace(/\D/g, ''))}
-                  style={{ flex: 1, padding: '9px 12px', borderRadius: 12,
-                    border: '1px solid #818cf8', background: 'var(--input-bg)',
-                    color: 'var(--input-text)', fontSize: '0.9rem', fontWeight: 700,
-                    outline: 'none', boxSizing: 'border-box' }}
-                />
+                {/* Counter-offers section */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>
+                    o propone tu tarifa
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
+                    <button
+                      key={pct}
+                      onClick={() => onAccept(item.id, amount, offerNote, distKm)}
+                      disabled={isSending}
+                      style={{
+                        flex: 1, padding: '8px 0',
+                        border: 'none',
+                        borderRadius: 12,
+                        background: `linear-gradient(135deg,${BRAND},#F58A07)`,
+                        color: '#1C1C2E', fontWeight: 800,
+                        fontSize: '0.74rem', cursor: 'pointer',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        boxShadow: `0 2px 8px ${BRAND_SHADOW}`,
+                      }}
+                    >
+                      <span style={{ fontSize: '0.76rem', fontWeight: 900 }}>₲{amount.toLocaleString()}</span>
+                      <span style={{ fontSize: '0.6rem', color: 'rgba(28,28,46,0.65)', fontWeight: 700 }}>{pct}</span>
+                    </button>
+                  ))}
+                  {/* Custom price */}
+                  <button
+                    onClick={() => setCustomOpen(o => !o)}
+                    disabled={isSending}
+                    style={{
+                      width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
+                      border: `1px solid ${customOpen ? '#818cf8' : 'rgba(255,255,255,0.10)'}`,
+                      background: customOpen ? 'rgba(129,140,248,0.14)' : 'rgba(255,255,255,0.04)',
+                      color: customOpen ? '#818cf8' : 'var(--text-muted)', fontWeight: 700,
+                      cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 2,
+                    }}
+                    title="Precio personalizado"
+                  >
+                    <Icon name="pencil" size={14} color={customOpen ? '#818cf8' : undefined} />
+                    <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
+                  </button>
+                </div>
+
+                {customOpen && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
+                    <input
+                      type="text" inputMode="numeric" placeholder="Ej: 50000"
+                      value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
+                      onChange={e => setCustomPrice(e.target.value.replace(/\D/g, ''))}
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: 12,
+                        border: '1px solid #818cf8', background: 'var(--input-bg)',
+                        color: 'var(--input-text)', fontSize: '0.9rem', fontWeight: 700,
+                        outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <button
+                      onClick={() => { const a = parseInt(customPrice || '0'); if (a > 0) onAccept(item.id, a, offerNote, distKm); }}
+                      disabled={isSending || !customPrice || parseInt(customPrice || '0') <= 0}
+                      style={{ padding: '9px 14px', borderRadius: 12, border: 'none',
+                        background: '#818cf8', color: '#fff', fontWeight: 800,
+                        fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
+                        opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.4 : 1 }}
+                    >
+                      Enviar
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Tecnico: ingresa su precio directamente — el cliente no fijó referencia */}
+                <div style={{
+                  background: 'rgba(245,197,24,0.06)',
+                  border: '1px solid rgba(245,197,24,0.18)',
+                  borderRadius: 14, padding: '12px 14px',
+                }}>
+                  <div style={{
+                    fontSize: '0.67rem', fontWeight: 800, color: 'var(--text-muted)',
+                    textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8,
+                  }}>
+                    Tu precio por este servicio
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: BRAND, fontSize: '1.05rem', fontWeight: 900, flexShrink: 0 }}>₲</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ej: 150.000"
+                      value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
+                      onChange={e => setCustomPrice(e.target.value.replace(/\D/g, ''))}
+                      style={{
+                        flex: 1, padding: '11px 14px', borderRadius: 12,
+                        border: `1px solid ${customPrice && parseInt(customPrice) > 0 ? BRAND : 'rgba(255,255,255,0.14)'}`,
+                        background: 'var(--input-bg)', color: 'var(--input-text)',
+                        fontSize: '1.05rem', fontWeight: 800, outline: 'none',
+                        boxSizing: 'border-box', transition: 'border-color 0.2s',
+                      }}
+                    />
+                  </div>
+                </div>
                 <button
                   onClick={() => { const a = parseInt(customPrice || '0'); if (a > 0) onAccept(item.id, a, offerNote, distKm); }}
                   disabled={isSending || !customPrice || parseInt(customPrice || '0') <= 0}
-                  style={{ padding: '9px 14px', borderRadius: 12, border: 'none',
-                    background: '#818cf8', color: '#fff', fontWeight: 800,
-                    fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
-                    opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.4 : 1 }}
+                  style={{
+                    width: '100%', padding: '14px 0', border: 'none', borderRadius: 14,
+                    cursor: (isSending || !customPrice || parseInt(customPrice || '0') <= 0) ? 'not-allowed' : 'pointer',
+                    background: (!customPrice || parseInt(customPrice || '0') <= 0 || isSending)
+                      ? 'rgba(245,197,24,0.22)'
+                      : `linear-gradient(135deg,${BRAND},#F58A07)`,
+                    color: '#1C1C2E', fontWeight: 900, fontSize: '1.05rem',
+                    opacity: (isSending || !customPrice || parseInt(customPrice || '0') <= 0) ? 0.55 : 1,
+                    boxShadow: (!customPrice || parseInt(customPrice || '0') <= 0 || isSending) ? 'none' : `0 4px 16px ${BRAND_SHADOW}`,
+                    letterSpacing: '0.01em',
+                    transition: 'opacity 0.2s, background 0.2s, box-shadow 0.2s',
+                  }}
                 >
-                  Enviar
+                  {isSending && offerSentForThis ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.9s linear infinite' }}>
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                      </svg>
+                      Enviando…
+                    </span>
+                  ) : 'Enviar oferta'}
                 </button>
-              </div>
+              </>
             )}
 
             {/* Note toggle — collapsible */}

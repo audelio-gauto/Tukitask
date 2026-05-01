@@ -128,16 +128,6 @@ export default function SolicitarServicioPage() {
   const [scheduledAt, setScheduledAt]     = useState('');  // ISO datetime string
   const [requireVerified, setRequireVerified] = useState(false);
 
-  // Pricing state — driven by admin-configured suggested_price (null = client sets own)
-  const suggestedPrice = category != null
-    ? (servicePrices[category] ?? null)
-    : null;
-  const [offerPrice, setOfferPrice] = useState(0);
-  // Sync whenever suggestedPrice changes (category switch or pricing data loads from API)
-  useEffect(() => {
-    setOfferPrice(suggestedPrice ?? 0);
-  }, [suggestedPrice]);
-
   // Step wizard state
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -186,7 +176,7 @@ export default function SolicitarServicioPage() {
       const res = await authFetch('/api/promo/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: promoCode.trim(), order_amount: offerPrice, order_type: 'tecnico' }),
+        body: JSON.stringify({ code: promoCode.trim(), order_amount: 0, order_type: 'tecnico' }),
       });
       const data = await res.json();
       if (!res.ok) { setPromoError(data.error || 'Código inválido'); return; }
@@ -235,7 +225,7 @@ export default function SolicitarServicioPage() {
           lat:                      locationLat   ? Number(locationLat)  : null,
           lng:                      locationLng   ? Number(locationLng)  : null,
           description:              details       || null,
-          price:                    offerPrice,
+          price:                    null,
           payment_method:           paymentMethod,
           scheduled_at:             serviceMode === 'agendar' && scheduledAt ? scheduledAt : null,
           require_verified_tecnico: requireVerified,
@@ -547,8 +537,8 @@ export default function SolicitarServicioPage() {
               <>
                 <div className="enviar-step-title">
                   <div>
-                    <div className="enviar-step-title-main">Descripción y oferta</div>
-                    <div className="enviar-step-title-sub">Contanos qué necesitás y cuánto pagás</div>
+                    <div className="enviar-step-title-main">Descripción del problema</div>
+                    <div className="enviar-step-title-sub">Contanos qué necesitás, el técnico te cotizará</div>
                   </div>
                 </div>
 
@@ -655,50 +645,6 @@ export default function SolicitarServicioPage() {
                   </div>
                 </div>
 
-                {/* Price section */}
-                <div className="enviar-price-section">
-                  <div className="enviar-price-label">
-                    Proponer precio
-                    {suggestedPrice != null && suggestedPrice > 0 && (
-                      <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
-                        Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
-                      </button>
-                    )}
-                  </div>
-                  <div className="enviar-price-control">
-                    <button
-                      type="button"
-                      className="enviar-price-btn minus"
-                      onClick={() => setOfferPrice(prev => Math.max(0, prev - 5000))}
-                      disabled={offerPrice <= 0}
-                      aria-label="Restar 5.000"
-                    >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
-                    </button>
-                    <div className="enviar-price-display">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className="enviar-price-input"
-                        value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '');
-                          setOfferPrice(Math.max(0, parseInt(raw) || 0));
-                        }}
-                      />
-                      <span className="enviar-price-currency">Gs</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="enviar-price-btn plus"
-                      onClick={() => setOfferPrice(prev => prev + 5000)}
-                      aria-label="Sumar 5.000"
-                    >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Payment method */}
                 <div className="enviar-payment-pills">
                   {paymentMethods.map(pm => (
@@ -763,7 +709,7 @@ export default function SolicitarServicioPage() {
                     type="submit"
                     form="servicio-form"
                     className="enviar-submit-final"
-                    disabled={sending || !category || offerPrice <= 0}
+                    disabled={sending || !category}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
@@ -774,7 +720,7 @@ export default function SolicitarServicioPage() {
                         Enviando...
                       </span>
                     ) : (
-                      <>Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+                      <>Solicitar servicio</>
                     )}
                   </button>
                 </div>
