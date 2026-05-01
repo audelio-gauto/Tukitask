@@ -156,6 +156,9 @@ export default function SeguimientoPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [myEmail,  setMyEmail]  = useState('');
   const [myName,   setMyName]   = useState<string | null>(null);
+  const [chatToast, setChatToast] = useState<{ text: string; from: string | null } | null>(null);
+  const [chatUnread, setChatUnread] = useState(0);
+  const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Read type + chat from query param, get session ────────────────────────
   useEffect(() => {
@@ -667,6 +670,27 @@ export default function SeguimientoPage() {
     };
   }, [order?.accepted_by, order?.status, fetchDriverLoc]);
 
+  // ── Realtime: incoming chat messages → show toast + unread badge ────────────
+  useEffect(() => {
+    if (!myEmail || !id || !STATUS_ACTIVE.has(order?.status ?? '')) return;
+    const filter = type === 'service' ? `job_id=eq.${id}` : `order_id=eq.${id}`;
+    const ch = supabase
+      .channel(`seguimiento-chat-${id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages', filter,
+      } as never, (payload: { new: { sender_email: string; sender_name: string | null; content: string } }) => {
+        const msg = payload.new;
+        if (msg.sender_email?.toLowerCase() === myEmail.toLowerCase()) return;
+        if (chatOpen) return; // modal is open, messages load there
+        setChatUnread(prev => prev + 1);
+        if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+        setChatToast({ from: msg.sender_name, text: msg.content.slice(0, 70) });
+        chatToastTimerRef.current = setTimeout(() => setChatToast(null), 6000);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myEmail, id, type, order?.status]);
   const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
   const workerRating = order?.driver_avg_rating ?? null;
@@ -906,10 +930,13 @@ export default function SeguimientoPage() {
           <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'center' }}>
             {isActive && (
               <button
-                onClick={() => setChatOpen(true)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}
+                onClick={() => { setChatOpen(true); setChatUnread(0); }}
+                style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}
               >
                 <Icon name="chat" size={16} color="#fff" /> Chat
+                {chatUnread > 0 && (
+                  <span style={{ position: 'absolute', top: -6, right: -6, background: '#ef4444', color: '#fff', borderRadius: '50%', minWidth: 18, height: 18, fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>{chatUnread}</span>
+                )}
               </button>
             )}
             <Link
@@ -922,15 +949,49 @@ export default function SeguimientoPage() {
         </div>
       ) : null}
 
+      {/* ── Chat toast popup ── */}
+      {chatToast && (
+        <div
+          onClick={() => {
+            if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
+            setChatToast(null);
+            setChatUnread(0);
+            setChatOpen(true);
+          }}
+          style={{
+            position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10000, width: 'calc(100% - 28px)', maxWidth: 400,
+            background: '#0f2920', border: '1.5px solid rgba(34,197,94,0.55)',
+            borderRadius: 18, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.75)',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · {type === 'service' ? 'TÉCNICO' : 'CONDUCTOR'}</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
+            </div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
+            style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
+
       {/* ── Chat Modal ── */}
       {chatOpen && myEmail && (
         <ChatModal
           open={chatOpen}
-          onClose={() => setChatOpen(false)}
+          onClose={() => { setChatOpen(false); setChatUnread(0); }}
           orderId={type === 'delivery' ? id : undefined}
           jobId={type === 'service' ? id : undefined}
           myEmail={myEmail}
           myName={myName}
+          myRole="client"
           otherName={workerName}
           otherPhoto={workerPhoto}
         />
