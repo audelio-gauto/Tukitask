@@ -100,7 +100,7 @@ export default function CitasPage() {
         const job = jobs.find(j => j.id === targetJobId) ?? jobs[0];
         if (job) {
           setChatJobId(job.id);
-          setChatOtherName(job.client_name);
+          setChatOtherName(job.client_name || job.client_email?.split('@')[0] || 'Cliente');
           setChatOtherPhoto(job.client_photo ?? null);
           setChatOpen(true);
         }

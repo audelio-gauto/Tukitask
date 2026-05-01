@@ -456,7 +456,7 @@ export default function ClienteHomePage() {
   useEffect(() => {
     if (!searchParams?.get('openChat') || chatOpen) return;
     const allItems = [
-      ...orders.map(o => ({ id: o.id, isJob: false, otherName: (acceptedDriverInfo[o.id]?.name ?? null), otherPhoto: (acceptedDriverInfo[o.id]?.photo ?? null), unread: unreadChats[o.id] ?? 0 })),
+      ...orders.map(o => ({ id: o.id, isJob: false, otherName: (acceptedDriverInfo[o.id]?.name || acceptedDriverInfo[o.id]?.driver_email?.split('@')[0] ?? null), otherPhoto: (acceptedDriverInfo[o.id]?.photo ?? null), unread: unreadChats[o.id] ?? 0 })),
       ...jobs.map(j => ({ id: j.id, isJob: true, otherName: (j.tecnico_name ?? null), otherPhoto: (j.tecnico_photo ?? null), unread: unreadChats[j.id] ?? 0 })),
     ];
     if (allItems.length === 0) return;

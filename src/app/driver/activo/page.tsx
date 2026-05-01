@@ -157,7 +157,7 @@ export default function ActivoPage() {
     // Prefer order with unread messages, fallback to first order
     const target = orders.find(o => (unreadCounts[o.id] ?? 0) > 0) ?? orders[0];
     if (!target) return;
-    setChatModal({ orderId: target.id, clientName: target.client_name ?? null, clientPhoto: target.client_photo ?? null });
+    setChatModal({ orderId: target.id, clientName: target.client_name || target.client_email?.split('@')[0] || 'Cliente', clientPhoto: target.client_photo ?? null });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, orders]);
 

@@ -32,7 +32,7 @@ export async function GET(req: Request) {
       const [profilesRes, completedRes] = await Promise.all([
         supabaseServer
           .from('driver_profiles')
-          .select('email, avg_rating, total_ratings, vehicle_type, transport_mode, acceptance_rate, avg_response_seconds')
+          .select('email, avg_rating, total_ratings, vehicle_type, transport_mode, acceptance_rate, avg_response_seconds, first_name, last_name, profile_photo')
           .in('email', driverEmails),
         supabaseServer
           .from('orders')
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
         const e = row.accepted_by as string;
         completedCountMap[e] = (completedCountMap[e] ?? 0) + 1;
       }
-      (profilesRes.data ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null; acceptance_rate: number | null; avg_response_seconds: number | null }) => {
+      (profilesRes.data ?? []).forEach((p: { email: string; avg_rating: number | null; total_ratings: number | null; vehicle_type: string | null; transport_mode: string | null; acceptance_rate: number | null; avg_response_seconds: number | null; first_name: string | null; last_name: string | null; profile_photo: string | null }) => {
         let vbrand: string | null = null;
         let vmodel: string | null = null;
         try {
@@ -57,7 +57,8 @@ export async function GET(req: Request) {
         } catch { /* noop */ }
         // Use live completed-order count; fall back to total_ratings if not available
         const liveCount = completedCountMap[p.email] ?? null;
-        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: liveCount ?? p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel, acceptance_rate: p.acceptance_rate ?? null, avg_response_seconds: p.avg_response_seconds ?? null };
+        const profileFullName = [p.first_name, p.last_name].filter(Boolean).join(' ') || null;
+        profileMap[p.email] = { avg_rating: p.avg_rating ?? null, total_ratings: liveCount ?? p.total_ratings ?? null, vehicle_brand: vbrand, vehicle_model: vmodel, acceptance_rate: p.acceptance_rate ?? null, avg_response_seconds: p.avg_response_seconds ?? null, profile_name: profileFullName, profile_photo: p.profile_photo ?? null };
       });
     }
 
@@ -74,6 +75,9 @@ export async function GET(req: Request) {
       });
       const enriched = {
         ...offer,
+        // Use profile name/photo as fallback if the offer row has them null
+        driver_name:               (offer.driver_name as string | null) || prof?.profile_name || (offer.driver_email as string)?.split('@')[0] || null,
+        driver_photo:              (offer.driver_photo as string | null) || prof?.profile_photo || null,
         driver_avg_rating:         prof?.avg_rating          ?? null,
         driver_total_ratings:      prof?.total_ratings       ?? null,
         driver_vehicle_brand:      prof?.vehicle_brand       ?? null,

@@ -49,7 +49,10 @@ export async function GET(req: Request) {
         driver_avg_rating = dp.avg_rating ?? null;
       }
     }
-    return NextResponse.json({ ...order, driver_name, driver_photo, driver_avg_rating });
+    // Last-resort fallback: use email prefix so client never sees null
+    if (!driver_name && order.accepted_by) {
+      driver_name = order.accepted_by.split('@')[0];
+    }
   }
 
   let query = db
