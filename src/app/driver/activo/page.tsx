@@ -77,44 +77,12 @@ export default function ActivoPage() {
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-
-  // ── Bell (timbre) state per order ─────────────────────────────────────────
-  type BellEntry = { count: number; lastRingAt: number | null; cancelFreeAt: number | null };
-  const [bellState, setBellState] = useState<Record<string, BellEntry>>({});
-  const [, setTick] = useState(0); // 1-second ticker for countdown display
   const prevUnreadRef = useRef<Record<string, number>>({});
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, msg }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2800);
-  };
-
-  // Ticker: re-render every second to update bell countdowns
-  useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const ringBell = async (orderId: string, clientEmail: string) => {
-    const entry = bellState[orderId] ?? { count: 0, lastRingAt: null, cancelFreeAt: null };
-    const newCount = entry.count + 1;
-    const nowMs = Date.now();
-    setBellState(prev => ({
-      ...prev,
-      [orderId]: {
-        count: newCount,
-        lastRingAt: nowMs,
-        cancelFreeAt: newCount === 3 ? nowMs + 120_000 : entry.cancelFreeAt,
-      },
-    }));
-    try {
-      await authFetch('/api/bell', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, bell_number: newCount, client_email: clientEmail, worker_type: 'driver' }),
-      });
-    } catch {}
   };
 
   const fetchActive = useCallback(() => {
@@ -212,15 +180,10 @@ export default function ActivoPage() {
           setOrders(prev => prev.filter(o => o.id !== orderId));
           setFinalizeOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
           setFailReason(prev => { const n = { ...prev }; delete n[orderId]; return n; });
-          setBellState(prev => { const n = { ...prev }; delete n[orderId]; return n; });
           showToast('⚠️ Entrega fallida registrada. Aparece en "Fallidos".');
         } else {
           setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
           setFinalizeOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
-          // Reset bell when driver starts delivery (client came out)
-          if (newStatus === 'in_transit') {
-            setBellState(prev => { const n = { ...prev }; delete n[orderId]; return n; });
-          }
         }
       } else {
         const err = await res.json().catch(() => ({}));
@@ -688,116 +651,24 @@ export default function ActivoPage() {
               <Icon name="clock" size={14} /> Esperando que el cliente confirme la recepción...
             </div>
           )}
-          {/* Delivery progress buttons: accepted → picking_up */}
-          {(status === 'accepted' || status === 'picking_up') && (
+          {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
+          {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
             <button
               disabled={!!acting}
-              onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up'].nextStatus)}
+              onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
               style={{
                 width: '100%', padding: '14px', borderRadius: 14, border: 'none',
                 background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
                 color: acting ? '#6b7280' : '#1C1C2E',
                 fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
                 boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
-                letterSpacing: '0.3px', transition: 'all 0.2s',
+                letterSpacing: '0.3px',
+                transition: 'all 0.2s',
               }}
             >
-              {acting === order.id + PROGRESS_ACTION[status as 'accepted' | 'picking_up'].nextStatus
-                ? 'Actualizando...'
-                : PROGRESS_ACTION[status as 'accepted' | 'picking_up'].label}
+              {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
             </button>
           )}
-
-          {/* at_pickup: timbre section + Iniciar entrega */}
-          {status === 'at_pickup' && (() => {
-            const bEntry = bellState[order.id] ?? { count: 0, lastRingAt: null, cancelFreeAt: null };
-            const nowMs = Date.now();
-            const cooldownMs = bEntry.count === 1 ? 60_000 : bEntry.count === 2 ? 120_000 : 0;
-            const remaining = bEntry.count > 0 && bEntry.count < 3 && bEntry.lastRingAt
-              ? Math.max(0, cooldownMs - (nowMs - bEntry.lastRingAt)) : 0;
-            const canRing = bEntry.count < 3 && remaining === 0;
-            const cancelFreeRemaining = bEntry.count >= 3 && bEntry.cancelFreeAt
-              ? Math.max(0, bEntry.cancelFreeAt - nowMs) : 0;
-            const canCancelFree = bEntry.count >= 3 && cancelFreeRemaining === 0;
-            const fmtMs = (ms: number) => {
-              const s = Math.ceil(ms / 1000);
-              return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
-            };
-            return (
-              <>
-                {/* ── Timbre ── */}
-                <div style={{
-                  background: 'rgba(245,197,24,0.06)',
-                  border: '1px solid rgba(245,197,24,0.22)',
-                  borderRadius: 14, padding: '12px 14px', marginBottom: 8,
-                }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>
-                    ¿El cliente no baja? Avisale
-                  </p>
-                  {bEntry.count < 3 ? (
-                    <button
-                      disabled={!canRing || !!acting}
-                      onClick={() => ringBell(order.id, order.client_email)}
-                      style={{
-                        width: '100%', padding: '11px', borderRadius: 12, border: 'none',
-                        background: canRing && !acting ? `linear-gradient(135deg, ${BRAND}, #F58A07)` : 'rgba(255,255,255,0.07)',
-                        color: canRing && !acting ? '#1C1C2E' : 'rgba(255,255,255,0.3)',
-                        fontWeight: 800, fontSize: '0.92rem',
-                        cursor: canRing && !acting ? 'pointer' : 'default',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {remaining > 0
-                        ? `⏱ Siguiente aviso en ${fmtMs(remaining)}`
-                        : `🔔 Tocar timbre${bEntry.count > 0 ? ` (${bEntry.count}/3)` : ''}`}
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ fontSize: '0.82rem', color: '#f87171', fontWeight: 700, textAlign: 'center' }}>
-                        ⚠️ Sin respuesta tras 3 avisos
-                      </div>
-                      {cancelFreeRemaining > 0 && (
-                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
-                          Podés cancelar en {fmtMs(cancelFreeRemaining)}
-                        </div>
-                      )}
-                      {canCancelFree && (
-                        <button
-                          disabled={!!acting}
-                          onClick={() => updateStatus(order.id, 'failed', { fail_reason: 'CLIENTE_NO_RESPONDE' })}
-                          style={{
-                            width: '100%', padding: '11px', borderRadius: 12,
-                            border: '1.5px solid rgba(239,68,68,0.5)',
-                            background: 'rgba(239,68,68,0.12)', color: '#f87171',
-                            fontWeight: 800, fontSize: '0.88rem',
-                            cursor: !!acting ? 'default' : 'pointer',
-                          }}
-                        >
-                          ✕ Cancelar sin penalización
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Iniciar entrega ── */}
-                <button
-                  disabled={!!acting}
-                  onClick={() => updateStatus(order.id, 'in_transit')}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                    background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
-                    color: acting ? '#6b7280' : '#1C1C2E',
-                    fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
-                    boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
-                    letterSpacing: '0.3px', transition: 'all 0.2s',
-                  }}
-                >
-                  {acting === order.id + 'in_transit' ? 'Actualizando...' : 'Iniciar entrega'}
-                </button>
-              </>
-            );
-          })()}
 
           {status === 'in_transit' && !isFinOpen && (
             <button

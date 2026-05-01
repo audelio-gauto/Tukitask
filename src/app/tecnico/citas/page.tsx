@@ -84,11 +84,6 @@ export default function CitasPage() {
   // Confirm action modal
   const [confirmModal, setConfirmModal] = useState<{ jobId: string; action: string; message: string } | null>(null);
 
-  // ── Bell (timbre) state per job ────────────────────────────────────────────
-  type BellEntry = { count: number; lastRingAt: number | null; cancelFreeAt: number | null };
-  const [bellState, setBellState] = useState<Record<string, BellEntry>>({});
-  const [, setTick] = useState(0); // 1-second ticker for countdowns
-
   // Warranty modal
   const [warrantyModal, setWarrantyModal] = useState<{ jobId: string; input: string } | null>(null);
   const [warrantySending, setWarrantySending] = useState(false);
@@ -202,33 +197,6 @@ export default function CitasPage() {
       .catch(() => { setLoading(false); setFetchError(true); });
   }, [email]);
 
-  // Ticker: re-render every second to update bell countdowns
-  useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const ringBellTecnico = async (jobId: string, clientEmail: string) => {
-    const entry = bellState[jobId] ?? { count: 0, lastRingAt: null, cancelFreeAt: null };
-    const newCount = entry.count + 1;
-    const nowMs = Date.now();
-    setBellState(prev => ({
-      ...prev,
-      [jobId]: {
-        count: newCount,
-        lastRingAt: nowMs,
-        cancelFreeAt: newCount === 3 ? nowMs + 120_000 : entry.cancelFreeAt,
-      },
-    }));
-    try {
-      await authFetch('/api/bell', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId, bell_number: newCount, client_email: clientEmail, worker_type: 'tecnico' }),
-      });
-    } catch {}
-  };
-
   useEffect(() => {
     loadJobs();
     // Fallback polling at 3 min; realtime is primary
@@ -252,20 +220,16 @@ export default function CitasPage() {
     };
   }, [loadJobs, email]);
 
-  const doAction = async (jobId: string, action: string, extra?: Record<string, unknown>) => {
+  const doAction = async (jobId: string, action: string) => {
     if (!email || actionId) return;
     setActionId(jobId + action);
     try {
       const res  = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, jobId, tecnicoEmail: email, ...extra }),
+        body: JSON.stringify({ action, jobId, tecnicoEmail: email }),
       });
       const json = await res.json();
-      // Reset bell when service starts (client opened the door)
-      if (action === 'en_proceso') {
-        setBellState(prev => { const n = { ...prev }; delete n[jobId]; return n; });
-      }
       if (json.job) setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...json.job } : j));
     } catch {}
     finally { setActionId(null); }
@@ -547,85 +511,12 @@ export default function CitasPage() {
                     </button>
                   )}
 
-                  {job.status === 'llegue' && (() => {
-                    const bEntry = bellState[job.id] ?? { count: 0, lastRingAt: null, cancelFreeAt: null };
-                    const nowMs = Date.now();
-                    const cooldownMs = bEntry.count === 1 ? 60_000 : bEntry.count === 2 ? 120_000 : 0;
-                    const remaining = bEntry.count > 0 && bEntry.count < 3 && bEntry.lastRingAt
-                      ? Math.max(0, cooldownMs - (nowMs - bEntry.lastRingAt)) : 0;
-                    const canRing = bEntry.count < 3 && remaining === 0;
-                    const cancelFreeRemaining = bEntry.count >= 3 && bEntry.cancelFreeAt
-                      ? Math.max(0, bEntry.cancelFreeAt - nowMs) : 0;
-                    const canCancelFree = bEntry.count >= 3 && cancelFreeRemaining === 0;
-                    const fmtMs = (ms: number) => {
-                      const s = Math.ceil(ms / 1000);
-                      return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
-                    };
-                    return (
-                      <>
-                        {/* ── Timbre ── */}
-                        <div style={{
-                          background: 'rgba(245,197,24,0.06)',
-                          border: '1px solid rgba(245,197,24,0.22)',
-                          borderRadius: 12, padding: '12px 14px', marginBottom: 8,
-                        }}>
-                          <p style={{ margin: '0 0 8px', fontSize: '0.76rem', color: 'rgba(0,0,0,0.45)', fontWeight: 600 }}>
-                            ¿El cliente no abre? Avisale
-                          </p>
-                          {bEntry.count < 3 ? (
-                            <button
-                              disabled={!canRing || !!busy}
-                              onClick={() => ringBellTecnico(job.id, job.client_email)}
-                              style={{
-                                width: '100%', padding: '10px', borderRadius: 10, border: 'none',
-                                background: canRing && !busy ? 'linear-gradient(135deg, #F5C518, #F58A07)' : 'rgba(0,0,0,0.08)',
-                                color: canRing && !busy ? '#1C1C2E' : 'rgba(0,0,0,0.3)',
-                                fontWeight: 800, fontSize: '0.9rem',
-                                cursor: canRing && !busy ? 'pointer' : 'default',
-                                transition: 'all 0.2s',
-                              }}
-                            >
-                              {remaining > 0
-                                ? `⏱ Siguiente aviso en ${fmtMs(remaining)}`
-                                : `🔔 Tocar timbre${bEntry.count > 0 ? ` (${bEntry.count}/3)` : ''}`}
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              <div style={{ fontSize: '0.82rem', color: '#ef4444', fontWeight: 700, textAlign: 'center' }}>
-                                ⚠️ Sin respuesta tras 3 avisos
-                              </div>
-                              {cancelFreeRemaining > 0 && (
-                                <div style={{ fontSize: '0.75rem', color: 'rgba(0,0,0,0.4)', textAlign: 'center' }}>
-                                  Podés cancelar en {fmtMs(cancelFreeRemaining)}
-                                </div>
-                              )}
-                              {canCancelFree && (
-                                <button
-                                  disabled={!!busy}
-                                  onClick={() => doAction(job.id, 'cancel', { fail_reason: 'CLIENTE_NO_RESPONDE' })}
-                                  style={{
-                                    width: '100%', padding: '10px', borderRadius: 10,
-                                    border: '1.5px solid rgba(239,68,68,0.5)',
-                                    background: 'rgba(239,68,68,0.08)', color: '#ef4444',
-                                    fontWeight: 800, fontSize: '0.88rem',
-                                    cursor: !!busy ? 'default' : 'pointer',
-                                  }}
-                                >
-                                  ✕ Cancelar sin penalización
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* ── Iniciar servicio ── */}
-                        <button onClick={() => doAction(job.id, 'en_proceso')} disabled={busy}
-                          style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
-                          ▶ Iniciar servicio
-                        </button>
-                      </>
-                    );
-                  })()}
+                  {job.status === 'llegue' && (
+                    <button onClick={() => doAction(job.id, 'en_proceso')} disabled={busy}
+                      style={{ width: '100%', padding: '10px', borderRadius: 12, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}>
+                      ▶ Iniciar servicio
+                    </button>
+                  )}
 
                   {job.status === 'en_proceso' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
