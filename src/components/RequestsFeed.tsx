@@ -239,9 +239,29 @@ export default memo(function RequestsFeed({
     setStopsOpen(false);
   }, [safeIdx, activeItem?.id]);
 
-  if (!available || visible.length === 0) {
+  if (!available) {
     if (activeIdRef.current !== null) { activeIdRef.current = null; onActiveItem?.(null); }
     return null;
+  }
+
+  if (visible.length === 0) {
+    if (activeIdRef.current !== null) { activeIdRef.current = null; onActiveItem?.(null); }
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '36px 24px', gap: 10, textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '2.8rem', lineHeight: 1 }}>📍</div>
+        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem' }}>
+          {mode === 'driver' ? 'No hay pedidos cerca' : 'No hay solicitudes cerca'}
+        </div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: 230, lineHeight: 1.5 }}>
+          {mode === 'driver'
+            ? 'Nuevas solicitudes aparecerán aquí automáticamente'
+            : 'Nuevas solicitudes de servicio aparecerán aquí'}
+        </div>
+      </div>
+    );
   }
 
   const labels = mode === 'driver' ? VEHICLE_LABELS : SERVICE_LABELS;

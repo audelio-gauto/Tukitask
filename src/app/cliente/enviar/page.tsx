@@ -419,7 +419,7 @@ export default function EnviarPaquetePage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Error al crear el pedido');
       }
-      router.push('/cliente');
+      setSuccess(true);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error al crear el pedido');
     } finally {

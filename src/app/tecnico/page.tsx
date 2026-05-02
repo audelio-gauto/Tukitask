@@ -64,7 +64,7 @@ export default function TecnicoDashboard() {
   const showToast = useCallback((msg: string) => {
     if (toastTmRef.current) clearTimeout(toastTmRef.current);
     setToast(msg);
-    toastTmRef.current = setTimeout(() => setToast(null), 2400);
+    toastTmRef.current = setTimeout(() => setToast(null), 3500);
   }, []);
 
   // ── Availability – persisted ───────────────────────────────────────────────

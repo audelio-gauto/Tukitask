@@ -415,6 +415,7 @@ export default function ClienteHomePage() {
   const [loading,   setLoading]   = useState(true);
   const [actionId,  setActionId]  = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
+  const [acceptConfirm, setAcceptConfirm] = useState<{ offerId: string; jobId?: string; workerName: string | null; amount: number; requestType: 'delivery' | 'service' } | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
@@ -433,6 +434,15 @@ export default function ClienteHomePage() {
   const [chatToast, setChatToast] = useState<{ id: string; isJob: boolean; from: string | null; text: string } | null>(null);
   const currentChatIdRef = useRef<string | null>(null);
   const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Generic action toast
+  const [actionToast, setActionToast] = useState<string | null>(null);
+  const actionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showActionToast = useCallback((msg: string, duration = 3500) => {
+    if (actionToastTimerRef.current) clearTimeout(actionToastTimerRef.current);
+    setActionToast(msg);
+    actionToastTimerRef.current = setTimeout(() => setActionToast(null), duration);
+  }, []);
 
   const openChat = useCallback((params: { orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null }) => {
     const id = params.orderId || params.jobId || null;
@@ -802,12 +812,14 @@ export default function ClienteHomePage() {
   const acceptDriverOffer = async (offerId: string) => {
     if (busy) return;
     setActionId(offerId);
+    try { navigator.vibrate?.(50); } catch {}
     try {
       await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
       });
+      showActionToast('✅ ¡Conductor aceptado! En camino...');
       loadAll();
     } finally { setActionId(null); }
   };
@@ -815,6 +827,7 @@ export default function ClienteHomePage() {
   const rejectDriverOffer = async (offerId: string) => {
     if (busy) return;
     setActionId(offerId);
+    try { navigator.vibrate?.(30); } catch {}
     try {
       await authFetch('/api/orders/offers', {
         method: 'PATCH',
@@ -828,12 +841,14 @@ export default function ClienteHomePage() {
   const acceptJobOffer = async (jobId: string, offerId: string) => {
     if (busy || !email) return;
     setActionId(offerId);
+    try { navigator.vibrate?.(50); } catch {}
     try {
       await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
+      showActionToast('✅ ¡Técnico aceptado! En camino...');
       loadAll();
     } finally { setActionId(null); }
   };
@@ -841,6 +856,7 @@ export default function ClienteHomePage() {
   const rejectJobOffer = async (offerId: string) => {
     if (busy) return;
     setActionId(offerId);
+    try { navigator.vibrate?.(30); } catch {}
     try {
       await authFetch('/api/tecnico/jobs', {
         method: 'POST',
@@ -1193,10 +1209,13 @@ export default function ClienteHomePage() {
                   offer={offer}
                   busy={busy}
                   isTop={idx === 0 && offer.status === 'pending' && offer.matchScore != null && paginatedOffers.filter(o => o.status === 'pending').length > 1}
-                  onAccept={() => offer.requestType === 'delivery'
-                    ? acceptDriverOffer(offer.id)
-                    : acceptJobOffer(offer.requestId, offer.id)
-                  }
+                  onAccept={() => setAcceptConfirm({
+                    offerId: offer.id,
+                    jobId: offer.requestType === 'service' ? offer.requestId : undefined,
+                    workerName: offer.name,
+                    amount: offer.price,
+                    requestType: offer.requestType,
+                  })}
                   onReject={() => offer.requestType === 'delivery'
                     ? rejectDriverOffer(offer.id)
                     : rejectJobOffer(offer.id)
@@ -1245,6 +1264,14 @@ export default function ClienteHomePage() {
       </div>
 
       {/* ── IDLE — service selector ───────────────────────────────────────── */}
+      {homeMode === 'idle' && loading && (
+        <div style={{ padding: '20px 14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} className="tuki-skeleton" style={{ height: 110, borderRadius: 16 }} />
+          ))}
+        </div>
+      )}
+
       {homeMode === 'idle' && !loading && (
         <div className="client-idle-overlay">
           {/* Hero illustration */}
@@ -1442,6 +1469,50 @@ export default function ClienteHomePage() {
         </>
       )}
 
+      {/* ── Accept confirm modal ───────────────────────────────────────── */}
+      {acceptConfirm && (
+        <>
+          <div onClick={() => setAcceptConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 10003 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px max(40px, env(safe-area-inset-bottom))', zIndex: 10004, boxShadow: '0 -4px 24px rgba(0,0,0,0.6)', border: '1px solid rgba(245,197,24,0.25)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: 6 }}>
+                ¿Confirmar aceptación?
+              </div>
+              <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                {acceptConfirm.workerName && <><strong style={{ color: 'var(--text-primary)' }}>{acceptConfirm.workerName}</strong> · </>}
+                <strong style={{ color: '#F5C518' }}>₲{Number(acceptConfirm.amount).toLocaleString()}</strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                Esta acción asignará al {acceptConfirm.requestType === 'delivery' ? 'conductor' : 'técnico'} a tu solicitud.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  const { offerId, jobId, requestType } = acceptConfirm;
+                  setAcceptConfirm(null);
+                  if (requestType === 'delivery') {
+                    acceptDriverOffer(offerId);
+                  } else if (jobId) {
+                    acceptJobOffer(jobId, offerId);
+                  }
+                }}
+                style={{ flex: 1, padding: '14px', borderRadius: 12, border: 'none', background: '#F5C518', color: '#000', fontWeight: 800, fontSize: '1rem', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+              >
+                ✓ Confirmar
+              </button>
+              <button
+                onClick={() => setAcceptConfirm(null)}
+                style={{ flex: 1, padding: '14px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--ghost-btn)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Chat Modal ───────────────────────────────────────────────────── */}
       <ChatModal
         open={chatOpen}
@@ -1490,6 +1561,23 @@ export default function ClienteHomePage() {
             onClick={e => { e.stopPropagation(); if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current); setChatToast(null); }}
             style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >✕</button>
+        </div>
+      )}
+
+      {/* ── Toast: acción exitosa (aceptar/rechazar oferta) ──────────────── */}
+      {actionToast && (
+        <div
+          style={{
+            position: 'fixed', bottom: 'calc(var(--tuki-nav-h, 64px) + 16px)', left: '50%',
+            transform: 'translateX(-50%)', zIndex: 10010,
+            background: 'rgba(22,163,74,0.95)', backdropFilter: 'blur(12px)',
+            borderRadius: 40, padding: '11px 22px',
+            display: 'flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{actionToast}</span>
         </div>
       )}
     </div>
