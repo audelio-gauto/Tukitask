@@ -90,6 +90,7 @@ function AdminWalletsPageInner() {
   const [movWallet, setMovWallet] = useState<DriverWallet | null>(null);
   const [movLoading, setMovLoading] = useState(false);
   const movDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [movFilter, setMovFilter] = useState<'all' | 'admin' | 'recharge'>('all');
 
   const showToast = (text: string, ok: boolean) => {
     setToast({ text, ok });
@@ -427,30 +428,63 @@ function AdminWalletsPageInner() {
                 </div>
                 <p className="text-xs text-gray-400">{movEmail}</p>
               </div>
+              {/* Filter bar */}
+              <div className="px-5 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
+                {([['all','Todos'],['admin','Ajustes Admin'],['recharge','Recargas']] as const).map(([f, label]) => (
+                  <button key={f} onClick={() => setMovFilter(f)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${movFilter === f ? 'bg-amber-400 text-black' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               {movWallet.transactions.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm p-8">Sin transacciones registradas</p>
-              ) : (
-                <div>
-                  {movWallet.transactions.map((tx, i) => {
-                    const cfg = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: '#6b7280' };
-                    return (
-                      <div key={tx.id} style={{ padding: '0.75rem 1.25rem', borderBottom: i < movWallet.transactions.length - 1 ? '1px solid #f3f4f6' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>{cfg.label}</span>
-                          {tx.note && <p style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.note}</p>}
+              ) : (() => {
+                const filtered = movWallet.transactions.filter(tx => {
+                  if (movFilter === 'admin') return tx.type === 'admin_credit' || tx.type === 'admin_debit';
+                  if (movFilter === 'recharge') return tx.type === 'recharge';
+                  return true;
+                });
+                if (filtered.length === 0) return <p className="text-center text-gray-400 text-sm p-8">Sin movimientos en esta categoría</p>;
+                return (
+                  <div>
+                    {filtered.map((tx, i) => {
+                      const cfg = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: '#6b7280' };
+                      const isAdmin = tx.type === 'admin_credit' || tx.type === 'admin_debit';
+                      const adminNoteMatch = tx.note?.match(/^\[Admin: ([^\]]+)\]\s*(.*)/);
+                      const adminWho = adminNoteMatch ? adminNoteMatch[1] : null;
+                      const cleanNote = adminNoteMatch ? adminNoteMatch[2] : tx.note;
+                      return (
+                        <div key={tx.id} style={{
+                          padding: '0.85rem 1.25rem',
+                          borderBottom: i < filtered.length - 1 ? '1px solid #f3f4f6' : 'none',
+                          display: 'flex', alignItems: 'flex-start', gap: 12,
+                          background: isAdmin ? (tx.amount > 0 ? '#f0fdf4' : '#fff5f5') : 'transparent',
+                        }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.color, flexShrink: 0, marginTop: 5 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>{cfg.label}</span>
+                              {isAdmin && adminWho && (
+                                <span style={{ fontSize: '0.68rem', background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '1px 6px', fontWeight: 600 }}>
+                                  por {adminWho}
+                                </span>
+                              )}
+                            </div>
+                            {cleanNote && <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2, lineHeight: 1.4 }}>{cleanNote}</p>}
+                            <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>{fmtDate(tx.created_at)}</p>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.9rem', color: tx.amount > 0 ? '#059669' : '#dc2626' }}>
+                              {tx.amount > 0 ? '+' : ''}{fmtGS(tx.amount)}
+                            </p>
+                          </div>
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <p style={{ fontWeight: 800, fontSize: '0.9rem', color: tx.amount > 0 ? '#059669' : '#dc2626' }}>
-                            {tx.amount > 0 ? '+' : ''}{fmtGS(tx.amount)}
-                          </p>
-                          <p style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{fmtDate(tx.created_at)}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

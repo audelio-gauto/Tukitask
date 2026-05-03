@@ -13,7 +13,7 @@ interface BankAlias {
 
 interface Transaction {
   id: string;
-  type: 'recharge' | 'commission' | 'adjustment';
+  type: string;
   amount: number;
   order_id: string | null;
   job_id: string | null;
@@ -30,9 +30,13 @@ function fmtGS(n: number) {
 }
 
 const TX_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string; sign: string }> = {
-  recharge:   { label: 'Recarga',    color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↑', sign: '+' },
-  commission: { label: 'Comisión',   color: '#f87171', bg: 'rgba(239,68,68,0.15)',   icon: '↓', sign: '-' },
-  adjustment: { label: 'Ajuste',     color: '#60a5fa', bg: 'rgba(96,165,250,0.15)',  icon: '⇄', sign: ''  },
+  recharge:     { label: 'Recarga',        color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↑', sign: '+' },
+  commission:   { label: 'Comisión',       color: '#f87171', bg: 'rgba(239,68,68,0.15)',   icon: '↓', sign: '-' },
+  adjustment:   { label: 'Ajuste',         color: '#60a5fa', bg: 'rgba(96,165,250,0.15)',  icon: '⇄', sign: ''  },
+  admin_credit: { label: 'Crédito Admin',  color: '#4ade80', bg: 'rgba(34,197,94,0.18)',   icon: '✦', sign: '+' },
+  admin_debit:  { label: 'Débito Admin',   color: '#f87171', bg: 'rgba(239,68,68,0.18)',   icon: '✦', sign: '-' },
+  refund:       { label: 'Reembolso',      color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↩', sign: '+' },
+  bonus:        { label: 'Bono',           color: '#fbbf24', bg: 'rgba(245,158,11,0.15)',  icon: '★', sign: '+' },
 };
 
 export default function DriverBilleteraPage() {
@@ -210,11 +214,17 @@ export default function DriverBilleteraPage() {
                 {transactions.map((tx) => {
                   const cfg = TX_CONFIG[tx.type] ?? TX_CONFIG.adjustment;
                   const absAmt = Math.abs(tx.amount);
+                  const isAdmin = tx.type === 'admin_credit' || tx.type === 'admin_debit';
+                  // Strip "[Admin: email]" prefix for clean display, keep the rest as note
+                  const adminNoteMatch = tx.note?.match(/^\[Admin: ([^\]]+)\]\s*(.*)/);
+                  const adminWho = adminNoteMatch ? adminNoteMatch[1] : null;
+                  const cleanNote = adminNoteMatch ? adminNoteMatch[2] : tx.note;
                   return (
                     <div key={tx.id} style={{
                       display: 'flex', alignItems: 'center', gap: 14,
-                      background: 'var(--glass-card)', borderRadius: 16,
-                      padding: '14px 16px', border: '1px solid var(--border-subtle)',
+                      background: isAdmin ? cfg.bg : 'var(--glass-card)', borderRadius: 16,
+                      padding: '14px 16px',
+                      border: isAdmin ? `1.5px solid ${cfg.color}44` : '1px solid var(--border-subtle)',
                     }}>
                       <div style={{
                         width: 44, height: 44, borderRadius: 14, flexShrink: 0,
@@ -224,10 +234,18 @@ export default function DriverBilleteraPage() {
                         {cfg.icon}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {tx.note || cfg.label}
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 2 }}>
+                          {isAdmin ? cfg.label : (tx.note || cfg.label)}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{fmtDate(tx.created_at)}</div>
+                        {isAdmin && cleanNote && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', opacity: 0.85, marginBottom: 2, lineHeight: 1.3 }}>
+                            {cleanNote}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {fmtDate(tx.created_at)}
+                          {adminWho && <span style={{ marginLeft: 6, opacity: 0.6 }}>· Admin</span>}
+                        </div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <div style={{ fontWeight: 900, fontSize: '1rem', color: cfg.color }}>
