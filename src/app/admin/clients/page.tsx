@@ -120,7 +120,7 @@ export default function ClientsPage() {
             </div>
             {clients.map(c => (
               <div key={c.id}
-                className="grid grid-cols-[36px_1fr_1fr_130px_80px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                className="grid grid-cols-[36px_1fr_1fr_130px_100px] gap-3 px-5 py-3 border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
                 onClick={() => router.push(`/admin/clients/${c.id}`)}
               >
                 <div className="flex items-center">
@@ -141,7 +141,16 @@ export default function ClientsPage() {
                 <div className="flex items-center justify-end">
                   <span className="text-xs text-gray-400">{fmtDate(c.created_at)}</span>
                 </div>
-                <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                  <a
+                    href={`/admin/profile/${encodeURIComponent(c.email)}`}
+                    title="Ver perfil unificado"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </a>
                   <button
                     onClick={() => setSuspendTarget({
                       user_id: c.id,

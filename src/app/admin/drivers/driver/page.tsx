@@ -34,6 +34,7 @@ export default function DriverListPage() {
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState<string | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
+  const [inactiveDays, setInactiveDays] = useState(0);
   const LIMIT = 50;
 
   const getToken = async () => {
@@ -41,13 +42,14 @@ export default function DriverListPage() {
     return session?.access_token || '';
   };
 
-  const fetchDrivers = useCallback(async (pg: number, q: string) => {
+  const fetchDrivers = useCallback(async (pg: number, q: string, inactive = 0) => {
     setLoading(true);
     setError('');
     try {
       const token = await getToken();
       const params = new URLSearchParams({ page: String(pg), limit: String(LIMIT) });
       if (q) params.set('search', q);
+      if (inactive > 0) params.set('inactive_days', String(inactive));
       const res = await fetch(`/api/admin/drivers/list?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -69,10 +71,17 @@ export default function DriverListPage() {
     e.preventDefault();
     setPage(1);
     setQuery(search);
-    fetchDrivers(1, search);
+    fetchDrivers(1, search, inactiveDays);
   };
 
-  const goPage = (pg: number) => { setPage(pg); fetchDrivers(pg, query); };
+  const goPage = (pg: number) => { setPage(pg); fetchDrivers(pg, query, inactiveDays); };
+
+  const setInactiveFilter = (days: number) => {
+    const next = inactiveDays === days ? 0 : days;
+    setInactiveDays(next);
+    setPage(1);
+    fetchDrivers(1, query, next);
+  };
 
   const handleVerify = async (d: DriverItem, action: 'verify' | 'reject') => {
     setVerifying(d.id);
@@ -122,7 +131,7 @@ export default function DriverListPage() {
 
       {/* Search */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 shadow-sm">
-        <form onSubmit={handleSearch} className="flex gap-3 items-end">
+        <form onSubmit={handleSearch} className="flex gap-3 items-end flex-wrap">
           <div className="flex-1 max-w-sm">
             <label className="block text-xs font-semibold text-gray-500 mb-1">Buscar conductor</label>
             <div className="relative">
@@ -138,10 +147,37 @@ export default function DriverListPage() {
           </div>
           <button type="submit" className="px-4 py-2 bg-[#F5C518] text-[#1d2327] rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors">Buscar</button>
           {query && (
-            <button type="button" onClick={() => { setSearch(''); setQuery(''); fetchDrivers(1, ''); }}
+            <button type="button" onClick={() => { setSearch(''); setQuery(''); fetchDrivers(1, '', inactiveDays); }}
               className="px-3 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">Limpiar</button>
           )}
         </form>
+        {/* Inactivity filters */}
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="text-xs text-gray-400 font-semibold">Sin actividad:</span>
+          {[7, 14, 30].map(d => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setInactiveFilter(d)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                inactiveDays === d
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
+            >
+              &gt;{d} días
+            </button>
+          ))}
+          {inactiveDays > 0 && (
+            <button
+              type="button"
+              onClick={() => setInactiveFilter(0)}
+              className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 transition-colors"
+            >
+              Ver todos
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
@@ -224,7 +260,16 @@ export default function DriverListPage() {
                   <div className="flex items-center justify-end">
                     <span className="text-xs text-gray-400">{fmtDate(d.created_at)}</span>
                   </div>
-                  <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                    <a
+                      href={`/admin/profile/${encodeURIComponent(d.email)}`}
+                      title="Ver perfil unificado"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </a>
                     <button
                       onClick={() => setSuspendTarget({
                         user_id: d.id,

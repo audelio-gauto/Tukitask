@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon } from '@/components/Icon';
+import SuspendUserModal, { SuspendTarget } from '../../components/SuspendUserModal';
 interface ClientDetail {
   user: { id: string; email: string; role: string; created_at: string };
   profile: {
@@ -13,7 +14,10 @@ interface ClientDetail {
   recent_orders: {
     id: string; status: string; offer?: number;
     suggested_price?: number; pickup_address?: string; dropoff_address?: string; created_at: string;
+    accepted_by?: string;
   }[];
+  total_orders: number;
+  ratings_given: { score: number; comment?: string; created_at: string; rated_email: string }[];
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -45,6 +49,7 @@ export default function ClientDetailPage() {
   const [editForm, setEditForm] = useState({ display_name: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -119,7 +124,7 @@ export default function ClientDetailPage() {
     </div>
   );
 
-  const { user, profile, recent_orders } = data;
+  const { user, profile, recent_orders, total_orders, ratings_given } = data;
   const name = profile?.display_name || user.email;
 
   return (
@@ -161,8 +166,8 @@ export default function ClientDetailPage() {
 
             <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100">
               <div className="text-center">
-                <p className="text-lg font-bold text-gray-900">{recent_orders.length}</p>
-                <p className="text-xs text-gray-500">Pedidos recientes</p>
+                <p className="text-lg font-bold text-gray-900">{total_orders ?? recent_orders.length}</p>
+                <p className="text-xs text-gray-500">Pedidos totales</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-gray-900">{profile?.avg_rating ? Number(profile.avg_rating).toFixed(1) : '—'}</p>
@@ -179,13 +184,23 @@ export default function ClientDetailPage() {
 
             {/* Edit section */}
             {!editing ? (
-              <button onClick={handleEdit}
-                className="mt-4 w-full py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                <span className="inline-flex items-center gap-2">
-                  <Icon name="pencil" size={14} />
-                  Editar datos
-                </span>
-              </button>
+              <div className="mt-4 flex flex-col gap-2">
+                <button onClick={handleEdit}
+                  className="w-full py-2 px-3 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                  <span className="inline-flex items-center gap-2">
+                    <Icon name="pencil" size={14} />
+                    Editar datos
+                  </span>
+                </button>
+                <button
+                  onClick={() => setSuspendTarget({ user_id: user.id, email: user.email, display_name: profile?.display_name })}
+                  className="w-full py-2 px-3 text-sm font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+                  <span className="inline-flex items-center gap-2">
+                    <Icon name="ban" size={14} />
+                    Suspender / banear
+                  </span>
+                </button>
+              </div>
             ) : (
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                 <div>
@@ -224,10 +239,19 @@ export default function ClientDetailPage() {
           </div>
         </div>
 
-        {/* Recent Orders */}
-        <div className="lg:col-span-2">
+        {/* Orders + Ratings */}
+        <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Últimos 10 pedidos</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">Últimos 10 pedidos</h3>
+              {total_orders > 10 && (
+                <a
+                  href={`/admin/orders?client_email=${encodeURIComponent(user.email)}`}
+                  className="text-xs text-indigo-600 hover:underline font-medium">
+                  Ver todos ({total_orders})
+                </a>
+              )}
+            </div>
             {recent_orders.length === 0 ? (
               <p className="text-gray-400 text-sm py-6 text-center">Sin pedidos registrados</p>
             ) : (
@@ -250,14 +274,61 @@ export default function ClientDetailPage() {
                       {o.pickup_address && (
                         <p className="text-xs text-gray-500 truncate mt-0.5">{o.pickup_address} → {o.dropoff_address}</p>
                       )}
+                      {o.accepted_by && (
+                        <p className="text-xs text-gray-400 mt-0.5">Driver: {o.accepted_by}</p>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
+
+          {/* Ratings given by client */}
+          {ratings_given && ratings_given.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                <span className="inline-flex items-center gap-2">
+                  <Icon name="star" size={14} />
+                  Calificaciones dadas ({ratings_given.length})
+                </span>
+              </h3>
+              <div className="space-y-2">
+                {ratings_given.map((r, i) => (
+                  <div key={i} className="py-2.5 px-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <svg key={s} className={`w-3 h-3 ${s <= r.score ? 'text-[#F5C518]' : 'text-gray-300'}`}
+                            fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                        <span className="text-xs text-gray-500 ml-1">{r.rated_email}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString('es-PY')}</span>
+                    </div>
+                    {r.comment && <p className="text-xs text-gray-600 italic">&ldquo;{r.comment}&rdquo;</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Suspend Modal */}
+      {suspendTarget && (
+        <SuspendUserModal
+          target={suspendTarget}
+          onClose={() => setSuspendTarget(null)}
+          onDone={() => {
+            setSuspendTarget(null);
+            setToast({ msg: 'Acción de suspensión aplicada', ok: true });
+            setTimeout(() => setToast(null), 3000);
+          }}
+        />
+      )}
     </div>
   );
 }
