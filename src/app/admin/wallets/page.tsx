@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon } from '@/components/Icon';
 
@@ -47,8 +48,10 @@ function fmtGS(n: number) {
 }
 
 export default function AdminWalletsPage() {
+  const searchParams = useSearchParams();
+  const initialTab = (['pending','approved','rejected','ajuste','movimientos'].includes(searchParams.get('tab') || '') ? searchParams.get('tab') : 'pending') as 'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos';
   const [requests, setRequests] = useState<RechargeRequest[]>([]);
-  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos'>('pending');
+  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos'>(initialTab);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState('');
