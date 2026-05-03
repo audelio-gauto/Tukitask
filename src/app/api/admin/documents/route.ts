@@ -202,7 +202,7 @@ export async function PATCH(req: Request) {
   if (!admin) return unauthorized();
 
   const body = await req.json().catch(() => null);
-  const { id, status, rejection_reason, previous_status } = body || {};
+  const { id, status, rejection_reason, previous_status, expires_at } = body || {};
 
   if (!id || !['approved', 'rejected', 'pending'].includes(status)) {
     return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
@@ -221,6 +221,7 @@ export async function PATCH(req: Request) {
   };
   if (status === 'rejected') update.rejection_reason = (rejection_reason || '').trim().slice(0, 500);
   if (status === 'approved') update.rejection_reason = null;
+  if (expires_at !== undefined) update.expires_at = expires_at || null;
 
   // Optimistic lock: only update if status hasn't changed since the client last fetched
   let query = sbAdmin()

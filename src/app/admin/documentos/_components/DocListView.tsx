@@ -145,7 +145,7 @@ function DocThumb({
   doc: DocRecord;
   signedUrl: string | null;
   token: string;
-  onUpdate: (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string) => Promise<{ conflict?: boolean }>;
+  onUpdate: (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string, expiresAt?: string) => Promise<{ conflict?: boolean }>;
 }) {
   const [rejReason,   setRejReason]   = useState(doc.rejection_reason || '');
   const [showReject,  setShowReject]  = useState(false);
@@ -156,13 +156,14 @@ function DocThumb({
   const [showHistory, setShowHistory] = useState(false);
   const [history,     setHistory]     = useState<AuditEntry[]>([]);
   const [loadingHist, setLoadingHist] = useState(false);
+  const [expiryInput, setExpiryInput] = useState(() => doc.expires_at ? doc.expires_at.substring(0, 10) : '');
 
   const prefix = vehiclePrefix(doc.doc_type);
   const expiry = expiryStatus(doc.expires_at);
 
   const approve = async () => {
     setSaving(true); setConflict(false);
-    const r = await onUpdate(doc.id, 'approved', undefined, localStatus);
+    const r = await onUpdate(doc.id, 'approved', undefined, localStatus, expiryInput || undefined);
     if (r.conflict) setConflict(true);
     else { setLocalStatus('approved'); setLocalReason(null); }
     setSaving(false);
@@ -294,6 +295,16 @@ function DocThumb({
 
         {/* Actions */}
         {!showReject && localStatus !== 'approved' && (
+          <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 4 }}>
+            <label style={{ fontSize: '0.6rem', color: '#6b7280', fontWeight: 600 }}>📅 Fecha venc. (opcional)</label>
+            <input
+              type="date"
+              value={expiryInput}
+              onChange={e => setExpiryInput(e.target.value)}
+              style={{ fontSize: '0.68rem', padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', color: '#1f2937', background: '#fff', width: '100%' }}
+            />
+          </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={approve} disabled={saving} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? '…' : (
@@ -310,6 +321,7 @@ function DocThumb({
               </span>
             </button>
           </div>
+          </>
         )}
         {!showReject && localStatus === 'approved' && (
           <button onClick={() => setShowReject(true)} style={{ padding: '4px 0', borderRadius: 7, border: 'none', background: '#f3f4f6', color: '#6b7280', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', width: '100%' }}>
@@ -376,7 +388,7 @@ function DriverCard({
 }: {
   group: DriverGroup;
   token: string;
-  onDocUpdate: (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string) => Promise<{ conflict?: boolean }>;
+  onDocUpdate: (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string, expiresAt?: string) => Promise<{ conflict?: boolean }>;
 }) {
   const [open,        setOpen]       = useState(false);
   const [signedUrls,  setSignedUrls] = useState<Record<string, string>>({});
@@ -415,10 +427,10 @@ function DriverCard({
     });
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDocUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string) => {
-    const result = await onDocUpdate(id, status, reason, prev);
+  const handleDocUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string, expiresAt?: string) => {
+    const result = await onDocUpdate(id, status, reason, prev, expiresAt);
     if (!result.conflict) {
-      setLocalDocs(p => p.map(d => d.id === id ? { ...d, status, rejection_reason: reason ?? null } : d));
+      setLocalDocs(p => p.map(d => d.id === id ? { ...d, status, rejection_reason: reason ?? null, ...(expiresAt !== undefined ? { expires_at: expiresAt || null } : {}) } : d));
     }
     return result;
   };
@@ -628,12 +640,12 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, roleFilter]);
 
-  const handleDocUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string): Promise<{ conflict?: boolean }> => {
+  const handleDocUpdate = async (id: string, status: 'approved' | 'rejected', reason?: string, prev?: string, expiresAt?: string): Promise<{ conflict?: boolean }> => {
     if (!token) return {};
     const res = await fetch('/api/admin/documents', {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, rejection_reason: reason, previous_status: prev }),
+      body: JSON.stringify({ id, status, rejection_reason: reason, previous_status: prev, ...(expiresAt !== undefined ? { expires_at: expiresAt || null } : {}) }),
     });
     if (res.status === 409) return { conflict: true };
     return {};
