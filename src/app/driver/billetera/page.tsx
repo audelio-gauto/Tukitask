@@ -30,9 +30,12 @@ function fmtGS(n: number) {
 }
 
 // Format raw "Gs 2500.00" numbers inside note strings → "Gs 2.500"
+// Also strips leaked admin email from old recharge notes.
 function fmtNote(note: string | null): string {
   if (!note) return '';
-  return note.replace(/Gs\s+([\d]+(?:\.\d+)?)/g, (_, n) =>
+  // Remove " por admin@..." suffix on recharge notes
+  const clean = note.replace(/^(Recarga aprobada)\s+por\s+\S+/i, '$1');
+  return clean.replace(/Gs\s+([\d]+(?:\.\d+)?)/g, (_, n) =>
     'Gs\u00a0' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(Math.round(parseFloat(n)))
   );
 }
