@@ -890,34 +890,61 @@ export default function DriverDashboard() {
           )}
 
           {/* Tarjeta de estado de documentos */}
-          {(docCounts.approved < DRIVER_TOTAL_DOCS || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
-            <Link href="/driver/settings" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
-              <div style={{
-                padding: '0.85rem 1rem', borderRadius: 14,
-                background: (docAlerts.expired.length > 0 || docCounts.rejected > 0)
-                  ? 'var(--alert-error-bg)'
-                  : 'var(--alert-warning-bg)',
-                border: `1.5px solid ${(docAlerts.expired.length > 0 || docCounts.rejected > 0) ? 'var(--alert-error-border)' : 'var(--alert-warning-border)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ display: 'inline-flex', color: docAlerts.expired.length > 0 ? '#ef4444' : docCounts.rejected > 0 ? '#ef4444' : 'var(--text-muted)' }}>
-                    <Icon name={docAlerts.expired.length > 0 ? 'x' : docCounts.rejected > 0 ? 'x' : 'paper-clip'} size={16} />
-                  </span>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)' }}>
-                      {docAlerts.expired.length > 0
-                        ? 'Documentos vencidos — no podés conectarte'
-                        : `${docCounts.approved}/${DRIVER_TOTAL_DOCS} aprobados${docCounts.pending > 0 ? ` · ${docCounts.pending} pendiente${docCounts.pending > 1 ? 's' : ''}` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
-                      }
-                    </p>
+          {(docCounts.approved < DRIVER_TOTAL_DOCS || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (() => {
+            const hasError = docAlerts.expired.length > 0 || docCounts.rejected > 0;
+            const pct = Math.round((docCounts.approved / DRIVER_TOTAL_DOCS) * 100);
+            const barColor = hasError ? '#ef4444' : docCounts.approved === DRIVER_TOTAL_DOCS ? '#22c55e' : '#F5C518';
+            // Ring dimensions
+            const R = 18, CIRC = 2 * Math.PI * R;
+            const dash = CIRC * (docCounts.approved / DRIVER_TOTAL_DOCS);
+            return (
+              <Link href="/driver/settings" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
+                <div style={{
+                  padding: '0.9rem 1rem', borderRadius: 14,
+                  background: hasError ? 'var(--alert-error-bg)' : 'var(--alert-warning-bg)',
+                  border: `1.5px solid ${hasError ? 'var(--alert-error-border)' : 'var(--alert-warning-border)'}`,
+                }}>
+                  {/* Top row: ring + text + arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* SVG progress ring */}
+                    <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+                      <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx="22" cy="22" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3.5"/>
+                        <circle cx="22" cy="22" r={R} fill="none" stroke={barColor} strokeWidth="3.5"
+                          strokeDasharray={`${dash} ${CIRC}`} strokeLinecap="round"
+                          style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                        />
+                      </svg>
+                      <span style={{
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800,
+                        color: barColor, lineHeight: 1,
+                      }}>
+                        {docCounts.approved}/{DRIVER_TOTAL_DOCS}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mis documentos</p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {docAlerts.expired.length > 0
+                          ? 'Documentos vencidos — no podés conectarte'
+                          : `${pct}% completado${docCounts.pending > 0 ? ` · ${docCounts.pending} en revisión` : ''}${docCounts.rejected > 0 ? ` · ${docCounts.rejected} rechazado${docCounts.rejected > 1 ? 's' : ''}` : ''}${docCounts.missing > 0 ? ` · ${docCounts.missing} sin subir` : ''}${docAlerts.soon.length > 0 ? ' · próximos a vencer' : ''}`
+                        }
+                      </p>
+                    </div>
+                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', flexShrink: 0 }}>›</span>
+                  </div>
+                  {/* Bottom progress bar */}
+                  <div style={{ marginTop: 10, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 99, background: barColor,
+                      width: `${pct}%`, transition: 'width 0.6s ease',
+                    }} />
                   </div>
                 </div>
-                <span style={{ fontSize: '1rem', color: 'var(--text-muted)', flexShrink: 0 }}>›</span>
-              </div>
-            </Link>
-          )}
+              </Link>
+            );
+          })()}
 
           {/* Alertas de documentos */}
           {docAlerts.expired.length > 0 && (
