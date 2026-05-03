@@ -53,6 +53,7 @@ export async function GET(req: Request) {
     if (!driver_name && order.accepted_by) {
       driver_name = order.accepted_by.split('@')[0];
     }
+    return NextResponse.json({ ...order, driver_name, driver_photo, driver_avg_rating });
   }
 
   let query = db
