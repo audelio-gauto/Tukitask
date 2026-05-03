@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon } from '@/components/Icon';
 
@@ -58,21 +58,38 @@ export default function AdminWalletsPage() {
 
   // Ajuste manual state
   const [adjEmail, setAdjEmail] = useState('');
+  const [adjSearch, setAdjSearch] = useState('');
+  const [adjSuggestions, setAdjSuggestions] = useState<{email:string;name:string;role:string}[]>([]);
+  const [adjShowDrop, setAdjShowDrop] = useState(false);
   const [adjAmount, setAdjAmount] = useState('');
   const [adjNote, setAdjNote] = useState('');
   const [adjSaving, setAdjSaving] = useState(false);
   const [adjType, setAdjType] = useState<'credit' | 'debit'>('credit');
+  const adjDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Movimientos state
   const [movEmail, setMovEmail] = useState('');
   const [movEmailInput, setMovEmailInput] = useState('');
+  const [movSearch, setMovSearch] = useState('');
+  const [movSuggestions, setMovSuggestions] = useState<{email:string;name:string;role:string}[]>([]);
+  const [movShowDrop, setMovShowDrop] = useState(false);
   const [movWallet, setMovWallet] = useState<DriverWallet | null>(null);
   const [movLoading, setMovLoading] = useState(false);
+  const movDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (text: string, ok: boolean) => {
     setToast({ text, ok });
     setTimeout(() => setToast(null), 3500);
   };
+
+  async function fetchUserSuggestions(q: string, set: (v: {email:string;name:string;role:string}[]) => void) {
+    if (q.length < 2) { set([]); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q)}&roles=driver,tecnico`, {
+      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+    });
+    if (res.ok) set(await res.json());
+  }
 
   const fetchRequests = useCallback(async () => {
     if (tab === 'ajuste' || tab === 'movimientos') { setLoading(false); return; }
@@ -220,11 +237,46 @@ export default function AdminWalletsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-lg">
           <h2 className="text-base font-bold text-gray-800 mb-4">Ajuste manual de saldo</h2>
           <div className="flex flex-col gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Email del driver / técnico</label>
-              <input type="email" value={adjEmail} onChange={e => setAdjEmail(e.target.value)}
-                placeholder="driver@email.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
+            <div className="relative">
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Driver / Técnico</label>
+              {adjEmail ? (
+                <div className="flex items-center gap-2 px-3 py-2 border border-emerald-400 bg-emerald-50 rounded-lg text-sm">
+                  <span className="flex-1 text-gray-800 font-medium truncate">{adjEmail}</span>
+                  <button onClick={() => { setAdjEmail(''); setAdjSearch(''); }} className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={adjSearch}
+                    onChange={e => {
+                      setAdjSearch(e.target.value);
+                      if (adjDebounce.current) clearTimeout(adjDebounce.current);
+                      adjDebounce.current = setTimeout(() => fetchUserSuggestions(e.target.value, setAdjSuggestions), 300);
+                      setAdjShowDrop(true);
+                    }}
+                    onFocus={() => { if (adjSuggestions.length > 0) setAdjShowDrop(true); }}
+                    onBlur={() => setTimeout(() => setAdjShowDrop(false), 150)}
+                    placeholder="Buscar por nombre o email..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400"
+                  />
+                  {adjShowDrop && adjSuggestions.length > 0 && (
+                    <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                      {adjSuggestions.map(s => (
+                        <li key={s.email}
+                          onMouseDown={() => { setAdjEmail(s.email); setAdjSearch(''); setAdjShowDrop(false); }}
+                          className="px-3 py-2.5 cursor-pointer hover:bg-amber-50 flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold text-gray-800">{s.name || s.email}</span>
+                          {s.name && <span className="text-xs text-gray-400">{s.email}</span>}
+                          <span className="text-xs text-gray-400 capitalize">{s.role}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
@@ -263,15 +315,52 @@ export default function AdminWalletsPage() {
       {tab === 'movimientos' && (
         <div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4 max-w-lg">
-            <form onSubmit={e => { e.preventDefault(); loadMovimientos(movEmailInput); }} className="flex gap-2">
-              <input type="email" value={movEmailInput} onChange={e => setMovEmailInput(e.target.value)}
-                placeholder="Email del driver / técnico"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
-              <button type="submit" disabled={movLoading}
-                className="px-4 py-2 rounded-lg bg-[#F5C518] text-black text-sm font-bold disabled:opacity-50 hover:bg-[#E6A800] transition-colors">
+            <div className="relative flex gap-2">
+              <div className="relative flex-1">
+                {movEmailInput ? (
+                  <div className="flex items-center gap-2 px-3 py-2 border border-emerald-400 bg-emerald-50 rounded-lg text-sm">
+                    <span className="flex-1 text-gray-800 font-medium truncate">{movEmailInput}</span>
+                    <button onClick={() => { setMovEmailInput(''); setMovSearch(''); setMovWallet(null); }} className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={movSearch}
+                      onChange={e => {
+                        setMovSearch(e.target.value);
+                        if (movDebounce.current) clearTimeout(movDebounce.current);
+                        movDebounce.current = setTimeout(() => fetchUserSuggestions(e.target.value, setMovSuggestions), 300);
+                        setMovShowDrop(true);
+                      }}
+                      onFocus={() => { if (movSuggestions.length > 0) setMovShowDrop(true); }}
+                      onBlur={() => setTimeout(() => setMovShowDrop(false), 150)}
+                      placeholder="Buscar por nombre o email..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400"
+                    />
+                    {movShowDrop && movSuggestions.length > 0 && (
+                      <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                        {movSuggestions.map(s => (
+                          <li key={s.email}
+                            onMouseDown={() => { setMovEmailInput(s.email); setMovSearch(''); setMovShowDrop(false); }}
+                            className="px-3 py-2.5 cursor-pointer hover:bg-amber-50 flex flex-col gap-0.5">
+                            <span className="text-sm font-semibold text-gray-800">{s.name || s.email}</span>
+                            {s.name && <span className="text-xs text-gray-400">{s.email}</span>}
+                            <span className="text-xs text-gray-400 capitalize">{s.role}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+              <button onClick={() => loadMovimientos(movEmailInput)} disabled={movLoading || !movEmailInput}
+                className="px-4 py-2 rounded-lg bg-[#F5C518] text-black text-sm font-bold disabled:opacity-50 hover:bg-[#E6A800] transition-colors flex-shrink-0">
                 {movLoading ? '...' : 'Ver'}
               </button>
-            </form>
+            </div>
           </div>
           {movWallet && (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">

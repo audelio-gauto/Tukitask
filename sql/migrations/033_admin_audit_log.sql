@@ -19,6 +19,7 @@ create index if not exists admin_audit_log_created_idx on public.admin_audit_log
 -- Enable RLS — only admins can read
 alter table public.admin_audit_log enable row level security;
 
+drop policy if exists "admin_audit_log_read" on public.admin_audit_log;
 create policy "admin_audit_log_read" on public.admin_audit_log
   for select using (
     exists (
@@ -29,5 +30,6 @@ create policy "admin_audit_log_read" on public.admin_audit_log
   );
 
 -- Only service role can insert (backend only)
+drop policy if exists "admin_audit_log_insert" on public.admin_audit_log;
 create policy "admin_audit_log_insert" on public.admin_audit_log
   for insert with check (false);
