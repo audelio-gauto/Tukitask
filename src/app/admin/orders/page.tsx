@@ -601,15 +601,20 @@ export default function AdminOrdersPage() {
           <button
             onClick={() => {
               const headers = ['ID', 'Tipo', 'Estado', 'Cliente', 'Conductor', 'Precio', 'Fecha'];
-              const csvRows = [headers.join(','), ...rows.map(r => [
-                r.id,
-                r.type,
-                r.status,
-                `"${(r.client_email || '').replace(/"/g, '""')}"`,
-                `"${(r.accepted_by || '').replace(/"/g, '""')}"`,
-                r.offer ?? r.suggested_price ?? '',
-                r.created_at ? new Date(r.created_at).toISOString() : '',
-              ].join(','))];
+              const csvRows = [headers.join(','), ...rows.map(r => {
+                const isOrder = r._type === 'order';
+                const ord = isOrder ? (r as Order) : null;
+                const tec = !isOrder ? (r as TecnicoJob) : null;
+                return [
+                  r.id,
+                  r._type,
+                  r.status,
+                  `"${(r.client_email || '').replace(/"/g, '""')}"`,
+                  `"${(isOrder ? (ord!.accepted_by || '') : (tec!.tecnico_email || '')).replace(/"/g, '""')}"`,
+                  isOrder ? (ord!.offer ?? ord!.suggested_price ?? '') : (tec!.agreed_price ?? ''),
+                  r.created_at ? new Date(r.created_at).toISOString() : '',
+                ].join(',');
+              })];
               const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
@@ -618,7 +623,7 @@ export default function AdminOrdersPage() {
             }}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
           >
-            <Icon name="download" size={14} />
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             CSV
           </button>
           <button

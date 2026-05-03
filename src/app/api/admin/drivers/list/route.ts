@@ -40,7 +40,7 @@ export async function GET(req: Request) {
         .select('email')
         .eq('role', 'driver');
       inactiveEmails = (allDriverUsers || []).map((u: any) => u.email).filter((e: string) => !activeSet.has(e));
-      if (inactiveEmails.length === 0) {
+      if ((inactiveEmails as string[]).length === 0) {
         return NextResponse.json({ data: [], total: 0, page, limit });
       }
     }

@@ -193,10 +193,10 @@ export default function ClientDetailPage() {
                   </span>
                 </button>
                 <button
-                  onClick={() => setSuspendTarget({ user_id: user.id, email: user.email, display_name: profile?.display_name })}
+                  onClick={() => setSuspendTarget({ user_id: user.id, email: user.email, role: user.role, display_name: profile?.display_name })}
                   className="w-full py-2 px-3 text-sm font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
                   <span className="inline-flex items-center gap-2">
-                    <Icon name="ban" size={14} />
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
                     Suspender / banear
                   </span>
                 </button>
@@ -322,7 +322,7 @@ export default function ClientDetailPage() {
         <SuspendUserModal
           target={suspendTarget}
           onClose={() => setSuspendTarget(null)}
-          onDone={() => {
+          onComplete={() => {
             setSuspendTarget(null);
             setToast({ msg: 'Acción de suspensión aplicada', ok: true });
             setTimeout(() => setToast(null), 3000);

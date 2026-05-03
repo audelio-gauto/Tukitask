@@ -166,7 +166,9 @@ export default function AuditLogPage() {
         {!loading && hasMore && (
           <div className="flex justify-center py-4 border-t border-gray-100">
             <button onClick={loadMore} className="px-5 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex items-center gap-2">
-              <Icon name="chevron-down" size={14} />
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
               Cargar más
             </button>
           </div>

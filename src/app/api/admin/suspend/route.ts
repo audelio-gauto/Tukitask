@@ -156,7 +156,7 @@ export async function GET(req: Request) {
         .limit(50);
 
       return NextResponse.json({
-        history: (entries || []).map(e => ({
+        history: (entries || []).map((e: any) => ({
           action: e.action,
           reason: e.metadata?.reason ?? null,
           days: e.metadata?.days ?? null,
