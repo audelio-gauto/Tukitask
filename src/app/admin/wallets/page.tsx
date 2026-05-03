@@ -185,24 +185,33 @@ function AdminWalletsPageInner() {
       showToast('Email y monto requeridos', false); return;
     }
     setAdjSaving(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch('/api/admin/wallets', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-      body: JSON.stringify({
-        driver_email: adjEmail.trim(),
-        amount: adjType === 'credit' ? amount : -amount,
-        note: adjNote.trim() || undefined,
-      }),
-    });
-    const json = await res.json();
-    setAdjSaving(false);
-    if (json.success) {
-      showToast(`Saldo actualizado — nuevo saldo: ${fmtGS(json.new_balance)}`, true);
-      setAdjAmount(''); setAdjNote('');
-      if (typeof json.new_balance === 'number') setAdjBalance(json.new_balance);
-    } else {
-      showToast(json.error || 'Error al ajustar', false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/wallets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({
+          driver_email: adjEmail.trim(),
+          amount: adjType === 'credit' ? amount : -amount,
+          note: adjNote.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(`Saldo actualizado — nuevo saldo: ${fmtGS(json.new_balance)}`, true);
+        setAdjAmount(''); setAdjNote('');
+        if (typeof json.new_balance === 'number') setAdjBalance(json.new_balance);
+        // Reload movimientos if viewing the same driver
+        if (movWallet && movEmail === adjEmail.trim()) {
+          loadMovimientos(adjEmail.trim());
+        }
+      } else {
+        showToast(json.error || 'Error al ajustar', false);
+      }
+    } catch {
+      showToast('Error de conexión al aplicar ajuste', false);
+    } finally {
+      setAdjSaving(false);
     }
   }
 

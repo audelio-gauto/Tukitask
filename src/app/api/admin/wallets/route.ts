@@ -133,56 +133,63 @@ export async function PATCH(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = sbAdmin() as any;
 
-  // Upsert wallet + insert transaction atomically via RPC if available, else manual
-  const { data: wallet, error: wErr } = await db
-    .from('driver_wallets')
-    .select('balance')
-    .eq('driver_email', driver_email)
-    .maybeSingle();
+  try {
+    // Upsert wallet + insert transaction atomically via RPC if available, else manual
+    const { data: wallet, error: wErr } = await db
+      .from('driver_wallets')
+      .select('balance')
+      .eq('driver_email', driver_email)
+      .maybeSingle();
 
-  if (wErr) return NextResponse.json({ error: wErr.message }, { status: 500 });
+    if (wErr) return NextResponse.json({ error: wErr.message }, { status: 500 });
 
-  const currentBalance = wallet?.balance ?? 0;
-  const newBalance = currentBalance + amount;
+    const currentBalance = wallet?.balance ?? 0;
+    const newBalance = currentBalance + amount;
 
-  if (newBalance < 0) {
-    return NextResponse.json({ error: `Saldo insuficiente — actual: ${currentBalance} Gs` }, { status: 400 });
+    if (newBalance < 0) {
+      return NextResponse.json({ error: `Saldo insuficiente — actual: ${currentBalance} Gs` }, { status: 400 });
+    }
+
+    // Update or create wallet
+    const { error: upsertErr } = await db
+      .from('driver_wallets')
+      .upsert({ driver_email, balance: newBalance, updated_at: new Date().toISOString() }, { onConflict: 'driver_email' });
+    if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+    // Insert transaction record
+    const { error: txErr } = await db.from('wallet_transactions').insert({
+      driver_email,
+      type: amount > 0 ? 'admin_credit' : 'admin_debit',
+      amount,
+      note: note ? `[Admin: ${admin.email}] ${note}` : `[Admin: ${admin.email}]`,
+      created_at: new Date().toISOString(),
+    });
+    if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+
+    // Audit log (best-effort — table may not exist yet)
+    await db.from('admin_audit_log').insert({
+      admin_email: admin.email,
+      action: amount > 0 ? 'wallet_credit' : 'wallet_debit',
+      target_type: 'driver',
+      target_id: driver_email,
+      metadata: { amount, note, prev_balance: currentBalance, new_balance: newBalance },
+    }).catch(() => {});
+
+    // Notify driver (best-effort)
+    try {
+      emitNotification(
+        driver_email,
+        'wallet',
+        amount > 0 ? '💰 Ajuste de saldo' : '💸 Débito de saldo',
+        note || (amount > 0 ? 'El administrador acreditó saldo a tu billetera.' : 'El administrador realizó un débito en tu billetera.'),
+        { amount },
+        { groupKey: `admin_wallet_${Date.now()}` },
+      );
+    } catch { /* notification failure must not block response */ }
+
+    return NextResponse.json({ success: true, new_balance: newBalance });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error interno';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-
-  // Update or create wallet
-  const { error: upsertErr } = await db
-    .from('driver_wallets')
-    .upsert({ driver_email, balance: newBalance, updated_at: new Date().toISOString() }, { onConflict: 'driver_email' });
-  if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
-
-  // Insert transaction record
-  const { error: txErr } = await db.from('wallet_transactions').insert({
-    driver_email,
-    type: amount > 0 ? 'admin_credit' : 'admin_debit',
-    amount,
-    note: note ? `[Admin: ${admin.email}] ${note}` : `[Admin: ${admin.email}]`,
-    created_at: new Date().toISOString(),
-  });
-  if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
-
-  // Audit log
-  await db.from('admin_audit_log').insert({
-    admin_email: admin.email,
-    action: amount > 0 ? 'wallet_credit' : 'wallet_debit',
-    target_type: 'driver',
-    target_id: driver_email,
-    metadata: { amount, note, prev_balance: currentBalance, new_balance: newBalance },
-  }).throwOnError().catch(() => { /* table may not exist yet */ });
-
-  // Notify driver
-  emitNotification(
-    driver_email,
-    'wallet',
-    amount > 0 ? '💰 Ajuste de saldo' : '💸 Débito de saldo',
-    note || (amount > 0 ? 'El administrador acreditó saldo a tu billetera.' : 'El administrador realizó un débito en tu billetera.'),
-    { amount },
-    { groupKey: `admin_wallet_${Date.now()}` },
-  );
-
-  return NextResponse.json({ success: true, new_balance: newBalance });
 }
