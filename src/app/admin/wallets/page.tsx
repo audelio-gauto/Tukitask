@@ -330,8 +330,15 @@ export default function AdminWalletsPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Monto (Gs)</label>
-              <input type="number" min="1" value={adjAmount} onChange={e => setAdjAmount(e.target.value)}
-                placeholder="50000"
+              <input
+                type="text"
+                inputMode="numeric"
+                value={adjAmount ? parseInt(adjAmount.replace(/\./g, ''), 10).toLocaleString('es-PY') : ''}
+                onChange={e => {
+                  const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '');
+                  setAdjAmount(raw);
+                }}
+                placeholder="50.000"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
             </div>
             <div>
