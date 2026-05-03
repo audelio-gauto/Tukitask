@@ -167,13 +167,15 @@ export async function PATCH(req: Request) {
     if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
 
     // Audit log (best-effort — table may not exist yet)
-    await db.from('admin_audit_log').insert({
-      admin_email: admin.email,
-      action: amount > 0 ? 'wallet_credit' : 'wallet_debit',
-      target_type: 'driver',
-      target_id: driver_email,
-      metadata: { amount, note, prev_balance: currentBalance, new_balance: newBalance },
-    }).catch(() => {});
+    try {
+      await db.from('admin_audit_log').insert({
+        admin_email: admin.email,
+        action: amount > 0 ? 'wallet_credit' : 'wallet_debit',
+        target_type: 'driver',
+        target_id: driver_email,
+        metadata: { amount, note, prev_balance: currentBalance, new_balance: newBalance },
+      });
+    } catch { /* audit log table may not exist yet */ }
 
     // Notify driver (best-effort)
     try {
