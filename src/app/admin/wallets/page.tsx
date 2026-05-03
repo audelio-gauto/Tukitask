@@ -90,7 +90,9 @@ function AdminWalletsPageInner() {
   const [movWallet, setMovWallet] = useState<DriverWallet | null>(null);
   const [movLoading, setMovLoading] = useState(false);
   const movDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [movFilter, setMovFilter] = useState<'all' | 'admin' | 'recharge'>('all');
+  const [movFilterType, setMovFilterType] = useState<'all' | 'admin_credit' | 'admin_debit' | 'recharge' | 'commission'>('all');
+  const [movDateFrom, setMovDateFrom] = useState('');
+  const [movDateTo, setMovDateTo] = useState('');
 
   const showToast = (text: string, ok: boolean) => {
     setToast({ text, ok });
@@ -437,26 +439,87 @@ function AdminWalletsPageInner() {
                 </div>
                 <p className="text-xs text-gray-400">{movEmail}</p>
               </div>
-              {/* Filter bar */}
-              <div className="px-5 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
-                {([['all','Todos'],['admin','Ajustes Admin'],['recharge','Recargas']] as const).map(([f, label]) => (
-                  <button key={f} onClick={() => setMovFilter(f)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${movFilter === f ? 'bg-amber-400 text-black' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                    {label}
-                  </button>
-                ))}
+              {/* Filter panel */}
+              <div className="px-5 py-4 border-b border-gray-100 space-y-3">
+                {/* Type chips */}
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    ['all',          'Todos',           '#6b7280', '#f3f4f6'],
+                    ['admin_credit', 'Crédito Admin',   '#059669', '#f0fdf4'],
+                    ['admin_debit',  'Débito Admin',    '#dc2626', '#fff5f5'],
+                    ['recharge',     'Recarga',         '#2563eb', '#eff6ff'],
+                    ['commission',   'Comisión',        '#d97706', '#fffbeb'],
+                  ] as const).map(([f, label, activeColor, activeBg]) => (
+                    <button key={f} onClick={() => setMovFilterType(f)}
+                      style={movFilterType === f
+                        ? { background: activeBg, color: activeColor, border: `1.5px solid ${activeColor}40`, fontWeight: 700 }
+                        : { background: '#f9fafb', color: '#6b7280', border: '1.5px solid #e5e7eb', fontWeight: 500 }}
+                      className="px-3 py-1 rounded-full text-xs transition-all">
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {/* Date range */}
+                <div className="flex gap-3 flex-wrap items-center">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 font-semibold whitespace-nowrap">Desde</label>
+                    <input type="date" value={movDateFrom} onChange={e => setMovDateFrom(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 font-semibold whitespace-nowrap">Hasta</label>
+                    <input type="date" value={movDateTo} onChange={e => setMovDateTo(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                  </div>
+                  {(movDateFrom || movDateTo || movFilterType !== 'all') && (
+                    <button onClick={() => { setMovFilterType('all'); setMovDateFrom(''); setMovDateTo(''); }}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 text-xs font-semibold transition-colors">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      Limpiar
+                    </button>
+                  )}
+                </div>
               </div>
               {movWallet.transactions.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm p-8">Sin transacciones registradas</p>
               ) : (() => {
                 const filtered = movWallet.transactions.filter(tx => {
-                  if (movFilter === 'admin') return tx.type === 'admin_credit' || tx.type === 'admin_debit';
-                  if (movFilter === 'recharge') return tx.type === 'recharge';
+                  if (movFilterType !== 'all' && tx.type !== movFilterType) return false;
+                  if (movDateFrom) {
+                    const txDate = tx.created_at.slice(0, 10);
+                    if (txDate < movDateFrom) return false;
+                  }
+                  if (movDateTo) {
+                    const txDate = tx.created_at.slice(0, 10);
+                    if (txDate > movDateTo) return false;
+                  }
                   return true;
                 });
-                if (filtered.length === 0) return <p className="text-center text-gray-400 text-sm p-8">Sin movimientos en esta categoría</p>;
+                const totalCredits  = filtered.filter(t => t.amount > 0).reduce((s, t) => s + Number(t.amount), 0);
+                const totalDebits   = filtered.filter(t => t.amount < 0).reduce((s, t) => s + Number(t.amount), 0);
+                const net = totalCredits + totalDebits;
+                if (filtered.length === 0) return <p className="text-center text-gray-400 text-sm p-8">Sin movimientos para los filtros seleccionados</p>;
                 return (
-                  <div>
+                  <>
+                    {/* Summary bar */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.5rem', padding: '0.65rem 1.25rem', borderBottom: '1px solid #f3f4f6', background: '#fafafa', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600 }}>CRÉDITOS</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#059669' }}>+{fmtGS(totalCredits)}</span>
+                      </div>
+                      <div style={{ width: 1, height: 14, background: '#e5e7eb' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600 }}>DÉBITOS</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#dc2626' }}>{fmtGS(totalDebits)}</span>
+                      </div>
+                      <div style={{ width: 1, height: 14, background: '#e5e7eb' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600 }}>NETO</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: net >= 0 ? '#059669' : '#dc2626' }}>{net >= 0 ? '+' : ''}{fmtGS(net)}</span>
+                      </div>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#9ca3af' }}>{filtered.length} movimiento{filtered.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div>
                     {filtered.map((tx, i) => {
                       const cfg = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: '#6b7280' };
                       const isAdmin = tx.type === 'admin_credit' || tx.type === 'admin_debit';
@@ -491,7 +554,8 @@ function AdminWalletsPageInner() {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  </>
                 );
               })()}
             </div>
