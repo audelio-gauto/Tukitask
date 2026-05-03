@@ -24,7 +24,7 @@ create policy "admin_audit_log_read" on public.admin_audit_log
     exists (
       select 1 from public.users u
       where u.id = auth.uid()
-      and u.role in ('admin', 'super_admin', 'owner')
+      and u.role::text in ('admin', 'super_admin', 'owner')
     )
   );
 
