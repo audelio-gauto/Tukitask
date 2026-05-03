@@ -29,6 +29,14 @@ function fmtGS(n: number) {
   return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(n);
 }
 
+// Format raw "Gs 2500.00" numbers inside note strings → "Gs 2.500"
+function fmtNote(note: string | null): string {
+  if (!note) return '';
+  return note.replace(/Gs\s+([\d]+(?:\.\d+)?)/g, (_, n) =>
+    'Gs\u00a0' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(Math.round(parseFloat(n)))
+  );
+}
+
 const TX_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string; sign: string }> = {
   recharge:     { label: 'Recarga',        color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↑', sign: '+' },
   commission:   { label: 'Comisión',       color: '#f87171', bg: 'rgba(239,68,68,0.15)',   icon: '↓', sign: '-' },
@@ -235,11 +243,11 @@ export default function DriverBilleteraPage() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 2 }}>
-                          {isAdmin ? cfg.label : (tx.note || cfg.label)}
+                          {isAdmin ? cfg.label : (fmtNote(tx.note) || cfg.label)}
                         </div>
                         {isAdmin && cleanNote && (
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', opacity: 0.85, marginBottom: 2, lineHeight: 1.3 }}>
-                            {cleanNote}
+                            {fmtNote(cleanNote)}
                           </div>
                         )}
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>

@@ -47,6 +47,14 @@ function fmtGS(n: number) {
   return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(n);
 }
 
+// Format raw "Gs 2500.00" numbers inside note strings → "Gs 2.500"
+function fmtNote(note: string | null): string {
+  if (!note) return '';
+  return note.replace(/Gs\s+([\d]+(?:\.\d+)?)/g, (_, n) =>
+    'Gs\u00a0' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(Math.round(parseFloat(n)))
+  );
+}
+
 function AdminWalletsPageInner() {
   const searchParams = useSearchParams();
   const VALID_TABS = ['pending','approved','rejected','ajuste','movimientos'] as const;
@@ -543,7 +551,7 @@ function AdminWalletsPageInner() {
                                 </span>
                               )}
                             </div>
-                            {cleanNote && <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2, lineHeight: 1.4 }}>{cleanNote}</p>}
+                            {cleanNote && <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2, lineHeight: 1.4 }}>{fmtNote(cleanNote)}</p>}
                             <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: 2 }}>{fmtDate(tx.created_at)}</p>
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
