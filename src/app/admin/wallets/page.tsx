@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon } from '@/components/Icon';
@@ -47,11 +47,20 @@ function fmtGS(n: number) {
   return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(n);
 }
 
-export default function AdminWalletsPage() {
+function AdminWalletsPageInner() {
   const searchParams = useSearchParams();
-  const initialTab = (['pending','approved','rejected','ajuste','movimientos'].includes(searchParams.get('tab') || '') ? searchParams.get('tab') : 'pending') as 'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos';
+  const VALID_TABS = ['pending','approved','rejected','ajuste','movimientos'] as const;
+  type TabType = typeof VALID_TABS[number];
   const [requests, setRequests] = useState<RechargeRequest[]>([]);
-  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos'>(initialTab);
+  const [tab, setTab] = useState<TabType>('pending');
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && (VALID_TABS as readonly string[]).includes(t)) {
+      setTab(t as TabType);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -579,5 +588,13 @@ export default function AdminWalletsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminWalletsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminWalletsPageInner />
+    </Suspense>
   );
 }
