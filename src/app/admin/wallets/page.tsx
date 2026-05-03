@@ -58,6 +58,8 @@ export default function AdminWalletsPage() {
 
   // Ajuste manual state
   const [adjEmail, setAdjEmail] = useState('');
+  const [adjBalance, setAdjBalance] = useState<number | null>(null);
+  const [adjBalanceLoading, setAdjBalanceLoading] = useState(false);
   const [adjSearch, setAdjSearch] = useState('');
   const [adjSuggestions, setAdjSuggestions] = useState<{email:string;name:string;role:string}[]>([]);
   const [adjShowDrop, setAdjShowDrop] = useState(false);
@@ -89,6 +91,20 @@ export default function AdminWalletsPage() {
       headers: { Authorization: `Bearer ${session?.access_token || ''}` },
     });
     if (res.ok) set(await res.json());
+  }
+
+  async function fetchAdjBalance(email: string) {
+    setAdjBalanceLoading(true);
+    setAdjBalance(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/admin/wallets?driver_email=${encodeURIComponent(email)}`, {
+      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setAdjBalance(typeof json.balance === 'number' ? json.balance : null);
+    }
+    setAdjBalanceLoading(false);
   }
 
   const fetchRequests = useCallback(async () => {
@@ -171,6 +187,7 @@ export default function AdminWalletsPage() {
     if (json.success) {
       showToast(`Saldo actualizado — nuevo saldo: ${fmtGS(json.new_balance)}`, true);
       setAdjAmount(''); setAdjNote('');
+      if (typeof json.new_balance === 'number') setAdjBalance(json.new_balance);
     } else {
       showToast(json.error || 'Error al ajustar', false);
     }
@@ -242,7 +259,7 @@ export default function AdminWalletsPage() {
               {adjEmail ? (
                 <div className="flex items-center gap-2 px-3 py-2 border border-emerald-400 bg-emerald-50 rounded-lg text-sm">
                   <span className="flex-1 text-gray-800 font-medium truncate">{adjEmail}</span>
-                  <button onClick={() => { setAdjEmail(''); setAdjSearch(''); }} className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                  <button onClick={() => { setAdjEmail(''); setAdjSearch(''); setAdjBalance(null); }} className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 </div>
@@ -266,7 +283,7 @@ export default function AdminWalletsPage() {
                     <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
                       {adjSuggestions.map(s => (
                         <li key={s.email}
-                          onMouseDown={() => { setAdjEmail(s.email); setAdjSearch(''); setAdjShowDrop(false); }}
+                          onMouseDown={() => { setAdjEmail(s.email); setAdjSearch(''); setAdjShowDrop(false); fetchAdjBalance(s.email); }}
                           className="px-3 py-2.5 cursor-pointer hover:bg-amber-50 flex flex-col gap-0.5">
                           <span className="text-sm font-semibold text-gray-800">{s.name || s.email}</span>
                           {s.name && <span className="text-xs text-gray-400">{s.email}</span>}
@@ -278,6 +295,26 @@ export default function AdminWalletsPage() {
                 </>
               )}
             </div>
+
+            {/* Balance display */}
+            {adjEmail && (
+              <div className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                adjBalance === null ? 'bg-gray-50 border-gray-200' :
+                adjBalance > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+              }`}>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Saldo actual</span>
+                {adjBalanceLoading ? (
+                  <span className="text-sm text-gray-400">Cargando...</span>
+                ) : adjBalance === null ? (
+                  <span className="text-sm text-gray-400">Sin billetera registrada</span>
+                ) : (
+                  <span className={`text-lg font-black ${adjBalance > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {fmtGS(adjBalance)}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
               <div className="flex gap-2">
