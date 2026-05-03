@@ -112,3 +112,77 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+// PATCH — manual wallet adjustment by admin
+// body: { driver_email, amount (positive=credit, negative=debit), note }
+export async function PATCH(req: Request) {
+  const admin = await getAuthAdmin(req);
+  if (!admin) return unauthorized();
+
+  let body: { driver_email?: string; amount?: number; note?: string };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  const { driver_email, amount, note } = body;
+  if (!driver_email || amount == null || amount === 0) {
+    return NextResponse.json({ error: 'driver_email y amount requeridos' }, { status: 400 });
+  }
+  if (Math.abs(amount) > 100_000_000) {
+    return NextResponse.json({ error: 'Monto fuera de rango' }, { status: 400 });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = sbAdmin() as any;
+
+  // Upsert wallet + insert transaction atomically via RPC if available, else manual
+  const { data: wallet, error: wErr } = await db
+    .from('driver_wallets')
+    .select('balance')
+    .eq('driver_email', driver_email)
+    .maybeSingle();
+
+  if (wErr) return NextResponse.json({ error: wErr.message }, { status: 500 });
+
+  const currentBalance = wallet?.balance ?? 0;
+  const newBalance = currentBalance + amount;
+
+  if (newBalance < 0) {
+    return NextResponse.json({ error: `Saldo insuficiente — actual: ${currentBalance} Gs` }, { status: 400 });
+  }
+
+  // Update or create wallet
+  const { error: upsertErr } = await db
+    .from('driver_wallets')
+    .upsert({ driver_email, balance: newBalance, updated_at: new Date().toISOString() }, { onConflict: 'driver_email' });
+  if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+  // Insert transaction record
+  const { error: txErr } = await db.from('wallet_transactions').insert({
+    driver_email,
+    type: amount > 0 ? 'admin_credit' : 'admin_debit',
+    amount,
+    note: note ? `[Admin: ${admin.email}] ${note}` : `[Admin: ${admin.email}]`,
+    created_at: new Date().toISOString(),
+  });
+  if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
+
+  // Audit log
+  await db.from('admin_audit_log').insert({
+    admin_email: admin.email,
+    action: amount > 0 ? 'wallet_credit' : 'wallet_debit',
+    target_type: 'driver',
+    target_id: driver_email,
+    metadata: { amount, note, prev_balance: currentBalance, new_balance: newBalance },
+  }).throwOnError().catch(() => { /* table may not exist yet */ });
+
+  // Notify driver
+  emitNotification(
+    driver_email,
+    'wallet',
+    amount > 0 ? '💰 Ajuste de saldo' : '💸 Débito de saldo',
+    note || (amount > 0 ? 'El administrador acreditó saldo a tu billetera.' : 'El administrador realizó un débito en tu billetera.'),
+    { amount },
+    { groupKey: `admin_wallet_${Date.now()}` },
+  );
+
+  return NextResponse.json({ success: true, new_balance: newBalance });
+}

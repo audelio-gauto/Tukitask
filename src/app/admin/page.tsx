@@ -24,6 +24,12 @@ interface OrderMetrics {
   revenueToday: number;
 }
 
+interface Alerts {
+  pendingRecharges: number;
+  stalePendingOrders: number;
+  unresolvedReports: number;
+}
+
 function fmtGs(n: number) {
   return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(n);
 }
@@ -33,6 +39,7 @@ export default function AdminDashboard() {
   const [orderMetrics, setOrderMetrics] = useState<OrderMetrics>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, cancelledOrders: 0, totalRevenue: 0, revenueToday: 0 });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [dailyRevenue, setDailyRevenue] = useState<number[]>(Array(7).fill(0));
+  const [alerts, setAlerts] = useState<Alerts>({ pendingRecharges: 0, stalePendingOrders: 0, unresolvedReports: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +60,9 @@ export default function AdminDashboard() {
         { count: deliveredOrders },
         { count: cancelledOrders },
         { data: allOrders },
+        { count: pendingRecharges },
+        { count: stalePendingOrders },
+        { count: unresolvedReports },
       ] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'driver'),
@@ -75,6 +85,12 @@ export default function AdminDashboard() {
           .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned'])
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
           .limit(2000),
+        // Alertas operacionales
+        supabase.from('wallet_recharges').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('orders').select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'negotiating'])
+          .lte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
       ]);
 
       setStats({
@@ -112,6 +128,11 @@ export default function AdminDashboard() {
       });
       setDailyRevenue(daily);
       setRecentUsers(recentUsersData || []);
+      setAlerts({
+        pendingRecharges:  (pendingRecharges  as number) ?? 0,
+        stalePendingOrders: (stalePendingOrders as number) ?? 0,
+        unresolvedReports: (unresolvedReports as number) ?? 0,
+      });
       setLoading(false);
     })();
   }, []);
@@ -140,6 +161,30 @@ export default function AdminDashboard() {
         <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-0.5">Resumen general del sistema</p>
       </div>
+
+      {/* Alerts */}
+      {(alerts.pendingRecharges > 0 || alerts.stalePendingOrders > 0 || alerts.unresolvedReports > 0) && (
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {alerts.pendingRecharges > 0 && (
+            <Link href="/admin/wallets" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 hover:bg-amber-100 transition-colors">
+              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-amber-400 text-white font-bold text-sm flex-shrink-0">{alerts.pendingRecharges}</span>
+              <span className="text-sm font-semibold text-amber-700">Recargas pendientes de aprobación</span>
+            </Link>
+          )}
+          {alerts.stalePendingOrders > 0 && (
+            <Link href="/admin/orders" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 hover:bg-red-100 transition-colors">
+              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 text-white font-bold text-sm flex-shrink-0">{alerts.stalePendingOrders}</span>
+              <span className="text-sm font-semibold text-red-700">Pedidos sin asignar &gt;30 min</span>
+            </Link>
+          )}
+          {alerts.unresolvedReports > 0 && (
+            <Link href="/admin/reports" className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 hover:bg-purple-100 transition-colors">
+              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-500 text-white font-bold text-sm flex-shrink-0">{alerts.unresolvedReports}</span>
+              <span className="text-sm font-semibold text-purple-700">Reportes sin resolver</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">

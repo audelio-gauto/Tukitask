@@ -160,39 +160,101 @@ function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
-// PATCH — cancel an order or tecnico job from admin
+// PATCH — cancel, set_status, or reassign an order/tecnico job from admin
 export async function PATCH(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
-  let body: { id?: string; type?: 'order' | 'tecnico'; action?: string };
+  let body: { id?: string; type?: 'order' | 'tecnico'; action?: string; status?: string; driver_email?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
   const { id, type, action } = body;
-  if (!id || !type || action !== 'cancel') {
-    return NextResponse.json({ error: 'id, type, and action=cancel required' }, { status: 400 });
+  if (!id || !type || !action) {
+    return NextResponse.json({ error: 'id, type, and action required' }, { status: 400 });
   }
 
   const db = sbAdmin();
   const table = type === 'order' ? 'orders' : 'tecnico_jobs';
-  const cancelStatus = type === 'order' ? 'cancelled' : 'cancelled';
-
-  // Only allow cancelling non-terminal orders
   const terminalStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned', 'completado', 'rechazado'];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row } = await (db as any).from(table).select('status').eq('id', id).maybeSingle();
+  const { data: row } = await (db as any).from(table).select('status, accepted_by').eq('id', id).maybeSingle();
   if (!row) return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
-  if (terminalStatuses.includes(row.status)) {
-    return NextResponse.json({ error: `No se puede cancelar — estado actual: ${row.status}` }, { status: 400 });
+
+  // ── Cancel ────────────────────────────────────────────────────────────────
+  if (action === 'cancel') {
+    if (terminalStatuses.includes(row.status)) {
+      return NextResponse.json({ error: `No se puede cancelar — estado actual: ${row.status}` }, { status: 400 });
+    }
+    const updates: Record<string, unknown> = { status: 'cancelled' };
+    if (type === 'order') updates.cancelled_at = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (db as any).from(table).update(updates).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Audit log
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (db as any).from('admin_audit_log').insert({
+      admin_email: admin.email, action: 'cancel_order', target_type: type,
+      target_id: id, metadata: { prev_status: row.status },
+    }).throwOnError().catch(() => { /* table may not exist yet */ });
+
+    return NextResponse.json({ success: true });
   }
 
-  const updates: Record<string, unknown> = { status: cancelStatus };
-  if (type === 'order') updates.cancelled_at = new Date().toISOString();
+  // ── Force status change ───────────────────────────────────────────────────
+  if (action === 'set_status') {
+    const { status: newStatus } = body;
+    if (!newStatus) return NextResponse.json({ error: 'status required' }, { status: 400 });
+    const updates: Record<string, unknown> = { status: newStatus };
+    if (type === 'order' && newStatus === 'cancelled') updates.cancelled_at = new Date().toISOString();
+    if (type === 'order' && ['delivered', 'commission_charged'].includes(newStatus)) {
+      updates.completed_at = new Date().toISOString();
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (db as any).from(table).update(updates).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (db as any).from(table).update(updates).eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (db as any).from('admin_audit_log').insert({
+      admin_email: admin.email, action: 'set_status', target_type: type,
+      target_id: id, metadata: { prev_status: row.status, new_status: newStatus },
+    }).throwOnError().catch(() => { /* table may not exist yet */ });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  }
+
+  // ── Reassign driver ───────────────────────────────────────────────────────
+  if (action === 'reassign') {
+    const { driver_email } = body;
+    if (!driver_email) return NextResponse.json({ error: 'driver_email required' }, { status: 400 });
+
+    // Validate driver exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: driverUser } = await (db as any).from('users').select('email, role').eq('email', driver_email.toLowerCase().trim()).maybeSingle();
+    if (!driverUser) return NextResponse.json({ error: 'Conductor no encontrado' }, { status: 404 });
+    if (!['driver', 'tecnico'].includes(driverUser.role)) {
+      return NextResponse.json({ error: 'El usuario no es driver ni técnico' }, { status: 400 });
+    }
+
+    const field = type === 'order' ? 'accepted_by' : 'tecnico_email';
+    const updates: Record<string, unknown> = {
+      [field]: driver_email.toLowerCase().trim(),
+      status: 'accepted',
+      accepted_at: new Date().toISOString(),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (db as any).from(table).update(updates).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (db as any).from('admin_audit_log').insert({
+      admin_email: admin.email, action: 'reassign_driver', target_type: type,
+      target_id: id, metadata: { prev_driver: row.accepted_by, new_driver: driver_email },
+    }).throwOnError().catch(() => { /* table may not exist yet */ });
+
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: `Acción desconocida: ${action}` }, { status: 400 });
 }

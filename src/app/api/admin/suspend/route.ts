@@ -136,6 +136,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('user_id');
+  const history = searchParams.get('history') === '1';
 
   if (!userId) {
     return NextResponse.json({ error: 'user_id requerido' }, { status: 400 });
@@ -143,6 +144,27 @@ export async function GET(req: Request) {
 
   try {
     const db = sbAdmin();
+
+    // History mode: return audit log entries
+    if (history) {
+      const { data: entries } = await db
+        .from('admin_audit_log')
+        .select('action, metadata, admin_email, created_at')
+        .eq('target_id', userId)
+        .in('action', ['suspend', 'reactivate'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      return NextResponse.json({
+        history: (entries || []).map(e => ({
+          action: e.action,
+          reason: e.metadata?.reason ?? null,
+          days: e.metadata?.days ?? null,
+          admin_email: e.admin_email,
+          created_at: e.created_at,
+        })),
+      });
+    }
 
     // Look up user email from users table, then find auth user by email
     const { data: targetUser } = await db

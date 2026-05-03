@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon, type IconName } from '@/components/Icon';
 
@@ -144,7 +144,20 @@ function ActiveDot({ active }: { active: boolean }) {
 }
 
 // ── Order detail drawer ────────────────────────────────────────────────────────
-function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () => void; onCancel: (id: string, type: 'order' | 'tecnico') => void }) {
+function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
+  row: Row | null;
+  onClose: () => void;
+  onCancel: (id: string, type: 'order' | 'tecnico') => void;
+  onSetStatus: (id: string, type: 'order' | 'tecnico', status: string) => void;
+  onReassign: (id: string, type: 'order' | 'tecnico', driverEmail: string) => void;
+}) {
+  const [newStatus, setNewStatus] = React.useState('');
+  const [reassignEmail, setReassignEmail] = React.useState('');
+
+  React.useEffect(() => {
+    if (row) { setNewStatus(row.status); setReassignEmail(''); }
+  }, [row?.id]);
+
   if (!row) return null;
   const isOrder = row._type === 'order';
   const o = row as Order;
@@ -152,6 +165,8 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
 
   const terminalStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned', 'completado', 'rechazado'];
   const canCancel = !terminalStatuses.includes(row.status);
+  const statusOptions = isOrder ? ALL_ORDER_STATUS_KEYS : ALL_TECNICO_STATUS_KEYS;
+  const statusMap = isOrder ? ORDER_STATUSES : TECNICO_STATUSES;
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
@@ -312,18 +327,67 @@ function OrderDrawer({ row, onClose, onCancel }: { row: Row | null; onClose: () 
           />
         )}
 
-        {/* Cancel button */}
-        {canCancel && (
-          <button
-            onClick={() => onCancel(row.id, row._type)}
-            className="mt-auto w-full py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Icon name="x" size={14} />
-              Cancelar pedido
-            </span>
-          </button>
-        )}
+        {/* ── Admin actions ── */}
+        <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+          {/* Force status change */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Cambiar estado</p>
+            <div className="flex gap-2">
+              <select
+                value={newStatus}
+                onChange={e => setNewStatus(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518]"
+              >
+                {statusOptions.map(s => (
+                  <option key={s} value={s}>{statusMap[s]?.label ?? s}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => { if (newStatus !== row.status) onSetStatus(row.id, row._type, newStatus); }}
+                disabled={newStatus === row.status}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+
+          {/* Reassign driver */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+              Reasignar {isOrder ? 'conductor' : 'técnico'}
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={reassignEmail}
+                onChange={e => setReassignEmail(e.target.value)}
+                placeholder="email@conductor.com"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400"
+              />
+              <button
+                onClick={() => { if (reassignEmail.trim()) onReassign(row.id, row._type, reassignEmail.trim()); }}
+                disabled={!reassignEmail.trim()}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Asignar
+              </button>
+            </div>
+          </div>
+
+          {/* Cancel */}
+          {canCancel && (
+            <button
+              onClick={() => onCancel(row.id, row._type)}
+              className="w-full py-2.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Icon name="x" size={14} />
+                Cancelar pedido
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -464,6 +528,48 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleSetStatus = async (id: string, type: 'order' | 'tecnico', status: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, type, action: 'set_status', status }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error'); }
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      setSelected(prev => prev && prev.id === id ? { ...prev, status } : prev);
+      setToast({ msg: `Estado cambiado a: ${status}`, ok: true });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToast({ msg, ok: false });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleReassign = async (id: string, type: 'order' | 'tecnico', driverEmail: string) => {
+    if (!confirm(`¿Reasignar este pedido a ${driverEmail}?`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, type, action: 'reassign', driver_email: driverEmail }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error'); }
+      const field = type === 'order' ? 'accepted_by' : 'tecnico_email';
+      setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: driverEmail, status: 'accepted' } : r));
+      setSelected(prev => prev && prev.id === id ? { ...prev, [field]: driverEmail, status: 'accepted' } : prev);
+      setToast({ msg: `Reasignado a ${driverEmail}`, ok: true });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToast({ msg, ok: false });
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
   const statusKeys = tab === 'tecnico' ? ALL_TECNICO_STATUS_KEYS : ALL_ORDER_STATUS_KEYS;
   const statusMap  = tab === 'tecnico' ? TECNICO_STATUSES : ORDER_STATUSES;
 
@@ -491,15 +597,40 @@ export default function AdminOrdersPage() {
             </span>
           </p>
         </div>
-        <button
-          onClick={() => fetchData()}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const headers = ['ID', 'Tipo', 'Estado', 'Cliente', 'Conductor', 'Precio', 'Fecha'];
+              const csvRows = [headers.join(','), ...rows.map(r => [
+                r.id,
+                r.type,
+                r.status,
+                `"${(r.client_email || '').replace(/"/g, '""')}"`,
+                `"${(r.accepted_by || '').replace(/"/g, '""')}"`,
+                r.offer ?? r.suggested_price ?? '',
+                r.created_at ? new Date(r.created_at).toISOString() : '',
+              ].join(','))];
+              const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = `pedidos_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <Icon name="download" size={14} />
+            CSV
+          </button>
+          <button
+            onClick={() => fetchData()}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
@@ -688,7 +819,7 @@ export default function AdminOrdersPage() {
       )}
 
       {/* ── Drawer ───────────────────────────────────────────────────────── */}
-      <OrderDrawer row={selected} onClose={() => setSelected(null)} onCancel={handleCancel} />
+      <OrderDrawer row={selected} onClose={() => setSelected(null)} onCancel={handleCancel} onSetStatus={handleSetStatus} onReassign={handleReassign} />
     </div>
   );
 }

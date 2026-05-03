@@ -15,6 +15,29 @@ interface RechargeRequest {
   created_at: string;
 }
 
+interface WalletTx {
+  id: string;
+  type: string;
+  amount: number;
+  note: string | null;
+  created_at: string;
+}
+
+interface DriverWallet {
+  balance: number;
+  transactions: WalletTx[];
+  recharge_requests: { id: string; amount: number; status: string; created_at: string }[];
+}
+
+const TX_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  commission: { label: 'Comisión', color: '#ef4444' },
+  recharge: { label: 'Recarga', color: '#10b981' },
+  admin_credit: { label: 'Crédito admin', color: '#10b981' },
+  admin_debit: { label: 'Débito admin', color: '#ef4444' },
+  refund: { label: 'Reembolso', color: '#10b981' },
+  bonus: { label: 'Bono', color: '#f59e0b' },
+};
+
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -25,7 +48,7 @@ function fmtGS(n: number) {
 
 export default function AdminWalletsPage() {
   const [requests, setRequests] = useState<RechargeRequest[]>([]);
-  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'ajuste' | 'movimientos'>('pending');
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -33,12 +56,26 @@ export default function AdminWalletsPage() {
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Ajuste manual state
+  const [adjEmail, setAdjEmail] = useState('');
+  const [adjAmount, setAdjAmount] = useState('');
+  const [adjNote, setAdjNote] = useState('');
+  const [adjSaving, setAdjSaving] = useState(false);
+  const [adjType, setAdjType] = useState<'credit' | 'debit'>('credit');
+
+  // Movimientos state
+  const [movEmail, setMovEmail] = useState('');
+  const [movEmailInput, setMovEmailInput] = useState('');
+  const [movWallet, setMovWallet] = useState<DriverWallet | null>(null);
+  const [movLoading, setMovLoading] = useState(false);
+
   const showToast = (text: string, ok: boolean) => {
     setToast({ text, ok });
     setTimeout(() => setToast(null), 3500);
   };
 
   const fetchRequests = useCallback(async () => {
+    if (tab === 'ajuste' || tab === 'movimientos') { setLoading(false); return; }
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || '';
@@ -96,6 +133,46 @@ export default function AdminWalletsPage() {
     }
   }
 
+  async function handleAdjust() {
+    const amount = parseInt(adjAmount);
+    if (!adjEmail.trim() || !amount || amount <= 0) {
+      showToast('Email y monto requeridos', false); return;
+    }
+    setAdjSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/admin/wallets', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+      body: JSON.stringify({
+        driver_email: adjEmail.trim(),
+        amount: adjType === 'credit' ? amount : -amount,
+        note: adjNote.trim() || undefined,
+      }),
+    });
+    const json = await res.json();
+    setAdjSaving(false);
+    if (json.success) {
+      showToast(`Saldo actualizado — nuevo saldo: ${fmtGS(json.new_balance)}`, true);
+      setAdjAmount(''); setAdjNote('');
+    } else {
+      showToast(json.error || 'Error al ajustar', false);
+    }
+  }
+
+  async function loadMovimientos(email: string) {
+    if (!email.trim()) return;
+    setMovLoading(true);
+    setMovWallet(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/admin/wallets?driver_email=${encodeURIComponent(email.trim())}`, {
+      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+    });
+    const json = await res.json();
+    setMovLoading(false);
+    if (res.ok) { setMovWallet(json); setMovEmail(email.trim()); }
+    else showToast(json.error || 'Error', false);
+  }
+
   const tabStyle = (active: boolean) => ({
     padding: '0.45rem 1rem',
     borderRadius: 8,
@@ -127,17 +204,115 @@ export default function AdminWalletsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 10, padding: 4, marginBottom: '1.5rem', width: 'fit-content' }}>
-        {(['pending', 'approved', 'rejected'] as const).map(t => (
+      <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 10, padding: 4, marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {(['pending', 'approved', 'rejected', 'ajuste', 'movimientos'] as const).map(t => (
           <button key={t} style={tabStyle(tab === t)} onClick={() => setTab(t)}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {t === 'pending' ? <Icon name="clock" size={14} /> : t === 'approved' ? <Icon name="check" size={14} /> : <Icon name="x" size={14} />}
-              {t === 'pending' ? 'Pendientes' : t === 'approved' ? 'Aprobadas' : 'Rechazadas'}
+              {t === 'pending' ? <Icon name="clock" size={14} /> : t === 'approved' ? <Icon name="check" size={14} /> : t === 'rejected' ? <Icon name="x" size={14} /> : t === 'ajuste' ? <Icon name="money" size={14} /> : <Icon name="clipboard" size={14} />}
+              {t === 'pending' ? 'Pendientes' : t === 'approved' ? 'Aprobadas' : t === 'rejected' ? 'Rechazadas' : t === 'ajuste' ? 'Ajuste Manual' : 'Movimientos'}
             </span>
           </button>
         ))}
       </div>
 
+      {/* ── Ajuste Manual ──────────────────────────────────────────────────── */}
+      {tab === 'ajuste' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-lg">
+          <h2 className="text-base font-bold text-gray-800 mb-4">Ajuste manual de saldo</h2>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Email del driver / técnico</label>
+              <input type="email" value={adjEmail} onChange={e => setAdjEmail(e.target.value)}
+                placeholder="driver@email.com"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
+              <div className="flex gap-2">
+                <button onClick={() => setAdjType('credit')}
+                  style={{ flex: 1, padding: '0.45rem', borderRadius: 8, border: `2px solid ${adjType === 'credit' ? '#10b981' : '#e5e7eb'}`, background: adjType === 'credit' ? '#f0fdf4' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', color: adjType === 'credit' ? '#059669' : '#6b7280' }}>
+                  + Crédito
+                </button>
+                <button onClick={() => setAdjType('debit')}
+                  style={{ flex: 1, padding: '0.45rem', borderRadius: 8, border: `2px solid ${adjType === 'debit' ? '#ef4444' : '#e5e7eb'}`, background: adjType === 'debit' ? '#fff5f5' : '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', color: adjType === 'debit' ? '#dc2626' : '#6b7280' }}>
+                  − Débito
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Monto (Gs)</label>
+              <input type="number" min="1" value={adjAmount} onChange={e => setAdjAmount(e.target.value)}
+                placeholder="50000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Nota (opcional)</label>
+              <input type="text" value={adjNote} onChange={e => setAdjNote(e.target.value)}
+                placeholder="Corrección de error, bono, penalidad..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
+            </div>
+            <button onClick={handleAdjust} disabled={adjSaving || !adjEmail.trim() || !adjAmount}
+              className="w-full py-2.5 rounded-lg text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              {adjSaving ? 'Procesando...' : `Aplicar ${adjType === 'credit' ? 'crédito' : 'débito'}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Movimientos por driver ──────────────────────────────────────────── */}
+      {tab === 'movimientos' && (
+        <div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-4 max-w-lg">
+            <form onSubmit={e => { e.preventDefault(); loadMovimientos(movEmailInput); }} className="flex gap-2">
+              <input type="email" value={movEmailInput} onChange={e => setMovEmailInput(e.target.value)}
+                placeholder="Email del driver / técnico"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-[#F5C518] focus:border-[#F5C518] placeholder:text-gray-400" />
+              <button type="submit" disabled={movLoading}
+                className="px-4 py-2 rounded-lg bg-[#F5C518] text-black text-sm font-bold disabled:opacity-50 hover:bg-[#E6A800] transition-colors">
+                {movLoading ? '...' : 'Ver'}
+              </button>
+            </form>
+          </div>
+          {movWallet && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 font-semibold">SALDO ACTUAL</p>
+                  <p className="text-2xl font-black text-gray-800">{fmtGS(movWallet.balance)}</p>
+                </div>
+                <p className="text-xs text-gray-400">{movEmail}</p>
+              </div>
+              {movWallet.transactions.length === 0 ? (
+                <p className="text-center text-gray-400 text-sm p-8">Sin transacciones registradas</p>
+              ) : (
+                <div>
+                  {movWallet.transactions.map((tx, i) => {
+                    const cfg = TX_TYPE_LABELS[tx.type] ?? { label: tx.type, color: '#6b7280' };
+                    return (
+                      <div key={tx.id} style={{ padding: '0.75rem 1.25rem', borderBottom: i < movWallet.transactions.length - 1 ? '1px solid #f3f4f6' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>{cfg.label}</span>
+                          {tx.note && <p style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.note}</p>}
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <p style={{ fontWeight: 800, fontSize: '0.9rem', color: tx.amount > 0 ? '#059669' : '#dc2626' }}>
+                            {tx.amount > 0 ? '+' : ''}{fmtGS(tx.amount)}
+                          </p>
+                          <p style={{ fontSize: '0.68rem', color: '#9ca3af' }}>{fmtDate(tx.created_at)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(tab === 'pending' || tab === 'approved' || tab === 'rejected') && (
+      <>
       {loading ? (
         <div className="bg-white rounded-xl p-12 text-center text-gray-400">Cargando...</div>
       ) : requests.length === 0 ? (
@@ -254,6 +429,8 @@ export default function AdminWalletsPage() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* Modal vista comprobante */}

@@ -45,6 +45,8 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [suspHistory, setSuspHistory] = useState<Array<{ action: string; reason: string | null; days: number | null; admin_email: string; created_at: string }>>([]);
 
   const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -138,6 +140,18 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   }) : null;
   const canSuspend = permanent || (parseInt(days) > 0);
+
+  const loadHistory = async () => {
+    if (showHistory) { setShowHistory(false); return; }
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/suspend?user_id=${target.user_id}&history=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) { const d = await res.json(); setSuspHistory(d.history || []); }
+    } catch { /* silent */ }
+    setShowHistory(true);
+  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
@@ -266,6 +280,33 @@ export default function SuspendUserModal({ target, onClose, onComplete }: Props)
               )}
             </>
           )}
+
+          {/* Suspension history */}
+          <div className="border-t border-gray-100 pt-3">
+            <button onClick={loadHistory}
+              className="w-full text-left text-xs font-semibold text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition-colors">
+              <Icon name="clock" size={12} />
+              {showHistory ? 'Ocultar historial' : 'Ver historial de suspensiones'}
+            </button>
+            {showHistory && (
+              <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+                {suspHistory.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-3">Sin historial de suspensiones</p>
+                ) : suspHistory.map((h, i) => (
+                  <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-bold ${h.action === 'suspend' ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {h.action === 'suspend' ? `Suspendido${h.days === 0 ? ' (permanente)' : h.days ? ` ${h.days}d` : ''}` : 'Reactivado'}
+                      </span>
+                      <span className="text-[10px] text-gray-400">{fmtDate(h.created_at)}</span>
+                    </div>
+                    {h.reason && <p className="text-[10px] text-gray-500 mt-0.5">{h.reason}</p>}
+                    <p className="text-[10px] text-gray-400">Por: {h.admin_email}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
