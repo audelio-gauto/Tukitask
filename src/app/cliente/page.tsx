@@ -237,7 +237,7 @@ function OfferCard({
   const isSuggestedPrice = offer.suggestedPrice != null && Math.abs(offer.price - offer.suggestedPrice) / Math.max(offer.suggestedPrice, 1) < 0.05;
 
   return (
-    <div style={{
+    <div className="offer-card-enter" style={{
       background: 'var(--sheet-bg)',
       borderRadius: 16,
       border: '1.5px solid rgba(245,197,24,0.20)',

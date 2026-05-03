@@ -226,6 +226,46 @@ export default function GananciasPage() {
             background: 'var(--glass-card)', borderRadius: 16, padding: '0.85rem 1rem',
             marginBottom: '1.25rem', border: '1px solid var(--glass-card-border)',
           }}>
+            {/* ── Weekly bar chart (last 7 days) ── */}
+            {(() => {
+              const days: { label: string; amount: number }[] = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+                const amount   = uniqueOrders
+                  .filter(o => DELIVERED_STATUSES.includes(o.status))
+                  .filter(o => { const t = new Date(o.created_at).getTime(); return t >= dayStart.getTime() && t < dayEnd.getTime(); })
+                  .reduce((s, o) => s + orderPrice(o), 0);
+                const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                return { label: labels[d.getDay()], amount };
+              });
+              const maxAmt = Math.max(...days.map(d => d.amount), 1);
+              const BAR_H = 60;
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Últimos 7 días
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: BAR_H + 20 }}>
+                    {days.map((d, i) => {
+                      const h = Math.max(4, Math.round((d.amount / maxAmt) * BAR_H));
+                      const isToday = i === 6;
+                      return (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                          <div style={{
+                            width: '100%', height: h, borderRadius: '4px 4px 0 0',
+                            background: isToday ? '#c8ff00' : d.amount > 0 ? 'rgba(200,255,0,0.35)' : 'rgba(255,255,255,0.06)',
+                            transition: 'height 0.4s ease',
+                          }} />
+                          <span style={{ fontSize: '0.55rem', color: isToday ? '#c8ff00' : '#6b7280', fontWeight: isToday ? 800 : 500 }}>{d.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Resumen
             </div>

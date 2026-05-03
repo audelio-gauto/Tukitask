@@ -802,11 +802,10 @@ export default function ActivoPage() {
 
       <div style={{ padding: '16px 16px 100px' }}>
         {loading && (
-          <div style={{ textAlign: 'center', paddingTop: 60, color: '#9ca3af' }}>
-            <svg style={{ width: 36, height: 36, marginBottom: 10, display: 'inline-block', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            <p style={{ margin: 0 }}>Cargando...</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[0, 1].map(i => (
+              <div key={i} className="tuki-skeleton" style={{ height: 120, borderRadius: 16 }} />
+            ))}
           </div>
         )}
 

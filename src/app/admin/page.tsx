@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 });
   const [orderMetrics, setOrderMetrics] = useState<OrderMetrics>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, cancelledOrders: 0, totalRevenue: 0, revenueToday: 0 });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [dailyRevenue, setDailyRevenue] = useState<number[]>(Array(7).fill(0));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +100,17 @@ export default function AdminDashboard() {
         totalRevenue:    rev30.reduce((s, o) => s + getPrice(o), 0),
         revenueToday:    rev30.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
       });
+
+      // Build last-7-days daily revenue array
+      const daily = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const end   = start + 86400000;
+        return rev30.filter(o => { const t = new Date(o.created_at).getTime(); return t >= start && t < end; })
+                    .reduce((s, o) => s + getPrice(o), 0);
+      });
+      setDailyRevenue(daily);
       setRecentUsers(recentUsersData || []);
       setLoading(false);
     })();
@@ -164,6 +176,33 @@ export default function AdminDashboard() {
               <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Revenue mini-chart: last 7 days */}
+      <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Ingresos — últimos 7 días</h2>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 72 }}>
+          {dailyRevenue.map((amt, i) => {
+            const maxAmt = Math.max(...dailyRevenue, 1);
+            const BAR_H = 60;
+            const h = Math.max(4, Math.round((amt / maxAmt) * BAR_H));
+            const isToday = i === 6;
+            const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const d = new Date(); d.setDate(d.getDate() - (6 - i));
+            return (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                <div style={{
+                  width: '100%', height: h, borderRadius: '4px 4px 0 0',
+                  background: isToday ? '#F5C518' : amt > 0 ? 'rgba(245,197,24,0.35)' : '#f3f4f6',
+                  transition: 'height 0.4s ease',
+                }} />
+                <span style={{ fontSize: '0.6rem', color: isToday ? '#d97706' : '#9ca3af', fontWeight: isToday ? 700 : 400 }}>
+                  {labels[d.getDay()]}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

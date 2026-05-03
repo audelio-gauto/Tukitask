@@ -157,11 +157,17 @@ function DocThumb({
   const [history,     setHistory]     = useState<AuditEntry[]>([]);
   const [loadingHist, setLoadingHist] = useState(false);
   const [expiryInput, setExpiryInput] = useState(() => doc.expires_at ? doc.expires_at.substring(0, 10) : '');
+  const [expiryError, setExpiryError] = useState('');
 
   const prefix = vehiclePrefix(doc.doc_type);
   const expiry = expiryStatus(doc.expires_at);
 
   const approve = async () => {
+    if (expiryInput && new Date(expiryInput) <= new Date()) {
+      setExpiryError('La fecha debe ser futura');
+      return;
+    }
+    setExpiryError('');
     setSaving(true); setConflict(false);
     const r = await onUpdate(doc.id, 'approved', undefined, localStatus, expiryInput || undefined);
     if (r.conflict) setConflict(true);
@@ -301,9 +307,10 @@ function DocThumb({
             <input
               type="date"
               value={expiryInput}
-              onChange={e => setExpiryInput(e.target.value)}
-              style={{ fontSize: '0.68rem', padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', color: '#1f2937', background: '#fff', width: '100%' }}
+              onChange={e => { setExpiryInput(e.target.value); setExpiryError(''); }}
+              style={{ fontSize: '0.68rem', padding: '3px 6px', borderRadius: 6, border: `1px solid ${expiryError ? '#ef4444' : '#e5e7eb'}`, color: '#1f2937', background: '#fff', width: '100%' }}
             />
+            {expiryError && <p style={{ color: '#ef4444', fontSize: '0.6rem', margin: '2px 0 0', fontWeight: 600 }}>{expiryError}</p>}
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={approve} disabled={saving} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>

@@ -799,8 +799,21 @@ export default function SeguimientoPage() {
 
       {/* ── Bottom info card ── */}
       {loading ? (
-        <div style={{ flexShrink: 0, height: 130, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Cargando…</div>
+        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '14px 14px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div className="tuki-skeleton" style={{ width: 80, height: 24, borderRadius: 20 }} />
+            <div style={{ marginLeft: 'auto' }}>
+              <div className="tuki-skeleton" style={{ width: 70, height: 22, borderRadius: 8 }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div className="tuki-skeleton" style={{ width: 50, height: 50, borderRadius: '50%', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="tuki-skeleton" style={{ width: '55%', height: 16, borderRadius: 6 }} />
+              <div className="tuki-skeleton" style={{ width: '35%', height: 12, borderRadius: 6 }} />
+            </div>
+          </div>
+          <div className="tuki-skeleton" style={{ width: '100%', height: 38, borderRadius: 10 }} />
         </div>
       ) : error ? (
         <div style={{ flexShrink: 0, padding: 16, background: 'rgba(239,68,68,0.08)', borderTop: '1px solid rgba(239,68,68,0.15)', textAlign: 'center', color: '#f87171', fontSize: '0.85rem' }}>
