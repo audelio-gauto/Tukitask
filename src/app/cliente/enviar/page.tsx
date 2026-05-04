@@ -876,7 +876,11 @@ export default function EnviarPaquetePage() {
                         </span>
                         <div className="enviar-vehicle-info">
                           <span className="enviar-vehicle-name">{v.label}</span>
-                          <span className="enviar-vehicle-sub">{v.sub}</span>
+                          <span className="enviar-vehicle-sub">
+                            {orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 Persona' :
+                             orderType === 'viaje' && v.value === 'auto' ? 'Capacidad hasta 3 personas' :
+                             v.sub}
+                          </span>
                         </div>
                         <div className="enviar-vehicle-price">
                           {!loadingPricing && estPrice > 0 ? (
