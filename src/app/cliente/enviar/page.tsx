@@ -658,7 +658,7 @@ export default function EnviarPaquetePage() {
                         : orderType === 'flete'
                         ? 'Moto Carro o Camión para cargas grandes'
                         : orderType === 'viaje'
-                        ? 'Solo Auto · conductor te lleva al destino'
+                        ? 'Viaja fácil, rápido y a tu manera'
                         : stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
                     </div>
                   </div>
