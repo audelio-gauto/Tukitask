@@ -215,32 +215,46 @@ export default function PricingConfigPage() {
 
   const handleVehicleImageUpload = async (vehicleType: string, file: File) => {
     setUploadingVehicle(vehicleType)
+    setError('')
     try {
+      // 1. Read file as base64 (Promise-based so errors are caught)
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const result = (e.target?.result as string | null)?.split(',')[1]
+          if (result) resolve(result)
+          else reject(new Error('No se pudo leer el archivo'))
+        }
+        reader.onerror = () => reject(new Error('Error al leer el archivo'))
+        reader.readAsDataURL(file)
+      })
+
+      // 2. Get auth token
       const { data: { session: s } } = await supabase.auth.getSession()
       const token = s?.access_token || ''
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const base64 = (e.target?.result as string).split(',')[1]
-        const res = await fetch('/api/admin/upload-vehicle-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ base64, mimeType: file.type, vehicleType }),
-        })
-        const data = await res.json()
-        if (res.ok && data.url) {
-          setVehicles(prev => prev.map(v =>
-            v.vehicle_type === vehicleType ? { ...v, image_url: data.url } : v
-          ))
-          setSuccess('Imagen del vehículo guardada')
-          setTimeout(() => setSuccess(''), 3000)
-        } else {
-          setError(data.error || 'Error al subir imagen')
-        }
-        setUploadingVehicle(null)
+      if (!token) throw new Error('Sesión expirada. Recargá la página.')
+
+      // 3. Upload
+      const res = await fetch('/api/admin/upload-vehicle-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ base64, mimeType: file.type, vehicleType }),
+      })
+      const data = await res.json()
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || `Error ${res.status}`)
       }
-      reader.readAsDataURL(file)
-    } catch {
-      setError('Error al subir imagen')
+
+      // 4. Update local state so image shows immediately
+      setVehicles(prev => prev.map(v =>
+        v.vehicle_type === vehicleType ? { ...v, image_url: data.url } : v
+      ))
+      setSuccess(`Imagen de ${vehicleType} guardada`)
+      setTimeout(() => setSuccess(''), 4000)
+    } catch (err) {
+      setError(String(err instanceof Error ? err.message : err))
+    } finally {
       setUploadingVehicle(null)
     }
   }
