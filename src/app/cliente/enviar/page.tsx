@@ -838,7 +838,7 @@ export default function EnviarPaquetePage() {
                   </span>
                   <div>
                     <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
-                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'El conductor te llevará al destino en Auto' : 'Los conductores verán tu precio y aceptarán'}</div>
+                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'Viaja fácil, rápido y a tu manera' : 'Los conductores verán tu precio y aceptarán'}</div>
                   </div>
                 </div>
 
