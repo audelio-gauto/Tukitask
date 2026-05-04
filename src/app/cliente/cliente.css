@@ -1814,58 +1814,129 @@
   letter-spacing: 0.04em;
 }
 
-/* ── Vehicle grid (step 3) ── */
+/* ── Vehicle grid (step 2) ── */
 .enviar-vehicle-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  margin-bottom: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1.2rem;
 }
 .enviar-vehicle-card {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px 14px;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
   border: 2px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: 18px;
   background: #fff;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s, background 0.2s;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  width: 100%;
 }
-.enviar-vehicle-card:active { transform: scale(0.97); }
+.enviar-vehicle-card:active { transform: scale(0.98); }
 .enviar-vehicle-card.selected {
   border-color: #F5C518;
-  background: #FFFDF0;
-  box-shadow: 0 0 0 3px rgba(245,197,24,0.2);
+  background: linear-gradient(135deg, #FFFDF0 0%, #FFFBE6 100%);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.25), 0 6px 24px rgba(245,197,24,0.15);
 }
-.enviar-vehicle-icon { font-size: 1.75rem; line-height: 1; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; }
-.enviar-vehicle-info { display: flex; flex-direction: column; gap: 2px; }
-.enviar-vehicle-name { font-size: 0.88rem; font-weight: 700; color: #111827; }
-.enviar-vehicle-sub { font-size: 0.72rem; color: #6b7280; }
+/* Image circle */
+.enviar-vehicle-icon {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+  border: 2px solid #e5e7eb;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.enviar-vehicle-card.selected .enviar-vehicle-icon {
+  border-color: #F5C518;
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.30);
+}
+.enviar-vehicle-icon img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+/* Middle: name + subtitle */
+.enviar-vehicle-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.enviar-vehicle-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.2px;
+}
+.enviar-vehicle-sub {
+  font-size: 0.76rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+/* Right: price badge */
 .enviar-vehicle-price {
-  margin-top: 4px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #059669;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
-.enviar-vehicle-price small { font-size: 0.68rem; font-weight: 500; color: #6b7280; }
-.enviar-vehicle-hint { font-size: 0.72rem; color: #9ca3af; font-weight: 500; }
+.enviar-vehicle-price span {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #059669;
+  background: #ecfdf5;
+  border-radius: 10px;
+  padding: 4px 10px;
+  border: 1px solid #d1fae5;
+  white-space: nowrap;
+}
+.enviar-vehicle-card.selected .enviar-vehicle-price span {
+  background: #fef9c3;
+  border-color: #fde68a;
+  color: #92400e;
+}
+.enviar-vehicle-price small { font-size: 0.68rem; font-weight: 600; color: #6b7280; }
+.enviar-vehicle-hint {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-weight: 500;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 3px 8px;
+  border: 1px solid #e5e7eb;
+}
+/* Checkmark badge */
 .enviar-vehicle-check {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #F5C518;
+  border: 2px solid #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #1C1C2E;
+  box-shadow: 0 2px 6px rgba(245,197,24,0.5);
 }
 
 /* ── Price section (step 3) ── */

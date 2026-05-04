@@ -867,12 +867,11 @@ export default function EnviarPaquetePage() {
                             <img
                               src={pricing[v.value].image_url!}
                               alt={v.label}
-                              width={64}
-                              height={64}
-                              style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+                              width={72}
+                              height={72}
                             />
                           ) : (
-                            <Icon name={v.icon as import('@/components/Icon').IconName} size={28} />
+                            <Icon name={v.icon as import('@/components/Icon').IconName} size={32} />
                           )}
                         </span>
                         <div className="enviar-vehicle-info">
@@ -888,7 +887,7 @@ export default function EnviarPaquetePage() {
                         </div>
                         {form.vehicleType === v.value && (
                           <span className="enviar-vehicle-check">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           </span>
                         )}
                       </button>
