@@ -8,10 +8,6 @@ const menuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/cliente', icon: 'home' },
   { slug: 'enviar', label: 'Enviar Paquete', href: '/cliente/enviar', icon: 'send' },
   { slug: 'servicio', label: 'Solicitar Servicio', href: '/cliente/servicio', icon: 'tools' },
-  { slug: 'mis-servicios', label: 'Mis Servicios', href: '/cliente/mis-servicios', icon: 'wrench' },
-  { slug: 'mis-envios', label: 'Mis Envíos', href: '/cliente/mis-envios', icon: 'package' },
-  { slug: 'pedidos', label: 'Mis Pedidos', href: '/cliente/pedidos', icon: 'shopping' },
-  { slug: 'direcciones', label: 'Mis Direcciones', href: '/cliente/direcciones', icon: 'map' },
   { slug: 'settings', label: 'Configuración', href: '/cliente/settings', icon: 'settings' },
 ];
 
