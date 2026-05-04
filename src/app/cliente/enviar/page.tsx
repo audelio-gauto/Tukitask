@@ -861,12 +861,12 @@ export default function EnviarPaquetePage() {
                             <img
                               src={pricing[v.value].image_url!}
                               alt={v.label}
-                              width={40}
-                              height={40}
-                              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+                              width={64}
+                              height={64}
+                              style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
                             />
                           ) : (
-                            <Icon name={v.icon as import('@/components/Icon').IconName} size={18} />
+                            <Icon name={v.icon as import('@/components/Icon').IconName} size={28} />
                           )}
                         </span>
                         <div className="enviar-vehicle-info">
