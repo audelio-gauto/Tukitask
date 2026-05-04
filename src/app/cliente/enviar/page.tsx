@@ -598,9 +598,15 @@ export default function EnviarPaquetePage() {
                   className={`enviar-order-tab ${orderType === tab.key ? 'active' : ''}`}
                 >
                   <span className="enviar-order-tab-icon">
-                    <Icon name={tab.icon} size={18} />
+                    {(() => {
+                      const vt = tab.key === 'flete' ? 'camion2t' : tab.key === 'viaje' ? 'auto' : 'moto';
+                      const imgUrl = pricing[vt]?.image_url;
+                      return imgUrl
+                        ? <img src={imgUrl} alt={tab.label} width={64} height={64} />
+                        : <Icon name={tab.icon} size={26} />;
+                    })()}
                   </span>
-                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <span className="enviar-order-tab-label">{tab.label}</span>
                     <span className="enviar-order-tab-sublabel">{tab.sub}</span>
                   </span>
