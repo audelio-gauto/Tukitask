@@ -182,7 +182,7 @@ export default function EnviarPaquetePage() {
     fetch('/api/pricing')
       .then(res => res.json())
       .then(data => {
-        const map: { [key: string]: { base_price: number | null, price_per_km: number | null } } = {};
+        const map: { [key: string]: { base_price: number | null, price_per_km: number | null, image_url?: string | null } } = {};
         if (data && data.vehicle_pricing) {
           for (const v of data.vehicle_pricing) {
             const key = v.vehicle_type || '';
