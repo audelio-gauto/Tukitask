@@ -29,6 +29,7 @@ type IconName =
   | "moon"
   | "package"
   | "paper-clip"
+  | "shopping-cart"
   | "pencil"
   | "plus"
   | "refresh"
@@ -164,6 +165,9 @@ const icons: Record<IconName, React.ReactNode> = {
   ),
   "user": (
     <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>
+  ),
+  "shopping-cart": (
+    <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M16 10a4 4 0 0 1-8 0" /></>
   ),
   "x": (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />

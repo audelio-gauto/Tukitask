@@ -25,7 +25,7 @@ const paymentMethods = [
 
 const ORDER_TYPE_ICONS = {
   envio: 'package',
-  mandadito: 'package',
+  mandadito: 'shopping-cart',
   flete: 'truck',
   viaje: 'car',
 } as const;
@@ -580,7 +580,7 @@ export default function EnviarPaquetePage() {
           {step === 1 ? (
             <div className="enviar-order-toggle">
                 {([
-                  { key: 'mandadito', icon: 'package' as const, label: 'Mandaditos', sub: 'Ir a comprar' },
+                  { key: 'mandadito', icon: 'shopping-cart' as const, label: 'Mandaditos', sub: 'Ir a comprar' },
                   { key: 'viaje',     icon: 'car'     as const, label: 'Viaje',      sub: 'Pasajero' },
                   { key: 'envio',     icon: 'package' as const, label: 'Envío',      sub: 'Paquetes' },
                   { key: 'flete',     icon: 'truck'   as const, label: 'Fletes',     sub: 'Carga grande' },
@@ -646,7 +646,7 @@ export default function EnviarPaquetePage() {
               <>
                 <div className="enviar-step-title">
                   <span className="enviar-step-title-icon">
-                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'package' : orderType === 'viaje' ? 'car' : 'map-pin'} size={16} />
+                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'shopping-cart' : orderType === 'viaje' ? 'car' : 'map-pin'} size={16} />
                   </span>
                   <div>
                     <div className="enviar-step-title-main">
