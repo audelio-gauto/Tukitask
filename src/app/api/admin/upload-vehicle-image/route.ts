@@ -75,15 +75,26 @@ export async function POST(req: Request) {
       .eq('vehicle_type', vehicleType);
 
     if (dbError) {
-      // Row may not exist yet — upsert it minimally
-      await client.from('vehicle_pricing').upsert(
-        { vehicle_type: vehicleType, image_url: publicUrl },
-        { onConflict: 'vehicle_type' }
-      );
+      console.error('vehicle_pricing update error:', dbError.message, dbError.code);
+      // Column may not exist yet (migration not applied)
+      if (dbError.message?.includes('column') || dbError.code === '42703') {
+        return NextResponse.json({
+          error: 'La columna image_url no existe. Ejecutá la migración 037 en Supabase SQL Editor.',
+        }, { status: 500 });
+      }
+      // Row may not exist yet — try upsert
+      const { error: upsertError } = await client
+        .from('vehicle_pricing')
+        .upsert({ vehicle_type: vehicleType, image_url: publicUrl }, { onConflict: 'vehicle_type' });
+      if (upsertError) {
+        console.error('vehicle_pricing upsert error:', upsertError.message);
+        return NextResponse.json({ error: `Error al guardar en BD: ${upsertError.message}` }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ url: publicUrl });
-  } catch {
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (err) {
+    console.error('upload-vehicle-image exception:', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
