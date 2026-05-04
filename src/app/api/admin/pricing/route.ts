@@ -92,6 +92,7 @@ export async function PUT(req: Request) {
             price_per_km: pricePerKm,
             commission_pct: commissionPct,
             commission_fixed: commissionFixed,
+            ...(item.image_url !== undefined ? { image_url: item.image_url } : {}),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'vehicle_type' })
         if (error) errors.push(`vehicle_pricing ${item.vehicle_type}: ${error.message}`)

@@ -173,7 +173,7 @@ export default function EnviarPaquetePage() {
 
 
   // Pricing state
-  const [pricing, setPricing] = useState<{ [key: string]: { base_price: number | null, price_per_km: number | null } }>({});
+  const [pricing, setPricing] = useState<{ [key: string]: { base_price: number | null, price_per_km: number | null, image_url?: string | null } }>({});
   const [pricingSettings, setPricingSettings] = useState<Record<string, number>>({});
   const [loadingPricing, setLoadingPricing] = useState(true);
 
@@ -189,6 +189,7 @@ export default function EnviarPaquetePage() {
             map[key] = {
               base_price: v.base_price === null || v.base_price === undefined ? null : Number(v.base_price),
               price_per_km: v.price_per_km === null || v.price_per_km === undefined ? null : Number(v.price_per_km),
+              image_url: v.image_url ?? null,
             };
           }
         }
@@ -856,7 +857,17 @@ export default function EnviarPaquetePage() {
                         onClick={() => update('vehicleType', v.value)}
                       >
                         <span className="enviar-vehicle-icon">
-                          <Icon name={v.icon as import('@/components/Icon').IconName} size={18} />
+                          {pricing[v.value]?.image_url ? (
+                            <img
+                              src={pricing[v.value].image_url!}
+                              alt={v.label}
+                              width={40}
+                              height={40}
+                              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+                            />
+                          ) : (
+                            <Icon name={v.icon as import('@/components/Icon').IconName} size={18} />
+                          )}
                         </span>
                         <div className="enviar-vehicle-info">
                           <span className="enviar-vehicle-name">{v.label}</span>

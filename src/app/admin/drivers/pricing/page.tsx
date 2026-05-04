@@ -22,6 +22,7 @@ interface VehiclePricing {
   price_per_km: number | null;
   commission_pct: number | null;
   commission_fixed: number | null;
+  image_url?: string | null;
 }
 
 interface PricingSetting {
@@ -210,6 +211,39 @@ export default function PricingConfigPage() {
   const [minShipping, setMinShipping] = useState<number | null>(null)
   const [mapboxKey, setMapboxKey] = useState<string>('')
   const [googleKey, setGoogleKey] = useState<string>('')
+  const [uploadingVehicle, setUploadingVehicle] = useState<string | null>(null)
+
+  const handleVehicleImageUpload = async (vehicleType: string, file: File) => {
+    setUploadingVehicle(vehicleType)
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      const token = s?.access_token || ''
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(',')[1]
+        const res = await fetch('/api/admin/upload-vehicle-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ base64, mimeType: file.type, vehicleType }),
+        })
+        const data = await res.json()
+        if (res.ok && data.url) {
+          setVehicles(prev => prev.map(v =>
+            v.vehicle_type === vehicleType ? { ...v, image_url: data.url } : v
+          ))
+          setSuccess('Imagen del vehículo guardada')
+          setTimeout(() => setSuccess(''), 3000)
+        } else {
+          setError(data.error || 'Error al subir imagen')
+        }
+        setUploadingVehicle(null)
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      setError('Error al subir imagen')
+      setUploadingVehicle(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -322,9 +356,50 @@ export default function PricingConfigPage() {
         <div className="space-y-6">
           {vehicles.map(v => (
             <div key={v.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Icon name={vehicleIconName(v.vehicle_type)} size={18} className="text-gray-600" />
-                <span className="font-semibold text-gray-700">{v.label}</span>
+              <div className="flex items-center gap-3 mb-3">
+                {/* Vehicle image preview + upload */}
+                <div className="relative flex-shrink-0">
+                  <div
+                    className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center"
+                    style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
+                  >
+                    {v.image_url ? (
+                      <img
+                        src={v.image_url}
+                        alt={v.label}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Icon name={vehicleIconName(v.vehicle_type)} size={24} className="text-gray-400" />
+                    )}
+                  </div>
+                  <label
+                    htmlFor={`vehicle-img-${v.vehicle_type}`}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#F5C518] border-2 border-white flex items-center justify-center cursor-pointer hover:bg-[#E6A800] transition-colors"
+                    title="Cambiar imagen"
+                  >
+                    {uploadingVehicle === v.vehicle_type ? (
+                      <div className="w-3 h-3 border border-[#1C1C2E] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    )}
+                  </label>
+                  <input
+                    id={`vehicle-img-${v.vehicle_type}`}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) handleVehicleImageUpload(v.vehicle_type, file)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-700">{v.label}</span>
+                  <p className="text-[11px] text-gray-400 mt-0.5">300 × 300 px · JPG / PNG / WebP · máx 2 MB</p>
+                </div>
               </div>
               <p className="text-xs text-gray-400 mb-3">
                 Configura precios, comisiones y límites para este tipo de vehículo.

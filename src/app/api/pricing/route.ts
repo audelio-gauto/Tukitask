@@ -6,7 +6,7 @@ import { supabaseServer } from '../../../lib/supabaseServer'
 export async function GET() {
   try {
     const [vehicles, settings] = await Promise.all([
-      supabaseServer.from('vehicle_pricing').select('vehicle_type, label, emoji, base_price, price_per_km, sort_order').order('sort_order'),
+      supabaseServer.from('vehicle_pricing').select('vehicle_type, label, emoji, base_price, price_per_km, sort_order, image_url').order('sort_order'),
       supabaseServer.from('pricing_settings').select('key, value, label').order('key'),
     ])
 
