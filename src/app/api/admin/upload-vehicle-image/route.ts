@@ -1,28 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const sb = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-);
-
-async function authorizeAdmin(req: Request) {
-  const auth = (req.headers.get('authorization') || '').trim();
-  if (!auth.startsWith('Bearer ')) return false;
-  const token = auth.split(' ')[1];
-  if (!token) return false;
-  try {
-    const client = sb();
-    const { data: { user } } = await client.auth.getUser(token);
-    if (!user) return false;
-    const { data } = await client.from('users').select('role').eq('id', user.id).maybeSingle();
-    return ['admin', 'super_admin', 'owner'].includes(data?.role ?? '');
-  } catch { return false; }
-}
+import { getAuthAdmin, unauthorized, sbAdmin } from '@/lib/apiAuth';
 
 export async function POST(req: Request) {
-  if (!await authorizeAdmin(req))
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const admin = await getAuthAdmin(req);
+  if (!admin) return unauthorized();
 
   try {
     const { base64, mimeType, vehicleType } = await req.json();
@@ -48,11 +29,11 @@ export async function POST(req: Request) {
 
     const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
     const storedName = `vehicle-icons/${vehicleType}.${ext}`;
-    const client = sb();
+    const client = sbAdmin();
 
     // Ensure app-assets bucket exists
     const { data: buckets } = await client.storage.listBuckets();
-    const bucketExists = (buckets ?? []).some(b => b.id === 'app-assets');
+    const bucketExists = (buckets ?? []).some((b: { id: string }) => b.id === 'app-assets');
     if (!bucketExists) {
       await client.storage.createBucket('app-assets', { public: true, fileSizeLimit: 2097152 });
     }
