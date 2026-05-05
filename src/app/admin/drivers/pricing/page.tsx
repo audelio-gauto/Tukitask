@@ -99,6 +99,14 @@ export default function PricingConfigPage() {
       setGlobalBase(gb)
       setGlobalPerKm(gp)
       setMinShipping(mp)
+      // surge state
+      setSurgePeakMult(getSettingValue('surge_peak_multiplier') ?? 1.25)
+      setSurgeDemandMult(getSettingValue('surge_demand_multiplier') ?? 1.40)
+      setDemandThreshold(getSettingValue('demand_ratio_threshold') ?? 0.60)
+      setPeakStart(getSettingValue('peak_hour_start') ?? 7)
+      setPeakEnd(getSettingValue('peak_hour_end') ?? 9)
+      setPeakStart2(getSettingValue('peak_hour_start_2') ?? 17)
+      setPeakEnd2(getSettingValue('peak_hour_end_2') ?? 19)
 
       // ensure appSettings mapbox/google keys local state
       const getApp = (k: string) => {
@@ -139,6 +147,14 @@ export default function PricingConfigPage() {
       setOrPush('global_base_price', globalBase ?? null)
       setOrPush('global_price_per_km', globalPerKm ?? null)
       setOrPush('min_shipping_price', minShipping ?? null)
+      // surge keys
+      setOrPush('surge_peak_multiplier',   surgePeakMult)
+      setOrPush('surge_demand_multiplier', surgeDemandMult)
+      setOrPush('demand_ratio_threshold',  demandThreshold)
+      setOrPush('peak_hour_start',         peakStart)
+      setOrPush('peak_hour_end',           peakEnd)
+      setOrPush('peak_hour_start_2',       peakStart2)
+      setOrPush('peak_hour_end_2',         peakEnd2)
 
       // ensure app_settings contains api keys
       const mergedApp = [...appSettings]
@@ -211,6 +227,14 @@ export default function PricingConfigPage() {
   const [minShipping, setMinShipping] = useState<number | null>(null)
   const [mapboxKey, setMapboxKey] = useState<string>('')
   const [googleKey, setGoogleKey] = useState<string>('')
+  // surge pricing state
+  const [surgePeakMult, setSurgePeakMult] = useState<number>(1.25)
+  const [surgeDemandMult, setSurgeDemandMult] = useState<number>(1.40)
+  const [demandThreshold, setDemandThreshold] = useState<number>(0.60)
+  const [peakStart, setPeakStart] = useState<number>(7)
+  const [peakEnd, setPeakEnd] = useState<number>(9)
+  const [peakStart2, setPeakStart2] = useState<number>(17)
+  const [peakEnd2, setPeakEnd2] = useState<number>(19)
   const [uploadingVehicle, setUploadingVehicle] = useState<string | null>(null)
 
   const handleVehicleImageUpload = async (vehicleType: string, file: File) => {
@@ -355,6 +379,87 @@ export default function PricingConfigPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1">Precio Mínimo</label>
               <input type="number" min="0" step="0.01" value={minShipping ?? ''} onChange={e => setMinShipping(e.target.value === '' ? null : Number(e.target.value))} className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
               <p className="text-xs text-gray-400">Precio mínimo permitido</p>
+            </div>
+          </div>
+
+          {/* Surge / Precio Dinámico */}
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+              ⚡ Precio Dinámico (Surge)
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              El precio sugerido se multiplica automáticamente en hora pico o cuando la demanda supera el umbral.
+              Se aplica el multiplicador más alto (no se acumulan).
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Multiplicador hora pico</label>
+                <input
+                  type="number" min="1" max="3" step="0.05"
+                  value={surgePeakMult}
+                  onChange={e => setSurgePeakMult(Number(e.target.value) || 1)}
+                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">Ej: 1.25 = +25%</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Multiplicador alta demanda</label>
+                <input
+                  type="number" min="1" max="3" step="0.05"
+                  value={surgeDemandMult}
+                  onChange={e => setSurgeDemandMult(Number(e.target.value) || 1)}
+                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">Ej: 1.40 = +40%</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Umbral demanda</label>
+                <input
+                  type="number" min="0.1" max="10" step="0.1"
+                  value={demandThreshold}
+                  onChange={e => setDemandThreshold(Number(e.target.value) || 0.6)}
+                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">Ratio órdenes/drivers activo</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Pico mañana — inicio (h)</label>
+                <input
+                  type="number" min="0" max="23" step="1"
+                  value={peakStart}
+                  onChange={e => setPeakStart(Number(e.target.value))}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Pico mañana — fin (h)</label>
+                <input
+                  type="number" min="0" max="23" step="1"
+                  value={peakEnd}
+                  onChange={e => setPeakEnd(Number(e.target.value))}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Pico tarde — inicio (h)</label>
+                <input
+                  type="number" min="0" max="23" step="1"
+                  value={peakStart2}
+                  onChange={e => setPeakStart2(Number(e.target.value))}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Pico tarde — fin (h)</label>
+                <input
+                  type="number" min="0" max="23" step="1"
+                  value={peakEnd2}
+                  onChange={e => setPeakEnd2(Number(e.target.value))}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
