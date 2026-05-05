@@ -1976,6 +1976,36 @@
   margin-bottom: 0.85rem;
   box-shadow: 0 4px 16px rgba(245,197,24,0.10);
 }
+
+/* Surge badge */
+.enviar-surge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  padding: 3px 12px;
+  margin-bottom: 10px;
+}
+.enviar-surge-orange {
+  background: #fff3e0;
+  color: #b45309;
+  border: 1.5px solid #f59e0b;
+}
+.enviar-surge-red {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1.5px solid #f43f5e;
+}
+.enviar-surge-range {
+  font-size: 0.70rem;
+  color: #6b7280;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
 .enviar-price-label {
   display: flex;
   align-items: center;

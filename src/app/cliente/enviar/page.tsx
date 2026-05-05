@@ -278,6 +278,40 @@ export default function EnviarPaquetePage() {
     }
   }, [suggestedPrice]);
 
+  // ── Dynamic surge pricing ─────────────────────────────────────────────────
+  type SurgeData = { suggested: number; range_min: number; range_max: number; multiplier: number; label: string; color: 'green' | 'orange' | 'red' };
+  const [surgeData, setSurgeData] = useState<SurgeData | null>(null);
+  const surgeCtrlRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
+    if (dist <= 0 || !form.vehicleType) { setSurgeData(null); return; }
+
+    // Debounce 600 ms — avoids a request on every coord update while user drags
+    const timer = setTimeout(() => {
+      surgeCtrlRef.current?.abort();
+      const ctrl = new AbortController();
+      surgeCtrlRef.current = ctrl;
+      fetch(
+        `/api/pricing/dynamic?vehicle_type=${encodeURIComponent(form.vehicleType)}&distance_km=${dist.toFixed(3)}`,
+        { signal: ctrl.signal },
+      )
+        .then(r => (r.ok ? r.json() : null))
+        .then((data: SurgeData | null) => { if (data && !('error' in data)) setSurgeData(data); })
+        .catch(() => {}); // silently ignore AbortError / network errors
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [form.vehicleType, distanceKm, routeDistanceMeters]);
+
+  // Override offerPrice with dynamic suggested when surge data arrives
+  useEffect(() => {
+    if (surgeData && surgeData.suggested > 0) {
+      setOfferPrice(surgeData.suggested);
+      offerInitialized.current = true;
+    }
+  }, [surgeData]);
+
   // When pickup + first stop coordinates change, request a routed path via backend proxy
   // For multi-stop we compute per-segment then concatenate into one polyline
   useEffect(() => {
@@ -901,14 +935,29 @@ export default function EnviarPaquetePage() {
 
                 {/* Price control */}
                 <div className="enviar-price-section">
+                  {/* Surge badge — only visible when multiplier > 1 */}
+                  {surgeData && surgeData.multiplier > 1.0 && (
+                    <div className={`enviar-surge-badge enviar-surge-${surgeData.color}`}>
+                      {surgeData.color === 'red' ? '🔥' : '⚡'} {surgeData.label}
+                    </div>
+                  )}
                   <div className="enviar-price-label">
                     Tu oferta al conductor
-                    {suggestedPrice > 0 && (
-                      <button type="button" className="enviar-price-reset" onClick={() => setOfferPrice(suggestedPrice)}>
-                        Sugerido: {suggestedPrice.toLocaleString('es-PY')} Gs
+                    {(surgeData?.suggested ?? suggestedPrice) > 0 && (
+                      <button
+                        type="button"
+                        className="enviar-price-reset"
+                        onClick={() => setOfferPrice(surgeData?.suggested ?? suggestedPrice)}
+                      >
+                        Sugerido: {(surgeData?.suggested ?? suggestedPrice).toLocaleString('es-PY')} Gs
                       </button>
                     )}
                   </div>
+                  {surgeData && surgeData.multiplier > 1.0 && (
+                    <div className="enviar-surge-range">
+                      Rango normal: {surgeData.range_min.toLocaleString('es-PY')} – {surgeData.range_max.toLocaleString('es-PY')} Gs
+                    </div>
+                  )}
                   <div className="enviar-price-control">
                     <button
                       type="button"
