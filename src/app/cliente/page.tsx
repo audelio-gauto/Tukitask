@@ -498,6 +498,8 @@ export default function ClienteHomePage() {
 
       setOrders(activeOrders);
       setJobs(activeJobs);
+      // Show content immediately — offers + driver extras load in background
+      setLoading(false);
 
       // Fetch ALL offers for ALL active orders (pending offers → offer cards; accepted offers → tracking driver info)
       if (activeOrders.length > 0) {
@@ -556,7 +558,6 @@ export default function ClienteHomePage() {
         setJobOffers({});
       }
 
-      setLoading(false);
     } catch { setLoading(false); }
   }, [email]);
 
