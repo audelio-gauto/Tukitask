@@ -198,6 +198,9 @@ export default function MisOfertasPage() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const prevUnreadRef = useRef<Record<string, number>>({});
 
+  // Scroll to top on mount to avoid stale scroll position from nested scroll container
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
   const loadData = useCallback(async () => {
     if (!email) return;
     try {
@@ -402,7 +405,7 @@ export default function MisOfertasPage() {
 
   /* ── Render ──────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--surface-1)', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--surface-1)', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(64px + env(safe-area-inset-bottom))', overflowX: 'hidden' }}>
       <style>{PULSE_CSS}</style>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -440,7 +443,7 @@ export default function MisOfertasPage() {
       </div>
 
       {/* ── Content ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, padding: '14px 14px 8px', overflowY: 'auto' }}>
+      <div style={{ flex: 1, padding: '14px 14px 8px' }}>
 
         {/* Skeletons */}
         {loading && [0, 1, 2].map(i => (
