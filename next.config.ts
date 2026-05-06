@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
+        // API routes: no caching + Vary so CDN doesn't cache CORS responses
+        source: '/api/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Vary', value: 'Origin' },
+        ],
+      },
+      {
         // Combined service worker — controls full origin scope
         source: '/sw.js',
         headers: [
