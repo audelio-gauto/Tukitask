@@ -5,6 +5,7 @@
  * Uses service-role to read promo_codes without RLS restrictions.
  */
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin } from '@/lib/apiAuth';
 
 export async function POST(req: Request) {
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
     .ilike('code', code.trim())
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   if (!promo) return NextResponse.json({ error: 'Código no válido' }, { status: 404 });
 
   // Validity checks

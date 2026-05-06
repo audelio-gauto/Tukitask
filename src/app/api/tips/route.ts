@@ -7,6 +7,7 @@
  * - Notifies the driver
  */
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin } from '@/lib/apiAuth';
 import { emitNotification } from '@/lib/notificationEmitter';
 
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     driver_email: order.driver_email.toLowerCase(),
     amount,
   });
-  if (tipErr) return NextResponse.json({ error: tipErr.message }, { status: 500 });
+  if (tipErr) return serverError(tipErr);
 
   // Update order tip_amount
   await sb.from('orders').update({ tip_amount: amount }).eq('id', order_id);

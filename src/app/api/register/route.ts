@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       .upsert({ email: emailNormalized, role }, { onConflict: 'email' });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return serverError(error);
     }
 
     return NextResponse.json({ success: true, role });

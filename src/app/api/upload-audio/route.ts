@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { getAuthUser, unauthorized, sbAdmin } from '@/lib/apiAuth';
 import { ALLOWED_AUDIO_TYPES, MAX_FILE_SIZE_AUDIO } from '@/lib/constants';
 
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
       .upload(storagePath, buffer, { contentType: baseMime, upsert: true });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return serverError(uploadError);
     }
 
     const { data: urlData } = sb.storage.from('audio-messages').getPublicUrl(storagePath);

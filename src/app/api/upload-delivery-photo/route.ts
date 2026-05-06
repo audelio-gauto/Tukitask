@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
       .upload(fileName, buffer, { contentType: mimeType, upsert: true });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return serverError(uploadError);
     }
 
     const { data: urlData } = db.storage.from('delivery-proofs').getPublicUrl(fileName);

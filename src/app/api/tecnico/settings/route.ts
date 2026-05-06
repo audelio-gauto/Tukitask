@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 export async function GET(req: Request) {
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
       .select('*')
       .eq('email', emailNormalized)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     if (!data) return NextResponse.json({ settings: null });
     return NextResponse.json({ settings: data });
   } catch {
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     if (body.accepts_packages !== undefined) payload.accepts_packages = Boolean(body.accepts_packages);
     if (body.accepted_services !== undefined && typeof body.accepted_services === 'object') payload.accepted_services = body.accepted_services;
     const { data, error } = await sbAdmin().from('tecnico_settings').upsert(payload, { onConflict: 'email' }).select().maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ settings: data });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 
 const sb = createClient(
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 
     if (error) {
       console.error('[cron/cleanup] DB error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return serverError(error);
     }
 
     const result = data as {

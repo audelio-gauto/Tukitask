@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 // GET — abierto (perfil público del driver)
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
       .select('email, first_name, last_name, phone, profile_photo, avg_rating, total_ratings, transport_mode, vehicle_type, license_plate, acceptance_rate, avg_response_seconds, service_filters, pickup_range, delivery_range, nav_app, verified')
       .ilike('email', email)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ profile: data });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     const { error } = await sbAdmin()
       .from('driver_profiles')
       .upsert({ email: emailNormalized, ...profile }, { onConflict: 'email' });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

@@ -1,3 +1,4 @@
+import { serverError } from '@/lib/apiError';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, unauthorized, sbAdmin } from '@/lib/apiAuth';
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       { onConflict: 'user_email,token' },
     );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   return NextResponse.json({ ok: true });
 }
 
@@ -50,6 +51,6 @@ export async function DELETE(req: NextRequest) {
     .eq('user_email', user.email)
     .eq('token', token);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   return NextResponse.json({ ok: true });
 }

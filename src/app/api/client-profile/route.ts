@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 /** GET /api/client-profile?email=... — abierto */
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     if (photo_url !== undefined) update.photo_url = photo_url;
 
     const { error } = await sbAdmin().from('client_profiles').upsert(update, { onConflict: 'email' });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

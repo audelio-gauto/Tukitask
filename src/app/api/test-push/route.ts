@@ -1,3 +1,4 @@
+import { serverError } from '@/lib/apiError';
 /**
  * GET /api/test-push?email=xxx@xxx.com
  * Endpoint de prueba para verificar FCM.
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .eq('user_email', email.toLowerCase());
 
   if (tokensErr) {
-    return NextResponse.json({ error: tokensErr.message }, { status: 500 });
+    return serverError(tokensErr);
   }
 
   if (!tokens?.length) {

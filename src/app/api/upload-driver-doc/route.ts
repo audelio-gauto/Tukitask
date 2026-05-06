@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 
@@ -63,7 +64,7 @@ export async function GET(req: Request) {
     .eq('driver_email', email)
     .order('updated_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   // Filter out deprecated doc types so old DB records don’t appear on the frontend
   type DocRow = { doc_type: string; role: string };
   const docs = (data || []) as DocRow[];
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
       .upload(filePath, buffer, { contentType: mimeType, upsert: true });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return serverError(uploadError);
     }
 
     // Guardar metadata en BD (upsert: un doc por tipo por conductor+rol)
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
       }, { onConflict: 'driver_email,role,doc_type' });
 
     if (dbError) {
-      return NextResponse.json({ error: dbError.message }, { status: 500 });
+      return serverError(dbError);
     }
 
     return NextResponse.json({ success: true, status: 'pending' });
@@ -208,7 +209,7 @@ export async function PATCH(req: Request) {
       .eq('driver_email', email)
       .eq('doc_type', doc_type);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ success: true, resetToPending: needsReview });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

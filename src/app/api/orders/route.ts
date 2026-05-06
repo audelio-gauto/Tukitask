@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
       .select('*, order_stops(*)')
       .eq('id', orderId)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     if (!order) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     // Security: only the client or the assigned driver may fetch
     const isClient = order.client_email?.toLowerCase() === user.email;
@@ -85,7 +86,7 @@ export async function GET(req: Request) {
       .limit(500);
     if (since) histQ = histQ.gte('created_at', since);
     const { data: histData, error: histErr } = await histQ;
-    if (histErr) return NextResponse.json({ error: histErr.message }, { status: 500 });
+    if (histErr) return serverError(histErr);
     return NextResponse.json(histData ?? []);
   } else if (driverEmail) {
     const user = await getAuthUser(req);
@@ -157,7 +158,7 @@ export async function GET(req: Request) {
       .eq('driver_email', user.email)
       .order('matched_at', { ascending: false })
       .limit(100);
-    if (feedErr) return NextResponse.json({ error: feedErr.message }, { status: 500 });
+    if (feedErr) return serverError(feedErr);
 
     const feedIds = (feedRows ?? []).map((r: { order_id: string }) => r.order_id).filter(Boolean);
 
@@ -167,7 +168,7 @@ export async function GET(req: Request) {
     }
     query = query.in('status', ['pending', 'negotiating']).limit(100);
     const { data: fetched, error: qErr } = await query;
-    if (qErr) return NextResponse.json({ error: qErr.message }, { status: 500 });
+    if (qErr) return serverError(qErr);
 
     // Enrich with client profile info
     const raw = (fetched || []) as Record<string, unknown>[];
@@ -217,7 +218,7 @@ export async function GET(req: Request) {
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
 
   // For client history — enrich with driver info from driver_profiles
   if (clientEmail && data) {
@@ -317,7 +318,7 @@ export async function POST(req: Request) {
     .single();
   if (error) {
     console.error('[orders POST]', error.message, '— if column missing, run migration 025_mandaditos.sql');
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError(error);
   }
 
   // Insert stops for multi-stop orders
@@ -337,7 +338,7 @@ export async function POST(req: Request) {
     if (stopsErr) {
       // Roll back the order if stops failed (best effort)
       await db.from('orders').delete().eq('id', order.id);
-      return NextResponse.json({ error: stopsErr.message }, { status: 500 });
+      return serverError(stopsErr);
     }
   }
 
@@ -376,7 +377,7 @@ export async function PATCH(req: Request) {
       .update(stopUpdate)
       .eq('id', stop_id)
       .eq('order_id', order_id); // extra safety check
-    if (stopErr) return NextResponse.json({ error: stopErr.message }, { status: 500 });
+    if (stopErr) return serverError(stopErr);
 
     // Check if all stops are done (delivered or failed) → auto-transition order to 'delivered'
     const { data: remaining } = await db
@@ -412,7 +413,11 @@ export async function PATCH(req: Request) {
             if (!error) { commErr = null; break; }
             commErr = error;
           }
-          if (commErr) console.error('[multi-stop] deduct_commission failed after 3 attempts:', commErr.message, '— order_id:', order_id);
+          if (commErr) {
+            console.error('[multi-stop] deduct_commission failed after 3 attempts:', commErr.message, '— order_id:', order_id, '— reverting');
+            await db.from('orders').update({ status: 'in_transit', completed_at: null }).eq('id', order_id);
+            return NextResponse.json({ error: 'Delivery confirmation failed, please try again.' }, { status: 503 });
+          }
         }
         // Notify client with accurate counts
         const { data: ord } = await db.from('orders').select('client_email').eq('id', order_id).single();
@@ -492,7 +497,7 @@ export async function PATCH(req: Request) {
   }
 
   const { error } = await db.from('orders').update({ status }).eq('id', order_id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
 
   // Invalidate available-orders cache when an order leaves the public feed
   if (['accepted', 'cancelled', 'delivered', 'failed'].includes(status)) {
@@ -527,8 +532,10 @@ export async function PATCH(req: Request) {
       rpcErr = result.error;
     }
     if (rpcErr) {
-      // All retries failed — log for manual reconciliation, but don't fail the delivery
-      console.error('[orders PATCH] deduct_commission failed after 3 attempts:', rpcErr.message, '— order_id:', order_id);
+      // All retries failed — revert status so the driver can retry delivery confirmation
+      console.error('[orders PATCH] deduct_commission failed after 3 attempts:', rpcErr.message, '— order_id:', order_id, '— reverting to in_transit');
+      await db.from('orders').update({ status: 'in_transit', completed_at: null }).eq('id', order_id);
+      return NextResponse.json({ error: 'Delivery confirmation failed, please try again.' }, { status: 503 });
     }
   }
 

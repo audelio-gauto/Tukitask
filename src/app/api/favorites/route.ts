@@ -5,6 +5,7 @@
  * DELETE – { driver_email } → remove favourite
  */
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin } from '@/lib/apiAuth';
 
 export async function GET(req: Request) {
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     .eq('client_email', user.email.toLowerCase())
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   return NextResponse.json(data ?? []);
 }
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     driver_email: driver_email.toLowerCase(),
   }, { onConflict: 'client_email,driver_email' });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   return NextResponse.json({ success: true });
 }
 
@@ -56,6 +57,6 @@ export async function DELETE(req: Request) {
     .eq('client_email', user.email.toLowerCase())
     .eq('driver_email', driver_email.toLowerCase());
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
   return NextResponse.json({ success: true });
 }

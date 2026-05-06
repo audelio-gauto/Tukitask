@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthUser, unauthorized } from '@/lib/apiAuth';
 
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
         { onConflict: 'driver_email' }
       );
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

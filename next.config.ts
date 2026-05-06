@@ -10,7 +10,7 @@ import type { NextConfig } from "next";
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com",
   "img-src 'self' data: blob: https://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://fcm.googleapis.com https://*.googleapis.com https://nominatim.openstreetmap.org",
   "font-src 'self' data:",

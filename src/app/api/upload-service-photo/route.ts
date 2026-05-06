@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, validateImageMagicBytes } from '@/lib/constants';
 
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
       .upload(fileName, buffer, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      return serverError(uploadError);
     }
 
     const { data: urlData } = sb.storage.from('service-photos').getPublicUrl(fileName);

@@ -12,7 +12,8 @@ export async function allowRequest(key: string, limit = 60, windowSec = 60) {
     }
     return Number(cur) <= limit
   } catch (err) {
+    // Redis error (transient network issue) — fail closed to prevent abuse
     console.warn('allowRequest redis error', err)
-    return true
+    return false
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 import { allowRequest } from '@/lib/rateLimit';
 import { getAuthUser } from '@/lib/apiAuth';
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
       const { data, error } = await sb.from('users').select('role').ilike('email', emailNormalized).maybeSingle();
       if (error) {
         console.error('Supabase query error:', error);
-        return NextResponse.json({ role: null, error: error.message }, { status: 500 });
+        return serverError(error, 'check-role');
       }
       if (!data) {
         return NextResponse.json({ role: null, error: 'User not found' }, { status: 200 });

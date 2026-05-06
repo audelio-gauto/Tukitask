@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 import { dispatchPush } from '@/lib/pushService';
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
       .eq('order_id', orderId)
       .order('created_at', { ascending: true })
       .limit(200);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json(data ?? []);
   }
 
@@ -77,7 +78,7 @@ export async function GET(req: Request) {
       .eq('job_id', jobId)
       .order('created_at', { ascending: true })
       .limit(200);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json(data ?? []);
   }
 }
@@ -160,7 +161,7 @@ export async function POST(req: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
 
   // Send push notification to the recipient (screen-off sound support)
   if (recipientEmail) {

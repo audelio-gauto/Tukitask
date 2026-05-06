@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
+import { computeMatchScore } from '@/lib/matchScore';
 
 // GET — requiere token (datos privados de negociación)
 export async function GET(req: Request) {
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
       .in('order_id', ids)
       .in('status', ['pending', 'accepted'])   // accepted needed for tracking card
       .order('created_at', { ascending: false });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
 
     // Enrich with driver_profiles (avg_rating, vehicle info) + real completed-order count
     const driverEmails = [...new Set((data ?? []).map((o: Record<string,unknown>) => o.driver_email as string).filter(Boolean))];
@@ -66,7 +68,6 @@ export async function GET(req: Request) {
     const grouped: Record<string, unknown[]> = {};
     for (const offer of data ?? []) {
       const prof = profileMap[offer.driver_email];
-      const { computeMatchScore } = await import('@/lib/matchScore');
       const matchResult = computeMatchScore({
         avgRating:          prof?.avg_rating          ?? null,
         distanceKm:         offer.distance_km         ?? null,
@@ -101,7 +102,7 @@ export async function GET(req: Request) {
       .eq('order_id', orderId)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json(data);
   }
 
@@ -112,7 +113,7 @@ export async function GET(req: Request) {
       .eq('driver_email', driverEmail)
       .order('created_at', { ascending: false })
       .limit(100);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json(data);
   }
 
@@ -221,7 +222,7 @@ export async function POST(req: Request) {
       .eq('id', existing.id)
       .select()
       .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     return NextResponse.json(data);
   }
 
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return serverError(error);
 
   await supabaseServer
     .from('orders')
@@ -318,7 +319,7 @@ export async function PATCH(req: Request) {
       p_offer_id:    offer_id,
       p_client_email: user.email,
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
     const result = data as { success: boolean; error?: string; status?: number; offer?: object };
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
@@ -368,7 +369,7 @@ export async function PATCH(req: Request) {
       .update({ status: 'rejected', updated_at: new Date().toISOString() })
       .eq('id', offer_id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return serverError(error);
 
     // Notify driver of rejection
     if (offerForNotif?.driver_email) {

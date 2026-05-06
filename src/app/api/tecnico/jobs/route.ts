@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
@@ -110,7 +111,7 @@ export async function GET(req: Request) {
         .eq('tecnico_email', email)
         .in('status', ACTIVE_STATUSES)
         .order('scheduled_at', { ascending: true });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json(data ?? []);
     }
 
@@ -125,7 +126,7 @@ export async function GET(req: Request) {
         .eq('tecnico_email', email)
         .in('status', HISTORY_STATUSES)
         .order('created_at', { ascending: false });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json(data ?? []);
     }
 
@@ -194,7 +195,7 @@ export async function GET(req: Request) {
 
       let jobsRaw: any[] = [];
       const { data: allJobs, error } = await q;
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
 
       // Distance filter: only when tecnico has GPS in driver_locations
       if (tecLat !== null && tecLng !== null) {
@@ -275,7 +276,7 @@ export async function GET(req: Request) {
         .select('*')
         .eq('id', singleJobId)
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       if (!job) return NextResponse.json({ error: 'not_found' }, { status: 404 });
       const isClient  = job.client_email?.toLowerCase()  === user.email;
       const isTecnico = job.tecnico_email?.toLowerCase() === user.email;
@@ -293,7 +294,7 @@ export async function GET(req: Request) {
         .eq('client_email', clientEmail)
         .in('status', ['pending', ...ACTIVE_STATUSES])
         .order('created_at', { ascending: false });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       const jobs = data ?? [];
       // Enrich with tecnico avg_rating + total_ratings from tecnico_settings
       if (jobs.length > 0) {
@@ -326,7 +327,7 @@ export async function GET(req: Request) {
         .in('status', HISTORY_STATUSES)
         .order('created_at', { ascending: false })
         .limit(50);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json(data ?? []);
     }
 
@@ -341,7 +342,7 @@ export async function GET(req: Request) {
         .eq('job_id', jobOffersId)
         .eq('status', 'pending')
         .order('proposed_price', { ascending: true });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       const offers = data ?? [];
       if (offers.length > 0) {
         const emails = [...new Set(offers.map((o: Record<string, unknown>) => o.tecnico_email as string))];
@@ -412,7 +413,7 @@ export async function POST(req: Request) {
         })
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
@@ -462,7 +463,7 @@ export async function POST(req: Request) {
         }, { onConflict: 'job_id,tecnico_email', ignoreDuplicates: false })
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
 
       // Notify client about the new tecnico offer
       const { data: jobForNotif } = await sb
@@ -495,7 +496,7 @@ export async function POST(req: Request) {
         p_offer_id:     offerId,
         p_client_email: normalizedEmail,
       });
-      if (rpcErr) return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+      if (rpcErr) return serverError(rpcErr);
 
       const result = rpcResult as { success: boolean; error?: string; status?: number; tecnico_email?: string; job_id?: string; offer_id?: string };
       if (!result.success) {
@@ -542,7 +543,7 @@ export async function POST(req: Request) {
         .eq('id', offerId)
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
 
       if (offerInfo?.tecnico_email) {
         emitNotification(
@@ -570,7 +571,7 @@ export async function POST(req: Request) {
         .in('status', ['accepted'])
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       // Notify client
       if (data?.client_email) {
         emitNotification(data.client_email, 'job_status', 'Técnico en camino', 'El técnico va en camino a tu ubicación.', { job_id: jobId }, { priority: 'urgent' });
@@ -590,7 +591,7 @@ export async function POST(req: Request) {
         .in('status', ['en_camino'])
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       if (data?.client_email) {
         emitNotification(data.client_email, 'job_status', 'Técnico llegó', '¡El técnico llegó a tu ubicación!', { job_id: jobId }, { priority: 'urgent' });
       }
@@ -609,7 +610,7 @@ export async function POST(req: Request) {
         .in('status', ['llegue'])
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
@@ -644,7 +645,7 @@ export async function POST(req: Request) {
         .in('status', ['en_proceso', 'completion_pending'])
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
@@ -660,7 +661,7 @@ export async function POST(req: Request) {
         .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
@@ -684,7 +685,7 @@ export async function POST(req: Request) {
         .in('status', ['en_proceso'])
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       if (data?.client_email) {
         emitNotification(data.client_email, 'job_status', 'Servicio completado', 'El técnico marcó el servicio como completado. Por favor confirma.', { job_id: jobId }, { priority: 'urgent', groupKey: `job:${jobId}:completion_pending` });
       }
@@ -703,7 +704,7 @@ export async function POST(req: Request) {
         .eq('status', 'completion_pending')
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
 
       // ── Deduct commission from tecnico wallet ──────────────────────────────
       if (data?.tecnico_email) {
@@ -760,7 +761,9 @@ export async function POST(req: Request) {
               if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500));
             }
             if (rpcErr) {
-              console.error('[accept_completion] deduct_tecnico_commission failed after 3 attempts:', rpcErr.message);
+              console.error('[accept_completion] deduct_tecnico_commission failed after 3 attempts:', rpcErr.message, '— reverting to completion_pending');
+              await sb.from('tecnico_jobs').update({ status: 'completion_pending', completed_at: null }).eq('id', jobId);
+              return NextResponse.json({ error: 'Service confirmation failed, please try again.' }, { status: 503 });
             }
           } else {
             console.log(`[accept_completion] Commission amount is 0, skipping deduction`);
@@ -809,7 +812,7 @@ export async function POST(req: Request) {
         .eq('status', 'completion_pending')
         .select()
         .maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
@@ -922,7 +925,7 @@ export async function POST(req: Request) {
         q = q.eq('client_email', user.email).in('status', ['pending', ...ACTIVE_STATUSES]);
       }
       const { data, error } = await q.eq('id', jobId).select().maybeSingle();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return serverError(error);
       return NextResponse.json({ job: data });
     }
 
