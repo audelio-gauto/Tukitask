@@ -198,8 +198,12 @@ export default function MisOfertasPage() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const prevUnreadRef = useRef<Record<string, number>>({});
 
-  // Scroll to top on mount to avoid stale scroll position from nested scroll container
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  // Scroll to top on mount — works in both browser and Capacitor Android WebView
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!email) return;
@@ -449,7 +453,7 @@ export default function MisOfertasPage() {
         {loading && [0, 1, 2].map(i => (
           <div
             key={i}
-            style={{ height: 110, borderRadius: 16, background: 'var(--glass-card)', marginBottom: 12, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }}
+            style={{ height: 110, borderRadius: 16, background: 'var(--surface-3)', marginBottom: 12, animation: 'mis-ofertas-pulse 1.5s ease-in-out infinite' }}
           />
         ))}
 
