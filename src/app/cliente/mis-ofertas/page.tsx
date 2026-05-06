@@ -667,8 +667,8 @@ export default function MisOfertasPage() {
                       El conductor va en camino a devolverte el paquete
                     </div>
                   ) : (
-                    // Default: show cancel button (only for cancellable statuses)
-                    ['accepted', 'picking_up', 'in_transit'].includes(order.status) && (
+                    // Default: show cancel button (only for cancellable statuses — hidden once in_transit)
+                    ['accepted', 'picking_up', 'at_pickup'].includes(order.status) && (
                       <button
                         onClick={() => setCancelConfirm({ id: order.id, type: 'delivery' })}
                         disabled={busy}

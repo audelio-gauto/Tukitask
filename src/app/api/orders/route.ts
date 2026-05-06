@@ -463,7 +463,7 @@ export async function PATCH(req: Request) {
     driver_returning: ['returning'],
     returned: ['return_delivered'],
     return_rejected: ['return_delivered', 'returning'],
-    cancelled: ['pending', 'negotiating', 'accepted', 'picking_up', 'in_transit'],
+    cancelled: ['pending', 'negotiating', 'accepted', 'picking_up', 'at_pickup'],
     // client_confirmed = comprobante/recibo para cliente y admin
     // la comisión ya fue descontada automáticamente al marcar 'delivered'
     client_confirmed: ['delivered', 'commission_charged'],
