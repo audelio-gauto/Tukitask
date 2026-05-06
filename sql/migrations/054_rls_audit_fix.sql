@@ -177,6 +177,14 @@ EXCEPTION WHEN undefined_table THEN NULL; END $$;
 DO $$ BEGIN CREATE POLICY "tecnico_feed_service_role" ON public.tecnico_feed FOR ALL TO service_role USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
+-- PostGIS extension table: coordinate reference system definitions (public read-only reference data)
+DO $$ BEGIN ALTER TABLE public.spatial_ref_sys ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN undefined_table THEN NULL; WHEN insufficient_privilege THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "spatial_ref_sys_public_read" ON public.spatial_ref_sys FOR SELECT TO anon, authenticated USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "spatial_ref_sys_service_role" ON public.spatial_ref_sys FOR ALL TO service_role USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
 -- ── Verification query ───────────────────────────────────────────────────────
 -- Run this after executing to confirm 0 unprotected tables remain
 -- (spatial_ref_sys from PostGIS is expected and can be ignored):
