@@ -705,7 +705,7 @@ export default function ActivoPage() {
                     transition: 'all 0.2s',
                   }}
                 >
-                  <Icon name="x" size={14} color="#f87171" /> Cancelar envío
+                  <Icon name="x" size={14} color="#f87171" /> Cancelar
                 </button>
               )}
             </div>
