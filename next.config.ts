@@ -1,11 +1,39 @@
 import type { NextConfig } from "next";
 
+// Content Security Policy — covers all external services used by the app:
+//   Supabase (REST + Realtime WebSocket), Firebase FCM, Mapbox GL,
+//   OpenStreetMap tiles, CartoCDN tiles.
+// Notes:
+//   - 'unsafe-inline' on script-src: required by Next.js App Router hydration
+//   - 'unsafe-eval' on script-src: required by Mapbox GL worker threads
+//   - blob: on worker-src/child-src: required by Mapbox GL web workers
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://fcm.googleapis.com https://*.googleapis.com https://nominatim.openstreetmap.org",
+  "font-src 'self' data:",
+  "media-src 'self' blob: https://*.supabase.co",
+  "worker-src 'self' blob:",
+  "child-src blob:",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join('; ');
+
 const securityHeaders = [
+  // Enforce HTTPS for 1 year on all subdomains (no preload — allows future domain migration)
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'Content-Security-Policy', value: CSP },
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
+  // X-Frame-Options kept for older browsers; CSP frame-ancestors covers modern ones
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=()' },
 ];
 
 const nextConfig: NextConfig = {
