@@ -80,6 +80,9 @@ export default function ActivoPage() {
   // Unread message counts per order
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const prevUnreadRef = useRef<Record<string, number>>({});
+  // Cancel flow
+  const [cancelOpen, setCancelOpen] = useState<Set<string>>(new Set());
+  const [cancelReason, setCancelReason] = useState<Record<string, string>>({});
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
@@ -192,8 +195,11 @@ export default function ActivoPage() {
           setOrders(prev => prev.filter(o => o.id !== orderId));
           setFinalizeOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
           setFailReason(prev => { const n = { ...prev }; delete n[orderId]; return n; });
-          showToast('⚠️ Entrega fallida registrada. Aparece en "Fallidos".');
-        } else {
+          showToast('⚠️ Entrega fallida registrada. Aparece en "Fallidos".');        } else if (newStatus === 'driver_cancelled') {
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+          setCancelOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+          setCancelReason(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+          showToast('\ud83d\udeab Env\u00edo cancelado.');        } else {
           setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
           setFinalizeOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
         }
@@ -273,6 +279,9 @@ export default function ActivoPage() {
     const isActingDelivered = acting === order.id + 'delivered';
     const isActingFailed = acting === order.id + 'failed';
     const isActingProgress = status !== 'in_transit' && acting === order.id + (PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup']?.nextStatus ?? '');
+    const isCancelOpen = cancelOpen.has(order.id);
+    const cancelReasonText = cancelReason[order.id] ?? '';
+    const isActingCancel = acting === order.id + 'driver_cancelled';
 
     return (
       <div
@@ -665,21 +674,41 @@ export default function ActivoPage() {
           )}
           {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
           {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
-            <button
-              disabled={!!acting}
-              onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
-                color: acting ? '#6b7280' : '#1C1C2E',
-                fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
-                boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
-                letterSpacing: '0.3px',
-                transition: 'all 0.2s',
-              }}
-            >
-              {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                disabled={!!acting}
+                onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                  background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                  color: acting ? '#6b7280' : '#1C1C2E',
+                  fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                  boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                  letterSpacing: '0.3px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
+              </button>
+
+              {/* Cancel button — only for picking_up (En camino) and at_pickup (Recogida) */}
+              {(status === 'picking_up' || status === 'at_pickup') && (
+                <button
+                  disabled={!!acting}
+                  onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
+                  style={{
+                    width: '100%', padding: '11px', borderRadius: 12,
+                    border: '1.5px solid rgba(239,68,68,0.4)',
+                    background: 'rgba(239,68,68,0.08)',
+                    color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
+                    cursor: acting ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Icon name="x" size={14} color="#f87171" /> Cancelar envío
+                </button>
+              )}
+            </div>
           )}
 
           {status === 'in_transit' && !isFinOpen && (
@@ -933,6 +962,80 @@ export default function ActivoPage() {
             </div>
           </div>
         </div>
+        );
+      })}
+
+      {/* Cancel reason dialog */}
+      {[...cancelOpen].map(orderId => {
+        const reason = cancelReason[orderId] ?? '';
+        const isBusy = acting === orderId + 'driver_cancelled';
+        return (
+          <div key={orderId} style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 24px',
+          }}>
+            <div style={{
+              background: 'var(--surface-1)',
+              border: '1.5px solid rgba(239,68,68,0.45)',
+              borderRadius: 20, padding: '28px 24px',
+              width: '100%', maxWidth: 360,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.85)',
+            }}>
+              <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: 10 }}>🚫</div>
+              <h3 style={{ color: '#f87171', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 6px', textAlign: 'center' }}>
+                Cancelar envío
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.83rem', margin: '0 0 16px', textAlign: 'center', lineHeight: 1.5 }}>
+                ¿Por qué cancelas este envío? Indicá el motivo para notificar al cliente.
+              </p>
+              <textarea
+                value={reason}
+                onChange={e => setCancelReason(prev => ({ ...prev, [orderId]: e.target.value }))}
+                placeholder="Ej: Problema con el vehículo, emergencia personal, dirección no encontrada..."
+                rows={3}
+                style={{
+                  width: '100%', borderRadius: 10, border: '1.5px solid rgba(239,68,68,0.35)',
+                  background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: '0.85rem',
+                  padding: '10px 12px', resize: 'none', boxSizing: 'border-box',
+                  outline: 'none', fontFamily: 'inherit', marginBottom: 14,
+                }}
+              />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  disabled={isBusy}
+                  onClick={() => {
+                    setCancelOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                    setCancelReason(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                  }}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: 12,
+                    border: '1.5px solid var(--border-strong)',
+                    background: 'var(--glass-card)', color: 'var(--text-secondary)',
+                    fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                  }}
+                >
+                  Volver
+                </button>
+                <button
+                  disabled={!reason.trim() || isBusy}
+                  onClick={() => updateStatus(orderId, 'driver_cancelled', { cancel_reason: reason.trim() })}
+                  style={{
+                    flex: 2, padding: '13px', borderRadius: 12, border: 'none',
+                    background: !reason.trim() || isBusy
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    color: !reason.trim() || isBusy ? '#6b7280' : '#fff',
+                    fontWeight: 800, fontSize: '0.88rem',
+                    cursor: !reason.trim() || isBusy ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {isBusy ? 'Cancelando...' : 'Confirmar cancelación'}
+                </button>
+              </div>
+            </div>
+          </div>
         );
       })}
 

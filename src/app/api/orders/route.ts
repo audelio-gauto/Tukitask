@@ -350,7 +350,7 @@ export async function PATCH(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
-  const { order_id, status, fail_reason, return_reason, return_rejected_reason, stop_id, stop_status } = body;
+  const { order_id, status, fail_reason, return_reason, return_rejected_reason, cancel_reason, stop_id, stop_status } = body;
 
   // ── Stop-level update (multi-stop orders) ──────────────────────────────────
   if (stop_id && stop_status) {
@@ -455,6 +455,7 @@ export async function PATCH(req: Request) {
     returning: ['failed', 'return_rejected'],
     return_delivered: ['driver_returning'],
     incident_closed: ['return_rejected'],
+    driver_cancelled: ['picking_up', 'at_pickup'], // driver cancels en camino or at pickup
   };
 
   // Client-initiated transitions
@@ -515,6 +516,8 @@ export async function PATCH(req: Request) {
   if (status === 'returning') extraUpdates.return_attempts = (Number(order.return_attempts) || 0) + 1;
   if (status === 'incident_closed') extraUpdates.incident_closed_at = new Date().toISOString();
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
+  if (status === 'driver_cancelled') extraUpdates.cancel_reason = cancel_reason ?? null;
+  if (status === 'driver_cancelled') extraUpdates.cancelled_at = new Date().toISOString();
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {
     await db.from('orders').update(extraUpdates).eq('id', order_id);
@@ -548,6 +551,7 @@ export async function PATCH(req: Request) {
     returning: '⚠️ El conductor solicita devolver tu paquete — acción requerida',
     returned: 'Tu paquete fue devuelto',
     cancelled: 'El pedido fue cancelado',
+    driver_cancelled: '⚠️ El conductor canceló el envío',
     client_confirmed: 'El cliente confirmó la recepción',
   };
   // Urgent statuses deserve popup + sound
