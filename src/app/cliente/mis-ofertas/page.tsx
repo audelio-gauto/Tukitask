@@ -224,6 +224,8 @@ export default function MisOfertasPage() {
           ? jobsData.filter((j: ActiveJob) => ACTIVE_JOB_STS.includes(j.status))
           : [],
       );
+      // Mark loading done as soon as core data is ready — driver extras load in background
+      setLoading(false);
 
       // Fetch driver profile (vehicle details) for accepted+ orders
       const VEHICLE_LABELS_MAP: Record<string, string> = { moto: 'Moto', auto: 'Auto', moto_carro: 'Moto Carro', camion: 'Camión' };
@@ -251,7 +253,6 @@ export default function MisOfertasPage() {
       );
       setDriverExtras(prev => ({ ...prev, ...extrasMap }));
     } catch { /* keep previous data */ }
-    setLoading(false);
   }, [email]);
 
   useEffect(() => {
