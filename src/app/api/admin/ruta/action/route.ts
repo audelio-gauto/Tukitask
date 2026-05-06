@@ -6,6 +6,21 @@ export const dynamic = 'force-dynamic';
 const VALID_ACTIONS = ['suspend', 'block', 'reactivate'] as const;
 type Action = typeof VALID_ACTIONS[number];
 
+/** Resolve the real auth.users UUID by email (may differ from public users.id) */
+async function getAuthUidByEmail(db: ReturnType<typeof sbAdmin>, email: string): Promise<string | null> {
+  const target = email.toLowerCase();
+  let page = 1;
+  while (page <= 20) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 100 });
+    if (error || !data?.users?.length) break;
+    const found = data.users.find((u: any) => u.email?.toLowerCase() === target);
+    if (found) return found.id;
+    if (data.users.length < 100) break;
+    page++;
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
@@ -43,18 +58,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No se puede suspender un administrador' }, { status: 403 });
     }
 
+    // Resolve the real auth.users UUID by email (users.id may differ from auth.users.id)
+    const authUid = await getAuthUidByEmail(db, targetUser.email);
+    if (!authUid) {
+      return NextResponse.json({ error: 'Usuario no encontrado en auth' }, { status: 404 });
+    }
+
     if (action === 'reactivate') {
-      // Remove ban + clear suspended metadata
-      await db.auth.admin.updateUserById(user_id, {
+      const { error: updateErr } = await db.auth.admin.updateUserById(authUid, {
         ban_duration: 'none',
         app_metadata: { suspended: false, blocked: false, suspension_reason: null },
       });
+      if (updateErr) return NextResponse.json({ error: 'Error al reactivar: ' + updateErr.message }, { status: 500 });
       return NextResponse.json({ ok: true, action: 'reactivate', email: targetUser.email });
     }
 
     if (action === 'suspend') {
       // 30-day ban
-      await db.auth.admin.updateUserById(user_id, {
+      const { error: updateErr } = await db.auth.admin.updateUserById(authUid, {
         ban_duration: '720h',
         app_metadata: {
           suspended: true,
@@ -64,12 +85,13 @@ export async function POST(req: Request) {
           suspended_at: new Date().toISOString(),
         },
       });
+      if (updateErr) return NextResponse.json({ error: 'Error al suspender: ' + updateErr.message }, { status: 500 });
       return NextResponse.json({ ok: true, action: 'suspend', email: targetUser.email });
     }
 
     if (action === 'block') {
       // Permanent ban (876000h = ~100 years)
-      await db.auth.admin.updateUserById(user_id, {
+      const { error: updateErr } = await db.auth.admin.updateUserById(authUid, {
         ban_duration: '876000h',
         app_metadata: {
           suspended: false,
@@ -79,6 +101,7 @@ export async function POST(req: Request) {
           blocked_at: new Date().toISOString(),
         },
       });
+      if (updateErr) return NextResponse.json({ error: 'Error al bloquear: ' + updateErr.message }, { status: 500 });
       return NextResponse.json({ ok: true, action: 'block', email: targetUser.email });
     }
 
