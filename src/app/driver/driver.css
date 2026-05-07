@@ -784,6 +784,22 @@ input:checked + .tuki-toggle-slider:before {
 }
 .tuki-stop-card.is-done .tuki-stop-address { color: #16a34a; }
 .tuki-stop-card.is-failed .tuki-stop-address { color: #dc2626; }
+.tuki-stop-card.is-locked {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.tuki-stop-lock-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.tuki-stop-locked-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 3px 0 0 34px;
+  letter-spacing: 0.3px;
+}
 
 .tuki-stop-meta-row {
   display: flex;

@@ -525,26 +525,49 @@ export default function ActivoPage() {
               </div>
 
               {/* Map buttons */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                {order.pickup_address && (
-                  <button
-                    onClick={() => openMaps(navApp, order.pickup_address)}
-                    className="tuki-btn tuki-btn-warning tuki-btn-sm"
-                    style={{ flex: 1 }}
-                  >
-                    <Icon name="map" size={14} /> Ir a Recogida
-                  </button>
-                )}
-                {order.delivery_address && (
-                  <button
-                    onClick={() => openMaps(navApp, order.delivery_address)}
-                    className="tuki-btn tuki-btn-success tuki-btn-sm"
-                    style={{ flex: 1 }}
-                  >
-                    <Icon name="map" size={14} /> Ir a Entrega
-                  </button>
-                )}
-              </div>
+              {(() => {
+                // For multi-stop in_transit: button targets the current pending stop
+                const sortedStops: any[] = Array.isArray(order.order_stops)
+                  ? [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence)
+                  : [];
+                const currentStop = status === 'in_transit'
+                  ? sortedStops.find((s: any) => s.status === 'pending') ?? null
+                  : null;
+                const deliveryTarget = currentStop ?? null;
+                const deliveryLabel = deliveryTarget
+                  ? `Ir a Entrega ${deliveryTarget.sequence}`
+                  : 'Ir a Entrega';
+                const deliveryAddr = deliveryTarget?.address ?? order.delivery_address;
+                return (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    {order.pickup_address && (
+                      <button
+                        onClick={() => openMaps(navApp, order.pickup_address)}
+                        className="tuki-btn tuki-btn-warning tuki-btn-sm"
+                        style={{ flex: 1 }}
+                      >
+                        <Icon name="map" size={14} /> Ir a Recogida
+                      </button>
+                    )}
+                    {deliveryAddr && (
+                      <button
+                        onClick={() => openMaps(navApp, deliveryAddr)}
+                        className="tuki-btn tuki-btn-success tuki-btn-sm"
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.2, padding: '8px 10px' }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>
+                          <Icon name="map" size={14} /> {deliveryLabel}
+                        </span>
+                        {deliveryTarget && (
+                          <span style={{ fontSize: '0.68rem', opacity: 0.82, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                            {deliveryTarget.address.split(',').slice(0, 2).join(',')}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -597,15 +620,24 @@ export default function ActivoPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence).map((stop: any) => {
+                {(() => {
+                  const sortedAllStops = [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence);
+                  // The one and only active stop: first pending in sequence
+                  const currentActiveStop = status === 'in_transit'
+                    ? sortedAllStops.find((s: any) => s.status === 'pending') ?? null
+                    : null;
+                  return sortedAllStops.map((stop: any) => {
                   const isDone = stop.status === 'delivered';
                   const isFailed = stop.status === 'failed';
                   const isPending = stop.status === 'pending';
+                  // A pending stop is "active" only if it is the current one; others are locked
+                  const isActive = isPending && currentActiveStop?.id === stop.id;
+                  const isLocked = isPending && currentActiveStop?.id !== stop.id;
                   const isBusy = stopActing[stop.id];
                   const failFormOpen = stopFailOpen.has(stop.id);
                   const stopReason = stopFailReason[stop.id] ?? '';
 
-                  const cardClass = `tuki-stop-card${isDone ? ' is-done' : isFailed ? ' is-failed' : ''}`;
+                  const cardClass = `tuki-stop-card${isDone ? ' is-done' : isFailed ? ' is-failed' : isLocked ? ' is-locked' : ''}`;
                   const badgeClass = `tuki-stop-badge${isDone ? ' done' : isFailed ? ' failed' : ' pending'}`;
 
                   return (
@@ -650,19 +682,33 @@ export default function ActivoPage() {
                           )}
                         </div>
 
-                        {/* Navigate button */}
-                        <button
-                          className="tuki-stop-nav-btn"
-                          onClick={() => openMaps(navApp, stop.address)}
-                          title="Navegar"
-                          aria-label="Abrir en mapa"
-                        >
-                          <Icon name="map" size={14} />
-                        </button>
+                        {/* Navigate button — only for active or done/failed stops */}
+                        {!isLocked && (
+                          <button
+                            className="tuki-stop-nav-btn"
+                            onClick={() => openMaps(navApp, stop.address)}
+                            title="Navegar"
+                            aria-label="Abrir en mapa"
+                          >
+                            <Icon name="map" size={14} />
+                          </button>
+                        )}
+
+                        {/* Lock icon for future stops */}
+                        {isLocked && (
+                          <span className="tuki-stop-lock-icon" aria-label="Bloqueada">
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                          </span>
+                        )}
                       </div>
 
-                      {/* Action buttons — pending + in_transit only */}
-                      {isPending && status === 'in_transit' && !failFormOpen && (
+                      {/* Locked label */}
+                      {isLocked && (
+                        <div className="tuki-stop-locked-label">Esperando parada anterior</div>
+                      )}
+
+                      {/* Action buttons — only for the ACTIVE stop */}
+                      {isActive && !failFormOpen && (
                         <div className="tuki-stop-actions">
                           <button
                             className="tuki-stop-btn tuki-stop-btn-deliver"
@@ -683,8 +729,8 @@ export default function ActivoPage() {
                         </div>
                       )}
 
-                      {/* Fail reason form */}
-                      {isPending && failFormOpen && (
+                      {/* Fail reason form — only for active stop */}
+                      {isActive && failFormOpen && (
                         <div className="tuki-stop-fail-form">
                           <textarea
                             className="tuki-stop-fail-textarea"
@@ -713,7 +759,8 @@ export default function ActivoPage() {
                       )}
                     </div>
                   );
-                })}
+                  }); // end sortedAllStops.map
+                })()} {/* end IIFE */}
               </div>
             </div>
           )}
