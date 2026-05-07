@@ -1557,6 +1557,37 @@
   gap: 6px;
 }
 
+/* ── Enviar: optimize route button ── */
+.enviar-optimize-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 9px 0;
+  border: 1.5px solid var(--client-primary);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--client-primary-dark);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.enviar-optimize-btn:hover {
+  background: var(--client-action-active);
+}
+@media (prefers-color-scheme: dark) {
+  .enviar-optimize-btn {
+    color: var(--client-primary);
+    border-color: rgba(var(--client-primary-rgb, 99,102,241), 0.55);
+  }
+  .enviar-optimize-btn:hover {
+    background: rgba(var(--client-primary-rgb, 99,102,241), 0.1);
+  }
+}
+
 /* ── Client map idle overlay ── */
 .client-map-shell {
   position: fixed;

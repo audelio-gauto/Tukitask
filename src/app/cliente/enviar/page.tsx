@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
-import { haversineKm } from '@/lib/geo';
+import { haversineKm, nearestNeighborSort } from '@/lib/geo';
 import { Icon } from '@/components/Icon';
 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
@@ -115,6 +115,26 @@ export default function EnviarPaquetePage() {
     if (stops.length <= 1) return;
     setStops(prev => prev.filter((_, i) => i !== idx));
   };
+
+  // Nearest-neighbor route optimization — reorders stops in-place
+  const [optimized, setOptimized] = useState(false);
+  const optimizeStops = () => {
+    const pLat = parseFloat(form.pickupLat);
+    const pLng = parseFloat(form.pickupLng);
+    if (!isFinite(pLat) || !isFinite(pLng)) return;
+    const sorted = nearestNeighborSort(
+      { lat: pLat, lng: pLng },
+      stops,
+      s => s.lat,
+      s => s.lng,
+    );
+    setStops(sorted.map((s, i) => ({ ...s, id: stops[i]?.id ?? crypto.randomUUID() })));
+    setOptimized(true);
+    setTimeout(() => setOptimized(false), 2500);
+  };
+
+  // Whether optimize button should be shown
+  const canOptimize = stops.length >= 2 && stops.filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng))).length >= 2 && isFinite(parseFloat(form.pickupLat)) && orderType !== 'viaje';
 
   // First stop conveniently maps to legacy delivery fields for backward compat
   const firstStop = stops[0];
@@ -777,6 +797,28 @@ export default function EnviarPaquetePage() {
                     >
                       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                       Agregar parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : ''}
+                    </button>
+                  )}
+
+                  {/* Optimize route button — visible when ≥2 stops have coords */}
+                  {canOptimize && (
+                    <button
+                      type="button"
+                      onClick={optimizeStops}
+                      className="enviar-optimize-btn"
+                      title="Reordena las paradas de más cercana a más lejana para reducir la distancia total"
+                    >
+                      {optimized ? (
+                        <>
+                          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          Ruta optimizada
+                        </>
+                      ) : (
+                        <>
+                          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
+                          Optimizar ruta
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
+import { nearestNeighborSort } from '@/lib/geo';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
@@ -75,6 +76,8 @@ export default function ActivoPage() {
   const [stopActing, setStopActing] = useState<Record<string, boolean>>({}); // stopId → busy
   const [stopFailOpen, setStopFailOpen] = useState<Set<string>>(new Set()); // which stops show fail form
   const [stopFailReason, setStopFailReason] = useState<Record<string, string>>({}); // stopId → reason text
+  // Optimize state: orderId → 'loading' | 'done' | undefined
+  const [optimizeState, setOptimizeState] = useState<Record<string, 'loading' | 'done'>>({});
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
@@ -211,6 +214,69 @@ export default function ActivoPage() {
       showToast('❌ Error de conexión. Intentá de nuevo.');
     }
     setActing(null);
+  };
+
+  // Nearest-neighbor route optimization for pending stops
+  const optimizeDriverStops = (order: any) => {
+    const pendingStops: any[] = (order.order_stops || []).filter((s: any) => s.status === 'pending');
+    if (pendingStops.length < 2) return;
+
+    setOptimizeState(prev => ({ ...prev, [order.id]: 'loading' }));
+
+    const doOptimize = (originLat: number, originLng: number) => {
+      const sorted = nearestNeighborSort(
+        { lat: originLat, lng: originLng },
+        pendingStops,
+        (s: any) => s.lat,
+        (s: any) => s.lng,
+      );
+
+      // Build reorder payload: only pending stops, new sequences continue from last non-pending sequence
+      const doneStops: any[] = (order.order_stops || []).filter((s: any) => s.status !== 'pending');
+      const doneMax = doneStops.length > 0 ? Math.max(...doneStops.map((s: any) => s.sequence)) : 0;
+      const reorderPayload = sorted.map((s: any, i: number) => ({
+        stop_id: s.id,
+        sequence: doneMax + i + 1,
+      }));
+
+      authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, reorder_stops: reorderPayload }),
+      })
+        .then(r => {
+          if (r.ok) {
+            setOrders(prev => prev.map(o => {
+              if (o.id !== order.id) return o;
+              const updatedStops = (o.order_stops || []).map((s: any) => {
+                const found = reorderPayload.find((p: any) => p.stop_id === s.id);
+                return found ? { ...s, sequence: found.sequence } : s;
+              });
+              return { ...o, order_stops: updatedStops };
+            }));
+            setOptimizeState(prev => ({ ...prev, [order.id]: 'done' }));
+            showToast('✅ Ruta optimizada');
+            setTimeout(() => setOptimizeState(prev => { const n = { ...prev }; delete n[order.id]; return n; }), 2500);
+          } else {
+            showToast('❌ No se pudo optimizar');
+            setOptimizeState(prev => { const n = { ...prev }; delete n[order.id]; return n; });
+          }
+        })
+        .catch(() => {
+          showToast('❌ Error de conexión');
+          setOptimizeState(prev => { const n = { ...prev }; delete n[order.id]; return n; });
+        });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => doOptimize(pos.coords.latitude, pos.coords.longitude),
+        () => doOptimize(Number(order.pickup_lat), Number(order.pickup_lng)),
+        { enableHighAccuracy: true, timeout: 5000 },
+      );
+    } else {
+      doOptimize(Number(order.pickup_lat), Number(order.pickup_lng));
+    }
   };
 
   // Per-stop status update (multi-stop orders)
@@ -496,8 +562,44 @@ export default function ActivoPage() {
           {/* ── Paradas (multi-stop) ── */}
           {Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                📍 Paradas ({order.order_stops.length})
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  📍 Paradas ({order.order_stops.length})
+                </div>
+                {/* Optimize button — only when ≥2 pending stops with coords and order is in_transit */}
+                {status === 'in_transit' &&
+                  (order.order_stops || []).filter((s: any) => s.status === 'pending' && s.lat != null && s.lng != null).length >= 2 && (
+                  <button
+                    onClick={() => optimizeDriverStops(order)}
+                    disabled={optimizeState[order.id] === 'loading'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '4px 10px', borderRadius: 8,
+                      border: optimizeState[order.id] === 'done'
+                        ? '1px solid rgba(74,222,128,0.4)'
+                        : '1px solid rgba(245,197,24,0.4)',
+                      background: optimizeState[order.id] === 'done'
+                        ? 'rgba(74,222,128,0.1)'
+                        : 'rgba(245,197,24,0.08)',
+                      color: optimizeState[order.id] === 'done' ? '#4ade80' : '#F5C518',
+                      fontSize: '0.7rem', fontWeight: 700,
+                      cursor: optimizeState[order.id] === 'loading' ? 'not-allowed' : 'pointer',
+                      opacity: optimizeState[order.id] === 'loading' ? 0.6 : 1,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {optimizeState[order.id] === 'loading' ? (
+                      <>⏳ Optimizando...</>
+                    ) : optimizeState[order.id] === 'done' ? (
+                      <>✓ Optimizado</>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
+                        Optimizar ruta
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence).map((stop: any) => {

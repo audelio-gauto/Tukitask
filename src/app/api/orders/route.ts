@@ -350,7 +350,49 @@ export async function PATCH(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
-  const { order_id, status, fail_reason, return_reason, return_rejected_reason, cancel_reason, stop_id, stop_status } = body;
+  const { order_id, status, fail_reason, return_reason, return_rejected_reason, cancel_reason, stop_id, stop_status, reorder_stops } = body;
+
+  // ── Reorder stops (nearest-neighbor optimization) ─────────────────────────
+  if (Array.isArray(reorder_stops) && reorder_stops.length > 0) {
+    if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 });
+    const db = sbAdmin();
+    const { data: orderCheck } = await db
+      .from('orders')
+      .select('accepted_by, is_multi_stop')
+      .eq('id', order_id)
+      .single();
+    if (!orderCheck) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (orderCheck.accepted_by?.toLowerCase() !== user.email) return forbidden('Not your order');
+
+    // Validate payload: max 20 items, each must have stop_id (UUID) + sequence (int)
+    if (reorder_stops.length > 20) return NextResponse.json({ error: 'Too many stops' }, { status: 400 });
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const item of reorder_stops) {
+      if (typeof item.stop_id !== 'string' || !UUID_RE.test(item.stop_id)) {
+        return NextResponse.json({ error: 'Invalid stop_id' }, { status: 400 });
+      }
+      if (!Number.isInteger(item.sequence) || item.sequence < 1 || item.sequence > 100) {
+        return NextResponse.json({ error: 'Invalid sequence' }, { status: 400 });
+      }
+    }
+
+    // Update each pending stop's sequence atomically (only pending stops can be reordered)
+    const updateErrors: string[] = [];
+    for (const item of reorder_stops) {
+      const { error } = await db
+        .from('order_stops')
+        .update({ sequence: item.sequence })
+        .eq('id', item.stop_id)
+        .eq('order_id', order_id)
+        .eq('status', 'pending'); // only reorder pending stops
+      if (error) updateErrors.push(item.stop_id);
+    }
+    if (updateErrors.length > 0) {
+      console.error('[reorder_stops] partial failure', updateErrors);
+      return NextResponse.json({ error: 'Partial update failure' }, { status: 500 });
+    }
+    return NextResponse.json({ success: true, reordered: reorder_stops.length });
+  }
 
   // ── Stop-level update (multi-stop orders) ──────────────────────────────────
   if (stop_id && stop_status) {
