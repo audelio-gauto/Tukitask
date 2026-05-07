@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useWorkerContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { supabase } from '@/lib/supabaseClient';
-import { nearestNeighborSort } from '@/lib/geo';
+import { nearestNeighborSort, haversineKm } from '@/lib/geo';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
@@ -78,6 +78,8 @@ export default function ActivoPage() {
   const [stopFailReason, setStopFailReason] = useState<Record<string, string>>({}); // stopId → reason text
   // Optimize state: orderId → 'loading' | 'done' | undefined
   const [optimizeState, setOptimizeState] = useState<Record<string, 'loading' | 'done'>>({});
+  // Driver GPS position for distance estimation on stop badges
+  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
@@ -141,6 +143,17 @@ export default function ActivoPage() {
       if (ch) supabase.removeChannel(ch);
     };
   }, [fetchActive, email]);
+
+  // Watch driver GPS position for stop distance badges
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      pos => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 10_000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   // Poll unread counts when orders change
   useEffect(() => {
@@ -713,6 +726,21 @@ export default function ActivoPage() {
                       {isLocked && (
                         <div className="tuki-stop-locked-label">Esperando parada anterior</div>
                       )}
+
+                      {/* Distance/time badge — only for the active stop with coords */}
+                      {isActive && stop.lat != null && stop.lng != null && driverPos && (() => {
+                        const distKm = haversineKm(driverPos.lat, driverPos.lng, Number(stop.lat), Number(stop.lng));
+                        const mins = Math.max(1, Math.round(distKm / 30 * 60));
+                        const distLabel = distKm < 1
+                          ? `${Math.round(distKm * 1000)} m`
+                          : `${distKm.toFixed(1)} km`;
+                        return (
+                          <div className="tuki-stop-eta-badge">
+                            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            {distLabel} · {mins} min
+                          </div>
+                        );
+                      })()}
 
                       {/* Action buttons — only for the ACTIVE stop */}
                       {isActive && !failFormOpen && (

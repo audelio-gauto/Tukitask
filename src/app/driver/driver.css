@@ -800,6 +800,27 @@ input:checked + .tuki-toggle-slider:before {
   padding: 3px 0 0 34px;
   letter-spacing: 0.3px;
 }
+.tuki-stop-eta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 2px 0;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(245, 197, 24, 0.12);
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  color: #d4a800;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+@media (prefers-color-scheme: dark) {
+  .tuki-stop-eta-badge {
+    background: rgba(245, 197, 24, 0.15);
+    border-color: rgba(245, 197, 24, 0.4);
+    color: #F5C518;
+  }
+}
 
 .tuki-stop-meta-row {
   display: flex;
