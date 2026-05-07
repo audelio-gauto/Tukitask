@@ -644,6 +644,11 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-order-tab-label">{tab.label}</span>
                     <span className="enviar-order-tab-sublabel">{tab.sub}</span>
                   </span>
+                  {orderType === tab.key && (
+                    <span className="enviar-vehicle-check">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

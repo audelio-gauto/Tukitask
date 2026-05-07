@@ -1427,6 +1427,7 @@
 }
 .enviar-order-toggle::-webkit-scrollbar { display: none; }
 .enviar-order-tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
