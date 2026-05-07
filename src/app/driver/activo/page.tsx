@@ -499,30 +499,44 @@ export default function ActivoPage() {
           {/* Addresses */}
           {(order.pickup_address || order.delivery_address) && (
             <div className="tuki-address-box" style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <div style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  paddingTop: 4, gap: 3, flexShrink: 0,
-                }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block' }} />
-                  <span style={{ width: 2, height: 22, background: 'var(--border-subtle)', display: 'block' }} />
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#4ade80', display: 'block' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  {order.pickup_address && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div className="tuki-address-label" style={{ color: '#F5C518' }}>Recogida</div>
-                      <div className="tuki-address-text">{order.pickup_address}</div>
+              {(() => {
+                const addrSortedStops: any[] = Array.isArray(order.order_stops)
+                  ? [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence)
+                  : [];
+                const addrCurrentStop = status === 'in_transit'
+                  ? addrSortedStops.find((s: any) => s.status === 'pending') ?? null
+                  : null;
+                const entregaLabel = addrCurrentStop
+                  ? `Entrega ${addrCurrentStop.sequence}`
+                  : 'Entrega';
+                const entregaAddr = addrCurrentStop?.address ?? order.delivery_address;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      paddingTop: 4, gap: 3, flexShrink: 0,
+                    }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F5C518', display: 'block' }} />
+                      <span style={{ width: 2, height: 22, background: 'var(--border-subtle)', display: 'block' }} />
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#4ade80', display: 'block' }} />
                     </div>
-                  )}
-                  {order.delivery_address && (
-                    <div>
-                      <div className="tuki-address-label" style={{ color: '#4ade80' }}>Entrega</div>
-                      <div className="tuki-address-text">{order.delivery_address}</div>
+                    <div style={{ flex: 1 }}>
+                      {order.pickup_address && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div className="tuki-address-label" style={{ color: '#F5C518' }}>Recogida</div>
+                          <div className="tuki-address-text">{order.pickup_address}</div>
+                        </div>
+                      )}
+                      {entregaAddr && (
+                        <div>
+                          <div className="tuki-address-label" style={{ color: '#4ade80' }}>{entregaLabel}</div>
+                          <div className="tuki-address-text">{entregaAddr}</div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                );
+              })()}
 
               {/* Map buttons */}
               {(() => {
@@ -553,16 +567,9 @@ export default function ActivoPage() {
                       <button
                         onClick={() => openMaps(navApp, deliveryAddr)}
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
-                        style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.2, padding: '8px 10px' }}
+                        style={{ flex: 1 }}
                       >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>
-                          <Icon name="map" size={14} /> {deliveryLabel}
-                        </span>
-                        {deliveryTarget && (
-                          <span style={{ fontSize: '0.68rem', opacity: 0.82, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                            {deliveryTarget.address.split(',').slice(0, 2).join(',')}
-                          </span>
-                        )}
+                        <Icon name="map" size={14} /> {deliveryLabel}
                       </button>
                     )}
                   </div>
