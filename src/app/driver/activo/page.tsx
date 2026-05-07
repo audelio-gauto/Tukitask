@@ -562,46 +562,41 @@ export default function ActivoPage() {
           {/* ── Paradas (multi-stop) ── */}
           {Array.isArray(order.order_stops) && order.order_stops.length > 0 && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  📍 Paradas ({order.order_stops.length})
+              <div className="tuki-stops-header">
+                <div className="tuki-stops-label">
+                  <span className="tuki-stops-label-dot" />
+                  Paradas ({order.order_stops.length})
                 </div>
-                {/* Optimize button — only when ≥2 pending stops with coords and order is in_transit */}
+
+                {/* Optimize button */}
                 {status === 'in_transit' &&
                   (order.order_stops || []).filter((s: any) => s.status === 'pending' && s.lat != null && s.lng != null).length >= 2 && (
                   <button
+                    className={`tuki-stop-optimize-btn${optimizeState[order.id] === 'done' ? ' done' : ''}`}
                     onClick={() => optimizeDriverStops(order)}
                     disabled={optimizeState[order.id] === 'loading'}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '4px 10px', borderRadius: 8,
-                      border: optimizeState[order.id] === 'done'
-                        ? '1px solid rgba(74,222,128,0.4)'
-                        : '1px solid rgba(245,197,24,0.4)',
-                      background: optimizeState[order.id] === 'done'
-                        ? 'rgba(74,222,128,0.1)'
-                        : 'rgba(245,197,24,0.08)',
-                      color: optimizeState[order.id] === 'done' ? '#4ade80' : '#F5C518',
-                      fontSize: '0.7rem', fontWeight: 700,
-                      cursor: optimizeState[order.id] === 'loading' ? 'not-allowed' : 'pointer',
-                      opacity: optimizeState[order.id] === 'loading' ? 0.6 : 1,
-                      transition: 'all 0.2s',
-                    }}
                   >
                     {optimizeState[order.id] === 'loading' ? (
-                      <>⏳ Optimizando...</>
+                      <>
+                        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" style={{ animation: 'tuki-spin 0.9s linear infinite' }} /></svg>
+                        Optimizando...
+                      </>
                     ) : optimizeState[order.id] === 'done' ? (
-                      <>✓ Optimizado</>
+                      <>
+                        <Icon name="check" size={11} />
+                        Optimizado
+                      </>
                     ) : (
                       <>
-                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
+                        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
                         Optimizar ruta
                       </>
                     )}
                   </button>
                 )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence).map((stop: any) => {
                   const isDone = stop.status === 'delivered';
                   const isFailed = stop.status === 'failed';
@@ -610,127 +605,108 @@ export default function ActivoPage() {
                   const failFormOpen = stopFailOpen.has(stop.id);
                   const stopReason = stopFailReason[stop.id] ?? '';
 
+                  const cardClass = `tuki-stop-card${isDone ? ' is-done' : isFailed ? ' is-failed' : ''}`;
+                  const badgeClass = `tuki-stop-badge${isDone ? ' done' : isFailed ? ' failed' : ' pending'}`;
+
                   return (
-                    <div key={stop.id} style={{
-                      background: isDone ? 'rgba(74,222,128,0.07)' : isFailed ? 'rgba(239,68,68,0.07)' : 'rgba(0,0,0,0.25)',
-                      border: `1.5px solid ${isDone ? 'rgba(74,222,128,0.3)' : isFailed ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
-                      borderRadius: 12, padding: '10px 12px',
-                    }}>
-                      {/* Stop header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: isPending && status === 'in_transit' ? 8 : 4 }}>
-                        <span style={{
-                          minWidth: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                          background: isDone ? '#4ade80' : isFailed ? '#ef4444' : '#475569',
-                          color: '#fff', fontSize: '0.7rem', fontWeight: 800,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {isDone ? '✓' : isFailed ? '✗' : stop.sequence}
+                    <div key={stop.id} className={cardClass}>
+                      <div className="tuki-stop-row">
+                        {/* Sequence badge */}
+                        <span className={badgeClass}>
+                          {isDone
+                            ? <Icon name="check" size={11} />
+                            : isFailed
+                            ? <Icon name="x" size={11} />
+                            : stop.sequence}
                         </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.82rem', color: isDone ? '#4ade80' : isFailed ? '#f87171' : 'rgba(255,255,255,0.85)', lineHeight: 1.35 }}>
-                            {stop.address}
-                          </div>
+
+                        {/* Address + meta */}
+                        <div className="tuki-stop-body">
+                          <div className="tuki-stop-address">{stop.address}</div>
+
                           {stop.receiver_contact && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                              👤 {stop.receiver_contact}
+                            <div className="tuki-stop-meta-row">
+                              <Icon name="user" size={11} />
+                              <span>{stop.receiver_contact}</span>
                               {stop.receiver_phone && (
-                                <a href={`tel:${stop.receiver_phone}`} style={{ color: '#60a5fa', marginLeft: 6, textDecoration: 'none' }}>
-                                  📞 {stop.receiver_phone}
-                                </a>
+                                <>
+                                  <span style={{ opacity: 0.35 }}>·</span>
+                                  <Icon name="device-mobile" size={11} />
+                                  <a href={`tel:${stop.receiver_phone}`}>{stop.receiver_phone}</a>
+                                </>
                               )}
                             </div>
                           )}
+
                           {stop.description && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                              📝 {stop.description}
+                            <div className="tuki-stop-meta-row">
+                              <Icon name="pencil" size={11} />
+                              <span>{stop.description}</span>
                             </div>
                           )}
+
                           {isFailed && stop.fail_reason && (
-                            <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: 3, borderLeft: '2px solid #ef4444', paddingLeft: 6 }}>
-                              {stop.fail_reason}
-                            </div>
+                            <div className="tuki-stop-fail-reason">{stop.fail_reason}</div>
                           )}
                         </div>
-                        {/* Nav button */}
+
+                        {/* Navigate button */}
                         <button
+                          className="tuki-stop-nav-btn"
                           onClick={() => openMaps(navApp, stop.address)}
-                          style={{
-                            padding: '5px 8px', borderRadius: 8, border: '1px solid var(--border-strong)',
-                            background: 'var(--glass-card)', color: '#94a3b8',
-                            fontSize: '0.7rem', cursor: 'pointer', flexShrink: 0,
-                          }}
-                        >🗺️</button>
+                          title="Navegar"
+                          aria-label="Abrir en mapa"
+                        >
+                          <Icon name="map" size={14} />
+                        </button>
                       </div>
 
-                      {/* Action buttons — only when pending + in_transit */}
+                      {/* Action buttons — pending + in_transit only */}
                       {isPending && status === 'in_transit' && !failFormOpen && (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <div className="tuki-stop-actions">
                           <button
+                            className="tuki-stop-btn tuki-stop-btn-deliver"
                             disabled={isBusy}
                             onClick={() => updateStopStatus(order.id, stop.id, 'delivered')}
-                            style={{
-                              flex: 1, padding: '8px', borderRadius: 10,
-                              border: isBusy ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(74,222,128,0.3)',
-                              background: isBusy ? 'rgba(255,255,255,0.06)' : 'rgba(74,222,128,0.18)',
-                              color: isBusy ? '#6b7280' : '#4ade80',
-                              fontWeight: 700, fontSize: '0.78rem', cursor: isBusy ? 'not-allowed' : 'pointer',
-                            }}
                           >
-                            {isBusy ? '...' : '✅ Entregado'}
+                            <Icon name="check" size={13} />
+                            {isBusy ? 'Guardando...' : 'Entregado'}
                           </button>
                           <button
+                            className="tuki-stop-btn tuki-stop-btn-fail"
                             disabled={isBusy}
                             onClick={() => setStopFailOpen(prev => new Set([...prev, stop.id]))}
-                            style={{
-                              flex: 1, padding: '8px', borderRadius: 10,
-                              border: '1px solid rgba(239,68,68,0.3)',
-                              background: 'rgba(239,68,68,0.1)', color: '#f87171',
-                              fontWeight: 700, fontSize: '0.78rem', cursor: isBusy ? 'not-allowed' : 'pointer',
-                            }}
                           >
-                            ❌ Fallido
+                            <Icon name="x" size={13} />
+                            Fallido
                           </button>
                         </div>
                       )}
 
-                      {/* Stop fail reason form */}
+                      {/* Fail reason form */}
                       {isPending && failFormOpen && (
-                        <div style={{ marginTop: 6 }}>
+                        <div className="tuki-stop-fail-form">
                           <textarea
+                            className="tuki-stop-fail-textarea"
                             value={stopReason}
                             onChange={e => setStopFailReason(prev => ({ ...prev, [stop.id]: e.target.value }))}
                             placeholder="Ej: No había nadie en casa, dirección incorrecta..."
                             rows={2}
-                            style={{
-                              width: '100%', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
-                              background: 'var(--surface-3)', color: 'var(--text-primary)', fontSize: '0.8rem',
-                              padding: '7px 9px', resize: 'none', boxSizing: 'border-box',
-                              outline: 'none', fontFamily: 'inherit',
-                            }}
                           />
-                          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                          <div className="tuki-stop-fail-form-btns">
                             <button
+                              className="tuki-stop-fail-cancel"
                               onClick={() => {
                                 setStopFailOpen(prev => { const n = new Set(prev); n.delete(stop.id); return n; });
                                 setStopFailReason(prev => { const n = { ...prev }; delete n[stop.id]; return n; });
                               }}
-                              style={{
-                                flex: 1, padding: '7px', borderRadius: 9, border: '1px solid var(--border-subtle)',
-                                background: 'transparent', color: '#6b7280', cursor: 'pointer', fontSize: '0.78rem',
-                              }}
                             >Cancelar</button>
                             <button
+                              className="tuki-stop-fail-confirm"
                               disabled={!stopReason.trim() || isBusy}
                               onClick={() => updateStopStatus(order.id, stop.id, 'failed', stopReason.trim())}
-                              style={{
-                                flex: 2, padding: '7px', borderRadius: 9, border: 'none',
-                                background: !stopReason.trim() || isBusy ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#ef4444,#dc2626)',
-                                color: !stopReason.trim() || isBusy ? '#6b7280' : '#fff',
-                                fontWeight: 700, fontSize: '0.78rem',
-                                cursor: !stopReason.trim() || isBusy ? 'not-allowed' : 'pointer',
-                              }}
                             >
-                              {isBusy ? '...' : 'Confirmar fallido'}
+                              {isBusy ? 'Guardando...' : 'Confirmar fallido'}
                             </button>
                           </div>
                         </div>

@@ -666,6 +666,262 @@ input:checked + .tuki-toggle-slider:before {
   .tuki-float-btn.filter { right: calc(500px + 68px); }
 }
 
+/* ── Multi-stop cards ── */
+.tuki-stops-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.tuki-stops-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.tuki-stops-label-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--tuki-primary);
+  flex-shrink: 0;
+}
+.tuki-stop-optimize-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(245,197,24,0.4);
+  background: rgba(245,197,24,0.07);
+  color: var(--tuki-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, opacity 0.18s;
+}
+.tuki-stop-optimize-btn:hover { background: rgba(245,197,24,0.14); }
+.tuki-stop-optimize-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.tuki-stop-optimize-btn.done {
+  border-color: rgba(74,222,128,0.4);
+  background: rgba(74,222,128,0.08);
+  color: #22c55e;
+}
+
+/* Individual stop card */
+.tuki-stop-card {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 11px 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.tuki-stop-card.is-done {
+  background: var(--stop-done-bg, rgba(34,197,94,0.06));
+  border-color: var(--stop-done-border, rgba(34,197,94,0.25));
+}
+.tuki-stop-card.is-failed {
+  background: var(--stop-fail-bg, rgba(239,68,68,0.06));
+  border-color: var(--stop-fail-border, rgba(239,68,68,0.22));
+}
+
+/* Light mode overrides */
+:root {
+  --stop-done-bg: rgba(22,163,74,0.06);
+  --stop-done-border: rgba(22,163,74,0.22);
+  --stop-fail-bg: rgba(220,38,38,0.05);
+  --stop-fail-border: rgba(220,38,38,0.2);
+}
+
+.tuki-stop-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tuki-stop-badge {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--surface-3);
+  border: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+.tuki-stop-badge.pending {
+  background: var(--surface-3);
+  border-color: var(--tuki-primary);
+  color: var(--tuki-primary);
+}
+.tuki-stop-badge.done {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.tuki-stop-badge.failed {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+.tuki-stop-body {
+  flex: 1;
+  min-width: 0;
+}
+.tuki-stop-address {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.tuki-stop-card.is-done .tuki-stop-address { color: #16a34a; }
+.tuki-stop-card.is-failed .tuki-stop-address { color: #dc2626; }
+
+.tuki-stop-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.tuki-stop-meta-row a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+}
+.tuki-stop-meta-row a:hover { text-decoration: underline; }
+.tuki-stop-fail-reason {
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--stop-fail-bg, rgba(220,38,38,0.05));
+  border-left: 3px solid #ef4444;
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tuki-stop-nav-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--ghost-btn);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-top: 1px;
+}
+.tuki-stop-nav-btn:hover {
+  background: var(--ghost-btn-hover);
+  color: var(--text-primary);
+}
+
+/* Stop action buttons */
+.tuki-stop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tuki-stop-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.18s, opacity 0.18s, transform 0.12s;
+}
+.tuki-stop-btn:active { transform: scale(0.97); }
+.tuki-stop-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tuki-stop-btn-deliver {
+  background: rgba(22,163,74,0.1);
+  border-color: rgba(22,163,74,0.3);
+  color: #16a34a;
+}
+.tuki-stop-btn-deliver:hover:not(:disabled) { background: rgba(22,163,74,0.18); }
+.tuki-stop-btn-fail {
+  background: rgba(220,38,38,0.08);
+  border-color: rgba(220,38,38,0.25);
+  color: #dc2626;
+}
+.tuki-stop-btn-fail:hover:not(:disabled) { background: rgba(220,38,38,0.15); }
+
+/* Stop fail form */
+.tuki-stop-fail-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tuki-stop-fail-textarea {
+  width: 100%;
+  border-radius: 9px;
+  border: 1.5px solid rgba(220,38,38,0.25);
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  resize: none;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+.tuki-stop-fail-textarea:focus { border-color: #ef4444; }
+.tuki-stop-fail-form-btns {
+  display: flex;
+  gap: 8px;
+}
+.tuki-stop-fail-cancel {
+  flex: 1;
+  padding: 8px;
+  border-radius: 9px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tuki-stop-fail-cancel:hover { background: var(--ghost-btn-hover); }
+.tuki-stop-fail-confirm {
+  flex: 2;
+  padding: 8px;
+  border-radius: 9px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+.tuki-stop-fail-confirm:disabled {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 /* ── Service Filter Modal ── */
 .driver-filter-overlay {
   position: fixed;
