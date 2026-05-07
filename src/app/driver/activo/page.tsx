@@ -871,21 +871,28 @@ export default function ActivoPage() {
             </div>
           )}
 
-          {status === 'in_transit' && !isFinOpen && (
-            <button
-              onClick={() => setFinalizeOpen(prev => new Set([...prev, order.id]))}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.5)',
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.28))',
-                color: '#4ade80', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                boxShadow: '0 4px 16px rgba(16,185,129,0.2)',
-              }}
-            >
-              <Icon name="flag" size={16} color="#4ade80" />
-              Finalizar entrega
-            </button>
-          )}
+          {status === 'in_transit' && !isFinOpen && (() => {
+            // Multi-stop: only show Finalizar when ALL stops are done (delivered or failed)
+            const stops: any[] = order.order_stops || [];
+            const hasStops = stops.length > 0;
+            const allStopsDone = hasStops && stops.every((s: any) => s.status === 'delivered' || s.status === 'failed');
+            if (hasStops && !allStopsDone) return null;
+            return (
+              <button
+                onClick={() => setFinalizeOpen(prev => new Set([...prev, order.id]))}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.5)',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.28))',
+                  color: '#4ade80', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: '0 4px 16px rgba(16,185,129,0.2)',
+                }}
+              >
+                <Icon name="flag" size={16} color="#4ade80" />
+                Finalizar entrega
+              </button>
+            );
+          })()}
 
           {status === 'in_transit' && isFinOpen && (
             // Expanded: Entregado | Entrega Fallida
@@ -989,7 +996,7 @@ export default function ActivoPage() {
         </div>
       ))}
 
-      <div style={{ padding: '16px 16px 100px' }}>
+      <div style={{ padding: '12px 8px 100px' }}>
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[0, 1].map(i => (
