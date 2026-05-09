@@ -32,6 +32,7 @@ export default function DriverDashboard() {
 
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
+  const [docsLoaded, setDocsLoaded] = useState(false);
   const DRIVER_TOTAL_DOCS = 7;
   /** Vehicle types with ALL required docs approved */
   const [approvedVehicleTypes, setApprovedVehicleTypes] = useState<Set<string>>(new Set()); // cedula_frente, antecedentes, domicilio + 4 vehicle docs (registro_frente, registro_dorso, cedula_verde_frente, cedula_verde_dorso)
@@ -229,6 +230,7 @@ export default function DriverDashboard() {
         }
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, DRIVER_TOTAL_DOCS - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
+        setDocsLoaded(true);
         // Compute per-vehicle-type approval status
         const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];
         const VEH_DOC_KEYS  = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
@@ -890,7 +892,7 @@ export default function DriverDashboard() {
           )}
 
           {/* Tarjeta de estado de documentos */}
-          {(docCounts.approved < DRIVER_TOTAL_DOCS || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (() => {
+          {docsLoaded && (docCounts.approved < DRIVER_TOTAL_DOCS || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (() => {
             const hasError = docAlerts.expired.length > 0 || docCounts.rejected > 0;
             const pct = Math.round((docCounts.approved / DRIVER_TOTAL_DOCS) * 100);
             const barColor = hasError ? '#ef4444' : docCounts.approved === DRIVER_TOTAL_DOCS ? '#22c55e' : '#F5C518';

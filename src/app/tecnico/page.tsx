@@ -77,6 +77,7 @@ export default function TecnicoDashboard() {
   // ── Document expiry alerts ────────────────────────────────────────────────
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
+  const [docsLoaded, setDocsLoaded] = useState(false);
   useEffect(() => {
     if (!email) return;
     const criticalKeys = ['cedula_frente', 'antecedentes'];
@@ -102,6 +103,7 @@ export default function TecnicoDashboard() {
         }
         setDocCounts({ approved: cApproved, pending: cPending, rejected: cRejected, missing: Math.max(0, 4 - docs.length) });
         setDocAlerts({ expired, soon, notApproved });
+        setDocsLoaded(true);
         // Only block if critical docs expired OR any doc explicitly rejected
         // Pending docs (awaiting review) do NOT block the tecnico from receiving work
         const hasRejected = docs.filter((d: { status: string }) => d.status === 'rejected').length > 0;
@@ -124,7 +126,7 @@ export default function TecnicoDashboard() {
           } catch {}
         }
       })
-      .catch(() => {});
+      .catch(() => { setDocsLoaded(true); });
   }, [email]);
 
   // ── Gender loaded from profile ─────────────────────────────────────────────
@@ -862,7 +864,7 @@ export default function TecnicoDashboard() {
           )}
 
           {/* Mis documentos status card */}
-          {(docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
+          {docsLoaded && (docCounts.approved < 4 || docAlerts.expired.length > 0 || docAlerts.soon.length > 0 || docAlerts.notApproved.length > 0) && (
             <Link href="/tecnico/settings?scroll=docs" style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}>
               <div style={{
                 padding: '0.85rem 1rem', borderRadius: 14,
