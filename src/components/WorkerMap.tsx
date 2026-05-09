@@ -4,8 +4,25 @@ import { useEffect, useRef, useState } from 'react';
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 const DEFAULT_CENTER = { lat: -25.2637, lng: -57.5759 };
 
-function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: number, h: number) {
-  return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
+function useDarkMode() {
+  const [dark, setDark] = useState(true); // app defaults to dark
+  useEffect(() => {
+    const read = () => document.documentElement.getAttribute('data-theme') !== 'light';
+    setDark(read());
+    const obs = new MutationObserver(() => setDark(read()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
+function mapStyle(dark: boolean) {
+  return dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
+}
+
+function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: number, h: number, dark: boolean) {
+  const style = dark ? 'dark-v11' : 'streets-v12';
+  return `https://api.mapbox.com/styles/v1/mapbox/${style}/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
 function createMarkerEl(label: string, color: string) {
@@ -24,6 +41,7 @@ export default function WorkerMap({
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
 }) {
+  const dark = useDarkMode();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const mbRef = useRef<any>(null);
@@ -66,7 +84,7 @@ export default function WorkerMap({
       try {
         map = new mapboxgl.Map({
           container: mapRef.current,
-          style: 'mapbox://styles/mapbox/streets-v12',
+          style: mapStyle(dark),
           center: [DEFAULT_CENTER.lng, DEFAULT_CENTER.lat],
           zoom: 15,
           accessToken: MAPBOX_TOKEN,
@@ -143,6 +161,13 @@ export default function WorkerMap({
       initRef.current = false;
     };
   }, [glFailed]);
+
+  // Switch map style when dark mode changes
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !map.isStyleLoaded()) return;
+    map.setStyle(mapStyle(dark));
+  }, [dark]);
 
   // Expose locate function to parent
   useEffect(() => {
@@ -246,7 +271,7 @@ export default function WorkerMap({
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
       {!glReady && MAPBOX_TOKEN && (
-        <img src={staticMapUrl(DEFAULT_CENTER, 15, 600, 600)} alt="Mapa"
+        <img src={staticMapUrl(DEFAULT_CENTER, 15, 600, 600, dark)} alt="Mapa"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       )}
