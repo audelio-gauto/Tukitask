@@ -815,13 +815,27 @@ export default function ClienteHomePage() {
     setActionId(offerId);
     try { navigator.vibrate?.(50); } catch {}
     try {
-      await authFetch('/api/orders/offers', {
+      const res = await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
       });
-      showActionToast('✅ ¡Conductor aceptado! En camino...');
-      loadAll();
+      if (res.ok) {
+        showActionToast('✅ ¡Conductor aceptado! En camino...');
+        // Optimistic: instantly clear pending offers + mark order as accepted
+        setDriverOffers(prev => {
+          const next: typeof prev = {};
+          for (const ordId of Object.keys(prev)) {
+            next[ordId] = prev[ordId].filter((o: DriverOffer) => o.id !== offerId);
+          }
+          return next;
+        });
+        setOrders(prev => prev.map(o => {
+          const had = (driverOffers[o.id] ?? []).some((of: DriverOffer) => of.id === offerId);
+          return had ? { ...o, status: 'accepted' } : o;
+        }));
+        loadAll(); // background sync
+      }
     } finally { setActionId(null); }
   };
 
@@ -830,12 +844,22 @@ export default function ClienteHomePage() {
     setActionId(offerId);
     try { navigator.vibrate?.(30); } catch {}
     try {
-      await authFetch('/api/orders/offers', {
+      const res = await authFetch('/api/orders/offers', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offer_id: offerId, action: 'reject' }),
       });
-      loadAll();
+      if (res.ok) {
+        // Optimistic: instantly remove the rejected offer card
+        setDriverOffers(prev => {
+          const next: typeof prev = {};
+          for (const ordId of Object.keys(prev)) {
+            next[ordId] = prev[ordId].filter((o: DriverOffer) => o.id !== offerId);
+          }
+          return next;
+        });
+        loadAll();
+      }
     } finally { setActionId(null); }
   };
 
@@ -844,13 +868,18 @@ export default function ClienteHomePage() {
     setActionId(offerId);
     try { navigator.vibrate?.(50); } catch {}
     try {
-      await authFetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
-      showActionToast('✅ ¡Técnico aceptado! En camino...');
-      loadAll();
+      if (res.ok) {
+        showActionToast('✅ ¡Técnico aceptado! En camino...');
+        // Optimistic: clear offers for this job + mark it assigned
+        setJobOffers(prev => ({ ...prev, [jobId]: (prev[jobId] ?? []).filter((o: TecnicoJobOffer) => o.id !== offerId) }));
+        setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'assigned' } : j));
+        loadAll();
+      }
     } finally { setActionId(null); }
   };
 
@@ -859,12 +888,22 @@ export default function ClienteHomePage() {
     setActionId(offerId);
     try { navigator.vibrate?.(30); } catch {}
     try {
-      await authFetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject_offer', offerId }),
       });
-      loadAll();
+      if (res.ok) {
+        // Optimistic: remove the rejected offer card
+        setJobOffers(prev => {
+          const next: typeof prev = {};
+          for (const jId of Object.keys(prev)) {
+            next[jId] = prev[jId].filter((o: TecnicoJobOffer) => o.id !== offerId);
+          }
+          return next;
+        });
+        loadAll();
+      }
     } finally { setActionId(null); }
   };
 
@@ -872,12 +911,16 @@ export default function ClienteHomePage() {
     if (busy || !email) return;
     setActionId('cancel_' + orderId);
     try {
-      await authFetch('/api/orders', {
+      const res = await authFetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, status: 'cancelled' }),
       });
-      loadAll();
+      if (res.ok) {
+        // Optimistic: instantly remove from list
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+        loadAll();
+      }
     } finally { setActionId(null); }
   };
 
@@ -885,12 +928,16 @@ export default function ClienteHomePage() {
     if (busy || !email) return;
     setActionId('cancel_' + jobId);
     try {
-      await authFetch('/api/tecnico/jobs', {
+      const res = await authFetch('/api/tecnico/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cancel', jobId, clientEmail: email }),
       });
-      loadAll();
+      if (res.ok) {
+        // Optimistic: instantly remove from list
+        setJobs(prev => prev.filter(j => j.id !== jobId));
+        loadAll();
+      }
     } finally { setActionId(null); }
   };
 
