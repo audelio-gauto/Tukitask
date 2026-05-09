@@ -162,12 +162,12 @@ export default function WorkerMap({
     };
   }, [glFailed]);
 
-  // Switch map style when dark mode changes
+  // Switch map style when dark mode changes or map finishes loading
   useEffect(() => {
     const map = mapInstance.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !glReady) return;
     map.setStyle(mapStyle(dark));
-  }, [dark]);
+  }, [dark, glReady]);
 
   // Expose locate function to parent
   useEffect(() => {
