@@ -338,6 +338,50 @@ export async function PATCH(req: Request) {
         { priority: 'urgent' },
       );
     }
+
+    // ── Generate anti-fraud PINs for envio orders ──────────────────────────
+    // PINs are generated HERE (at offer acceptance) — not at order creation,
+    // because only now do we know which driver was assigned.
+    const acceptedOrderId = accepted?.order_id as string | undefined;
+    if (acceptedOrderId) {
+      try {
+        const { data: orderRow } = await supabaseServer
+          .from('orders')
+          .select('order_type, is_multi_stop')
+          .eq('id', acceptedOrderId)
+          .maybeSingle();
+        if (orderRow?.order_type === 'envio') {
+          const genPin = (): string => String(Math.floor(1000 + Math.random() * 9000));
+          const pickup_code = genPin();
+          let delivery_pin = genPin();
+          while (delivery_pin === pickup_code) delivery_pin = genPin();
+          await supabaseServer
+            .from('orders')
+            .update({ pickup_code, delivery_pin })
+            .eq('id', acceptedOrderId);
+          // For multi-stop: each stop gets its own delivery_pin
+          if (orderRow.is_multi_stop) {
+            const { data: stops } = await supabaseServer
+              .from('order_stops')
+              .select('id')
+              .eq('order_id', acceptedOrderId)
+              .order('sequence');
+            if (stops) {
+              for (const stop of stops) {
+                await supabaseServer
+                  .from('order_stops')
+                  .update({ delivery_pin: genPin() })
+                  .eq('id', stop.id);
+              }
+            }
+          }
+        }
+      } catch {
+        // Graceful: PIN failure does not block offer acceptance
+        console.warn('[offers accept] PIN generation failed — order accepted without PINs');
+      }
+    }
+
     return NextResponse.json({ success: true, offer: result.offer });
   }
 

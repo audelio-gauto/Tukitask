@@ -342,6 +342,9 @@ export async function POST(req: Request) {
     }
   }
 
+  // Note: anti-fraud PINs (pickup_code / delivery_pin) are generated when the
+  // client accepts a driver offer — see /api/orders/offers PATCH action='accept'.
+
   return NextResponse.json(order, { status: 201 });
 }
 
@@ -350,7 +353,13 @@ export async function PATCH(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
   const body = await req.json();
-  const { order_id, status, fail_reason, return_reason, return_rejected_reason, cancel_reason, stop_id, stop_status, reorder_stops } = body;
+  const {
+    order_id, status, fail_reason, return_reason, return_rejected_reason, cancel_reason,
+    stop_id, stop_status, reorder_stops,
+    pickup_code: submittedPickupCode,
+    delivery_pin: submittedDeliveryPin,
+    pin_override,
+  } = body;
 
   // ── Reorder stops (nearest-neighbor optimization) ─────────────────────────
   if (Array.isArray(reorder_stops) && reorder_stops.length > 0) {
@@ -401,7 +410,7 @@ export async function PATCH(req: Request) {
     // Verify driver owns this order
     const { data: orderCheck } = await db
       .from('orders')
-      .select('accepted_by, is_multi_stop, status')
+      .select('accepted_by, is_multi_stop, status, order_type')
       .eq('id', order_id)
       .single();
     if (!orderCheck) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -413,6 +422,24 @@ export async function PATCH(req: Request) {
     const stopUpdate: Record<string, unknown> = { status: stop_status };
     if (stop_status === 'delivered') stopUpdate.delivered_at = new Date().toISOString();
     if (stop_status === 'failed' && fail_reason) stopUpdate.fail_reason = fail_reason;
+
+    // ── Anti-fraud: validate delivery PIN for envio multi-stop stops ──────
+    if (stop_status === 'delivered' && orderCheck?.order_type === 'envio') {
+      if (!pin_override) {
+        const { data: stopData } = await db
+          .from('order_stops')
+          .select('delivery_pin')
+          .eq('id', stop_id)
+          .single();
+        // Only validate if the stop actually has a PIN set (migration may not have run yet)
+        if (stopData?.delivery_pin && submittedDeliveryPin !== stopData.delivery_pin) {
+          return NextResponse.json({ error: 'pin_invalid', field: 'stop_delivery' }, { status: 422 });
+        }
+      } else {
+        // Override after max attempts — flag order for admin review
+        await db.from('orders').update({ delivery_flagged: true }).eq('id', order_id);
+      }
+    }
 
     const { error: stopErr } = await db
       .from('order_stops')
@@ -521,7 +548,7 @@ export async function PATCH(req: Request) {
   const db = sbAdmin();
   const { data: order } = await db
     .from('orders')
-    .select('status, accepted_by, client_email, return_attempts')
+    .select('status, accepted_by, client_email, return_attempts, order_type, pickup_code, delivery_pin, is_multi_stop')
     .eq('id', order_id)
     .single();
 
@@ -537,6 +564,27 @@ export async function PATCH(req: Request) {
   const allowedPrev = isClientStatus ? clientAllowed[status] : driverAllowed[status];
   if (!allowedPrev.includes(order.status)) {
     return NextResponse.json({ error: `Cannot transition from ${order.status} to ${status}` }, { status: 409 });
+  }
+
+  // ── Anti-fraud PIN validation for envio orders ────────────────────────────
+  // Only applies when the columns exist (graceful if migration hasn't run)
+  if (order.order_type === 'envio') {
+    // Pickup code: validated when driver starts delivery (at_pickup → in_transit)
+    if (status === 'in_transit' && !pin_override) {
+      if (order.pickup_code && submittedPickupCode !== order.pickup_code) {
+        return NextResponse.json({ error: 'pin_invalid', field: 'pickup' }, { status: 422 });
+      }
+    }
+    // Delivery PIN: validated when driver marks single-stop order as delivered
+    if (status === 'delivered' && !order.is_multi_stop && !pin_override) {
+      if (order.delivery_pin && submittedDeliveryPin !== order.delivery_pin) {
+        return NextResponse.json({ error: 'pin_invalid', field: 'delivery' }, { status: 422 });
+      }
+    }
+    // Pin override (after 5 failed attempts client-side) — flag for admin review
+    if (pin_override && (status === 'in_transit' || status === 'delivered')) {
+      await db.from('orders').update({ delivery_flagged: true }).eq('id', order_id);
+    }
   }
 
   const { error } = await db.from('orders').update({ status }).eq('id', order_id);
