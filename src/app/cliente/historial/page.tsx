@@ -509,17 +509,21 @@ export default function ClienteHistorialPage() {
                           </div>
                         </div>
                       )}
-                      {/* Chat 24h */}
-                      {(item.data as Order).driver_name && (
-                        <button
-                          onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
-                          className="tuki-btn tuki-btn-info tuki-btn-block"
-                          style={{ fontSize: '0.83rem', marginBottom: 6 }}
-                        >
-                          <Icon name="chat" size={14} />
-                          Chat 24h con el driver
-                        </button>
-                      )}
+                      {/* Chat — solo disponible las primeras 24h tras completar */}
+                      {(item.data as Order).driver_name && (() => {
+                        const refDate = (item.data as Order).completed_at ?? item.data.created_at;
+                        const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000 : false;
+                        return chatOk ? (
+                          <button
+                            onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
+                            className="tuki-btn tuki-btn-info tuki-btn-block"
+                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                          >
+                            <Icon name="chat" size={14} />
+                            Chat con el driver
+                          </button>
+                        ) : null;
+                      })()}
                       {/* Driver rating */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_name && (
                         localDriverRatings[item.data.id] != null || (item.data as Order).driver_rating != null ? (
