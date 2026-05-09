@@ -15,13 +15,14 @@ import { playMessageAlert } from '@/lib/audio';
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
 function useDarkMode() {
-  const [dark, setDark] = React.useState(false);
+  const [dark, setDark] = React.useState(true); // default dark (app default)
   React.useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setDark(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    // App uses data-theme="dark"|"light" on <html>, not prefers-color-scheme
+    const read = () => document.documentElement.getAttribute('data-theme') !== 'light';
+    setDark(read());
+    const obs = new MutationObserver(() => setDark(read()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
   }, []);
   return dark;
 }
