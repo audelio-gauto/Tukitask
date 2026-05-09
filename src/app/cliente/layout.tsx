@@ -11,6 +11,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import SuspendedScreen from '@/components/SuspendedScreen';
+import OfflineBanner from '@/components/OfflineBanner';
 import OfferIncomingToast from './components/OfferIncomingToast';
 import { getAppMode, saveRealRole, TASKER_ROLES } from '@/lib/modeSwitch';
 
@@ -127,6 +128,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="tuki-client-app">
+      <OfflineBanner />
       <ClientDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}

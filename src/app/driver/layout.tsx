@@ -13,6 +13,7 @@ import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
+import OfflineBanner from '@/components/OfflineBanner';
 import { authFetch } from '@/lib/authFetch';
 
 const DRIVER_TABS = [
@@ -256,6 +257,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="tuki-driver-app">
+      <OfflineBanner />
       <WorkerDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
