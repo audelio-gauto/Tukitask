@@ -14,6 +14,18 @@ import { playMessageAlert } from '@/lib/audio';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
+function useDarkMode() {
+  const [dark, setDark] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setDark(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return dark;
+}
+
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 interface Order {
   id: string;
@@ -404,6 +416,7 @@ function OfferCard({
 /* ─── Main component ──────────────────────────────────────────────────────── */
 export default function ClienteHomePage() {
   const { email, displayName, profilePhoto, avgRating, totalRatings, openDrawer } = useClientContext();
+  const isDark = useDarkMode();
 
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [jobs,      setJobs]      = useState<ActiveJob[]>([]);
@@ -1031,7 +1044,7 @@ export default function ClienteHomePage() {
     <div className="client-map-shell">
       {/* Map base */}
       <div className="client-map-base">
-        <ClientMap showMyLocationButton={false} locateRef={locateRef} />
+        <ClientMap showMyLocationButton={false} locateRef={locateRef} dark={isDark} />
       </div>
 
       {/* Top gradient */}
