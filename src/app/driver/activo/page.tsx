@@ -89,6 +89,21 @@ export default function ActivoPage() {
   const [cancelOpen, setCancelOpen] = useState<Set<string>>(new Set());
   const [cancelReason, setCancelReason] = useState<Record<string, string>>({});
 
+  // ── Anti-fraud PIN state ──────────────────────────────────────────────────
+  // Pickup code modal (at_pickup → in_transit for envio orders)
+  const [pickupPinOpen, setPickupPinOpen] = useState<Set<string>>(new Set());
+  const [pickupPinVal, setPickupPinVal] = useState<Record<string, string>>({});
+  const [pickupPinErr, setPickupPinErr] = useState<Record<string, string>>({});
+  const [pickupPinAttempts, setPickupPinAttempts] = useState<Record<string, number>>({});
+  // Delivery PIN (in confirmation dialog for single-stop envio)
+  const [deliveryPinVal, setDeliveryPinVal] = useState<Record<string, string>>({});
+  const [deliveryPinErr, setDeliveryPinErr] = useState<Record<string, string>>({});
+  const [deliveryPinAttempts, setDeliveryPinAttempts] = useState<Record<string, number>>({});
+  // Per-stop PIN (multi-stop envio)
+  const [stopPinVal, setStopPinVal] = useState<Record<string, string>>({});
+  const [stopPinErr, setStopPinErr] = useState<Record<string, string>>({});
+  const [stopPinAttempts, setStopPinAttempts] = useState<Record<string, number>>({});
+
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
     setToasts(prev => [...prev, { id, msg }]);
@@ -221,7 +236,37 @@ export default function ActivoPage() {
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        showToast('❌ ' + (err?.error || 'Error al actualizar estado'));
+        if (err?.error === 'pin_invalid') {
+          if (newStatus === 'in_transit') {
+            const attempts = (pickupPinAttempts[orderId] || 0) + 1;
+            setPickupPinAttempts(prev => ({ ...prev, [orderId]: attempts }));
+            const remaining = Math.max(0, 5 - attempts);
+            setPickupPinErr(prev => ({
+              ...prev,
+              [orderId]: remaining > 0
+                ? `Código incorrecto — ${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}`
+                : 'Código incorrecto',
+            }));
+            setPickupPinVal(prev => ({ ...prev, [orderId]: '' }));
+            // Re-open the modal to show the error
+            setPickupPinOpen(prev => new Set([...prev, orderId]));
+          } else if (newStatus === 'delivered') {
+            const attempts = (deliveryPinAttempts[orderId] || 0) + 1;
+            setDeliveryPinAttempts(prev => ({ ...prev, [orderId]: attempts }));
+            const remaining = Math.max(0, 5 - attempts);
+            setDeliveryPinErr(prev => ({
+              ...prev,
+              [orderId]: remaining > 0
+                ? `Código incorrecto — ${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}`
+                : 'Código incorrecto',
+            }));
+            setDeliveryPinVal(prev => ({ ...prev, [orderId]: '' }));
+            // Re-open delivery dialog
+            setConfirmDelivery(prev => new Set([...prev, orderId]));
+          }
+        } else {
+          showToast('❌ ' + (err?.error || 'Error al actualizar estado'));
+        }
       }
     } catch {
       showToast('❌ Error de conexión. Intentá de nuevo.');
@@ -293,7 +338,7 @@ export default function ActivoPage() {
   };
 
   // Per-stop status update (multi-stop orders)
-  const updateStopStatus = async (orderId: string, stopId: string, stopStatus: 'delivered' | 'failed', failReasonText?: string) => {
+  const updateStopStatus = async (orderId: string, stopId: string, stopStatus: 'delivered' | 'failed', failReasonText?: string, stopPin?: string, stopPinOverride?: boolean) => {
     setStopActing(prev => ({ ...prev, [stopId]: true }));
     try {
       const res = await authFetch('/api/orders', {
@@ -305,6 +350,8 @@ export default function ActivoPage() {
           stop_status: stopStatus,
           driver_email: email,
           ...(failReasonText ? { fail_reason: failReasonText } : {}),
+          ...(stopPin ? { delivery_pin: stopPin } : {}),
+          ...(stopPinOverride ? { pin_override: true } : {}),
         }),
       });
       if (res.ok) {
@@ -316,6 +363,10 @@ export default function ActivoPage() {
         }
         setStopFailOpen(prev => { const n = new Set(prev); n.delete(stopId); return n; });
         setStopFailReason(prev => { const n = { ...prev }; delete n[stopId]; return n; });
+        // Clear PIN state for this stop on success
+        setStopPinVal(prev => { const n = { ...prev }; delete n[stopId]; return n; });
+        setStopPinErr(prev => { const n = { ...prev }; delete n[stopId]; return n; });
+        setStopPinAttempts(prev => { const n = { ...prev }; delete n[stopId]; return n; });
         // If all stops done, the API auto-transitions order to delivered
         if (json?.all_stops_done) {
           setOrders(prev => prev.filter(o => o.id !== orderId));
@@ -335,7 +386,20 @@ export default function ActivoPage() {
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        showToast('❌ ' + (err?.error || 'Error al actualizar parada'));
+        if (err?.error === 'pin_invalid') {
+          const attempts = (stopPinAttempts[stopId] || 0) + 1;
+          setStopPinAttempts(prev => ({ ...prev, [stopId]: attempts }));
+          const remaining = Math.max(0, 5 - attempts);
+          setStopPinErr(prev => ({
+            ...prev,
+            [stopId]: remaining > 0
+              ? `Código incorrecto — ${remaining} intento${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''}`
+              : 'Código incorrecto',
+          }));
+          setStopPinVal(prev => ({ ...prev, [stopId]: '' }));
+        } else {
+          showToast('❌ ' + (err?.error || 'Error al actualizar parada'));
+        }
       }
     } catch {
       showToast('❌ Error de conexión');
@@ -743,26 +807,90 @@ export default function ActivoPage() {
                       })()}
 
                       {/* Action buttons — only for the ACTIVE stop */}
-                      {isActive && !failFormOpen && (
-                        <div className="tuki-stop-actions">
-                          <button
-                            className="tuki-stop-btn tuki-stop-btn-deliver"
-                            disabled={isBusy}
-                            onClick={() => updateStopStatus(order.id, stop.id, 'delivered')}
-                          >
-                            <Icon name="check" size={13} />
-                            {isBusy ? 'Guardando...' : 'Entregado'}
-                          </button>
-                          <button
-                            className="tuki-stop-btn tuki-stop-btn-fail"
-                            disabled={isBusy}
-                            onClick={() => setStopFailOpen(prev => new Set([...prev, stop.id]))}
-                          >
-                            <Icon name="x" size={13} />
-                            Fallido
-                          </button>
-                        </div>
-                      )}
+                      {isActive && !failFormOpen && (() => {
+                        // For envio multi-stop: require per-stop delivery PIN
+                        const isEnvioStop = order.order_type === 'envio' && stop.delivery_pin;
+                        const sPin = stopPinVal[stop.id] || '';
+                        const sPinErr = stopPinErr[stop.id] || '';
+                        const sPinAttempts = stopPinAttempts[stop.id] || 0;
+                        const canStopOverride = sPinAttempts >= 5;
+
+                        return isEnvioStop ? (
+                          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', marginBottom: 2 }}>
+                              📦 Código del receptor (4 dígitos)
+                            </div>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              value={sPin}
+                              placeholder="0000"
+                              onChange={e => {
+                                const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                setStopPinVal(prev => ({ ...prev, [stop.id]: v }));
+                                if (sPinErr) setStopPinErr(prev => ({ ...prev, [stop.id]: '' }));
+                              }}
+                              style={{
+                                width: '100%', textAlign: 'center', fontSize: '1.3rem',
+                                fontWeight: 900, letterSpacing: '0.4em',
+                                padding: '10px 8px', borderRadius: 10, boxSizing: 'border-box',
+                                border: sPinErr ? '2px solid #ef4444' : '2px solid rgba(245,197,24,0.35)',
+                                background: 'var(--surface-2)', color: 'var(--text-primary)', outline: 'none',
+                              }}
+                            />
+                            {sPinErr && (
+                              <div style={{ color: '#f87171', fontSize: '0.7rem', fontWeight: 600 }}>{sPinErr}</div>
+                            )}
+                            <div className="tuki-stop-actions">
+                              <button
+                                className="tuki-stop-btn tuki-stop-btn-deliver"
+                                disabled={isBusy || sPin.length < 4}
+                                onClick={() => updateStopStatus(order.id, stop.id, 'delivered', undefined, sPin)}
+                              >
+                                <Icon name="check" size={13} />
+                                {isBusy ? 'Guardando...' : 'Confirmar'}
+                              </button>
+                              <button
+                                className="tuki-stop-btn tuki-stop-btn-fail"
+                                disabled={isBusy}
+                                onClick={() => setStopFailOpen(prev => new Set([...prev, stop.id]))}
+                              >
+                                <Icon name="x" size={13} />
+                                Fallido
+                              </button>
+                            </div>
+                            {canStopOverride && (
+                              <button
+                                disabled={isBusy}
+                                onClick={() => updateStopStatus(order.id, stop.id, 'delivered', undefined, undefined, true)}
+                                style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '0.7rem', cursor: 'pointer', textAlign: 'left', padding: 0, textDecoration: 'underline' }}
+                              >
+                                ⚠️ Problema con el código — Continuar sin código (se reportará al soporte)
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="tuki-stop-actions">
+                            <button
+                              className="tuki-stop-btn tuki-stop-btn-deliver"
+                              disabled={isBusy}
+                              onClick={() => updateStopStatus(order.id, stop.id, 'delivered')}
+                            >
+                              <Icon name="check" size={13} />
+                              {isBusy ? 'Guardando...' : 'Entregado'}
+                            </button>
+                            <button
+                              className="tuki-stop-btn tuki-stop-btn-fail"
+                              disabled={isBusy}
+                              onClick={() => setStopFailOpen(prev => new Set([...prev, stop.id]))}
+                            >
+                              <Icon name="x" size={13} />
+                              Fallido
+                            </button>
+                          </div>
+                        );
+                      })()}
 
                       {/* Fail reason form — only for active stop */}
                       {isActive && failFormOpen && (
@@ -837,7 +965,15 @@ export default function ActivoPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 disabled={!!acting}
-                onClick={() => updateStatus(order.id, PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus)}
+                onClick={() => {
+                  const nextStatus = PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus;
+                  // For envio at_pickup → in_transit: require pickup code
+                  if (status === 'at_pickup' && order.order_type === 'envio' && order.pickup_code) {
+                    setPickupPinOpen(prev => new Set([...prev, order.id]));
+                  } else {
+                    updateStatus(order.id, nextStatus);
+                  }
+                }}
                 style={{
                   width: '100%', padding: '14px', borderRadius: 14, border: 'none',
                   background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
@@ -1034,6 +1170,13 @@ export default function ActivoPage() {
       {/* Delivery Confirmation Dialog */}
       {[...confirmDelivery].map(orderId => {
         const photoEntry = deliveryPhotos[orderId];
+        const ord = orders.find(o => o.id === orderId);
+        const isEnvioSingle = ord?.order_type === 'envio' && !ord?.is_multi_stop && ord?.delivery_pin;
+        const dPinVal = deliveryPinVal[orderId] || '';
+        const dPinErr = deliveryPinErr[orderId] || '';
+        const dPinAttempts = deliveryPinAttempts[orderId] || 0;
+        const canDeliveryOverride = dPinAttempts >= 5;
+        const confirmDisabled = !!acting || (isEnvioSingle && dPinVal.length < 4 && !canDeliveryOverride);
         return (
         <div key={orderId} style={{
           position: 'fixed', inset: 0, zIndex: 9998,
@@ -1055,6 +1198,75 @@ export default function ActivoPage() {
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
               Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.
             </p>
+
+            {/* ── Delivery PIN for single-stop envio ── */}
+            {isEnvioSingle && (
+              <div style={{
+                background: 'rgba(16,185,129,0.08)',
+                border: '1.5px solid rgba(16,185,129,0.25)',
+                borderRadius: 14, padding: '14px 16px', marginBottom: 18, textAlign: 'left',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontSize: '1rem' }}>🔐</span>
+                  <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.82rem' }}>
+                    Código del receptor
+                  </span>
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '0.76rem', margin: '0 0 10px', lineHeight: 1.4 }}>
+                  Pedile al receptor el código de 4 dígitos que le envió el remitente
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={dPinVal}
+                  placeholder="0  0  0  0"
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setDeliveryPinVal(prev => ({ ...prev, [orderId]: v }));
+                    if (dPinErr) setDeliveryPinErr(prev => ({ ...prev, [orderId]: '' }));
+                  }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'center',
+                    fontSize: '1.8rem', fontWeight: 900, letterSpacing: '0.45em',
+                    padding: '12px 8px', borderRadius: 12, boxSizing: 'border-box',
+                    border: dPinErr ? '2px solid #ef4444' : '2px solid rgba(16,185,129,0.4)',
+                    background: 'var(--surface-2)', color: 'var(--text-primary)', outline: 'none',
+                  }}
+                />
+                {dPinErr && (
+                  <div style={{ color: '#f87171', fontSize: '0.73rem', fontWeight: 600, marginTop: 6 }}>
+                    {dPinErr}
+                  </div>
+                )}
+                {dPinAttempts >= 3 && !canDeliveryOverride && (
+                  <div style={{ color: '#f59e0b', fontSize: '0.72rem', marginTop: 6 }}>
+                    ⚠️ {5 - dPinAttempts} intento{5 - dPinAttempts !== 1 ? 's' : ''} antes de modo emergencia
+                  </div>
+                )}
+                {canDeliveryOverride && (
+                  <button
+                    onClick={async () => {
+                      setConfirmDelivery(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                      if (photoEntry) {
+                        try {
+                          const ab = await photoEntry.file.arrayBuffer();
+                          const b64 = Buffer.from(ab).toString('base64');
+                          await authFetch('/api/upload-delivery-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId, base64: b64, mimeType: photoEntry.file.type }) });
+                        } catch {}
+                        URL.revokeObjectURL(photoEntry.previewUrl);
+                        setDeliveryPhotos(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                      }
+                      updateStatus(orderId, 'delivered', { pin_override: true });
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', marginTop: 8, padding: 0, textAlign: 'left' }}
+                  >
+                    ⚠️ Problema con el código — Continuar sin código (se reportará al soporte)
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Optional delivery proof photo */}
             <label style={{
               display: 'block', cursor: 'pointer', marginBottom: 18,
@@ -1096,7 +1308,7 @@ export default function ActivoPage() {
                 Cancelar
               </button>
               <button
-                disabled={!!acting}
+                disabled={confirmDisabled}
                 onClick={async () => {
                   setConfirmDelivery(prev => { const n = new Set(prev); n.delete(orderId); return n; });
                   // Upload photo if provided
@@ -1113,15 +1325,18 @@ export default function ActivoPage() {
                     URL.revokeObjectURL(photoEntry.previewUrl);
                     setDeliveryPhotos(prev => { const n = { ...prev }; delete n[orderId]; return n; });
                   }
-                  updateStatus(orderId, 'delivered');
+                  // Pass delivery PIN for envio single-stop orders
+                  const extra: Record<string, unknown> = {};
+                  if (isEnvioSingle && dPinVal.length === 4) extra.delivery_pin = dPinVal;
+                  updateStatus(orderId, 'delivered', extra);
                 }}
                 style={{
                   flex: 1, padding: '13px', borderRadius: 12, border: 'none',
-                  background: acting ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)',
-                  color: acting ? 'rgba(255,255,255,0.4)' : '#fff',
+                  background: confirmDisabled ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)',
+                  color: confirmDisabled ? 'rgba(255,255,255,0.4)' : '#fff',
                   fontWeight: 700, fontSize: '0.9rem',
-                  cursor: acting ? 'not-allowed' : 'pointer',
-                  opacity: acting ? 0.7 : 1,
+                  cursor: confirmDisabled ? 'not-allowed' : 'pointer',
+                  opacity: confirmDisabled ? 0.7 : 1,
                 }}
               >
                 {acting === orderId + 'delivered' ? '...' : '✅ Sí, entregado'}
@@ -1199,6 +1414,120 @@ export default function ActivoPage() {
                   }}
                 >
                   {isBusy ? 'Cancelando...' : 'Confirmar cancelación'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Pickup PIN Modal */}
+      {[...pickupPinOpen].map(orderId => {
+        const pPinVal = pickupPinVal[orderId] || '';
+        const pPinErr = pickupPinErr[orderId] || '';
+        const pPinAttempts = pickupPinAttempts[orderId] || 0;
+        const canPickupOverride = pPinAttempts >= 5;
+        return (
+          <div key={orderId} style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.82)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 24px',
+          }}>
+            <div style={{
+              background: 'var(--surface-1)',
+              border: '1.5px solid rgba(245,197,24,0.4)',
+              borderRadius: 20, padding: '30px 24px',
+              width: '100%', maxWidth: 360, textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.9)',
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: 10 }}>🔑</div>
+              <h3 style={{ color: '#F5C518', fontWeight: 800, fontSize: '1.15rem', margin: '0 0 8px' }}>
+                Código de Retiro
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
+                Pedile el código de 4 dígitos al remitente para confirmar el retiro del paquete
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={4}
+                value={pPinVal}
+                autoFocus
+                placeholder="0  0  0  0"
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setPickupPinVal(prev => ({ ...prev, [orderId]: v }));
+                  if (pPinErr) setPickupPinErr(prev => ({ ...prev, [orderId]: '' }));
+                }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'center',
+                  fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.5em',
+                  padding: '14px 8px', borderRadius: 14, boxSizing: 'border-box',
+                  border: pPinErr ? '2px solid #ef4444' : '2px solid rgba(245,197,24,0.5)',
+                  background: 'var(--surface-2)', color: '#F5C518', outline: 'none',
+                  marginBottom: 10,
+                }}
+              />
+              {pPinErr && (
+                <div style={{ color: '#f87171', fontSize: '0.78rem', fontWeight: 600, marginBottom: 8 }}>
+                  {pPinErr}
+                </div>
+              )}
+              {pPinAttempts >= 3 && !canPickupOverride && (
+                <div style={{ color: '#f59e0b', fontSize: '0.76rem', marginBottom: 10 }}>
+                  ⚠️ {5 - pPinAttempts} intento{5 - pPinAttempts !== 1 ? 's' : ''} antes de modo emergencia
+                </div>
+              )}
+              {canPickupOverride && (
+                <button
+                  onClick={() => {
+                    setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                    updateStatus(orderId, 'in_transit', { pin_override: true });
+                  }}
+                  style={{
+                    background: 'none', border: 'none', color: '#f59e0b',
+                    fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline',
+                    marginBottom: 14, padding: 0, display: 'block', width: '100%',
+                  }}
+                >
+                  ⚠️ Problema con el código — Continuar sin código (se reportará al soporte)
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+                <button
+                  onClick={() => {
+                    setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                    setPickupPinVal(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                    setPickupPinErr(prev => { const n = { ...prev }; delete n[orderId]; return n; });
+                  }}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: 12,
+                    border: '1.5px solid var(--border-strong)',
+                    background: 'var(--glass-card)', color: 'var(--text-secondary)',
+                    fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={pPinVal.length < 4 || !!acting}
+                  onClick={() => {
+                    setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                    updateStatus(orderId, 'in_transit', { pickup_code: pPinVal });
+                  }}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: 12, border: 'none',
+                    background: pPinVal.length < 4 || !!acting
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'linear-gradient(135deg, #F5C518, #d4a017)',
+                    color: pPinVal.length < 4 || !!acting ? 'rgba(255,255,255,0.4)' : '#000',
+                    fontWeight: 800, fontSize: '0.9rem',
+                    cursor: pPinVal.length < 4 || !!acting ? 'not-allowed' : 'pointer',
+                    opacity: pPinVal.length < 4 || !!acting ? 0.7 : 1,
+                  }}
+                >
+                  Confirmar
                 </button>
               </div>
             </div>
