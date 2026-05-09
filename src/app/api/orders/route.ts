@@ -548,7 +548,7 @@ export async function PATCH(req: Request) {
   const db = sbAdmin();
   const { data: order } = await db
     .from('orders')
-    .select('status, accepted_by, client_email, return_attempts, order_type, pickup_code, delivery_pin, is_multi_stop')
+    .select('*')
     .eq('id', order_id)
     .single();
 
