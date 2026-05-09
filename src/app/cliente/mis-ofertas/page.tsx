@@ -37,6 +37,7 @@ interface ActiveOrder {
   vehicle_type: string | null;
   order_type: string | null;
   accepted_by: string | null;
+  order_stops?: { id: string; sequence: number; address: string; status: string }[];
 }
 
 interface ActiveJob {
@@ -589,6 +590,29 @@ export default function MisOfertasPage() {
                         <span className="tuki-address-text" style={{ color: 'var(--text-secondary)' }}>{order.pickup_address}</span>
                       </div>
                     )}
+                    {/* Multi-stop: show each stop between pickup and final delivery */}
+                    {Array.isArray(order.order_stops) && order.order_stops.length > 0 &&
+                      [...order.order_stops]
+                        .sort((a, b) => a.sequence - b.sequence)
+                        .map(stop => (
+                          <div key={stop.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 5, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            <span style={{
+                              flexShrink: 0, marginTop: 1,
+                              width: 14, height: 14, borderRadius: '50%',
+                              background: stop.status === 'delivered' ? '#16a34a' : stop.status === 'failed' ? '#dc2626' : 'var(--surface-3)',
+                              border: `2px solid ${stop.status === 'delivered' ? '#16a34a' : stop.status === 'failed' ? '#dc2626' : '#F5C518'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '0.55rem', fontWeight: 800,
+                              color: stop.status === 'pending' ? '#F5C518' : '#fff',
+                            }}>
+                              {stop.status === 'delivered' ? '✓' : stop.status === 'failed' ? '✗' : stop.sequence}
+                            </span>
+                            <span className="tuki-address-text" style={{ color: stop.status === 'delivered' ? '#16a34a' : stop.status === 'failed' ? '#f87171' : 'var(--text-secondary)' }}>
+                              {stop.address}
+                            </span>
+                          </div>
+                        ))
+                    }
                     {order.delivery_address && (
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                         <Icon name="flag" size={14} color="#f87171" style={{ marginTop: 1, flexShrink: 0 }} />
