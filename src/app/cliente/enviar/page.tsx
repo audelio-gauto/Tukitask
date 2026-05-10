@@ -134,7 +134,7 @@ export default function EnviarPaquetePage() {
   };
 
   // Whether optimize button should be shown
-  const canOptimize = stops.length >= 2 && stops.filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng))).length >= 2 && isFinite(parseFloat(form.pickupLat)) && orderType !== 'viaje';
+  const canOptimize = stops.length >= 2 && stops.filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng))).length >= 2 && isFinite(parseFloat(form.pickupLat));
 
   // First stop conveniently maps to legacy delivery fields for backward compat
   const firstStop = stops[0];
@@ -788,8 +788,8 @@ export default function EnviarPaquetePage() {
                     </div>
                   ))}
 
-                  {/* Add stop button — hidden for viaje (no multi-stop for rides) */}
-                  {stops.length < MAX_STOPS && orderType !== 'viaje' && (
+                  {/* Add stop button */}
+                  {stops.length < MAX_STOPS && (
                     <button
                       type="button"
                       onClick={addStop}
