@@ -631,7 +631,7 @@ export default function ActivoPage() {
                 const deliveryAddr = deliveryTarget?.address ?? order.delivery_address;
                 return (
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    {order.pickup_address && (
+                    {order.pickup_address && (status === 'accepted' || status === 'picking_up') && (
                       <button
                         onClick={() => openMaps(navApp, order.pickup_address)}
                         className="tuki-btn tuki-btn-warning tuki-btn-sm"
@@ -640,7 +640,7 @@ export default function ActivoPage() {
                         <Icon name="map" size={14} /> Ir a Recogida
                       </button>
                     )}
-                    {deliveryAddr && (
+                    {deliveryAddr && (status === 'at_pickup' || status === 'in_transit') && (
                       <button
                         onClick={() => openMaps(navApp, deliveryAddr)}
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
