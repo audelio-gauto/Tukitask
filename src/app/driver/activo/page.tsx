@@ -615,8 +615,12 @@ export default function ActivoPage() {
                 );
               })()}
 
-              {/* Map buttons */}
+              {/* Map buttons — shown only for relevant statuses */}
               {(() => {
+                const showPickup = (status === 'accepted' || status === 'picking_up') && order.pickup_address;
+                const showDelivery = status === 'at_pickup' || status === 'in_transit';
+                if (!showPickup && !showDelivery) return null;
+
                 // For multi-stop in_transit: button targets the current pending stop
                 const sortedStops: any[] = Array.isArray(order.order_stops)
                   ? [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence)
@@ -631,7 +635,7 @@ export default function ActivoPage() {
                 const deliveryAddr = deliveryTarget?.address ?? order.delivery_address;
                 return (
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    {order.pickup_address && (
+                    {showPickup && (
                       <button
                         onClick={() => openMaps(navApp, order.pickup_address)}
                         className="tuki-btn tuki-btn-warning tuki-btn-sm"
@@ -640,7 +644,7 @@ export default function ActivoPage() {
                         <Icon name="map" size={14} /> Ir a Recogida
                       </button>
                     )}
-                    {deliveryAddr && (
+                    {showDelivery && deliveryAddr && (
                       <button
                         onClick={() => openMaps(navApp, deliveryAddr)}
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
