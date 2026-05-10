@@ -971,7 +971,7 @@ export default function SeguimientoPage() {
                       {pickupValidated
                         ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         : <span style={{ fontSize: '0.62rem' }}>🔑</span>}
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums' }}>{order.pickup_code}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums', opacity: pickupValidated ? 1 : 0.35 }}>{order.pickup_code}</span>
                     </div>
                   )}
                   {!order.is_multi_stop && order.delivery_pin && (
@@ -979,7 +979,7 @@ export default function SeguimientoPage() {
                       {deliveryValidated
                         ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         : <span style={{ fontSize: '0.62rem' }}>📦</span>}
-                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums' }}>{order.delivery_pin}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums', opacity: deliveryValidated ? 1 : 0.35 }}>{order.delivery_pin}</span>
                     </div>
                   )}
                 </div>
@@ -993,7 +993,7 @@ export default function SeguimientoPage() {
                       <div style={{ flex: 1, minWidth: 110, background: pickupValidated ? 'rgba(16,185,129,0.12)' : 'rgba(245,197,24,0.1)', border: `1px solid ${pickupValidated ? 'rgba(16,185,129,0.45)' : 'rgba(245,197,24,0.35)'}`, borderRadius: 10, padding: '8px 10px' }}>
                         <div style={{ fontSize: '0.63rem', color: '#94a3b8', marginBottom: 3 }}>🔑 Código de Retiro</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.pickup_code}</div>
+                          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums', opacity: pickupValidated ? 1 : 0.35 }}>{order.pickup_code}</div>
                           {pickupValidated && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
                         <div style={{ fontSize: '0.58rem', color: pickupValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{pickupValidated ? '✓ Código validado por el conductor' : 'Mostrá esto al conductor al retirar'}</div>
@@ -1003,7 +1003,7 @@ export default function SeguimientoPage() {
                       <div style={{ flex: 1, minWidth: 110, background: deliveryValidated ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)', border: `1px solid ${deliveryValidated ? 'rgba(16,185,129,0.5)' : 'rgba(16,185,129,0.3)'}`, borderRadius: 10, padding: '8px 10px' }}>
                         <div style={{ fontSize: '0.63rem', color: '#94a3b8', marginBottom: 3 }}>📦 Código de Entrega</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.delivery_pin}</div>
+                          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums', opacity: deliveryValidated ? 1 : 0.35 }}>{order.delivery_pin}</div>
                           {deliveryValidated && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
                         <div style={{ fontSize: '0.58rem', color: deliveryValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{deliveryValidated ? '✓ Entregado y confirmado' : 'Compartí con el receptor'}</div>
