@@ -700,6 +700,21 @@ export default function SeguimientoPage() {
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myEmail, id, type, order?.status]);
+
+  // ── Realtime: order status changes → instant PIN validation update ────────
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase
+      .channel(`order-status-${id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}`,
+      } as never, () => {
+        fetchOrder();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
   const workerRating = order?.driver_avg_rating ?? null;
