@@ -518,13 +518,13 @@ export async function PATCH(req: Request) {
   const driverAllowed: Record<string, string[]> = {
     picking_up: ['accepted'],
     at_pickup:  ['picking_up'],
-    in_transit: ['accepted', 'at_pickup', 'picking_up', 'failed', 'return_rejected'], // accepted→in_transit: skip intermediate steps
+    in_transit: ['at_pickup', 'picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
     failed: ['in_transit'],
     returning: ['failed', 'return_rejected'],
     return_delivered: ['driver_returning'],
     incident_closed: ['return_rejected'],
-    driver_cancelled: ['accepted', 'picking_up', 'at_pickup'], // allow cancel from any pre-transit state
+    driver_cancelled: ['picking_up', 'at_pickup'], // driver cancels en camino or at pickup
   };
 
   // Client-initiated transitions
