@@ -847,6 +847,7 @@ export default function ActivoPage() {
                                 className="tuki-stop-btn tuki-stop-btn-deliver"
                                 disabled={isBusy || sPin.length < 4}
                                 onClick={() => updateStopStatus(order.id, stop.id, 'delivered', undefined, sPin)}
+                                style={sPin.length === 4 ? { background: 'rgba(245,197,24,0.15)', borderColor: '#F5C518', color: '#F5C518' } : undefined}
                               >
                                 <Icon name="check" size={13} />
                                 {isBusy ? 'Guardando...' : 'Confirmar'}
