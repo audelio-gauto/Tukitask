@@ -88,6 +88,8 @@ export default function ActivoPage() {
   // Cancel flow
   const [cancelOpen, setCancelOpen] = useState<Set<string>>(new Set());
   const [cancelReason, setCancelReason] = useState<Record<string, string>>({});
+  // Arrived confirmation (picking_up → at_pickup)
+  const [arrivedConfirmOpen, setArrivedConfirmOpen] = useState<Set<string>>(new Set());
 
   // ── Anti-fraud PIN state ──────────────────────────────────────────────────
   // Pickup code modal (at_pickup → in_transit for envio orders)
@@ -975,6 +977,9 @@ export default function ActivoPage() {
                   // For envio at_pickup → in_transit: always show pickup code modal
                   if (nextStatus === 'in_transit' && order.order_type === 'envio') {
                     setPickupPinOpen(prev => new Set([...prev, order.id]));
+                  } else if (nextStatus === 'at_pickup') {
+                    // Show confirmation before marking arrived
+                    setArrivedConfirmOpen(prev => new Set([...prev, order.id]));
                   } else {
                     updateStatus(order.id, nextStatus);
                   }
@@ -1359,6 +1364,66 @@ export default function ActivoPage() {
       })}
 
       {/* Cancel reason dialog */}
+      {/* Arrived Confirmation Modal */}
+      {[...arrivedConfirmOpen].map(orderId => {
+        const isBusy = acting === orderId + 'at_pickup';
+        return (
+          <div key={orderId} style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 24px',
+          }}>
+            <div style={{
+              background: 'var(--surface-1)',
+              border: `1.5px solid ${BRAND}55`,
+              borderRadius: 20, padding: '28px 24px',
+              width: '100%', maxWidth: 360,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.85)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📍</div>
+              <h3 style={{ color: BRAND, fontWeight: 800, fontSize: '1.05rem', margin: '0 0 8px' }}>
+                ¿Ya llegaste al punto de recogida?
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.83rem', margin: '0 0 20px', lineHeight: 1.5 }}>
+                Confirmá solo cuando estés en el lugar. El cliente recibirá una notificación de que llegaste.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  disabled={isBusy}
+                  onClick={() => setArrivedConfirmOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; })}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: 12,
+                    border: '1.5px solid var(--border-strong)',
+                    background: 'var(--glass-card)', color: 'var(--text-secondary)',
+                    fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                  }}
+                >
+                  Volver
+                </button>
+                <button
+                  disabled={isBusy}
+                  onClick={() => {
+                    setArrivedConfirmOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                    updateStatus(orderId, 'at_pickup');
+                  }}
+                  style={{
+                    flex: 2, padding: '13px', borderRadius: 12, border: 'none',
+                    background: isBusy ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                    color: isBusy ? '#6b7280' : '#1C1C2E',
+                    fontWeight: 800, fontSize: '0.88rem',
+                    cursor: isBusy ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {isBusy ? 'Confirmando...' : 'Sí, ya llegué'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
       {[...cancelOpen].map(orderId => {
         const reason = cancelReason[orderId] ?? '';
         const isBusy = acting === orderId + 'driver_cancelled';
