@@ -25,8 +25,8 @@ const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<t
 };
 
 const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: string; nextStatus: string }> = {
-  accepted:   { label: 'Ir a recoger',    nextStatus: 'picking_up' },
-  picking_up: { label: 'Ya llegué',       nextStatus: 'at_pickup'  },
+  accepted:   { label: 'Iniciar entrega', nextStatus: 'in_transit' },
+  picking_up: { label: 'Iniciar entrega', nextStatus: 'in_transit' },
   at_pickup:  { label: 'Iniciar entrega', nextStatus: 'in_transit' },
 };
 
@@ -35,9 +35,7 @@ const BRAND_SHADOW = 'rgba(245,197,24,0.35)';
 
 const DELIVERY_STEPS = [
   { key: 'accepted',   label: 'Aceptado'  },
-  { key: 'picking_up', label: 'En camino' },
-  { key: 'at_pickup',  label: 'Recogida'  },
-  { key: 'in_transit', label: 'Tránsito'  },
+  { key: 'in_transit', label: 'En curso'  },
   { key: 'delivered',  label: 'Entregado' },
 ] as const;
 
@@ -456,7 +454,7 @@ export default function ActivoPage() {
           {/* Progress stepper */}
           {(() => {
             const returnMode = ['returning', 'driver_returning', 'return_delivered'].includes(status);
-            const activeIdx = returnMode ? 3 : DELIVERY_STEPS.findIndex(s => s.key === status);
+            const activeIdx = returnMode ? 2 : DELIVERY_STEPS.findIndex(s => s.key === status);
             return (
               <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 18, padding: '4px 0 0' }}>
                 {DELIVERY_STEPS.map((step, i) => {
@@ -960,15 +958,15 @@ export default function ActivoPage() {
               <Icon name="clock" size={14} /> Esperando que el cliente confirme la recepción...
             </div>
           )}
-          {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
+          {/* Iniciar entrega button: accepted / picking_up / at_pickup → in_transit */}
           {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 disabled={!!acting}
                 onClick={() => {
                   const nextStatus = PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus;
-                  // For envio at_pickup → in_transit: require pickup code
-                  if (status === 'at_pickup' && order.order_type === 'envio' && order.pickup_code) {
+                  // For envio orders going to in_transit: require pickup code
+                  if (nextStatus === 'in_transit' && order.order_type === 'envio' && order.pickup_code) {
                     setPickupPinOpen(prev => new Set([...prev, order.id]));
                   } else {
                     updateStatus(order.id, nextStatus);
