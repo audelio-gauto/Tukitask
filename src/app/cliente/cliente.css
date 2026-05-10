@@ -1852,8 +1852,8 @@
 
 /* ── Contact card ── */
 .enviar-contact-card {
-  background: #fff;
-  border: 2px solid #e5e7eb;
+  background: var(--client-surface);
+  border: 2px solid var(--client-border);
   border-radius: 18px;
   padding: 1.1rem;
   display: grid;
@@ -1867,11 +1867,11 @@
   gap: 10px;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #374151;
+  color: var(--client-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding-bottom: 8px;
-  border-bottom: 1.5px solid #f3f4f6;
+  border-bottom: 1.5px solid var(--client-border);
 }
 
 /* ── Vehicle grid (step 2) ── */
@@ -1888,9 +1888,9 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--client-border);
   border-radius: 18px;
-  background: #fff;
+  background: var(--client-surface);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s, background 0.2s;
@@ -1910,13 +1910,13 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #f3f4f6;
+  background: var(--client-action-active);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0,0,0,0.10);
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--client-border);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .enviar-vehicle-card.selected .enviar-vehicle-icon {
@@ -1941,12 +1941,12 @@
 .enviar-vehicle-name {
   font-size: 1rem;
   font-weight: 800;
-  color: #111827;
+  color: var(--client-text);
   letter-spacing: -0.2px;
 }
 .enviar-vehicle-sub {
   font-size: 0.76rem;
-  color: #6b7280;
+  color: var(--client-text-secondary);
   font-weight: 500;
 }
 /* Right: price badge */
@@ -1975,12 +1975,12 @@
 .enviar-vehicle-price small { font-size: 0.68rem; font-weight: 600; color: #6b7280; }
 .enviar-vehicle-hint {
   font-size: 0.72rem;
-  color: #9ca3af;
+  color: var(--client-text-secondary);
   font-weight: 500;
-  background: #f9fafb;
+  background: var(--client-action-active);
   border-radius: 8px;
   padding: 3px 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--client-border);
 }
 /* Checkmark badge */
 .enviar-vehicle-check {
@@ -2001,7 +2001,7 @@
 
 /* ── Price section (step 2) ── */
 .enviar-price-section {
-  background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%);
+  background: rgba(245,197,24,0.06);
   border: 2px solid rgba(245,197,24,0.35);
   border-radius: 18px;
   padding: 16px 18px;
@@ -2023,18 +2023,18 @@
   margin-bottom: 10px;
 }
 .enviar-surge-orange {
-  background: #fff3e0;
-  color: #b45309;
+  background: rgba(245,158,11,0.12);
+  color: #f59e0b;
   border: 1.5px solid #f59e0b;
 }
 .enviar-surge-red {
-  background: #fff1f2;
-  color: #be123c;
+  background: rgba(244,63,94,0.12);
+  color: #f43f5e;
   border: 1.5px solid #f43f5e;
 }
 .enviar-surge-range {
   font-size: 0.70rem;
-  color: #6b7280;
+  color: var(--client-text-secondary);
   margin-bottom: 10px;
   padding: 0 2px;
 }
@@ -2044,7 +2044,7 @@
   justify-content: space-between;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #374151;
+  color: var(--client-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
@@ -2070,8 +2070,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--client-action-active);
+  border: 1px solid var(--client-border);
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 0.75rem;
@@ -2094,7 +2094,7 @@
 .enviar-summary-dot.red { background: #ef4444; }
 .enviar-summary-addr {
   font-size: 0.78rem;
-  color: #374151;
+  color: var(--client-text);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -2142,7 +2142,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: #fff;
+  background: var(--client-bg);
   display: flex;
   flex-direction: column;
   animation: enviar-search-in 0.25s ease-out;
@@ -2157,19 +2157,19 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fff;
+  border-bottom: 1px solid var(--client-border);
+  background: var(--client-surface);
 }
 .enviar-search-back {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: #f1f5f9;
+  background: var(--client-action-active);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #374151;
+  color: var(--client-text);
   flex-shrink: 0;
 }
 .enviar-search-input-wrap {
@@ -2177,7 +2177,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f8f9fc;
+  background: var(--client-input-bg);
   border: 1.5px solid var(--client-border);
   border-radius: 12px;
   padding: 10px 14px;
@@ -2212,10 +2212,10 @@
   color: var(--client-primary);
   font-weight: 600;
   font-size: 0.9rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--client-border);
   transition: background 0.15s;
 }
-.enviar-search-gps:hover { background: #f8f9fc; }
+.enviar-search-gps:hover { background: var(--client-action-active); }
 .enviar-search-gps svg { color: var(--client-primary); }
 
 .enviar-search-suggestions {
@@ -2234,18 +2234,18 @@
   font-size: 0.9rem;
   color: var(--client-text);
   text-align: left;
-  border-bottom: 1px solid #f8f9fc;
+  border-bottom: 1px solid var(--client-border);
   transition: background 0.15s;
 }
-.enviar-search-suggestion:hover { background: #f8f9fc; }
-.enviar-search-suggestion svg { color: #9ca3af; flex-shrink: 0; }
+.enviar-search-suggestion:hover { background: var(--client-action-active); }
+.enviar-search-suggestion svg { color: var(--client-text-secondary); flex-shrink: 0; }
 
 /* ── Location Picker (Uber/Bolt style) ── */
 .lp-overlay {
   position: fixed;
   inset: 0;
   z-index: 10001;
-  background: #fff;
+  background: var(--client-bg);
   display: flex;
   flex-direction: column;
   animation: enviar-search-in 0.25s ease-out;
@@ -2259,20 +2259,20 @@
   gap: 10px;
   padding: 12px 16px;
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  background: rgba(255,255,255,0.95);
+  background: var(--client-surface);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--client-border);
 }
 .lp-back-btn {
   width: 40px; height: 40px;
   border-radius: 50%;
   border: none;
-  background: #f1f5f9;
+  background: var(--client-action-active);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #374151;
+  color: var(--client-text);
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2292,20 +2292,20 @@
 .lp-address-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--client-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 .lp-address-value {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--client-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .lp-address-value.lp-loading {
-  color: #9ca3af;
+  color: var(--client-text-secondary);
   font-style: italic;
 }
 .lp-map {
@@ -2343,7 +2343,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--client-surface);
   border: none;
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   display: flex;
@@ -2362,7 +2362,7 @@
   z-index: 10;
   padding: 12px 16px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  background: rgba(255,255,255,0.95);
+  background: var(--client-surface);
   backdrop-filter: blur(8px);
 }
 .lp-confirm-btn {

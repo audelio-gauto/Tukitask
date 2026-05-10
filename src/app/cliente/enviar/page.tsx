@@ -563,7 +563,7 @@ export default function EnviarPaquetePage() {
     <>
       {/* Address search fullscreen overlay */}
       {searchMode && (
-        <div className="enviar-search-overlay" style={{ background: '#fff' }}>
+        <div className="enviar-search-overlay">
           <div className="enviar-search-header">
             <button type="button" className="enviar-search-back" onClick={() => setSearchMode(null)}>
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
