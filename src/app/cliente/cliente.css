@@ -2190,14 +2190,101 @@
   font-size: 0.95rem;
   color: var(--client-text);
 }
-.enviar-search-input::placeholder { color: #9ca3af; }
+.enviar-search-input::placeholder { color: var(--client-placeholder); }
 .enviar-search-clear {
   border: none;
   background: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--client-text-secondary);
   padding: 0;
   display: flex;
+}
+
+/* ── MapboxSearch dark-mode-aware classes ── */
+.msearch-input {
+  width: 100%;
+  padding: 12px 64px 12px 40px;
+  font-size: 0.95rem;
+  background: var(--client-input-bg);
+  border: 1.5px solid var(--client-border);
+  border-radius: 12px;
+  outline: none;
+  color: var(--client-text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.msearch-input:focus {
+  border-color: var(--client-primary);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.15);
+}
+.msearch-input::placeholder { color: var(--client-placeholder); }
+.msearch-icon { color: var(--client-text-secondary); }
+.msearch-clear {
+  padding: 6px;
+  color: var(--client-text-secondary);
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+}
+.msearch-clear:hover {
+  color: var(--client-text);
+  background: var(--client-action-active);
+}
+.msearch-error {
+  margin-top: 6px;
+  padding: 12px 16px;
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--alert-error-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.msearch-dropdown {
+  position: absolute;
+  z-index: 50;
+  margin-top: 6px;
+  width: 100%;
+  background: var(--client-surface);
+  border-radius: 12px;
+  border: 1.5px solid var(--client-border);
+  box-shadow: var(--shadow-card);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.msearch-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.875rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--client-text);
+  transition: background 0.15s;
+}
+.msearch-item:hover { background: var(--client-action-active); }
+.msearch-item.active { background: rgba(245,197,24,0.12); }
+.msearch-item-sep { border-bottom: 1px solid var(--client-border); }
+.msearch-item-icon { color: var(--client-text-secondary); margin-top: 2px; flex-shrink: 0; }
+.msearch-item.active .msearch-item-icon { color: var(--client-primary); }
+.msearch-empty {
+  margin-top: 6px;
+  padding: 12px 16px;
+  background: var(--client-action-active);
+  border: 1px solid var(--client-border);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--client-text-secondary);
+  text-align: center;
 }
 
 .enviar-search-gps {

@@ -162,7 +162,7 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
     <div ref={wrapperRef} className="relative w-full">
       {/* Input con clear button */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none msearch-icon">
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" strokeWidth="2" />
             <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round" />
@@ -183,14 +183,13 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
           onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
           placeholder={placeholder || 'Buscar dirección...'}
           autoComplete="off"
-          className="w-full pl-10 pr-16 py-3 text-[0.95rem] bg-white border border-gray-200 rounded-xl
-                     outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+          className="msearch-input"
         />
 
         {/* Loading spinner + Clear button */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {loading && (
-            <span className="text-gray-400 animate-spin">
+            <span className="msearch-icon animate-spin">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
               </svg>
@@ -201,7 +200,7 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
               type="button"
               onClick={handleClear}
               aria-label="Limpiar búsqueda"
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="msearch-clear"
             >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -213,7 +212,7 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
 
       {/* Error message */}
       {error && open && (
-        <div className="mt-1.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+        <div className="msearch-error">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4m0 4h.01" />
@@ -228,19 +227,16 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
           ref={listRef}
           id="mapbox-search-listbox"
           role="listbox"
-          className="absolute z-50 mt-1.5 w-full bg-white rounded-xl border border-gray-200
-                     shadow-lg shadow-black/8 max-h-[280px] overflow-y-auto"
+          className="msearch-dropdown"
         >
           {suggestions.map((s, i) => (
             <li key={s.id} role="option" id={`mapbox-opt-${i}`} aria-selected={i === activeIdx}>
               <button
                 type="button"
                 onClick={() => selectSuggestion(s)}
-                className={`flex items-start gap-3 w-full px-4 py-3 text-left text-sm transition-colors
-                  ${i === activeIdx ? 'bg-emerald-50 text-emerald-900' : 'text-gray-700 hover:bg-gray-50'}
-                  ${i < suggestions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                className={`msearch-item${i === activeIdx ? ' active' : ''}${i < suggestions.length - 1 ? ' msearch-item-sep' : ''}`}
               >
-                <span className={`mt-0.5 flex-shrink-0 ${i === activeIdx ? 'text-emerald-500' : 'text-gray-400'}`}>
+                <span className="msearch-item-icon">
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -255,7 +251,7 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
 
       {/* No results */}
       {open && !loading && !error && suggestions.length === 0 && query.length >= 2 && (
-        <div className="mt-1.5 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500 text-center">
+        <div className="msearch-empty">
           No se encontraron direcciones para &ldquo;{query}&rdquo;
         </div>
       )}

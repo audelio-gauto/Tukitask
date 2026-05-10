@@ -569,7 +569,7 @@ export default function EnviarPaquetePage() {
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
             <span className={`enviar-dot ${searchMode === 'pickup' ? 'green' : 'red'}`} style={{ marginLeft: 8 }} />
-            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#374151', marginLeft: 8 }}>
+            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--client-text)', marginLeft: 8 }}>
               {searchMode === 'pickup' ? 'Punto de recogida' : searchMode.startsWith('stop_') ? `Parada ${parseInt((searchMode as string).split('_')[1]) + 1}` : 'Destino'}
             </span>
           </div>
