@@ -967,8 +967,8 @@ export default function ActivoPage() {
                 disabled={!!acting}
                 onClick={() => {
                   const nextStatus = PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus;
-                  // For envio at_pickup → in_transit: require pickup code
-                  if (nextStatus === 'in_transit' && order.order_type === 'envio' && order.pickup_code) {
+                  // For envio at_pickup → in_transit: always show pickup code modal
+                  if (nextStatus === 'in_transit' && order.order_type === 'envio') {
                     setPickupPinOpen(prev => new Set([...prev, order.id]));
                   } else {
                     updateStatus(order.id, nextStatus);
@@ -1171,12 +1171,13 @@ export default function ActivoPage() {
       {[...confirmDelivery].map(orderId => {
         const photoEntry = deliveryPhotos[orderId];
         const ord = orders.find(o => o.id === orderId);
-        const isEnvioSingle = ord?.order_type === 'envio' && !ord?.is_multi_stop && ord?.delivery_pin;
+        const isEnvioSingle = ord?.order_type === 'envio' && !ord?.is_multi_stop;
+        const hasDPinConfigured = !!ord?.delivery_pin;
         const dPinVal = deliveryPinVal[orderId] || '';
         const dPinErr = deliveryPinErr[orderId] || '';
         const dPinAttempts = deliveryPinAttempts[orderId] || 0;
         const canDeliveryOverride = dPinAttempts >= 5;
-        const confirmDisabled = !!acting || (isEnvioSingle && dPinVal.length < 4 && !canDeliveryOverride);
+        const confirmDisabled = !!acting || (isEnvioSingle && hasDPinConfigured && dPinVal.length < 4 && !canDeliveryOverride);
         return (
         <div key={orderId} style={{
           position: 'fixed', inset: 0, zIndex: 9998,
@@ -1193,14 +1194,19 @@ export default function ActivoPage() {
           }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
             <h3 style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
-              ¿Confirmar entrega?
+              {isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
-              Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.
+              {isEnvioSingle
+                ? hasDPinConfigured
+                  ? 'Ingresa el código de 4 dígitos que le envió el remitente al receptor'
+                  : 'Pedile al receptor el código que le compartió el remitente'
+                : 'Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.'
+              }
             </p>
 
             {/* ── Delivery PIN for single-stop envio ── */}
-            {isEnvioSingle && (
+            {isEnvioSingle && hasDPinConfigured && (
               <div style={{
                 background: 'rgba(16,185,129,0.08)',
                 border: '1.5px solid rgba(16,185,129,0.25)',
@@ -1327,7 +1333,7 @@ export default function ActivoPage() {
                   }
                   // Pass delivery PIN for envio single-stop orders
                   const extra: Record<string, unknown> = {};
-                  if (isEnvioSingle && dPinVal.length === 4) extra.delivery_pin = dPinVal;
+                  if (isEnvioSingle && hasDPinConfigured && dPinVal.length === 4) extra.delivery_pin = dPinVal;
                   updateStatus(orderId, 'delivered', extra);
                 }}
                 style={{
@@ -1427,6 +1433,8 @@ export default function ActivoPage() {
         const pPinErr = pickupPinErr[orderId] || '';
         const pPinAttempts = pickupPinAttempts[orderId] || 0;
         const canPickupOverride = pPinAttempts >= 5;
+        const orderForPin = orders.find(o => o.id === orderId);
+        const hasPinConfigured = !!orderForPin?.pickup_code;
         return (
           <div key={orderId} style={{
             position: 'fixed', inset: 0, zIndex: 9999,
@@ -1446,53 +1454,59 @@ export default function ActivoPage() {
                 Código de Retiro
               </h3>
               <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
-                Pedile el código de 4 dígitos al remitente para confirmar el retiro del paquete
+                {hasPinConfigured
+                  ? 'Ingresa el código de 4 dígitos que te muestra el remitente'
+                  : 'Pedile el código al remitente para confirmar el retiro del paquete'}
               </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={4}
-                value={pPinVal}
-                autoFocus
-                placeholder="0  0  0  0"
-                onChange={e => {
-                  const v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                  setPickupPinVal(prev => ({ ...prev, [orderId]: v }));
-                  if (pPinErr) setPickupPinErr(prev => ({ ...prev, [orderId]: '' }));
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'center',
-                  fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.5em',
-                  padding: '14px 8px', borderRadius: 14, boxSizing: 'border-box',
-                  border: pPinErr ? '2px solid #ef4444' : '2px solid rgba(245,197,24,0.5)',
-                  background: 'var(--surface-2)', color: '#F5C518', outline: 'none',
-                  marginBottom: 10,
-                }}
-              />
-              {pPinErr && (
-                <div style={{ color: '#f87171', fontSize: '0.78rem', fontWeight: 600, marginBottom: 8 }}>
-                  {pPinErr}
-                </div>
-              )}
-              {pPinAttempts >= 3 && !canPickupOverride && (
-                <div style={{ color: '#f59e0b', fontSize: '0.76rem', marginBottom: 10 }}>
-                  ⚠️ {5 - pPinAttempts} intento{5 - pPinAttempts !== 1 ? 's' : ''} antes de modo emergencia
-                </div>
-              )}
-              {canPickupOverride && (
-                <button
-                  onClick={() => {
-                    setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
-                    updateStatus(orderId, 'in_transit', { pin_override: true });
-                  }}
-                  style={{
-                    background: 'none', border: 'none', color: '#f59e0b',
-                    fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline',
-                    marginBottom: 14, padding: 0, display: 'block', width: '100%',
-                  }}
-                >
-                  ⚠️ Problema con el código — Continuar sin código (se reportará al soporte)
-                </button>
+              {hasPinConfigured && (
+                <>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={pPinVal}
+                    autoFocus
+                    placeholder="0  0  0  0"
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setPickupPinVal(prev => ({ ...prev, [orderId]: v }));
+                      if (pPinErr) setPickupPinErr(prev => ({ ...prev, [orderId]: '' }));
+                    }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'center',
+                      fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.5em',
+                      padding: '14px 8px', borderRadius: 14, boxSizing: 'border-box',
+                      border: pPinErr ? '2px solid #ef4444' : '2px solid rgba(245,197,24,0.5)',
+                      background: 'var(--surface-2)', color: '#F5C518', outline: 'none',
+                      marginBottom: 10,
+                    }}
+                  />
+                  {pPinErr && (
+                    <div style={{ color: '#f87171', fontSize: '0.78rem', fontWeight: 600, marginBottom: 8 }}>
+                      {pPinErr}
+                    </div>
+                  )}
+                  {pPinAttempts >= 3 && !canPickupOverride && (
+                    <div style={{ color: '#f59e0b', fontSize: '0.76rem', marginBottom: 10 }}>
+                      ⚠️ {5 - pPinAttempts} intento{5 - pPinAttempts !== 1 ? 's' : ''} antes de modo emergencia
+                    </div>
+                  )}
+                  {canPickupOverride && (
+                    <button
+                      onClick={() => {
+                        setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+                        updateStatus(orderId, 'in_transit', { pin_override: true });
+                      }}
+                      style={{
+                        background: 'none', border: 'none', color: '#f59e0b',
+                        fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline',
+                        marginBottom: 14, padding: 0, display: 'block', width: '100%',
+                      }}
+                    >
+                      ⚠️ Problema con el código — Continuar sin código (se reportará al soporte)
+                    </button>
+                  )}
+                </>
               )}
               <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                 <button
@@ -1511,20 +1525,20 @@ export default function ActivoPage() {
                   Cancelar
                 </button>
                 <button
-                  disabled={pPinVal.length < 4 || !!acting}
+                  disabled={(hasPinConfigured && pPinVal.length < 4 && !canPickupOverride) || !!acting}
                   onClick={() => {
                     setPickupPinOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
-                    updateStatus(orderId, 'in_transit', { pickup_code: pPinVal });
+                    updateStatus(orderId, 'in_transit', hasPinConfigured ? { pickup_code: pPinVal } : {});
                   }}
                   style={{
                     flex: 1, padding: '13px', borderRadius: 12, border: 'none',
-                    background: pPinVal.length < 4 || !!acting
+                    background: (hasPinConfigured && pPinVal.length < 4 && !canPickupOverride) || !!acting
                       ? 'rgba(255,255,255,0.08)'
                       : 'linear-gradient(135deg, #F5C518, #d4a017)',
-                    color: pPinVal.length < 4 || !!acting ? 'rgba(255,255,255,0.4)' : '#000',
+                    color: (hasPinConfigured && pPinVal.length < 4 && !canPickupOverride) || !!acting ? 'rgba(255,255,255,0.4)' : '#000',
                     fontWeight: 800, fontSize: '0.9rem',
-                    cursor: pPinVal.length < 4 || !!acting ? 'not-allowed' : 'pointer',
-                    opacity: pPinVal.length < 4 || !!acting ? 0.7 : 1,
+                    cursor: (hasPinConfigured && pPinVal.length < 4 && !canPickupOverride) || !!acting ? 'not-allowed' : 'pointer',
+                    opacity: (hasPinConfigured && pPinVal.length < 4 && !canPickupOverride) || !!acting ? 0.7 : 1,
                   }}
                 >
                   Confirmar
