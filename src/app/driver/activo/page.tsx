@@ -80,6 +80,7 @@ export default function ActivoPage() {
   const [optimizeState, setOptimizeState] = useState<Record<string, 'loading' | 'done'>>({});
   // Driver GPS position for distance estimation on stop badges
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsError, setGpsError] = useState(false); // GPS denied/unavailable
   // Chat modal
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   // Unread message counts per order
@@ -163,8 +164,8 @@ export default function ActivoPage() {
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
-      pos => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
+      pos => { setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGpsError(false); },
+      () => setGpsError(true),
       { enableHighAccuracy: true, maximumAge: 15_000, timeout: 10_000 },
     );
     return () => navigator.geolocation.clearWatch(watchId);
@@ -422,6 +423,17 @@ export default function ActivoPage() {
     const isActingDelivered = acting === order.id + 'delivered';
     const isActingFailed = acting === order.id + 'failed';
     const isActingProgress = status !== 'in_transit' && acting === order.id + (PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup']?.nextStatus ?? '');
+
+    // Geo-gate for "Ya llegué" (picking_up → at_pickup): must be within 500 m of pickup
+    const pickupLat = Number(order.pickup_lat);
+    const pickupLng = Number(order.pickup_lng);
+    const hasPickupCoords = !isNaN(pickupLat) && !isNaN(pickupLng) && pickupLat !== 0;
+    const distToPickupKm = (status === 'picking_up' && driverPos && hasPickupCoords)
+      ? haversineKm(driverPos.lat, driverPos.lng, pickupLat, pickupLng)
+      : null;
+    const nearPickup = !hasPickupCoords || gpsError || (distToPickupKm !== null && distToPickupKm <= 0.5);
+    const gpsAcquiring = status === 'picking_up' && hasPickupCoords && !gpsError && driverPos === null;
+    const pickupBlocked = status === 'picking_up' && !nearPickup && !gpsAcquiring;
     const isCancelOpen = cancelOpen.has(order.id);
     const cancelReasonText = cancelReason[order.id] ?? '';
     const isActingCancel = acting === order.id + 'driver_cancelled';
@@ -631,7 +643,7 @@ export default function ActivoPage() {
                 const deliveryAddr = deliveryTarget?.address ?? order.delivery_address;
                 return (
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    {order.pickup_address && (status === 'accepted' || status === 'picking_up') && (
+                    {order.pickup_address && (
                       <button
                         onClick={() => openMaps(navApp, order.pickup_address)}
                         className="tuki-btn tuki-btn-warning tuki-btn-sm"
@@ -640,7 +652,7 @@ export default function ActivoPage() {
                         <Icon name="map" size={14} /> Ir a Recogida
                       </button>
                     )}
-                    {deliveryAddr && (status === 'at_pickup' || status === 'in_transit') && (
+                    {deliveryAddr && (
                       <button
                         onClick={() => openMaps(navApp, deliveryAddr)}
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
@@ -964,8 +976,27 @@ export default function ActivoPage() {
           {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
           {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* GPS acquiring spinner — shown while waiting for first GPS fix (picking_up only) */}
+              {gpsAcquiring && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(148,163,184,0.10)', border: '1px solid rgba(148,163,184,0.22)', fontSize: '0.82rem', color: '#94a3b8' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, animation: 'spin 1s linear infinite' }}><path d="M12 2v4m0 12v4m10-10h-4M6 12H2m14.95-6.95l-2.83 2.83M9.17 14.83l-2.83 2.83m11.31 0l-2.83-2.83M9.17 9.17L6.34 6.34"/></svg>
+                  Obteniendo tu ubicación GPS...
+                </div>
+              )}
+              {/* Distance gate info — shown when driver is too far from pickup */}
+              {pickupBlocked && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', fontSize: '0.82rem', color: '#fbbf24' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+                  {distToPickupKm !== null
+                    ? distToPickupKm >= 1
+                      ? `Estás a ${distToPickupKm.toFixed(1)} km del punto de recogida`
+                      : `Estás a ${Math.round(distToPickupKm * 1000)} m del punto de recogida`
+                  : 'Verificando distancia al punto de recogida...'}
+                  {' — Acercate a menos de 500 m para confirmar llegada.'}
+                </div>
+              )}
               <button
-                disabled={!!acting}
+                disabled={!!acting || gpsAcquiring || pickupBlocked}
                 onClick={() => {
                   const nextStatus = PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].nextStatus;
                   // For envio at_pickup → in_transit: always show pickup code modal
@@ -977,12 +1008,13 @@ export default function ActivoPage() {
                 }}
                 style={{
                   width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                  background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
-                  color: acting ? '#6b7280' : '#1C1C2E',
-                  fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
-                  boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                  background: (acting || gpsAcquiring || pickupBlocked) ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                  color: (acting || gpsAcquiring || pickupBlocked) ? '#6b7280' : '#1C1C2E',
+                  fontWeight: 800, fontSize: '1rem', cursor: (acting || gpsAcquiring || pickupBlocked) ? 'not-allowed' : 'pointer',
+                  boxShadow: (acting || gpsAcquiring || pickupBlocked) ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
                   letterSpacing: '0.3px',
                   transition: 'all 0.2s',
+                  opacity: (gpsAcquiring || pickupBlocked) ? 0.5 : 1,
                 }}
               >
                 {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
