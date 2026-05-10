@@ -162,6 +162,7 @@ export default function SeguimientoPage() {
   const [error,    setError]    = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [myEmail,  setMyEmail]  = useState('');
+  const [pinsOpen, setPinsOpen] = useState(false);
   const [myName,   setMyName]   = useState<string | null>(null);
   const [chatToast, setChatToast] = useState<{ text: string; from: string | null } | null>(null);
   const [chatUnread, setChatUnread] = useState(0);
@@ -949,52 +950,83 @@ export default function SeguimientoPage() {
 
           {/* ── PIN Codes (envio sender only) ── */}
           {order.order_type === 'envio' && myEmail && order.client_email?.toLowerCase() === myEmail.toLowerCase() && (order.pickup_code || order.delivery_pin) && (
-            <div style={{ marginTop: 16, padding: '14px 14px', borderRadius: 14, background: 'rgba(245,197,24,0.06)', border: '1.5px solid rgba(245,197,24,0.25)' }}>
-              <div style={{ fontSize: '0.73rem', fontWeight: 700, color: '#F5C518', marginBottom: 10, letterSpacing: '0.05em' }}>🔐 CÓDIGOS DE SEGURIDAD</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {order.pickup_code && (
-                  <div style={{ flex: 1, minWidth: 120, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 4 }}>🔑 Código de Retiro</div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.pickup_code}</div>
-                    <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginTop: 3 }}>Mostrá esto al conductor al entregar</div>
-                  </div>
-                )}
-                {!order.is_multi_stop && order.delivery_pin && (
-                  <div style={{ flex: 1, minWidth: 120, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 4 }}>📦 Código de Entrega</div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.delivery_pin}</div>
-                    <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginTop: 3 }}>Compartí este código con el receptor</div>
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(`Tu código de entrega TukiTask: ${order.delivery_pin}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ display: 'inline-block', marginTop: 6, fontSize: '0.68rem', fontWeight: 700, color: '#25d366', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', borderRadius: 6, padding: '3px 8px' }}
-                    >
-                      📲 Enviar por WhatsApp
-                    </a>
-                  </div>
-                )}
-              </div>
-              {/* Multi-stop: per-stop delivery PINs */}
-              {order.is_multi_stop && order.order_stops && order.order_stops.some(s => s.delivery_pin) && (
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {order.order_stops.filter(s => s.delivery_pin).sort((a, b) => a.sequence - b.sequence).map((s, i) => (
-                    <div key={i} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginBottom: 2 }}>📦 Parada {s.sequence}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.address}</div>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em' }}>{s.delivery_pin}</div>
-                      </div>
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(`Tu código de entrega TukiTask (Parada ${s.sequence}): ${s.delivery_pin}`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: '0.68rem', fontWeight: 700, color: '#25d366', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', borderRadius: 6, padding: '4px 8px', flexShrink: 0 }}
-                      >
-                        📲 WhatsApp
-                      </a>
+            <div style={{ marginTop: 10, borderRadius: 12, border: '1.5px solid rgba(245,197,24,0.3)', overflow: 'hidden' }}>
+              {/* Header row – always visible */}
+              <button
+                onClick={() => setPinsOpen(v => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(245,197,24,0.07)', border: 'none', cursor: 'pointer', gap: 8 }}
+              >
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#F5C518', letterSpacing: '0.04em' }}>🔐 CÓDIGOS DE SEGURIDAD</span>
+                <span style={{ fontSize: '0.7rem', color: '#F5C518' }}>{pinsOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {/* Collapsed preview – always visible */}
+              {!pinsOpen && (
+                <div style={{ display: 'flex', gap: 6, padding: '6px 12px 8px', background: 'rgba(245,197,24,0.04)' }}>
+                  {order.pickup_code && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: 8, padding: '4px 10px' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>🔑</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#F5C518', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums' }}>{order.pickup_code}</span>
                     </div>
-                  ))}
+                  )}
+                  {!order.is_multi_stop && order.delivery_pin && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '4px 10px' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#94a3b8' }}>📦</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.25em', fontVariantNumeric: 'tabular-nums' }}>{order.delivery_pin}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Expanded detail */}
+              {pinsOpen && (
+                <div style={{ padding: '10px 12px 12px', background: 'rgba(245,197,24,0.04)' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {order.pickup_code && (
+                      <div style={{ flex: 1, minWidth: 110, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 10, padding: '8px 10px' }}>
+                        <div style={{ fontSize: '0.63rem', color: '#94a3b8', marginBottom: 3 }}>🔑 Código de Retiro</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.pickup_code}</div>
+                        <div style={{ fontSize: '0.58rem', color: '#94a3b8', marginTop: 2 }}>Mostrá esto al conductor al retirar</div>
+                      </div>
+                    )}
+                    {!order.is_multi_stop && order.delivery_pin && (
+                      <div style={{ flex: 1, minWidth: 110, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '8px 10px' }}>
+                        <div style={{ fontSize: '0.63rem', color: '#94a3b8', marginBottom: 3 }}>📦 Código de Entrega</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums' }}>{order.delivery_pin}</div>
+                        <div style={{ fontSize: '0.58rem', color: '#94a3b8', marginTop: 2 }}>Compartí con el receptor</div>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Tu código de entrega TukiTask: ${order.delivery_pin}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'inline-block', marginTop: 5, fontSize: '0.63rem', fontWeight: 700, color: '#25d366', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', borderRadius: 6, padding: '2px 7px' }}
+                        >
+                          📲 Enviar por WhatsApp
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  {/* Multi-stop per-stop PINs */}
+                  {order.is_multi_stop && order.order_stops && order.order_stops.some(s => s.delivery_pin) && (
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {order.order_stops.filter(s => s.delivery_pin).sort((a, b) => a.sequence - b.sequence).map((s, i) => (
+                        <div key={i} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.6rem', color: '#94a3b8', marginBottom: 1 }}>📦 Parada {s.sequence}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.address}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#4ade80', letterSpacing: '0.3em' }}>{s.delivery_pin}</div>
+                          </div>
+                          <a
+                            href={`https://wa.me/?text=${encodeURIComponent(`Tu código de entrega TukiTask (Parada ${s.sequence}): ${s.delivery_pin}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '0.63rem', fontWeight: 700, color: '#25d366', textDecoration: 'none', background: 'rgba(37,211,102,0.1)', borderRadius: 6, padding: '4px 7px', flexShrink: 0 }}
+                          >
+                            📲 WA
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

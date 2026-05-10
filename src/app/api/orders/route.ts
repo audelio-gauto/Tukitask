@@ -634,10 +634,11 @@ export async function PATCH(req: Request) {
 
   // ── Notify the other party about the status change ──
   const statusLabels: Record<string, string> = {
-    picking_up: 'El conductor va en camino a recoger tu paquete',
-    in_transit: 'Tu paquete está en tránsito',
-    delivered: '¡Tu paquete fue entregado!',
-    failed: 'Hubo un problema con la entrega',
+    picking_up: '🚗 El conductor va en camino a recoger tu paquete',
+    at_pickup:  '📍 El conductor llegó al punto de retiro',
+    in_transit: '🚚 Tu paquete está en tránsito',
+    delivered: '✅ ¡Tu paquete fue entregado!',
+    failed: '⚠️ Hubo un problema con la entrega',
     returning: '⚠️ El conductor solicita devolver tu paquete — acción requerida',
     returned: 'Tu paquete fue devuelto',
     cancelled: 'El pedido fue cancelado',
@@ -645,7 +646,7 @@ export async function PATCH(req: Request) {
     client_confirmed: 'El cliente confirmó la recepción',
   };
   // Urgent statuses deserve popup + sound
-  const urgentStatuses = ['picking_up', 'delivered', 'failed', 'returned', 'returning'];
+  const urgentStatuses = ['picking_up', 'at_pickup', 'delivered', 'failed', 'returned', 'returning'];
   const label = statusLabels[status];
   if (label) {
     const targetEmail = isDriverStatus ? order.client_email : order.accepted_by;
