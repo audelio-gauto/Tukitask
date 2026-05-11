@@ -1129,37 +1129,21 @@ export default function EnviarPaquetePage() {
                 {/* ── Card: Ubicación seleccionada ── */}
                 <div className="enviar-summary-card">
                   <div className="enviar-summary-card-header">📍 Ubicación seleccionada</div>
-                  <div className="enviar-summary-stops">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     {/* Pickup */}
-                    <div className="enviar-summary-stop-row">
-                      <div className="enviar-summary-stop-col">
-                        <span className="enviar-summary-stop-dot green" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="enviar-summary-stop-label">Recogida</div>
-                        <div className="enviar-summary-stop-text">{form.pickupAddress.split(',')[0] || '—'}</div>
-                      </div>
-                    </div>
-                    {/* Connector line + each stop */}
-                    {stops.map((stop, idx) => (
-                      <>
-                        <div key={`line-${idx}`} className="enviar-summary-stop-row" style={{ padding: 0 }}>
-                          <div className="enviar-summary-stop-col">
-                            <div className="enviar-summary-stop-line" />
-                          </div>
-                          <div />
-                        </div>
-                        <div key={`stop-${idx}`} className="enviar-summary-stop-row">
-                          <div className="enviar-summary-stop-col">
-                            <span className="enviar-summary-stop-dot red" />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="enviar-summary-stop-label">{stops.length === 1 ? 'Entrega' : `Parada ${idx + 1}`}</div>
-                            <div className="enviar-summary-stop-text">{(stop.address || '').split(',')[0] || '—'}</div>
-                          </div>
-                        </div>
-                      </>
-                    ))}
+                    <span className="enviar-summary-stop-dot green" style={{ flexShrink: 0 }} />
+                    <span className="enviar-summary-stop-text" style={{ flex: 1 }}>
+                      {form.pickupAddress.split(',')[0] || '—'}
+                    </span>
+                    {/* Arrow */}
+                    <svg width="14" height="14" fill="none" stroke="var(--client-text-secondary)" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    {/* Last stop */}
+                    <span className="enviar-summary-stop-dot red" style={{ flexShrink: 0 }} />
+                    <span className="enviar-summary-stop-text" style={{ flex: 1 }}>
+                      {stops.length === 1
+                        ? (firstStop.address || '').split(',')[0] || '—'
+                        : `${stops.length} paradas`}
+                    </span>
                   </div>
                 </div>
 
