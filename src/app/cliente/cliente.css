@@ -1475,16 +1475,22 @@
 }
 
 
-/* ── Enviar: order type tabs (Option B — 2×2 grid chips with image) ── */
+/* ── Enviar: order type tabs — horizontal scrollable chips ── */
 .enviar-order-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: row;
   gap: 8px;
   margin-bottom: 16px;
-  padding: 2px 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0 6px;
   background: transparent;
   border: none;
+  scroll-snap-type: x mandatory;
 }
+.enviar-order-toggle::-webkit-scrollbar { display: none; }
 
 .enviar-order-tab {
   position: relative;
@@ -1493,15 +1499,17 @@
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px 8px 8px;
+  padding: 8px 14px 8px 8px;
   border-radius: 50px;          /* pill shape */
   border: 2px solid var(--client-border);
   cursor: pointer;
   background: var(--client-surface);
   color: var(--client-text-secondary);
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.12s;
-  width: 100%;
-  min-width: 0;
+  /* Show ~2 tabs at once, hint at 3rd */
+  flex: 0 0 calc(50% - 4px);
+  min-width: 130px;
+  scroll-snap-align: start;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
