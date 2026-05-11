@@ -1126,22 +1126,63 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
-                {/* Summary row */}
-                <div className="enviar-summary-row" style={{ marginTop: '0.75rem' }}>
-                  <div className="enviar-summary-item">
-                    <span className="enviar-summary-dot green" />
-                    <span className="enviar-summary-addr">{form.pickupAddress.split(',')[0]}</span>
-                  </div>
-                  <svg width="14" height="14" fill="none" stroke="var(--client-text-secondary)" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  <div className="enviar-summary-item">
-                    <span className="enviar-summary-dot red" />
-                    <span className="enviar-summary-addr">
-                      {stops.length === 1
-                        ? (firstStop.address || '').split(',')[0]
-                        : `${stops.length} paradas`}
-                    </span>
+                {/* ── Card: Ubicación seleccionada ── */}
+                <div className="enviar-summary-card">
+                  <div className="enviar-summary-card-header">📍 Ubicación seleccionada</div>
+                  <div className="enviar-summary-stops">
+                    {/* Pickup */}
+                    <div className="enviar-summary-stop-row">
+                      <div className="enviar-summary-stop-col">
+                        <span className="enviar-summary-stop-dot green" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="enviar-summary-stop-label">Recogida</div>
+                        <div className="enviar-summary-stop-text">{form.pickupAddress.split(',')[0] || '—'}</div>
+                      </div>
+                    </div>
+                    {/* Connector line + each stop */}
+                    {stops.map((stop, idx) => (
+                      <>
+                        <div key={`line-${idx}`} className="enviar-summary-stop-row" style={{ padding: 0 }}>
+                          <div className="enviar-summary-stop-col">
+                            <div className="enviar-summary-stop-line" />
+                          </div>
+                          <div />
+                        </div>
+                        <div key={`stop-${idx}`} className="enviar-summary-stop-row">
+                          <div className="enviar-summary-stop-col">
+                            <span className="enviar-summary-stop-dot red" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="enviar-summary-stop-label">{stops.length === 1 ? 'Entrega' : `Parada ${idx + 1}`}</div>
+                            <div className="enviar-summary-stop-text">{(stop.address || '').split(',')[0] || '—'}</div>
+                          </div>
+                        </div>
+                      </>
+                    ))}
                   </div>
                 </div>
+
+                {/* ── Card: Vehículo seleccionado ── */}
+                {(() => {
+                  const veh = vehicleTypes.find(v => v.value === form.vehicleType);
+                  if (!veh) return null;
+                  const vehicleEmoji: Record<string, string> = {
+                    moto: '🏍️', auto: '🚗', motocarro: '🛻', camion2t: '🚛'
+                  };
+                  return (
+                    <div className="enviar-vehicle-summary-card">
+                      <div className="enviar-vehicle-summary-icon">
+                        {vehicleEmoji[veh.value] ?? '🚗'}
+                      </div>
+                      <div className="enviar-vehicle-summary-info">
+                        <div className="enviar-vehicle-summary-name">{veh.label}</div>
+                        <div className="enviar-vehicle-summary-sub">{veh.sub}</div>
+                      </div>
+                      <span className="enviar-vehicle-summary-badge">✓ Seleccionado</span>
+                    </div>
+                  );
+                })()}
 
                 {/* Extras: Programar + Promo — accordion colapsable */}
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
