@@ -1475,20 +1475,16 @@
 }
 
 
-/* ── Enviar: order type tabs (Option B — compact chips with image) ── */
+/* ── Enviar: order type tabs (Option B — 2×2 grid chips with image) ── */
 .enviar-order-toggle {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
   padding: 2px 0 4px;
   background: transparent;
   border: none;
 }
-.enviar-order-toggle::-webkit-scrollbar { display: none; }
 
 .enviar-order-tab {
   position: relative;
@@ -1504,9 +1500,8 @@
   background: var(--client-surface);
   color: var(--client-text-secondary);
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.12s;
-  flex: 1 1 0;
+  width: 100%;
   min-width: 0;
-  white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
@@ -1561,27 +1556,15 @@
   letter-spacing: 0.1px;
   line-height: 1.2;
   color: inherit;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Sublabel: only visible on active tab */
+/* Sublabel: always visible */
 .enviar-order-tab-sublabel {
   font-size: 0.63rem;
   font-weight: 500;
   color: var(--client-text-secondary);
   line-height: 1;
   margin-top: 1px;
-  white-space: nowrap;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.2s ease, opacity 0.2s ease;
-}
-.enviar-order-tab.active .enviar-order-tab-sublabel {
-  max-height: 20px;
-  opacity: 1;
 }
 
 /* ── Enviar: step pill ── */
