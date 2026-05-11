@@ -60,6 +60,8 @@ export default function EnviarPaquetePage() {
   const [promoResult, setPromoResult] = useState<{ discount_amount: number; description: string | null; code_id: string } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Address search overlay state — now also handles stop index
@@ -1141,65 +1143,133 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
-                {/* CTA */}
-                {/* Scheduled order + Promo code — optional extras */}
-                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {/* Scheduled date-time */}
-                  <div className="enviar-contact-card">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Icon name="calendar" size={12} />
-                        Programar pedido <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span>
-                      </label>
-                      <input
-                        type="datetime-local"
-                        className="enviar-field-input"
-                        value={dateScheduled}
-                        onChange={e => setDateScheduled(e.target.value)}
-                        min={new Date(Date.now() + 5 * 60000).toISOString().slice(0, 16)}
-                      />
+                {/* Extras: Programar + Promo — accordion colapsable */}
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                  {/* ── Programar pedido accordion ── */}
+                  <div className={`enviar-accordion${scheduleOpen ? ' open' : ''}${dateScheduled ? ' has-value' : ''}`}>
+                    <button
+                      type="button"
+                      className="enviar-accordion-row"
+                      onClick={() => setScheduleOpen(o => !o)}
+                      aria-expanded={scheduleOpen}
+                    >
+                      <span className="enviar-accordion-left">
+                        <span className="enviar-accordion-icon">📅</span>
+                        <span className="enviar-accordion-label">
+                          {dateScheduled
+                            ? (() => {
+                                const d = new Date(dateScheduled);
+                                return d.toLocaleString('es-PY', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                              })()
+                            : 'Envío inmediato'}
+                        </span>
+                        {dateScheduled && <span className="enviar-accordion-badge scheduled">Programado</span>}
+                      </span>
+                      <svg
+                        className="enviar-accordion-chevron"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                    <div className="enviar-accordion-body">
+                      <div className="enviar-accordion-content">
+                        <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          Elegí fecha y hora de pickup
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className="enviar-field-input"
+                          value={dateScheduled}
+                          onChange={e => setDateScheduled(e.target.value)}
+                          min={new Date(Date.now() + 5 * 60000).toISOString().slice(0, 16)}
+                        />
+                        {dateScheduled && (
+                          <button
+                            type="button"
+                            onClick={() => { setDateScheduled(''); setScheduleOpen(false); }}
+                            style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          >
+                            × Cancelar programación
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Promo code */}
-                  <div className="enviar-contact-card">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Icon name="tag" size={12} />
-                        Codigo promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span>
-                      </label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input
-                          className="enviar-field-input"
-                          placeholder="Ej: PROMO10"
-                          value={promoCode}
-                          onChange={e => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
-                          style={{ flex: 1 }}
-                          autoCapitalize="characters"
-                        />
-                        <button
-                          type="button"
-                          onClick={validatePromo}
-                          disabled={promoLoading || !promoCode.trim()}
-                          className="promo-apply-btn"
-                        >
-                          {promoLoading ? '...' : 'Aplicar'}
-                        </button>
+                  {/* ── Código promocional accordion ── */}
+                  <div className={`enviar-accordion${promoOpen ? ' open' : ''}${promoResult ? ' has-value' : ''}`}>
+                    <button
+                      type="button"
+                      className="enviar-accordion-row"
+                      onClick={() => setPromoOpen(o => !o)}
+                      aria-expanded={promoOpen}
+                    >
+                      <span className="enviar-accordion-left">
+                        <span className="enviar-accordion-icon">🏷️</span>
+                        <span className="enviar-accordion-label">
+                          {promoResult
+                            ? `${promoCode.toUpperCase()} · -${promoResult.discount_amount.toLocaleString('es-PY')} Gs`
+                            : '¿Tenés un código promo?'}
+                        </span>
+                        {promoResult && <span className="enviar-accordion-badge promo">✓ Aplicado</span>}
+                      </span>
+                      <svg
+                        className="enviar-accordion-chevron"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                    <div className="enviar-accordion-body">
+                      <div className="enviar-accordion-content">
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            className="enviar-field-input"
+                            placeholder="Ej: PROMO10"
+                            value={promoCode}
+                            onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); setPromoError(null); }}
+                            style={{ flex: 1 }}
+                            autoCapitalize="characters"
+                            autoComplete="off"
+                          />
+                          <button
+                            type="button"
+                            onClick={validatePromo}
+                            disabled={promoLoading || !promoCode.trim()}
+                            className="enviar-promo-apply-btn"
+                          >
+                            {promoLoading ? '...' : 'Aplicar'}
+                          </button>
+                        </div>
+                        {promoResult && (
+                          <div className="enviar-accordion-feedback success">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                            Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
+                          </div>
+                        )}
+                        {promoError && (
+                          <div className="enviar-accordion-feedback error">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            {promoError}
+                          </div>
+                        )}
+                        {promoResult && (
+                          <button
+                            type="button"
+                            onClick={() => { setPromoResult(null); setPromoCode(''); setPromoError(null); }}
+                            style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                          >
+                            × Quitar código
+                          </button>
+                        )}
                       </div>
-                      {promoResult && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Icon name="check" size={12} color="var(--client-success)" />
-                          Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
-                        </div>
-                      )}
-                      {promoError && (
-                        <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Icon name="x" size={12} color="var(--client-danger)" />
-                          {promoError}
-                        </div>
-                      )}
                     </div>
                   </div>
+
                 </div>
 
                 {/* CTA */}
@@ -1226,6 +1296,12 @@ export default function EnviarPaquetePage() {
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                         </svg>
                         Enviando...
+                      </span>
+                    ) : promoResult ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        Solicitar ·
+                        <span style={{ textDecoration: 'line-through', opacity: 0.6, fontSize: '0.85em' }}>{offerPrice.toLocaleString('es-PY')} Gs</span>
+                        <span style={{ color: '#bbf7d0', fontWeight: 800 }}>{Math.max(0, offerPrice - promoResult.discount_amount).toLocaleString('es-PY')} Gs</span>
                       </span>
                     ) : (
                       <>Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>

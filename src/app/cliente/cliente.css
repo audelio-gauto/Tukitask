@@ -1670,6 +1670,159 @@
   }
 }
 
+/* ── Enviar: accordion colapsable (Programar pedido / Código promo) ── */
+.enviar-accordion {
+  background: var(--client-surface);
+  border: 1.5px solid var(--client-border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.enviar-accordion.has-value {
+  border-color: rgba(245,197,24,0.55);
+  box-shadow: 0 0 0 2px rgba(245,197,24,0.12);
+}
+
+/* Fila clickeable — siempre visible */
+.enviar-accordion-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  gap: 8px;
+}
+.enviar-accordion-row:active { background: var(--client-action-active); }
+
+.enviar-accordion-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.enviar-accordion-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.enviar-accordion-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--client-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.enviar-accordion-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.enviar-accordion-badge.promo {
+  background: rgba(16,185,129,0.14);
+  color: #065f46;
+  border: 1px solid rgba(16,185,129,0.3);
+}
+.enviar-accordion-badge.scheduled {
+  background: rgba(245,197,24,0.16);
+  color: #92400e;
+  border: 1px solid rgba(245,197,24,0.35);
+}
+/* Light mode overrides */
+[data-theme="light"] .enviar-accordion-badge.promo { color: #065f46; }
+[data-theme="light"] .enviar-accordion-badge.scheduled { color: #78350f; }
+
+/* Chevron rota al abrir */
+.enviar-accordion-chevron {
+  color: var(--client-text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.enviar-accordion.open .enviar-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+/* Cuerpo desplegable — animado con grid-template-rows */
+.enviar-accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.enviar-accordion.open .enviar-accordion-body {
+  grid-template-rows: 1fr;
+}
+.enviar-accordion-body > .enviar-accordion-content {
+  overflow: hidden;
+  padding: 0 14px;
+}
+.enviar-accordion.open .enviar-accordion-body > .enviar-accordion-content {
+  padding: 0 14px 14px;
+}
+
+/* Separador visual entre fila y contenido */
+.enviar-accordion.open .enviar-accordion-row {
+  border-bottom: 1px solid var(--client-border);
+}
+
+/* Feedback success / error dentro del accordion */
+.enviar-accordion-feedback {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.enviar-accordion-feedback.success {
+  background: rgba(16,185,129,0.12);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: var(--client-success);
+}
+.enviar-accordion-feedback.error {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: var(--client-danger);
+}
+
+/* Botón Aplicar dentro del accordion de promo */
+.enviar-promo-apply-btn {
+  padding: 0 18px;
+  height: 42px;
+  border-radius: 8px;
+  border: 1.5px solid var(--client-primary);
+  background: transparent;
+  color: var(--client-primary-dark);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.enviar-promo-apply-btn:hover:not(:disabled) {
+  background: rgba(245,197,24,0.12);
+}
+.enviar-promo-apply-btn:active:not(:disabled) { transform: scale(0.97); }
+.enviar-promo-apply-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* Light mode */
+[data-theme="light"] .enviar-promo-apply-btn {
+  color: #78350f;
+  border-color: #F5C518;
+}
+
 /* ── Client map idle overlay ── */
 .client-map-shell {
   position: fixed;
