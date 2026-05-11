@@ -34,6 +34,8 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
   const initRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Incremented after every style reload so draw effect re-runs
+  const [styleVersion, setStyleVersion] = useState(0);
 
   // ── Init map once ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -97,6 +99,8 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
     const map = mapRef.current;
     if (!map || !ready) return;
     const style = dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
+    // After style loads, bump styleVersion so draw effect re-runs and re-adds sources/layers
+    map.once('styledata', () => setStyleVersion(v => v + 1));
     map.setStyle(style);
   }, [dark, ready]);
 
@@ -105,6 +109,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
     const map = mapRef.current;
     const mapboxgl = mbRef.current;
     if (!map || !mapboxgl || !ready) return;
+    if (!map.isStyleLoaded()) return;
 
     // Remove previous markers
     for (const m of markersRef.current) m.remove();
@@ -208,17 +213,9 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, pickup.lat, pickup.lng, stops, routeCoords]);
+  }, [ready, styleVersion, pickup.lat, pickup.lng, stops, routeCoords]);
 
-  // ── Re-add layers after style change ──────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    map.once('styledata', () => {
-      // After style reload, mark as ready again to re-draw
-      setReady(r => { if (r) { /* force re-run of draw effect */ } return r; });
-    });
-  }, [dark]);
+
 
   // ── Fallback: static image when GL not supported ───────────────────────────
   if (failed) {

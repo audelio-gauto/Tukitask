@@ -657,11 +657,11 @@ export default function EnviarPaquetePage() {
                       const vt = tab.key === 'flete' ? 'camion2t' : tab.key === 'viaje' ? 'auto' : 'moto';
                       const imgUrl = pricing[vt]?.image_url;
                       return imgUrl
-                        ? <img src={imgUrl} alt={tab.label} width={64} height={64} />
-                        : <Icon name={tab.icon} size={26} />;
+                        ? <img src={imgUrl} alt={tab.label} width={40} height={40} />
+                        : <Icon name={tab.icon} size={20} />;
                     })()}
                   </span>
-                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span className="enviar-order-tab-text">
                     <span className="enviar-order-tab-label">{tab.label}</span>
                     <span className="enviar-order-tab-sublabel">{tab.sub}</span>
                   </span>
@@ -704,26 +704,6 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 1: ADDRESSES ── */}
             {step === 1 && (
               <>
-                <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">
-                    <Icon name={orderType === 'flete' ? 'truck' : orderType === 'mandadito' ? 'shopping-cart' : orderType === 'viaje' ? 'car' : 'map-pin'} size={16} />
-                  </span>
-                  <div>
-                    <div className="enviar-step-title-main">
-                      {orderType === 'mandadito' ? '¿Dónde compramos y a dónde entregamos?' : orderType === 'flete' ? '¿Dónde recogemos y entregamos el flete?' : orderType === 'viaje' ? '¿Desde dónde y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
-                    </div>
-                    <div className="enviar-step-title-sub">
-                      {orderType === 'mandadito'
-                        ? 'Almacén (Punto A) → Tu dirección (Punto B)'
-                        : orderType === 'flete'
-                        ? 'Moto Carro o Camión para cargas grandes'
-                        : orderType === 'viaje'
-                        ? 'Viaja fácil, rápido y a tu manera'
-                        : stops.length > 1 ? `${stops.length} paradas · precio por km total` : 'Ingresá el origen y destino'}
-                    </div>
-                  </div>
-                </div>
-
                 <div className="enviar-address-section">
                   {/* Pickup */}
                   <div className="enviar-address-row">
@@ -824,6 +804,17 @@ export default function EnviarPaquetePage() {
                   )}
                 </div>
 
+                {/* Route preview map — shown when both pickup + at least one stop are set */}
+                {isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
+                  <RoutePreviewMap
+                    pickup={{ lat: parseFloat(form.pickupLat), lng: parseFloat(form.pickupLng) }}
+                    stops={stops
+                      .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
+                      .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
+                    routeCoords={routeCoords}
+                  />
+                )}
+
                 {/* Route info pill */}
                 {(routeDistanceMeters || distanceKm > 0) && (
                   <div className="enviar-route-info">
@@ -863,17 +854,6 @@ export default function EnviarPaquetePage() {
                       </>
                     )}
                   </div>
-                )}
-
-                {/* Route preview map — shown when both pickup + at least one stop are set */}
-                {isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
-                  <RoutePreviewMap
-                    pickup={{ lat: parseFloat(form.pickupLat), lng: parseFloat(form.pickupLng) }}
-                    stops={stops
-                      .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
-                      .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
-                    routeCoords={routeCoords}
-                  />
                 )}
 
                 {/* Mandadito extra fields */}
