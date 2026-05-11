@@ -73,10 +73,16 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
         style,
         center: [pickup.lng, pickup.lat],
         zoom: 13,
-        interactive: false, // no drag/zoom — prevents mobile scroll hijacking
+        interactive: true,
+        scrollZoom: true,
+        touchZoomRotate: true,
+        dragRotate: false,       // keep map 2D (no rotation)
         attributionControl: false,
         logoPosition: 'bottom-left',
       });
+
+      // Add zoom +/- buttons
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
       mapRef.current = map;
 
@@ -99,8 +105,8 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
     const map = mapRef.current;
     if (!map || !ready) return;
     const style = dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
-    // After style loads, bump styleVersion so draw effect re-runs and re-adds sources/layers
-    map.once('styledata', () => setStyleVersion(v => v + 1));
+    // 'style.load' fires when the new style is FULLY loaded and sources/layers can be re-added
+    map.once('style.load', () => setStyleVersion(v => v + 1));
     map.setStyle(style);
   }, [dark, ready]);
 
@@ -109,7 +115,12 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
     const map = mapRef.current;
     const mapboxgl = mbRef.current;
     if (!map || !mapboxgl || !ready) return;
-    if (!map.isStyleLoaded()) return;
+    // If style not ready yet, wait for it then bump version to re-run this effect
+    if (!map.isStyleLoaded()) {
+      const retry = () => setStyleVersion(v => v + 1);
+      map.once('style.load', retry);
+      return () => map.off('style.load', retry);
+    }
 
     // Remove previous markers
     for (const m of markersRef.current) m.remove();
@@ -192,7 +203,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
         type: 'line',
         source: SOURCE_ID,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#3b82f6', 'line-width': 4, 'line-dasharray': [0, 0] },
+        paint: { 'line-color': '#3b82f6', 'line-width': 4 },
       });
     }
 

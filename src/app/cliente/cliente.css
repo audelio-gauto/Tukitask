@@ -1415,7 +1415,7 @@
 .enviar-map-preview {
   position: relative;
   width: 100%;
-  height: 220px;
+  height: 260px;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--client-border);
@@ -1435,6 +1435,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  touch-action: none; /* allow Mapbox to handle all gestures (pinch-zoom, pan) */
 }
 
 /* Loading skeleton */
@@ -1470,7 +1471,7 @@
 @media (hover: none) and (pointer: coarse) {
   .enviar-map-preview {
     /* Slightly taller on phones for better readability */
-    height: 230px;
+    height: 270px;
   }
 }
 
