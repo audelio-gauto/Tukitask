@@ -32,6 +32,8 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
   const mbRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const initRef = useRef(false);
+  // Tracks the style that is currently applied to the map (null = not yet applied)
+  const currentStyleRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   // Incremented after every style reload so draw effect re-runs
@@ -100,11 +102,19 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Update map style when dark/light mode changes ─────────────────────────
+  // ── Update map style ONLY when dark/light mode actually changes ──────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
     const style = dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
+    // First run after ready: map was already initialized with the correct style — skip setStyle
+    if (currentStyleRef.current === null) {
+      currentStyleRef.current = style;
+      return;
+    }
+    // Style hasn't changed — nothing to do
+    if (currentStyleRef.current === style) return;
+    currentStyleRef.current = style;
     // 'style.load' fires when the new style is FULLY loaded and sources/layers can be re-added
     map.once('style.load', () => setStyleVersion(v => v + 1));
     map.setStyle(style);
