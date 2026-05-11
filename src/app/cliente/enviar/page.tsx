@@ -1033,6 +1033,27 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
+                {/* Low-price warning */}
+                {(surgeData?.suggested ?? suggestedPrice) > 0 &&
+                  offerPrice < (surgeData?.suggested ?? suggestedPrice) && (
+                  <div className="enviar-price-warning">
+                    <div className="enviar-price-warning-icon">⚠️</div>
+                    <div className="enviar-price-warning-body">
+                      <p className="enviar-price-warning-title">Tu oferta está por debajo del precio sugerido</p>
+                      <p className="enviar-price-warning-text">
+                        Los conductores reciben múltiples solicitudes al mismo tiempo. Una oferta baja reduce significativamente las chances de que acepten la tuya — o puede ser ignorada por completo.
+                      </p>
+                      <button
+                        type="button"
+                        className="enviar-price-warning-cta"
+                        onClick={() => setOfferPrice(surgeData?.suggested ?? suggestedPrice)}
+                      >
+                        Usar precio sugerido · {(surgeData?.suggested ?? suggestedPrice).toLocaleString('es-PY')} Gs
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Payment method */}
                 <div className="enviar-payment-pills">
                   {paymentMethods.map(pm => (
