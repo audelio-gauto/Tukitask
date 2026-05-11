@@ -1411,6 +1411,70 @@
   background: var(--client-border);
 }
 
+/* ── Route preview map (Step 1) ── */
+.enviar-map-preview {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--client-border);
+  background: var(--client-action-active);
+  margin-bottom: 1rem;
+  /* Subtle entrance animation */
+  animation: enviar-map-fadein 0.35s ease both;
+}
+
+@keyframes enviar-map-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.enviar-map-preview-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Loading skeleton */
+.enviar-map-preview-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--client-action-active);
+  color: var(--client-text-secondary);
+  z-index: 1;
+}
+
+@keyframes enviar-map-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.9; }
+}
+
+.enviar-map-preview-skeleton-icon {
+  animation: enviar-map-pulse 1.6s ease-in-out infinite;
+}
+
+/* Static fallback image */
+.enviar-map-preview-static {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Touch accessibility: pointer on tap to enable full interaction */
+@media (hover: none) and (pointer: coarse) {
+  .enviar-map-preview {
+    /* Slightly taller on phones for better readability */
+    height: 200px;
+  }
+}
+
+
 /* ── Enviar: order type tabs ── */
 .enviar-order-toggle {
   display: flex;

@@ -10,6 +10,7 @@ import { Icon } from '@/components/Icon';
 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
+const RoutePreviewMap = dynamic(() => import('../components/RoutePreviewMap'), { ssr: false });
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: 'bolt', priceHint: 'Más económico' },
@@ -862,6 +863,17 @@ export default function EnviarPaquetePage() {
                       </>
                     )}
                   </div>
+                )}
+
+                {/* Route preview map — shown when both pickup + at least one stop are set */}
+                {isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
+                  <RoutePreviewMap
+                    pickup={{ lat: parseFloat(form.pickupLat), lng: parseFloat(form.pickupLng) }}
+                    stops={stops
+                      .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
+                      .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
+                    routeCoords={routeCoords}
+                  />
                 )}
 
                 {/* Mandadito extra fields */}
