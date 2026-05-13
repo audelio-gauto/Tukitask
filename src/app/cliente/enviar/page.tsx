@@ -931,16 +931,6 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
             {step === 2 && (
               <>
-                <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">
-                    <Icon name="car" size={16} />
-                  </span>
-                  <div>
-                    <div className="enviar-step-title-main">Elegí el vehículo y tu oferta</div>
-                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'Viaja fácil, rápido y a tu manera' : 'Los conductores verán tu precio y aceptarán'}</div>
-                  </div>
-                </div>
-
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
