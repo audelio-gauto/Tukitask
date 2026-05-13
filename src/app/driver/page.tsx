@@ -433,12 +433,6 @@ export default function DriverDashboard() {
     { label: 'Tasa Aceptacion', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: 'trophy' as const, onClick: undefined as (() => void) | undefined },
   ];
 
-  const feedVisible = available && !walletBlocked && activeOrderCount === 0 && pendingOrders.filter(o => !dismissedHome.has(o.id)).length > 0;
-
-  // Aviso GPS: si hay pedidos pendientes pero sin posición, mostrar badge
-  const gpsNeeded = !driverPos && available && !walletBlocked && activeOrderCount === 0 &&
-    pendingOrders.some(o => o.pickup_lat != null);
-
   // Pre-filter orders by service type preferences before passing to feed
   const VEHICLE_FILTER_MAP: Record<string, string> = {
     moto: 'moto_envios',
@@ -512,6 +506,14 @@ export default function DriverDashboard() {
         : null,
       clientTotalOrders: o.client_total_orders ?? null,
     }));
+
+  // feedVisible usa filteredFeedItems (ya filtrado por rango/tipo) para que
+  // si todos los pedidos quedan fuera del rango la sheet NO se oculte.
+  const feedVisible = available && !walletBlocked && activeOrderCount === 0 && filteredFeedItems.filter(o => !dismissedHome.has(o.id)).length > 0;
+
+  // Aviso GPS: si hay pedidos pendientes pero sin posición, mostrar badge
+  const gpsNeeded = !driverPos && available && !walletBlocked && activeOrderCount === 0 &&
+    pendingOrders.some(o => o.pickup_lat != null);
 
   return (
     <>
