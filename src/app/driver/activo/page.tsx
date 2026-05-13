@@ -994,7 +994,11 @@ export default function ActivoPage() {
                   transition: 'all 0.2s',
                 }}
               >
-                {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
+                {isActingProgress ? 'Actualizando...' : (
+                  status === 'at_pickup' && order.order_type === 'viaje'
+                    ? 'Iniciar viaje'
+                    : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label
+                )}
               </button>
 
               {/* Cancel button — only for picking_up (En camino) and at_pickup (Recogida) */}
@@ -1035,7 +1039,7 @@ export default function ActivoPage() {
                 }}
               >
                 <Icon name="flag" size={16} color="#4ade80" />
-                Finalizar entrega
+                {order.order_type === 'viaje' ? 'Finalizar viaje' : 'Finalizar entrega'}
               </button>
             );
           })()}
@@ -1051,8 +1055,9 @@ export default function ActivoPage() {
                   className="tuki-btn tuki-btn-success"
                   style={{ flex: 1, fontSize: '0.88rem' }}
                 >
-                  {isActingDelivered ? '...' : <><Icon name="check" size={14} /> Entregado</>}
+                  {isActingDelivered ? '...' : <><Icon name="check" size={14} /> {order.order_type === 'viaje' ? 'Completado' : 'Entregado'}</>}
                 </button>
+                {order.order_type !== 'viaje' && (
                 <button
                   disabled={!!acting}
                   onClick={() => {
@@ -1071,6 +1076,7 @@ export default function ActivoPage() {
                 >
                   {isActingFailed ? '...' : <><Icon name="x" size={14} /> Entrega fallida</>}
                 </button>
+                )}
               </div>
 
               {/* Fail reason form */}
@@ -1202,16 +1208,18 @@ export default function ActivoPage() {
             width: '100%', maxWidth: 360, textAlign: 'center',
             boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>{ord?.order_type === 'viaje' ? '🚗' : '📦'}</div>
             <h3 style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
-              {isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
+              {ord?.order_type === 'viaje' ? '¿Confirmar viaje?' : isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
-              {isEnvioSingle
-                ? hasDPinConfigured
-                  ? 'Ingresa el código de 4 dígitos que le envió el remitente al receptor'
-                  : 'Pedile al receptor el código que le compartió el remitente'
-                : 'Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.'
+              {ord?.order_type === 'viaje'
+                ? 'Esta acción no se puede deshacer. El viaje se marcará como completado.'
+                : isEnvioSingle
+                  ? hasDPinConfigured
+                    ? 'Ingresa el código de 4 dígitos que le envió el remitente al receptor'
+                    : 'Pedile al receptor el código que le compartió el remitente'
+                  : 'Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.'
               }
             </p>
 
@@ -1283,7 +1291,8 @@ export default function ActivoPage() {
               </div>
             )}
 
-            {/* Optional delivery proof photo */}
+            {/* Optional delivery proof photo — not for viaje */}
+            {ord?.order_type !== 'viaje' && (
             <label style={{
               display: 'block', cursor: 'pointer', marginBottom: 18,
               background: 'var(--glass-card)', borderRadius: 12,
@@ -1307,6 +1316,7 @@ export default function ActivoPage() {
                 }}
               />
             </label>
+            )}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={() => {
@@ -1355,7 +1365,7 @@ export default function ActivoPage() {
                   opacity: confirmDisabled ? 0.7 : 1,
                 }}
               >
-                {acting === orderId + 'delivered' ? '...' : '✅ Sí, entregado'}
+                {acting === orderId + 'delivered' ? '...' : ord?.order_type === 'viaje' ? '✅ Sí, viaje completado' : '✅ Sí, entregado'}
               </button>
             </div>
           </div>
