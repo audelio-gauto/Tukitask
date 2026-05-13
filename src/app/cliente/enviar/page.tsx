@@ -1142,7 +1142,7 @@ export default function EnviarPaquetePage() {
 
                 {/* ── Card: Ubicación seleccionada ── */}
                 <div className="enviar-summary-card">
-                  <div className="enviar-summary-card-header">📍 Ubicación seleccionada</div>
+                  <div className="enviar-summary-card-header"></div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     {/* Pickup */}
                     <span className="enviar-summary-stop-dot green" style={{ flexShrink: 0 }} />
