@@ -94,7 +94,7 @@ const STATUS_ACTIVE = new Set([
   'en_route', 'arrived', 'completion_pending',
 ]);
 
-const POLL_INTERVAL = 8_000; // 8s for client tracking (faster than admin 15s)
+const POLL_INTERVAL = 20_000; // 20s fallback (Supabase Realtime handles sub-20s updates)
 
 function fmtGs(n: number | null) {
   return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
