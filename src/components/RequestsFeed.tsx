@@ -21,14 +21,14 @@ function CountdownBar({ createdAt }: { createdAt: string }) {
     return () => clearInterval(iv);
   }, [createdAt]);
   const pct = (seconds / CARD_TIMER) * 100;
-  const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
+  const c = '#F5C518';
   return (
     <div style={{ width: '100%', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
       <div style={{
         height: '100%', width: `${pct}%`,
         background: `linear-gradient(90deg,${c}cc,${c})`,
         borderRadius: 6,
-        transition: 'width 1s linear, background 0.5s',
+        transition: 'width 1s linear',
         boxShadow: seconds <= 15 ? `0 0 6px ${c}88` : 'none',
       }} />
     </div>
@@ -45,7 +45,7 @@ function CountdownRing({ createdAt }: { createdAt: string }) {
   const r = 16, circ = 2 * Math.PI * r;
   const dash = circ * (seconds / CARD_TIMER);
   const urgent = seconds <= 15;
-  const c = seconds > 20 ? '#22c55e' : seconds > 10 ? '#f59e0b' : '#ef4444';
+  const c = '#F5C518';
   return (
     <svg
       width="40" height="40" viewBox="0 0 40 40"
