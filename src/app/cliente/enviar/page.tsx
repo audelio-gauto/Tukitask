@@ -542,6 +542,27 @@ export default function EnviarPaquetePage() {
     }
   };
 
+  const [successCountdown, setSuccessCountdown] = useState(5);
+  useEffect(() => {
+    if (!success) return;
+    setSuccessCountdown(5);
+    const iv = setInterval(() => {
+      setSuccessCountdown(prev => {
+        if (prev <= 1) { clearInterval(iv); router.push('/cliente'); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [success, router]);
+
+  const SERVICE_LABELS: Record<string, { title: string; sub: string; newLabel: string }> = {
+    envio:     { title: '¡Envío registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.',     newLabel: 'Nuevo Envío' },
+    mandadito: { title: '¡Mandadito registrado!', sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu mandadito.', newLabel: 'Nuevo Mandadito' },
+    flete:     { title: '¡Flete registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu flete.',     newLabel: 'Nuevo Flete' },
+    viaje:     { title: '¡Viaje registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu viaje.',     newLabel: 'Nuevo Viaje' },
+  };
+  const svcLabel = SERVICE_LABELS[orderType] ?? SERVICE_LABELS.envio;
+
   if (success) {
     return (
       <div className="enviar-success-screen">
@@ -550,12 +571,15 @@ export default function EnviarPaquetePage() {
             <Icon name="check" size={28} color="#22c55e" />
           </div>
         </div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>¡Envío registrado!</h2>
-        <p style={{ color: '#6b7280', marginBottom: '2rem', maxWidth: 320 }}>Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.</p>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>{svcLabel.title}</h2>
+        <p style={{ color: '#6b7280', marginBottom: '1.25rem', maxWidth: 320 }}>{svcLabel.sub}</p>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+          Redirigiendo al panel en <strong style={{ color: '#22c55e' }}>{successCountdown}s</strong>…
+        </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-envios" className="client-btn client-btn-primary">Ver Mis Envíos</Link>
           <button className="client-btn" style={{ background: '#f1f5f9', color: '#374151' }} onClick={() => { setSuccess(false); setStep(1); setForm(f => ({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: f.senderContact, senderPhone: f.senderPhone, instructions: '', paymentMethod: 'efectivo', offer: '' })); setStops([emptyStop()]); }}>
-            Nuevo Envío
+            {svcLabel.newLabel}
           </button>
         </div>
       </div>
