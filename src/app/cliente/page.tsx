@@ -223,13 +223,14 @@ const OFFER_TIMER = 50;
 
 /* ─── Offer card (inDrive style) ─────────────────────────────────────────── */
 function OfferCard({
-  offer, onAccept, onReject, busy, isTop,
+  offer, onAccept, onReject, busy, isTop, isDark,
 }: {
   offer: UnifiedOffer;
   onAccept: () => void;
   onReject: () => void;
   busy: boolean;
   isTop?: boolean;
+  isDark?: boolean;
 }) {
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, OFFER_TIMER - Math.floor((Date.now() - new Date(offer.createdAt).getTime()) / 1000))
@@ -288,7 +289,7 @@ function OfferCard({
             const timerDash = circ2 * (remaining / OFFER_TIMER);
             return (
               <svg width="28" height="28" viewBox="0 0 28 28" style={{ flexShrink: 0 }}>
-                <circle cx="14" cy="14" r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5"/>
+                <circle cx="14" cy="14" r={r2} fill="none" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} strokeWidth="2.5"/>
                 <circle cx="14" cy="14" r={r2} fill="none" stroke={timerColor} strokeWidth="2.5"
                   strokeDasharray={`${timerDash} ${circ2}`} strokeLinecap="round"
                   transform="rotate(-90 14 14)" style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }}/>
@@ -350,7 +351,7 @@ function OfferCard({
                     {offer.matchScore}/100
                   </span>
                 </div>
-                <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: 4, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${offer.matchScore}%`, background: `linear-gradient(90deg, ${offer.matchColor ?? '#6b7280'}, ${offer.matchColor ?? '#6b7280'}aa)`, borderRadius: 4 }} />
                 </div>
               </div>
@@ -362,15 +363,15 @@ function OfferCard({
         {isPending && (() => {
           const chips: React.ReactNode[] = [];
           if (offer.distanceKm != null && offer.distanceKm < 3)
-            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km · Muy cercano</span>);
+            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(34,197,94,0.12)', color: isDark ? '#4ade80' : '#16a34a', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km · Muy cercano</span>);
           else if (offer.distanceKm != null && offer.distanceKm < 8)
-            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(59,130,246,0.10)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.22)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km</span>);
+            chips.push(<span key="dist" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(59,130,246,0.10)', color: isDark ? '#60a5fa' : '#2563eb', border: '1px solid rgba(59,130,246,0.22)', borderRadius: 6, padding: '2px 8px' }}>📍 {offer.distanceKm.toFixed(1)} km</span>);
           if (offer.rating != null && Number(offer.rating) >= 4.7)
             chips.push(<span key="rating" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(245,197,24,0.12)', color: '#F5C518', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 6, padding: '2px 8px' }}>⭐ Top rated</span>);
           if (offer.totalJobs != null && offer.totalJobs >= 50)
-            chips.push(<span key="jobs" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 6, padding: '2px 8px' }}>🏆 {offer.totalJobs >= 200 ? 'Muy experimentado' : 'Experimentado'}</span>);
+            chips.push(<span key="jobs" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(139,92,246,0.12)', color: isDark ? '#a78bfa' : '#7c3aed', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 6, padding: '2px 8px' }}>🏆 {offer.totalJobs >= 200 ? 'Muy experimentado' : 'Experimentado'}</span>);
           if (isSuggestedPrice)
-            chips.push(<span key="price" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 6, padding: '2px 8px' }}>👍 Tu tarifa exacta</span>);
+            chips.push(<span key="price" style={{ fontSize: '0.71rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: isDark ? '#34d399' : '#059669', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 6, padding: '2px 8px' }}>👍 Tu tarifa exacta</span>);
           if (chips.length === 0) return null;
           return <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', margin: '8px 0 2px' }}>{chips}</div>;
         })()}
@@ -388,7 +389,7 @@ function OfferCard({
             <button
               onClick={onReject}
               disabled={busy}
-              style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.10)'}`, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.9rem', cursor: busy ? 'default' : 'pointer' }}
             >
               Rechazar
             </button>
@@ -1063,7 +1064,7 @@ export default function ClienteHomePage() {
           <style>{`@keyframes fadeInDown { from { opacity:0; transform:translateX(-50%) translateY(-12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
           <div style={{ fontSize: '1.2rem', marginBottom: 6 }}>😔</div>
           <div style={{ fontWeight: 800, color: '#f87171', fontSize: '0.95rem', marginBottom: 4 }}>No hay tasker disponible</div>
-          <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Ningún tasker respondió. Podés intentarlo de nuevo.</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Ningún tasker respondió. Podés intentarlo de nuevo.</div>
         </div>
       )}
 
@@ -1128,7 +1129,7 @@ export default function ClienteHomePage() {
                   <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.08rem', marginBottom: 3, letterSpacing: '-0.01em' }}>
                     Buscando cerca de ti…
                   </div>
-                  <div style={{ fontSize: '0.77rem', color: '#64748b', fontWeight: 500 }}>
+                  <div style={{ fontSize: '0.77rem', color: 'var(--text-muted)', fontWeight: 500 }}>
                     Te avisamos cuando lleguen ofertas
                   </div>
                 </div>
@@ -1194,7 +1195,7 @@ export default function ClienteHomePage() {
                         </div>
 
                         {/* Countdown (top-right) */}
-                        <div style={{ textAlign: 'center', flexShrink: 0, background: isUrgent ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.15)', borderRadius: 10, padding: '5px 9px', border: isUrgent ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.07)' }}>
+                        <div style={{ textAlign: 'center', flexShrink: 0, background: isUrgent ? 'rgba(239,68,68,0.1)' : (isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.05)'), borderRadius: 10, padding: '5px 9px', border: isUrgent ? '1px solid rgba(239,68,68,0.3)' : `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.12)'}` }}>
                           <div style={{ fontSize: '0.6rem', color: '#ef4444', fontWeight: 700, letterSpacing: '0.03em', marginBottom: 1 }}>Cancela en</div>
                           <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ef4444', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                             {Math.floor(cd / 60).toString().padStart(2, '0')}:{(cd % 60).toString().padStart(2, '0')}
@@ -1205,7 +1206,7 @@ export default function ClienteHomePage() {
                       {/* Route row */}
                       {req.subtitle && (
                         <div style={{
-                          background: 'rgba(255,255,255,0.04)',
+                          background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
                           borderRadius: 11,
                           padding: '8px 12px',
                           marginBottom: 12,
@@ -1221,7 +1222,7 @@ export default function ClienteHomePage() {
                       )}
 
                       {/* Progress bar */}
-                      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden', marginBottom: 13 }}>
+                      <div style={{ height: 3, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', borderRadius: 4, overflow: 'hidden', marginBottom: 13 }}>
                         <div style={{ height: '100%', width: `${pct * 100}%`, background: barColor, borderRadius: 4, transition: 'width 1s linear, background 0.5s' }} />
                       </div>
 
@@ -1282,6 +1283,7 @@ export default function ClienteHomePage() {
                     ? rejectDriverOffer(offer.id)
                     : rejectJobOffer(offer.id)
                   }
+                  isDark={isDark}
                 />
               ))}
 

@@ -150,6 +150,9 @@
   border: 1px solid rgba(245,197,24,0.22);
   box-shadow: var(--shadow-soft);
 }
+[data-theme="light"] .client-welcome {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
 .client-welcome-avatar {
   width: 60px; height: 60px;
   border-radius: 50%;
@@ -772,13 +775,14 @@
   position: fixed;
   bottom: 20px; left: 50%;
   transform: translateX(-50%);
-  background: #0f172a; color: white;
+  background: var(--surface-1); color: var(--text-primary);
   padding: 12px 24px;
   border-radius: 99px;
   font-size: 0.9rem; font-weight: 500;
   box-shadow: var(--shadow-soft);
   z-index: 9999;
   animation: client-toast-in 0.3s ease-out;
+  border: 1px solid var(--border-subtle);
 }
 @keyframes client-toast-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
