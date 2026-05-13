@@ -1099,13 +1099,10 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 3: CONTACTS ── */}
             {step === 3 && (
               <>
-                <div className="enviar-step-title">
-                  <span className="enviar-step-title-icon">
-                    <Icon name="user" size={16} />
-                  </span>
+                <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
-                    <div className="enviar-step-title-main">{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmar datos del remitente'}</div>
-                    <div className="enviar-step-title-sub">{orderType === 'viaje' ? 'El conductor verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
+                    <div className="enviar-step-title-main" style={{ fontSize: 13 }}>{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmar datos del remitente'}</div>
+                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El conductor verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
                   </div>
                 </div>
 
