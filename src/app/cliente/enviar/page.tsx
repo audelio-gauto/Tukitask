@@ -1039,7 +1039,7 @@ export default function EnviarPaquetePage() {
                   <div className="enviar-price-warning">
                     <div className="enviar-price-warning-icon">⚠️</div>
                     <div className="enviar-price-warning-body">
-                      <p className="enviar-price-warning-title">⚠️ Tu Oferta es baja.</p>
+                      <p className="enviar-price-warning-title">Tu Oferta es baja.</p>
                       <p className="enviar-price-warning-text">
                         Sube un poco tu oferta para aumentar las posibilidades de aceptación inmediata.
                       </p>
