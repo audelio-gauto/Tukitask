@@ -15,7 +15,11 @@ import { playMessageAlert } from '@/lib/audio';
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
 function useDarkMode() {
-  const [dark, setDark] = React.useState(true); // default dark (app default)
+  const [dark, setDark] = React.useState(() => {
+    // Read immediately (client only) so the map initializes with the correct style
+    if (typeof document === 'undefined') return true;
+    return document.documentElement.getAttribute('data-theme') !== 'light';
+  });
   React.useEffect(() => {
     // App uses data-theme="dark"|"light" on <html>, not prefers-color-scheme
     const read = () => document.documentElement.getAttribute('data-theme') !== 'light';

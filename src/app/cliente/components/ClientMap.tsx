@@ -164,9 +164,15 @@ export default function ClientMap({
   // Update map style when dark prop changes (after initial load)
   useEffect(() => {
     const map = mapInstance.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
     const newStyle = dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
-    map.setStyle(newStyle);
+    if (map.isStyleLoaded()) {
+      map.setStyle(newStyle);
+    } else {
+      const onLoad = () => map.setStyle(newStyle);
+      map.once('load', onLoad);
+      return () => map.off('load', onLoad);
+    }
   }, [dark]);
 
   // Update GL markers and route
