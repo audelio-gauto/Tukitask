@@ -1207,7 +1207,7 @@ export default function EnviarPaquetePage() {
                                 const d = new Date(dateScheduled);
                                 return d.toLocaleString('es-PY', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                               })()
-                            : 'Envío inmediato'}
+                            : 'Reservas'}
                         </span>
                         {dateScheduled && <span className="enviar-accordion-badge scheduled">Programado</span>}
                       </span>
@@ -1222,7 +1222,7 @@ export default function EnviarPaquetePage() {
                     <div className="enviar-accordion-body">
                       <div className="enviar-accordion-content">
                         <label className="enviar-field-label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                          Elegí fecha y hora de pickup
+                          Elegí fecha y hora
                         </label>
                         <input
                           type="datetime-local"
