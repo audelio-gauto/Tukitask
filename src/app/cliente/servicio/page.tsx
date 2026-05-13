@@ -49,6 +49,7 @@ export default function SolicitarServicioPage() {
   const [promoResult, setPromoResult] = useState<{ discount_amount: number; description: string | null; code_id: string } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
 
   // Dynamic categories from DB
   const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
@@ -662,38 +663,65 @@ export default function SolicitarServicioPage() {
                   ))}
                 </div>
 
-                {/* Promo code */}
-                <div className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
-                  <div className="enviar-field">
-                    <label className="enviar-field-label">🏷️ Código promocional <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        className="enviar-field-input"
-                        placeholder="Ej: PROMO10"
-                        value={promoCode}
-                        onChange={e => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
-                        style={{ flex: 1 }}
-                        autoCapitalize="characters"
-                      />
-                      <button
-                        type="button"
-                        onClick={validatePromo}
-                        disabled={promoLoading || !promoCode.trim()}
-                        className="promo-apply-btn"
-                      >
-                        {promoLoading ? '...' : 'Aplicar'}
-                      </button>
+                {/* Promo code accordion */}
+                <div className={`enviar-accordion${promoOpen ? ' open' : ''}${promoResult ? ' has-value' : ''}`}>
+                  <button
+                    type="button"
+                    className="enviar-accordion-row"
+                    onClick={() => setPromoOpen(o => !o)}
+                    aria-expanded={promoOpen}
+                  >
+                    <span className="enviar-accordion-left">
+                      <span className="enviar-accordion-icon">🏷️</span>
+                      <span className="enviar-accordion-label">
+                        {promoResult
+                          ? `${promoCode.toUpperCase()} · -${promoResult.discount_amount.toLocaleString('es-PY')} Gs`
+                          : '¿Tenés un código promo?'}
+                      </span>
+                      {promoResult && <span className="enviar-accordion-badge promo">✓ Aplicado</span>}
+                    </span>
+                    <svg
+                      className="enviar-accordion-chevron"
+                      width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div className="enviar-accordion-body">
+                    <div className="enviar-accordion-content">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          className="enviar-field-input"
+                          placeholder="Ej: PROMO10"
+                          value={promoCode}
+                          onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); setPromoError(null); }}
+                          style={{ flex: 1 }}
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={validatePromo}
+                          disabled={promoLoading || !promoCode.trim()}
+                          className="enviar-promo-apply-btn"
+                        >
+                          {promoLoading ? '...' : 'Aplicar'}
+                        </button>
+                      </div>
+                      {promoResult && (
+                        <div className="enviar-accordion-feedback success">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                          Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
+                        </div>
+                      )}
+                      {promoError && (
+                        <div className="enviar-accordion-feedback error">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          {promoError}
+                        </div>
+                      )}
                     </div>
-                    {promoResult && (
-                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--client-success)', fontSize: '0.8rem', fontWeight: 600 }}>
-                        ✅ Descuento: -{promoResult.discount_amount.toLocaleString('es-PY')} Gs{promoResult.description ? ` · ${promoResult.description}` : ''}
-                      </div>
-                    )}
-                    {promoError && (
-                      <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--client-danger)', fontSize: '0.8rem', fontWeight: 600 }}>
-                        ❌ {promoError}
-                      </div>
-                    )}
                   </div>
                 </div>
 
