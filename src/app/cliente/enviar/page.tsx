@@ -1165,17 +1165,23 @@ export default function EnviarPaquetePage() {
                 {(() => {
                   const veh = vehicleTypes.find(v => v.value === form.vehicleType);
                   if (!veh) return null;
-                  const vehicleEmoji: Record<string, string> = {
-                    moto: '🏍️', auto: '🚗', motocarro: '🛻', camion2t: '🚛'
-                  };
+                  const vp = pricing[veh.value];
+                  const subText =
+                    orderType === 'viaje' && veh.value === 'moto' ? 'Capacidad 1 Persona' :
+                    orderType === 'viaje' && veh.value === 'auto' ? 'Capacidad hasta 3 personas' :
+                    veh.sub;
                   return (
                     <div className="enviar-vehicle-summary-card">
                       <div className="enviar-vehicle-summary-icon">
-                        {vehicleEmoji[veh.value] ?? '🚗'}
+                        {vp?.image_url ? (
+                          <img src={vp.image_url} alt={veh.label} width={48} height={48} style={{ objectFit: 'contain' }} />
+                        ) : (
+                          <Icon name={veh.icon as import('@/components/Icon').IconName} size={32} />
+                        )}
                       </div>
                       <div className="enviar-vehicle-summary-info">
                         <div className="enviar-vehicle-summary-name">{veh.label}</div>
-                        <div className="enviar-vehicle-summary-sub">{veh.sub}</div>
+                        <div className="enviar-vehicle-summary-sub">{subText}</div>
                       </div>
                       <span className="enviar-vehicle-summary-badge">✓ Seleccionado</span>
                     </div>
