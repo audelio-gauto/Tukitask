@@ -1172,10 +1172,10 @@ export default function ActivoPage() {
               📭
             </div>
             <p style={{ color: '#9ca3af', fontWeight: 600, margin: 0, fontSize: '1rem' }}>
-              Sin envíos activos
+              Sin servicios activos
             </p>
             <p style={{ color: '#6b7280', fontSize: '0.83rem', margin: 0, maxWidth: 240 }}>
-              Cuando un cliente acepte tu oferta, el envío aparecerá aquí.
+              Cuando un cliente acepte tu oferta, el servicio aparecerá aquí.
             </p>
           </div>
         )}
