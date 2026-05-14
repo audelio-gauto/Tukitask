@@ -128,12 +128,24 @@ interface ActiveRequest {
   icon: string;
   label: string;
   orderType: string;
-  vehicleType?: string;
   subtitle: string;
   createdAt: string;
 }
 
 /* ─── Order type config for searching card ───────────────────────────────── */
+const VIAJE_VEHICLE_ICON: Record<string, string> = {
+  moto:      '🛵',
+  auto:      '🚗',
+  motocarro: '🛺',
+  camion2t:  '🚛',
+};
+const VIAJE_VEHICLE_NAME: Record<string, string> = {
+  moto:      'Moto',
+  auto:      'Auto',
+  motocarro: 'Moto Carro',
+  camion2t:  'Camión',
+};
+
 const ORDER_CFG: Record<string, { color: string; badge: string; gradient: string; icon: string }> = {
   envio:     { color: '#3b82f6', badge: 'Envío',     gradient: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', icon: '📦' },
   mandadito: { color: '#f59e0b', badge: 'Mandadito', gradient: 'linear-gradient(135deg, #b45309, #f59e0b)', icon: '🛵' },
@@ -148,13 +160,6 @@ const DELIVERY_ORDER_LABELS: Record<string, { label: string }> = {
   mandadito: { label: 'Mandadito' },
   flete:     { label: 'Flete' },
   viaje:     { label: 'Viaje' },
-};
-
-const VIAJE_VEHICLE_ICONS: Record<string, string> = {
-  moto: '🏍️', auto: '🚗', motocarro: '🛵', camion2t: '🚛',
-};
-const VIAJE_VEHICLE_NAMES: Record<string, string> = {
-  moto: 'Moto', auto: 'Auto', motocarro: 'Moto Carro', camion2t: 'Camión',
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -440,7 +445,6 @@ export default function ClienteHomePage() {
   // Driver ETA: { orderId → { distKm, etaMin } }
   const [driverEta, setDriverEta] = useState<Record<string, { distKm: number; etaMin: number } | null>>({});
   const [loading,   setLoading]   = useState(true);
-  const [vehicleImages, setVehicleImages] = useState<Record<string, string | null>>({});
   const [actionId,  setActionId]  = useState<string | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ id: string; type: 'delivery' | 'service' } | null>(null);
   const [acceptConfirm, setAcceptConfirm] = useState<{ offerId: string; jobId?: string; workerName: string | null; amount: number; requestType: 'delivery' | 'service' } | null>(null);
@@ -505,21 +509,6 @@ export default function ClienteHomePage() {
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, orders, jobs]);
-
-  /* ─── Vehicle images from pricing config ──────────────────────────────── */
-  useEffect(() => {
-    fetch('/api/pricing')
-      .then(r => r.json())
-      .then(data => {
-        if (!data?.vehicle_pricing) return;
-        const map: Record<string, string | null> = {};
-        for (const v of data.vehicle_pricing) {
-          if (v.vehicle_type) map[v.vehicle_type] = v.image_url ?? null;
-        }
-        setVehicleImages(map);
-      })
-      .catch(() => {});
-  }, []);
 
   /* ─── Data loading ──────────────────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
@@ -813,14 +802,15 @@ export default function ClienteHomePage() {
     ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => {
       const ot = o.order_type ?? 'envio';
       const cfg = ORDER_CFG[ot] ?? DEFAULT_ORDER_CFG;
-      const vt = o.vehicle_type ?? '';
-      const icon = ot === 'viaje' ? (VIAJE_VEHICLE_ICONS[vt] || '🚗') : cfg.icon;
-      const lbl = ot === 'viaje' ? (VIAJE_VEHICLE_NAMES[vt] || 'Viaje') : (DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete');
+      const vt = o.vehicle_type ?? 'auto';
+      const icon = ot === 'viaje' ? (VIAJE_VEHICLE_ICON[vt] ?? '🚗') : cfg.icon;
+      const lbl = ot === 'viaje'
+        ? (VIAJE_VEHICLE_NAME[vt] ?? vt)
+        : (DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete');
       return {
         id: o.id, type: 'delivery' as const, icon,
         label: lbl,
         orderType: ot,
-        vehicleType: vt || undefined,
         subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
         createdAt: o.created_at,
       };
@@ -1198,13 +1188,7 @@ export default function ClienteHomePage() {
                           fontSize: '1.55rem', flexShrink: 0,
                           boxShadow: `0 4px 16px ${cfg.color}45`,
                         }}>
-                          {(() => {
-                            const imgKey = req.vehicleType || req.orderType;
-                            const imgUrl = vehicleImages[imgKey];
-                            return imgUrl
-                              ? <img src={imgUrl} alt={req.label} width={38} height={38} style={{ objectFit: 'contain' }} />
-                              : <span style={{ fontSize: '1.55rem' }}>{req.icon}</span>;
-                          })()}
+                          {req.icon}
                         </div>
 
                         {/* Label column */}
