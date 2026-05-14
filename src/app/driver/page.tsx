@@ -160,19 +160,42 @@ export default function DriverDashboard() {
       .finally(() => { isLoadingOrdersRef.current = false; });
   }, []);
 
+  // Forced refresh: reset feedPrimedRef so next loadPendingOrders calls ?refresh=1
+  const loadWithRefresh = useCallback(() => {
+    feedPrimedRef.current = false;
+    loadPendingOrders();
+  }, [loadPendingOrders]);
+
   useEffect(() => {
     if (!email) return;
     loadPendingOrders();
-    // Realtime for instant new-order notifications; 3 min fallback poll
+    // Fallback poll — 3 min (Realtime handles instant updates)
     const iv = setInterval(loadPendingOrders, 180_000);
-    const ch = supabase.channel(`driver-feed-${email}`)
+
+    // Primary: driver_feed INSERT fires when fn_match_driver_feed matches this driver
+    const chFeed = supabase.channel(`driver-feed-${email}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'driver_feed',
         filter: `driver_email=eq.${email}`,
       } as never, loadPendingOrders)
       .subscribe();
-    return () => { clearInterval(iv); supabase.removeChannel(ch); };
-  }, [loadPendingOrders, email]);
+
+    // Backup: listen to new pending orders directly on orders table.
+    // Handles the case where fn_match_driver_feed skips this driver (stale/missing GPS).
+    // On any new pending/negotiating order, force a feed refresh so this driver is matched.
+    const chOrders = supabase.channel(`driver-orders-pending-${email}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'orders',
+        filter: `status=eq.pending`,
+      } as never, loadWithRefresh)
+      .subscribe();
+
+    return () => {
+      clearInterval(iv);
+      supabase.removeChannel(chFeed);
+      supabase.removeChannel(chOrders);
+    };
+  }, [loadPendingOrders, loadWithRefresh, email]);
 
   const sendDriverOffer = async (orderId: string, amount: number, note: string, distanceKm: number | null = null) => {
     if (!amount || !email || !!sendingOfferId) return;
