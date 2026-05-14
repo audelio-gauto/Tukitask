@@ -1162,130 +1162,166 @@ export default function ClienteHomePage() {
                 </div>
               </div>
 
-              {/* Active request cards — premium */}
+              {/* ── Solicitudes activas ── */}
               {activeRequests.map(req => {
-                const secElapsed = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
+                const secEl = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
                 void elapsed2;
-                const cd = Math.max(0, REQUEST_TIMEOUT_SEC - secElapsed);
+                const cd  = Math.max(0, REQUEST_TIMEOUT_SEC - secEl);
                 const pct = cd / REQUEST_TIMEOUT_SEC;
                 const cfg = ORDER_CFG[req.orderType] ?? DEFAULT_ORDER_CFG;
-                const barColor = pct > 0.5 ? cfg.color : pct > 0.25 ? '#f59e0b' : '#ef4444';
-                const isUrgent = cd < 30;
+                const urgent = cd < 30;
+                const mins = Math.floor(cd / 60).toString().padStart(2, '0');
+                const secs = (cd % 60).toString().padStart(2, '0');
+                const barCol = pct > 0.5 ? cfg.color : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                /* service label: use line1 (e.g. "Remis") with cfg.badge as fallback */
+                const svcLabel  = req.line1 || cfg.badge;
+                /* vehicle label: use line2 (e.g. "Moto") */
+                const vehLabel  = req.line2 || '';
                 return (
                   <div key={req.id} style={{
-                    background: isDark ? 'rgba(18,18,30,0.97)' : '#ffffff',
-                    borderRadius: 20,
-                    marginBottom: 12,
-                    border: `1.5px solid ${isDark ? cfg.color + '30' : cfg.color + '45'}`,
+                    position: 'relative',
+                    borderRadius: 22,
+                    marginBottom: 14,
                     overflow: 'hidden',
+                    background: isDark
+                      ? 'linear-gradient(145deg, rgba(22,24,38,0.98) 0%, rgba(15,17,28,0.98) 100%)'
+                      : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
                     boxShadow: isDark
-                      ? `0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px ${cfg.color}12`
-                      : `0 4px 24px rgba(0,0,0,0.09), 0 0 0 1px ${cfg.color}18`,
+                      ? `0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px ${cfg.color}20, inset 0 1px 0 rgba(255,255,255,0.06)`
+                      : `0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px ${cfg.color}30`,
                   }}>
-                    {/* Top gradient bar */}
-                    <div style={{ height: 3, background: cfg.gradient }} />
+                    {/* ── Barra superior degradada ── */}
+                    <div style={{ height: 4, background: cfg.gradient, width: '100%' }} />
 
-                    <div style={{ padding: '14px 16px 16px' }}>
-                      {/* Header row: badge + title + countdown */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    {/* ── Barra izquierda de acento ── */}
+                    <div style={{
+                      position: 'absolute', left: 0, top: 4, bottom: 0,
+                      width: 4, background: cfg.gradient,
+                    }} />
 
-                        {/* Vehicle badge — rounded square, 2 lines */}
+                    <div style={{ padding: '16px 16px 16px 20px' }}>
+
+                      {/* ── Fila superior: badge + info + countdown ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+
+                        {/* Badge cuadrado con texto 2 líneas */}
                         <div style={{
-                          width: 64, height: 64, borderRadius: 16,
+                          width: 72, height: 72, borderRadius: 18,
                           background: cfg.gradient,
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, gap: 3, padding: '6px 8px',
-                          boxShadow: `0 4px 18px ${cfg.color}50`,
+                          flexShrink: 0, gap: 4,
+                          boxShadow: `0 6px 20px ${cfg.color}55`,
                         }}>
+                          {/* Línea 1 — tipo de servicio */}
                           <span style={{
-                            fontSize: '0.62rem', fontWeight: 800,
-                            color: 'rgba(255,255,255,0.90)',
-                            textTransform: 'uppercase', letterSpacing: '0.04em',
-                            lineHeight: 1, textAlign: 'center',
+                            fontSize: '0.6rem', fontWeight: 900,
+                            color: 'rgba(255,255,255,0.88)',
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            lineHeight: 1,
                           }}>
-                            {req.line1 || cfg.badge}
+                            {svcLabel}
                           </span>
+                          {/* Separador */}
+                          <div style={{ width: 28, height: 1, background: 'rgba(255,255,255,0.30)', borderRadius: 1 }} />
+                          {/* Línea 2 — vehículo */}
                           <span style={{
-                            fontSize: (req.line2 || '').length > 4 ? '0.7rem' : '0.9rem',
+                            fontSize: vehLabel.length > 4 ? '0.72rem' : '0.92rem',
                             fontWeight: 900, color: '#ffffff',
-                            lineHeight: 1.15, textAlign: 'center',
-                            wordBreak: 'break-word',
+                            lineHeight: 1, letterSpacing: '0.02em',
                           }}>
-                            {req.line2 || ''}
+                            {vehLabel}
                           </span>
                         </div>
 
-                        {/* Title + subtitle */}
+                        {/* Info central */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontWeight: 900,
-                            color: isDark ? '#f1f5f9' : '#0f172a',
-                            fontSize: '1rem', lineHeight: 1.2, marginBottom: 4,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {req.label}
+                          {/* Chips: servicio + vehículo */}
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 7, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.7rem', fontWeight: 800,
+                              color: cfg.color,
+                              background: isDark ? `${cfg.color}18` : `${cfg.color}14`,
+                              border: `1px solid ${cfg.color}40`,
+                              borderRadius: 8, padding: '3px 9px',
+                              letterSpacing: '0.01em',
+                            }}>{svcLabel}</span>
+                            {vehLabel ? (
+                              <span style={{
+                                fontSize: '0.7rem', fontWeight: 700,
+                                color: isDark ? '#cbd5e1' : '#475569',
+                                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                                border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                                borderRadius: 8, padding: '3px 9px',
+                              }}>{vehLabel}</span>
+                            ) : null}
                           </div>
-                          {req.subtitle && (
-                            <div style={{
-                              fontSize: '0.72rem',
-                              color: isDark ? '#94a3b8' : '#64748b',
-                              fontWeight: 500, lineHeight: 1.3,
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                              📍 {req.subtitle}
-                            </div>
-                          )}
+                          {/* Ruta */}
+                          <div style={{
+                            fontSize: '0.73rem',
+                            color: isDark ? '#94a3b8' : '#64748b',
+                            fontWeight: 500, lineHeight: 1.35,
+                            overflow: 'hidden', display: '-webkit-box',
+                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+                          }}>
+                            {'→ '}{req.subtitle}
+                          </div>
                         </div>
 
                         {/* Countdown */}
                         <div style={{
-                          textAlign: 'center', flexShrink: 0,
-                          background: isUrgent
-                            ? (isDark ? 'rgba(239,68,68,0.14)' : 'rgba(239,68,68,0.07)')
+                          flexShrink: 0, textAlign: 'center',
+                          background: urgent
+                            ? (isDark ? 'rgba(239,68,68,0.16)' : 'rgba(239,68,68,0.09)')
                             : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
-                          borderRadius: 12, padding: '6px 10px', minWidth: 58,
-                          border: isUrgent
-                            ? '1px solid rgba(239,68,68,0.38)'
-                            : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.09)'}`,
+                          border: urgent
+                            ? '1.5px solid rgba(239,68,68,0.45)'
+                            : `1.5px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+                          borderRadius: 14, padding: '8px 10px', minWidth: 62,
                         }}>
-                          <div style={{ fontSize: '0.56rem', color: isUrgent ? '#ef4444' : (isDark ? '#94a3b8' : '#64748b'), fontWeight: 700, letterSpacing: '0.03em', marginBottom: 2, textTransform: 'uppercase' }}>
-                            Cancela en
-                          </div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: isUrgent ? '#ef4444' : (isDark ? '#f1f5f9' : '#0f172a'), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                            {Math.floor(cd / 60).toString().padStart(2, '0')}:{(cd % 60).toString().padStart(2, '0')}
-                          </div>
+                          <div style={{
+                            fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.04em',
+                            textTransform: 'uppercase', marginBottom: 4,
+                            color: urgent ? '#ef4444' : (isDark ? '#64748b' : '#94a3b8'),
+                          }}>Expira en</div>
+                          <div style={{
+                            fontSize: '1.1rem', fontWeight: 900, lineHeight: 1,
+                            fontVariantNumeric: 'tabular-nums',
+                            color: urgent ? '#ef4444' : (isDark ? '#f1f5f9' : '#0f172a'),
+                          }}>{mins}:{secs}</div>
                         </div>
                       </div>
 
-                      {/* Progress bar */}
+                      {/* ── Barra de progreso ── */}
                       <div style={{
-                        height: 4,
-                        background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-                        borderRadius: 4, overflow: 'hidden', marginBottom: 14,
+                        height: 5, borderRadius: 5, marginBottom: 14,
+                        background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+                        overflow: 'hidden',
                       }}>
                         <div style={{
                           height: '100%', width: `${pct * 100}%`,
-                          background: isUrgent ? '#ef4444' : barColor,
-                          borderRadius: 4,
+                          background: urgent ? '#ef4444' : barCol,
+                          borderRadius: 5,
                           transition: 'width 1s linear, background 0.5s',
-                          boxShadow: `0 0 8px ${isUrgent ? '#ef444460' : barColor + '60'}`,
+                          boxShadow: `0 0 10px ${urgent ? '#ef444460' : barCol + '70'}`,
                         }} />
                       </div>
 
-                      {/* Cancel button */}
+                      {/* ── Botón cancelar ── */}
                       <button
                         onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                         disabled={busy}
                         style={{
-                          width: '100%', padding: '12px', borderRadius: 14,
-                          border: `1px solid ${isDark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.30)'}`,
-                          background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.05)',
+                          width: '100%', padding: '13px', borderRadius: 14,
+                          border: `1.5px solid ${isDark ? 'rgba(239,68,68,0.22)' : 'rgba(239,68,68,0.28)'}`,
+                          background: isDark ? 'rgba(239,68,68,0.07)' : 'rgba(239,68,68,0.05)',
                           color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
-                          cursor: busy ? 'default' : 'pointer', letterSpacing: '0.01em',
+                          cursor: busy ? 'default' : 'pointer',
+                          letterSpacing: '0.02em', opacity: busy ? 0.6 : 1,
+                          transition: 'opacity 0.2s',
                         }}
                       >
-                        ✕ Cancelar solicitud
+                        ✕  Cancelar solicitud
                       </button>
                     </div>
                   </div>
