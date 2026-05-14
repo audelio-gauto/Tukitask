@@ -1181,8 +1181,8 @@ export default function ClienteHomePage() {
                       ? 'linear-gradient(145deg, rgba(22,24,38,0.98) 0%, rgba(15,17,28,0.98) 100%)'
                       : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
                     boxShadow: isDark
-                      ? '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(245,197,24,0.22), inset 0 1px 0 rgba(255,255,255,0.06)'
-                      : '0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px rgba(245,197,24,0.45)',
+                      ? '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(127,95,245,0.30), inset 0 1px 0 rgba(255,255,255,0.06)'
+                      : '0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px rgba(127,95,245,0.50)',
                   }}>
                     {/* ── Barra superior degradada ── */}
                     <div style={{ height: 4, background: cfg.gradient, width: '100%' }} />
@@ -1201,11 +1201,11 @@ export default function ClienteHomePage() {
                         {/* Badge cuadrado con texto 2 líneas */}
                         <div style={{
                           width: 72, height: 72, borderRadius: 18,
-                          background: cfg.gradient,
+                          background: 'linear-gradient(135deg, #7F5FF5 0%, #9d80f7 100%)',
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0, gap: 4,
-                          boxShadow: `0 6px 20px ${cfg.color}55`,
+                          boxShadow: '0 6px 20px rgba(127,95,245,0.45)',
                         }}>
                           {/* Línea 1 — tipo de servicio */}
                           <span style={{
