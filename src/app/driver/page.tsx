@@ -52,6 +52,8 @@ export default function DriverDashboard() {
   const locateFnRef = useRef<(() => void) | null>(null);
   const [mapPickup, setMapPickup] = useState<{ lat: number; lng: number } | null>(null);
   const [mapDelivery, setMapDelivery] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapPickupBadge, setMapPickupBadge] = useState<string | null>(null);
+  const [mapDeliveryBadge, setMapDeliveryBadge] = useState<string | null>(null);
 
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -542,7 +544,7 @@ export default function DriverDashboard() {
     <>
       {/* Mapbox Map */}
       <div className="tuki-map">
-        <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} pickup={mapPickup} delivery={mapDelivery} />
+        <WorkerMap onLocate={(fn) => { locateFnRef.current = fn; }} pickup={mapPickup} delivery={mapDelivery} pickupBadge={mapPickupBadge} deliveryBadge={mapDeliveryBadge} />
       </div>
 
       {/* Radar overlay — visible only when online and no active feed */}
@@ -810,8 +812,22 @@ export default function DriverDashboard() {
         driverLng={driverPos?.lng}
         rateConfig={rateConfig}
         onActiveItem={(item) => {
-          setMapPickup(item?.pickupLat != null && item?.pickupLng != null ? { lat: Number(item.pickupLat), lng: Number(item.pickupLng) } : null);
-          setMapDelivery(item?.deliveryLat != null && item?.deliveryLng != null ? { lat: Number(item.deliveryLat), lng: Number(item.deliveryLng) } : null);
+          const pLat = item?.pickupLat != null ? Number(item.pickupLat) : null;
+          const pLng = item?.pickupLng != null ? Number(item.pickupLng) : null;
+          const dLat = item?.deliveryLat != null ? Number(item.deliveryLat) : null;
+          const dLng = item?.deliveryLng != null ? Number(item.deliveryLng) : null;
+          setMapPickup(pLat != null && pLng != null ? { lat: pLat, lng: pLng } : null);
+          setMapDelivery(dLat != null && dLng != null ? { lat: dLat, lng: dLng } : null);
+          const drLat = driverPos?.lat;
+          const drLng = driverPos?.lng;
+          if (pLat != null && pLng != null && drLat != null && drLng != null) {
+            const d = haversineKm(drLat, drLng, pLat, pLng);
+            setMapPickupBadge(`A · ${d.toFixed(1)} km · ${Math.max(1, Math.round(d * 2.5))} min`);
+          } else { setMapPickupBadge(null); }
+          if (pLat != null && pLng != null && dLat != null && dLng != null) {
+            const r = haversineKm(pLat, pLng, dLat, dLng);
+            setMapDeliveryBadge(`B · ${r.toFixed(1)} km · ${Math.max(1, Math.round(r * 2.5))} min`);
+          } else { setMapDeliveryBadge(null); }
         }}
       />
 

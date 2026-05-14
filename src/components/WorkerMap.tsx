@@ -25,10 +25,19 @@ function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: num
   return `https://api.mapbox.com/styles/v1/mapbox/${style}/static/${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
-function createMarkerEl(label: string, color: string) {
+function createMarkerEl(label: string, color: string, badge?: string | null) {
   const el = document.createElement('div');
-  el.style.cssText = `width:30px;height:30px;background:${color};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:default;`;
-  el.textContent = label;
+  el.style.cssText = 'position:relative;width:30px;height:30px;cursor:default;';
+  const circle = document.createElement('div');
+  circle.style.cssText = `width:30px;height:30px;background:${color};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);`;
+  circle.textContent = label;
+  el.appendChild(circle);
+  if (badge) {
+    const b = document.createElement('div');
+    b.style.cssText = `position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:rgba(8,8,18,0.88);color:#fff;border-radius:7px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap;border:1px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.55);pointer-events:none;line-height:1.3;`;
+    b.textContent = badge;
+    el.appendChild(b);
+  }
   return el;
 }
 
@@ -36,10 +45,14 @@ export default function WorkerMap({
   onLocate,
   pickup,
   delivery,
+  pickupBadge,
+  deliveryBadge,
 }: {
   onLocate?: (fn: () => void) => void;
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
+  pickupBadge?: string | null;
+  deliveryBadge?: string | null;
 }) {
   const dark = useDarkMode();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -188,28 +201,20 @@ export default function WorkerMap({
     const mapboxgl = mbRef.current;
     if (!map || !mapboxgl || !glReady) return;
 
+    // Recreate A/B markers (badge may have changed)
+    pickupMarkerRef.current?.remove(); pickupMarkerRef.current = null;
+    deliveryMarkerRef.current?.remove(); deliveryMarkerRef.current = null;
+
     // Pickup marker A
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
-      if (!pickupMarkerRef.current) {
-        pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981') })
-          .setLngLat([pickup.lng, pickup.lat]).addTo(map);
-      } else {
-        pickupMarkerRef.current.setLngLat([pickup.lng, pickup.lat]);
-      }
-    } else {
-      pickupMarkerRef.current?.remove(); pickupMarkerRef.current = null;
+      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981', pickupBadge) })
+        .setLngLat([pickup.lng, pickup.lat]).addTo(map);
     }
 
     // Delivery marker B
     if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
-      if (!deliveryMarkerRef.current) {
-        deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444') })
-          .setLngLat([delivery.lng, delivery.lat]).addTo(map);
-      } else {
-        deliveryMarkerRef.current.setLngLat([delivery.lng, delivery.lat]);
-      }
-    } else {
-      deliveryMarkerRef.current?.remove(); deliveryMarkerRef.current = null;
+      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444', deliveryBadge) })
+        .setLngLat([delivery.lng, delivery.lat]).addTo(map);
     }
 
     const srcId = 'driver-route';
@@ -266,7 +271,7 @@ export default function WorkerMap({
         });
       }
     }
-  }, [pickup, delivery, glReady]);
+  }, [pickup, delivery, pickupBadge, deliveryBadge, glReady]);
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#e5e7eb' }}>
