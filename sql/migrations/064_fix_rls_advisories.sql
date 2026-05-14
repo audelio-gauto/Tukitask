@@ -45,6 +45,7 @@ CREATE POLICY "admin_audit_log_read" ON public.admin_audit_log
 --   → consolidar en una sola política "chat_participants"
 DROP POLICY IF EXISTS "chat_order_participants" ON public.chat_messages;
 DROP POLICY IF EXISTS "chat_job_participants"   ON public.chat_messages;
+DROP POLICY IF EXISTS "chat_participants"        ON public.chat_messages;
 CREATE POLICY "chat_participants" ON public.chat_messages
   FOR ALL TO authenticated
   USING (
@@ -119,8 +120,11 @@ CREATE POLICY "doc_insert_own" ON public.driver_documents
 -- auth_rls_initplan + multiple_permissive_policies:
 --   "client_manage_own_favs" (FOR ALL) + "driver_see_favs" (FOR SELECT)
 --   → dos políticas SELECT para authenticated → consolidar SELECT; separar escritura
-DROP POLICY IF EXISTS "client_manage_own_favs" ON public.driver_favorites;
-DROP POLICY IF EXISTS "driver_see_favs"         ON public.driver_favorites;
+DROP POLICY IF EXISTS "client_manage_own_favs"    ON public.driver_favorites;
+DROP POLICY IF EXISTS "driver_see_favs"            ON public.driver_favorites;
+DROP POLICY IF EXISTS "driver_favorites_select"    ON public.driver_favorites;
+DROP POLICY IF EXISTS "driver_favorites_insert"    ON public.driver_favorites;
+DROP POLICY IF EXISTS "driver_favorites_delete"    ON public.driver_favorites;
 -- SELECT unificado: cliente ve sus favoritos; driver ve quién lo marcó favorito
 CREATE POLICY "driver_favorites_select" ON public.driver_favorites
   FOR SELECT TO authenticated
@@ -146,8 +150,11 @@ CREATE POLICY driver_feed_select_own ON public.driver_feed
 -- pero "Public read driver_locations" ya cubre SELECT → el driver tiene dos
 -- políticas SELECT permisivas para authenticated.
 -- Fix: convertir driver_own_write en políticas de escritura puras.
-DROP POLICY IF EXISTS "driver_own_write"         ON public.driver_locations;
+DROP POLICY IF EXISTS "driver_own_write"            ON public.driver_locations;
 DROP POLICY IF EXISTS "Driver updates own location" ON public.driver_locations;
+DROP POLICY IF EXISTS "driver_locations_insert"     ON public.driver_locations;
+DROP POLICY IF EXISTS "driver_locations_update"     ON public.driver_locations;
+DROP POLICY IF EXISTS "driver_locations_delete"     ON public.driver_locations;
 CREATE POLICY "driver_locations_insert" ON public.driver_locations
   FOR INSERT TO authenticated
   WITH CHECK (driver_email = (SELECT auth.email()));
@@ -167,6 +174,7 @@ CREATE POLICY "driver_locations_delete" ON public.driver_locations
 DROP POLICY IF EXISTS "offer_visibility"             ON public.driver_offers;
 DROP POLICY IF EXISTS "driver_offers_driver_select"  ON public.driver_offers;
 DROP POLICY IF EXISTS "driver_offers_client_select"  ON public.driver_offers;
+DROP POLICY IF EXISTS "driver_offers_select"         ON public.driver_offers;
 CREATE POLICY "driver_offers_select" ON public.driver_offers
   FOR SELECT TO authenticated
   USING (
@@ -183,7 +191,10 @@ CREATE POLICY "driver_offers_select" ON public.driver_offers
 --   "dp_own" (FOR ALL, incluye SELECT) + "dp_auth_read" (FOR SELECT USING(true))
 --   → dos políticas SELECT permisivas para authenticated
 -- Fix: convertir dp_own en escritura pura (SELECT ya cubierto por dp_auth_read)
-DROP POLICY IF EXISTS "dp_own" ON public.driver_profiles;
+DROP POLICY IF EXISTS "dp_own"    ON public.driver_profiles;
+DROP POLICY IF EXISTS "dp_insert" ON public.driver_profiles;
+DROP POLICY IF EXISTS "dp_update" ON public.driver_profiles;
+DROP POLICY IF EXISTS "dp_delete" ON public.driver_profiles;
 CREATE POLICY "dp_insert" ON public.driver_profiles
   FOR INSERT TO authenticated
   WITH CHECK (email = (SELECT auth.email()));
@@ -202,12 +213,14 @@ CREATE POLICY "dp_delete" ON public.driver_profiles
 --   UPDATE: "Users can mark own notifications read" + "notifications_own_update" → dos
 DROP POLICY IF EXISTS "Users can read own notifications"      ON public.notifications;
 DROP POLICY IF EXISTS "notifications_own_select"              ON public.notifications;
+DROP POLICY IF EXISTS "notifications_select"                  ON public.notifications;
 CREATE POLICY "notifications_select" ON public.notifications
   FOR SELECT TO authenticated
   USING (user_email = (SELECT auth.email()));
 
 DROP POLICY IF EXISTS "Users can mark own notifications read" ON public.notifications;
 DROP POLICY IF EXISTS "notifications_own_update"              ON public.notifications;
+DROP POLICY IF EXISTS "notifications_update"                  ON public.notifications;
 CREATE POLICY "notifications_update" ON public.notifications
   FOR UPDATE TO authenticated
   USING     (user_email = (SELECT auth.email()))
@@ -258,6 +271,7 @@ DROP POLICY IF EXISTS "drivers_see_available_orders"  ON public.orders;
 DROP POLICY IF EXISTS "client_sees_own_orders"         ON public.orders;
 DROP POLICY IF EXISTS "driver_sees_assigned_orders"    ON public.orders;
 DROP POLICY IF EXISTS "orders_authenticated_select"    ON public.orders;
+DROP POLICY IF EXISTS "orders_select"                  ON public.orders;
 CREATE POLICY "orders_select" ON public.orders
   FOR SELECT TO authenticated
   USING (
@@ -292,8 +306,12 @@ CREATE POLICY tecnico_feed_select_own ON public.tecnico_feed
 -- auth_rls_initplan + multiple_permissive_policies:
 --   "tjo_tecnico_own" (FOR ALL) + "tjo_client_read" (FOR SELECT)
 --   → dos SELECT permisivos para authenticated → consolidar
-DROP POLICY IF EXISTS "tjo_tecnico_own"  ON public.tecnico_job_offers;
-DROP POLICY IF EXISTS "tjo_client_read"  ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_tecnico_own" ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_client_read" ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_select"      ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_insert"      ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_update"      ON public.tecnico_job_offers;
+DROP POLICY IF EXISTS "tjo_delete"      ON public.tecnico_job_offers;
 -- SELECT unificado: técnico ve sus ofertas; cliente ve ofertas de sus trabajos
 CREATE POLICY "tjo_select" ON public.tecnico_job_offers
   FOR SELECT TO authenticated
@@ -320,9 +338,13 @@ CREATE POLICY "tjo_delete" ON public.tecnico_job_offers
 -- auth_rls_initplan + multiple_permissive_policies:
 --   "tj_client_own" (FOR ALL) + "tj_tecnico_read" (FOR SELECT) → dos SELECT
 --   "tj_client_own" (FOR ALL) + "tj_tecnico_update" (FOR UPDATE) → dos UPDATE
-DROP POLICY IF EXISTS "tj_client_own"    ON public.tecnico_jobs;
-DROP POLICY IF EXISTS "tj_tecnico_read"  ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_client_own"     ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_tecnico_read"   ON public.tecnico_jobs;
 DROP POLICY IF EXISTS "tj_tecnico_update" ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_select"         ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_update"         ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_client_insert"  ON public.tecnico_jobs;
+DROP POLICY IF EXISTS "tj_client_delete"  ON public.tecnico_jobs;
 -- SELECT unificado: cliente ve sus trabajos; técnico ve pending + los suyos
 CREATE POLICY "tj_select" ON public.tecnico_jobs
   FOR SELECT TO authenticated
