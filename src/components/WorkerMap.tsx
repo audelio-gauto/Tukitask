@@ -207,13 +207,13 @@ export default function WorkerMap({
 
     // Pickup marker A
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
-      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981', pickupBadge) })
+      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#f59e0b', pickupBadge) })
         .setLngLat([pickup.lng, pickup.lat]).addTo(map);
     }
 
     // Delivery marker B
     if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
-      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444', deliveryBadge) })
+      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#f59e0b', deliveryBadge) })
         .setLngLat([delivery.lng, delivery.lat]).addTo(map);
     }
 
@@ -226,23 +226,28 @@ export default function WorkerMap({
         type: 'Feature', properties: {},
         geometry: { type: 'LineString', coordinates: coords },
       };
-      if (map.getSource(srcId)) {
-        (map.getSource(srcId) as any).setData(geojson);
-      } else if (map.isStyleLoaded()) {
-        map.addSource(srcId, { type: 'geojson', data: geojson });
-        // White casing for contrast on any map style
-        map.addLayer({ id: casingId, type: 'line', source: srcId,
-          paint: { 'line-color': '#fff', 'line-width': 7, 'line-opacity': 0.5 },
-          layout: { 'line-cap': 'round', 'line-join': 'round' } });
-        map.addLayer({ id: layerId, type: 'line', source: srcId,
-          paint: { 'line-color': '#facc15', 'line-width': 4.5, 'line-opacity': 1 },
-          layout: { 'line-cap': 'round', 'line-join': 'round' } });
-      }
-
-      if (coords.length >= 2) {
-        const bounds = new mapboxgl.LngLatBounds();
-        coords.forEach((c: [number, number]) => bounds.extend(c));
-        map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+      const doApply = () => {
+        if (map.getSource(srcId)) {
+          (map.getSource(srcId) as any).setData(geojson);
+        } else {
+          map.addSource(srcId, { type: 'geojson', data: geojson });
+          map.addLayer({ id: casingId, type: 'line', source: srcId,
+            paint: { 'line-color': '#fff', 'line-width': 7, 'line-opacity': 0.5 },
+            layout: { 'line-cap': 'round', 'line-join': 'round' } });
+          map.addLayer({ id: layerId, type: 'line', source: srcId,
+            paint: { 'line-color': '#3b82f6', 'line-width': 4.5, 'line-opacity': 1 },
+            layout: { 'line-cap': 'round', 'line-join': 'round' } });
+        }
+        if (coords.length >= 2) {
+          const bounds = new mapboxgl.LngLatBounds();
+          coords.forEach((c: [number, number]) => bounds.extend(c));
+          map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+        }
+      };
+      if (map.isStyleLoaded()) {
+        doApply();
+      } else {
+        map.once('styledata', doApply);
       }
     }
 

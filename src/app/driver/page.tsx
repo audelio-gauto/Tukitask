@@ -822,11 +822,11 @@ export default function DriverDashboard() {
           const drLng = driverPos?.lng;
           if (pLat != null && pLng != null && drLat != null && drLng != null) {
             const d = haversineKm(drLat, drLng, pLat, pLng);
-            setMapPickupBadge(`A · ${d.toFixed(1)} km · ${Math.max(1, Math.round(d * 2.5))} min`);
+            setMapPickupBadge(`${d.toFixed(1)} km · ${Math.max(1, Math.round(d * 2.5))} min`);
           } else { setMapPickupBadge(null); }
           if (pLat != null && pLng != null && dLat != null && dLng != null) {
             const r = haversineKm(pLat, pLng, dLat, dLng);
-            setMapDeliveryBadge(`B · ${r.toFixed(1)} km · ${Math.max(1, Math.round(r * 2.5))} min`);
+            setMapDeliveryBadge(`${r.toFixed(1)} km · ${Math.max(1, Math.round(r * 2.5))} min`);
           } else { setMapDeliveryBadge(null); }
         }}
       />
