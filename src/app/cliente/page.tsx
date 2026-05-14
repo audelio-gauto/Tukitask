@@ -1191,28 +1191,28 @@ export default function ClienteHomePage() {
 
                         {/* Vehicle badge — rounded square, 2 lines */}
                         <div style={{
-                          width: 60, height: 60, borderRadius: 16,
+                          width: 64, height: 64, borderRadius: 16,
                           background: cfg.gradient,
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, gap: 2, padding: '6px 6px',
+                          flexShrink: 0, gap: 3, padding: '6px 8px',
                           boxShadow: `0 4px 18px ${cfg.color}50`,
                         }}>
                           <span style={{
-                            fontSize: '0.5rem', fontWeight: 800,
-                            color: 'rgba(255,255,255,0.82)',
-                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                            fontSize: '0.62rem', fontWeight: 800,
+                            color: 'rgba(255,255,255,0.90)',
+                            textTransform: 'uppercase', letterSpacing: '0.04em',
                             lineHeight: 1, textAlign: 'center',
                           }}>
-                            {req.line1}
+                            {req.line1 || cfg.badge}
                           </span>
                           <span style={{
-                            fontSize: req.line2.length > 4 ? '0.62rem' : '0.82rem',
+                            fontSize: (req.line2 || '').length > 4 ? '0.7rem' : '0.9rem',
                             fontWeight: 900, color: '#ffffff',
                             lineHeight: 1.15, textAlign: 'center',
                             wordBreak: 'break-word',
                           }}>
-                            {req.line2}
+                            {req.line2 || ''}
                           </span>
                         </div>
 
