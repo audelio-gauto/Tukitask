@@ -158,13 +158,6 @@ const ORDER_CFG: Record<string, { color: string; badge: string; gradient: string
 };
 const DEFAULT_ORDER_CFG = { color: '#3b82f6', badge: 'Solicitud', gradient: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', icon: '📦' };
 
-const DELIVERY_ORDER_LABELS: Record<string, { label: string }> = {
-  envio:     { label: 'Envío de paquete' },
-  mandadito: { label: 'Mandadito' },
-  flete:     { label: 'Flete' },
-  viaje:     { label: 'Viaje' },
-};
-
 const SERVICE_LABELS: Record<string, string> = {
   limpieza: '🧹 Limpieza', niera: '👶 Niñera', cocina: '🍳 Cocina',
   eventos: '🎉 Eventos', cuidado_mascotas: '🐾 Mascotas', cuidado_adultos: '👴 Adultos',
@@ -1262,7 +1255,7 @@ export default function ClienteHomePage() {
                             color: isDark ? '#94a3b8' : '#64748b',
                             fontWeight: 500, lineHeight: 1.35,
                             overflow: 'hidden', display: '-webkit-box',
-                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                           }}>
                             {'→ '}{req.subtitle}
                           </div>
