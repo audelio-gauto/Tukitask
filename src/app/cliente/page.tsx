@@ -1165,7 +1165,8 @@ export default function ClienteHomePage() {
                 const urgent = cd < 30;
                 const mins = Math.floor(cd / 60).toString().padStart(2, '0');
                 const secs = (cd % 60).toString().padStart(2, '0');
-                const barCol = pct > 0.5 ? cfg.color : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                const BRAND = '#F5C518';
+                const barCol = BRAND;
                 /* service label: use line1 (e.g. "Remis") with cfg.badge as fallback */
                 const svcLabel  = req.line1 || cfg.badge;
                 /* vehicle label: use line2 (e.g. "Moto") */
@@ -1180,8 +1181,8 @@ export default function ClienteHomePage() {
                       ? 'linear-gradient(145deg, rgba(22,24,38,0.98) 0%, rgba(15,17,28,0.98) 100%)'
                       : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
                     boxShadow: isDark
-                      ? `0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px ${cfg.color}20, inset 0 1px 0 rgba(255,255,255,0.06)`
-                      : `0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px ${cfg.color}30`,
+                      ? '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(245,197,24,0.22), inset 0 1px 0 rgba(255,255,255,0.06)'
+                      : '0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px rgba(245,197,24,0.45)',
                   }}>
                     {/* ── Barra superior degradada ── */}
                     <div style={{ height: 4, background: cfg.gradient, width: '100%' }} />
@@ -1293,10 +1294,10 @@ export default function ClienteHomePage() {
                       }}>
                         <div style={{
                           height: '100%', width: `${pct * 100}%`,
-                          background: urgent ? '#ef4444' : barCol,
+                          background: urgent ? '#ef4444' : '#F5C518',
                           borderRadius: 5,
                           transition: 'width 1s linear, background 0.5s',
-                          boxShadow: `0 0 10px ${urgent ? '#ef444460' : barCol + '70'}`,
+                          boxShadow: urgent ? '0 0 10px #ef444460' : '0 0 10px #F5C51870',
                         }} />
                       </div>
 
