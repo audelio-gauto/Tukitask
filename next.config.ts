@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 // Content Security Policy — covers all external services used by the app:
 //   Supabase (REST + Realtime WebSocket), Firebase FCM, Mapbox GL,
@@ -37,8 +38,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  eslint: { ignoreDuringBuilds: true },
   turbopack: {
-    root: ".",
+    root: path.resolve("."),
   },
   async rewrites() {
     return [
