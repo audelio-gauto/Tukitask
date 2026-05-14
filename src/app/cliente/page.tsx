@@ -1134,28 +1134,14 @@ export default function ClienteHomePage() {
 
         {/* ── SEARCHING ────────────────────────────────────────────────────── */}
         {homeMode === 'searching' && (
-          <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(245,197,24,0.2)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
+          <div style={{ background: 'var(--sheet-bg)', borderRadius: '24px 24px 0 0', border: '1px solid rgba(127,95,245,0.18)', boxShadow: '0 -12px 40px rgba(0,0,0,0.6)' }}>
             {/* Handle */}
             <div style={{ padding: '12px 0 0', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: 40, height: 4, background: 'var(--handle-bar)', borderRadius: 2 }} />
             </div>
 
-            {/* Searching content */}
-            <div style={{ padding: '16px 20px 28px' }}>
-              {/* Header radar row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                <RadarPulse />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.08rem', marginBottom: 3, letterSpacing: '-0.01em' }}>
-                    Buscando conductores…
-                  </div>
-                  <div style={{ fontSize: '0.77rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    Te avisamos cuando lleguen ofertas
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Solicitudes activas ── */}
+            {/* Tarjetas unificadas */}
+            <div style={{ padding: '12px 16px 28px' }}>
               {activeRequests.map(req => {
                 const secEl = Math.floor((Date.now() - new Date(req.createdAt).getTime()) / 1000);
                 void elapsed2;
@@ -1165,17 +1151,13 @@ export default function ClienteHomePage() {
                 const urgent = cd < 30;
                 const mins = Math.floor(cd / 60).toString().padStart(2, '0');
                 const secs = (cd % 60).toString().padStart(2, '0');
-                const BRAND = '#F5C518';
-                const barCol = BRAND;
-                /* service label: use line1 (e.g. "Remis") with cfg.badge as fallback */
-                const svcLabel  = req.line1 || cfg.badge;
-                /* vehicle label: use line2 (e.g. "Moto") */
-                const vehLabel  = req.line2 || '';
+                const svcLabel = req.line1 || cfg.badge;
+                const vehLabel = req.line2 || '';
                 return (
                   <div key={req.id} style={{
                     position: 'relative',
                     borderRadius: 22,
-                    marginBottom: 14,
+                    marginBottom: 12,
                     overflow: 'hidden',
                     background: isDark
                       ? 'linear-gradient(145deg, rgba(22,24,38,0.98) 0%, rgba(15,17,28,0.98) 100%)'
@@ -1184,85 +1166,29 @@ export default function ClienteHomePage() {
                       ? '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(127,95,245,0.30), inset 0 1px 0 rgba(255,255,255,0.06)'
                       : '0 6px 28px rgba(0,0,0,0.10), 0 0 0 1.5px rgba(127,95,245,0.50)',
                   }}>
-                    {/* ── Barra superior degradada ── */}
+                    {/* Barra superior de color */}
                     <div style={{ height: 4, background: cfg.gradient, width: '100%' }} />
+                    {/* Barra izquierda de acento */}
+                    <div style={{ position: 'absolute', left: 0, top: 4, bottom: 0, width: 4, background: cfg.gradient }} />
 
-                    {/* ── Barra izquierda de acento ── */}
-                    <div style={{
-                      position: 'absolute', left: 0, top: 4, bottom: 0,
-                      width: 4, background: cfg.gradient,
-                    }} />
+                    <div style={{ padding: '14px 16px 16px 20px' }}>
 
-                    <div style={{ padding: '16px 16px 16px 20px' }}>
-
-                      {/* ── Fila superior: badge + info + countdown ── */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-
-                        {/* Badge cuadrado con texto 2 líneas */}
-                        <div style={{
-                          width: 72, height: 72, borderRadius: 18,
-                          background: 'linear-gradient(135deg, #7F5FF5 0%, #9d80f7 100%)',
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, gap: 4,
-                          boxShadow: '0 6px 20px rgba(127,95,245,0.45)',
-                        }}>
-                          {/* Línea 1 — tipo de servicio */}
-                          <span style={{
-                            fontSize: '0.6rem', fontWeight: 900,
-                            color: 'rgba(255,255,255,0.88)',
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            lineHeight: 1,
-                          }}>
-                            {svcLabel}
-                          </span>
-                          {/* Separador */}
-                          <div style={{ width: 28, height: 1, background: 'rgba(255,255,255,0.30)', borderRadius: 1 }} />
-                          {/* Línea 2 — vehículo */}
-                          <span style={{
-                            fontSize: vehLabel.length > 4 ? '0.72rem' : '0.92rem',
-                            fontWeight: 900, color: '#ffffff',
-                            lineHeight: 1, letterSpacing: '0.02em',
-                          }}>
-                            {vehLabel}
-                          </span>
-                        </div>
-
-                        {/* Info central */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Chips: servicio + vehículo */}
-                          <div style={{ display: 'flex', gap: 6, marginBottom: 7, flexWrap: 'wrap' }}>
-                            <span style={{
-                              fontSize: '0.7rem', fontWeight: 800,
-                              color: cfg.color,
-                              background: isDark ? `${cfg.color}18` : `${cfg.color}14`,
-                              border: `1px solid ${cfg.color}40`,
-                              borderRadius: 8, padding: '3px 9px',
-                              letterSpacing: '0.01em',
-                            }}>{svcLabel}</span>
-                            {vehLabel ? (
-                              <span style={{
-                                fontSize: '0.7rem', fontWeight: 700,
-                                color: isDark ? '#cbd5e1' : '#475569',
-                                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                                border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-                                borderRadius: 8, padding: '3px 9px',
-                              }}>{vehLabel}</span>
-                            ) : null}
+                      {/* ── Sección 1: Estado de búsqueda (radar integrado) ── */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        paddingBottom: 13, marginBottom: 14,
+                        borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
+                      }}>
+                        <RadarPulse />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '0.97rem', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                            Buscando conductores…
                           </div>
-                          {/* Ruta */}
-                          <div style={{
-                            fontSize: '0.73rem',
-                            color: isDark ? '#94a3b8' : '#64748b',
-                            fontWeight: 500, lineHeight: 1.35,
-                            overflow: 'hidden', display: '-webkit-box',
-                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                          }}>
-                            {'→ '}{req.subtitle}
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>
+                            Te avisamos cuando lleguen ofertas
                           </div>
                         </div>
-
-                        {/* Countdown */}
+                        {/* Countdown integrado */}
                         <div style={{
                           flexShrink: 0, textAlign: 'center',
                           background: urgent
@@ -1271,34 +1197,45 @@ export default function ClienteHomePage() {
                           border: urgent
                             ? '1.5px solid rgba(239,68,68,0.45)'
                             : `1.5px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
-                          borderRadius: 14, padding: '8px 10px', minWidth: 62,
+                          borderRadius: 14, padding: '7px 10px', minWidth: 62,
                         }}>
-                          <div style={{
-                            fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.04em',
-                            textTransform: 'uppercase', marginBottom: 4,
-                            color: urgent ? '#ef4444' : (isDark ? '#64748b' : '#94a3b8'),
-                          }}>Expira en</div>
-                          <div style={{
-                            fontSize: '1.1rem', fontWeight: 900, lineHeight: 1,
-                            fontVariantNumeric: 'tabular-nums',
-                            color: urgent ? '#ef4444' : (isDark ? '#f1f5f9' : '#0f172a'),
-                          }}>{mins}:{secs}</div>
+                          <div style={{ fontSize: '0.53rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 3, color: urgent ? '#ef4444' : (isDark ? '#64748b' : '#94a3b8') }}>Expira en</div>
+                          <div style={{ fontSize: '1.08rem', fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: urgent ? '#ef4444' : (isDark ? '#f1f5f9' : '#0f172a') }}>{mins}:{secs}</div>
+                        </div>
+                      </div>
+
+                      {/* ── Sección 2: Badge de servicio + ruta ── */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 14 }}>
+                        {/* Badge */}
+                        <div style={{
+                          width: 60, height: 60, borderRadius: 16,
+                          background: 'linear-gradient(135deg, #7F5FF5 0%, #9d80f7 100%)',
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, gap: 3,
+                          boxShadow: '0 4px 16px rgba(127,95,245,0.45)',
+                        }}>
+                          <span style={{ fontSize: '0.58rem', fontWeight: 900, color: 'rgba(255,255,255,0.88)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>{svcLabel}</span>
+                          <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.30)', borderRadius: 1 }} />
+                          <span style={{ fontSize: vehLabel.length > 4 ? '0.7rem' : '0.88rem', fontWeight: 900, color: '#ffffff', lineHeight: 1, letterSpacing: '0.02em' }}>{vehLabel}</span>
+                        </div>
+                        {/* Info + chips */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: 5, marginBottom: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: cfg.color, background: isDark ? `${cfg.color}18` : `${cfg.color}14`, border: `1px solid ${cfg.color}40`, borderRadius: 7, padding: '2px 8px' }}>{svcLabel}</span>
+                            {vehLabel ? (
+                              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isDark ? '#cbd5e1' : '#475569', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, borderRadius: 7, padding: '2px 8px' }}>{vehLabel}</span>
+                            ) : null}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: isDark ? '#94a3b8' : '#64748b', fontWeight: 500, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {'→ '}{req.subtitle}
+                          </div>
                         </div>
                       </div>
 
                       {/* ── Barra de progreso ── */}
-                      <div style={{
-                        height: 5, borderRadius: 5, marginBottom: 14,
-                        background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-                        overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          height: '100%', width: `${pct * 100}%`,
-                          background: urgent ? '#ef4444' : '#F5C518',
-                          borderRadius: 5,
-                          transition: 'width 1s linear, background 0.5s',
-                          boxShadow: urgent ? '0 0 10px #ef444460' : '0 0 10px #F5C51870',
-                        }} />
+                      <div style={{ height: 5, borderRadius: 5, marginBottom: 14, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct * 100}%`, background: urgent ? '#ef4444' : '#F5C518', borderRadius: 5, transition: 'width 1s linear, background 0.5s', boxShadow: urgent ? '0 0 10px #ef444460' : '0 0 10px #F5C51870' }} />
                       </div>
 
                       {/* ── Botón cancelar ── */}
@@ -1306,7 +1243,7 @@ export default function ClienteHomePage() {
                         onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                         disabled={busy}
                         style={{
-                          width: '100%', padding: '13px', borderRadius: 14,
+                          width: '100%', padding: '12px', borderRadius: 14,
                           border: `1.5px solid ${isDark ? 'rgba(239,68,68,0.22)' : 'rgba(239,68,68,0.28)'}`,
                           background: isDark ? 'rgba(239,68,68,0.07)' : 'rgba(239,68,68,0.05)',
                           color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
