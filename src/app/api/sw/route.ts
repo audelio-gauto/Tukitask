@@ -21,11 +21,11 @@ export async function GET(): Promise<Response> {
 
   const sw = `
 /* ─────────────────────────────────────────────────────────────────────────
-   TukiTask Service Worker  —  v2.0
+   TukiTask Service Worker  —  v3.0
    Handles: FCM background notifications + PWA offline caching
    ───────────────────────────────────────────────────────────────────────── */
 
-const CACHE_NAME   = 'tuki-cache-v2';
+const CACHE_NAME   = 'tuki-cache-v3';
 const OFFLINE_URL  = '/offline.html';
 const STATIC_EXTS  = /\\.(js|css|png|jpg|jpeg|webp|svg|ico|woff2?|ttf|eot)(\\?.*)?$/;
 const STATIC_PATHS = /^\\/_next\\/static\\//;
