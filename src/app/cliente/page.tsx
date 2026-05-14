@@ -149,6 +149,13 @@ const DELIVERY_ORDER_LABELS: Record<string, { label: string }> = {
   viaje:     { label: 'Viaje' },
 };
 
+const VIAJE_VEHICLE_ICONS: Record<string, string> = {
+  moto: '🏍️', auto: '🚗', motocarro: '🛵', camion2t: '🚛',
+};
+const VIAJE_VEHICLE_NAMES: Record<string, string> = {
+  moto: 'Moto', auto: 'Auto', motocarro: 'Moto Carro', camion2t: 'Camión',
+};
+
 const SERVICE_LABELS: Record<string, string> = {
   limpieza: '🧹 Limpieza', niera: '👶 Niñera', cocina: '🍳 Cocina',
   eventos: '🎉 Eventos', cuidado_mascotas: '🐾 Mascotas', cuidado_adultos: '👴 Adultos',
@@ -789,9 +796,11 @@ export default function ClienteHomePage() {
     ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => {
       const ot = o.order_type ?? 'envio';
       const cfg = ORDER_CFG[ot] ?? DEFAULT_ORDER_CFG;
-      const lbl = DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete';
+      const vt = o.vehicle_type ?? '';
+      const icon = ot === 'viaje' ? (VIAJE_VEHICLE_ICONS[vt] || '🚗') : cfg.icon;
+      const lbl = ot === 'viaje' ? (VIAJE_VEHICLE_NAMES[vt] || 'Viaje') : (DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete');
       return {
-        id: o.id, type: 'delivery' as const, icon: cfg.icon,
+        id: o.id, type: 'delivery' as const, icon,
         label: lbl,
         orderType: ot,
         subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
@@ -1171,7 +1180,7 @@ export default function ClienteHomePage() {
                           fontSize: '1.55rem', flexShrink: 0,
                           boxShadow: `0 4px 16px ${cfg.color}45`,
                         }}>
-                          {cfg.icon}
+                          {req.icon}
                         </div>
 
                         {/* Label column */}
