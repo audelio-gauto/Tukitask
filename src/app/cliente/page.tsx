@@ -1147,7 +1147,7 @@ export default function ClienteHomePage() {
                 <RadarPulse />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.08rem', marginBottom: 3, letterSpacing: '-0.01em' }}>
-                    Buscando cerca de ti…
+                    Buscando conductores…
                   </div>
                   <div style={{ fontSize: '0.77rem', color: 'var(--text-muted)', fontWeight: 500 }}>
                     Te avisamos cuando lleguen ofertas
