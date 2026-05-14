@@ -127,19 +127,22 @@ interface ActiveRequest {
   type: 'delivery' | 'service';
   icon: string;
   label: string;
+  line1: string;
+  line2: string;
   orderType: string;
   subtitle: string;
   createdAt: string;
 }
 
 /* ─── Order type config for searching card ───────────────────────────────── */
-const VIAJE_VEHICLE_ICON: Record<string, string> = {
-  moto:      '🛵',
-  auto:      '🚗',
-  motocarro: '🛺',
-  camion2t:  '🚛',
+const SERVICE_TYPE_SHORT: Record<string, string> = {
+  viaje:     'Remis',
+  envio:     'Envío',
+  mandadito: 'Mandadito',
+  flete:     'Flete',
+  service:   'Técnico',
 };
-const VIAJE_VEHICLE_NAME: Record<string, string> = {
+const VEHICLE_SHORT: Record<string, string> = {
   moto:      'Moto',
   auto:      'Auto',
   motocarro: 'Moto Carro',
@@ -801,27 +804,30 @@ export default function ClienteHomePage() {
   const activeRequests: ActiveRequest[] = [
     ...orders.filter(o => SEARCHING_STS.includes(o.status)).map(o => {
       const ot = o.order_type ?? 'envio';
-      const cfg = ORDER_CFG[ot] ?? DEFAULT_ORDER_CFG;
-      const vt = o.vehicle_type ?? 'auto';
-      const icon = ot === 'viaje' ? (VIAJE_VEHICLE_ICON[vt] ?? '🚗') : cfg.icon;
-      const lbl = ot === 'viaje'
-        ? (VIAJE_VEHICLE_NAME[vt] ?? vt)
-        : (DELIVERY_ORDER_LABELS[ot]?.label ?? 'Envío de paquete');
+      const vt = o.vehicle_type ?? 'moto';
+      const line1 = SERVICE_TYPE_SHORT[ot] ?? 'Envío';
+      const line2 = VEHICLE_SHORT[vt] ?? vt;
+      const label = `${line1} ${line2}`;
       return {
-        id: o.id, type: 'delivery' as const, icon,
-        label: lbl,
+        id: o.id, type: 'delivery' as const,
+        icon: (ORDER_CFG[ot] ?? DEFAULT_ORDER_CFG).icon,
+        label, line1, line2,
         orderType: ot,
         subtitle: [o.pickup_address, o.delivery_address].filter(Boolean).join(' → ') || 'Sin dirección',
         createdAt: o.created_at,
       };
     }),
-    ...jobs.filter(j => SEARCHING_STS.includes(j.status)).map(j => ({
-      id: j.id, type: 'service' as const, icon: '🔧',
-      label: SERVICE_LABELS[j.service_type] ?? j.service_type,
-      orderType: 'service',
-      subtitle: j.address ?? 'Sin dirección',
-      createdAt: j.created_at ?? new Date().toISOString(),
-    })),
+    ...jobs.filter(j => SEARCHING_STS.includes(j.status)).map(j => {
+      const svcLabel = SERVICE_LABELS[j.service_type] ?? j.service_type;
+      const line2 = svcLabel.replace(/^.{1,2}\s/, '');
+      return {
+        id: j.id, type: 'service' as const, icon: '🔧',
+        label: svcLabel, line1: 'Técnico', line2,
+        orderType: 'service',
+        subtitle: j.address ?? 'Sin dirección',
+        createdAt: j.created_at ?? new Date().toISOString(),
+      };
+    }),
   ];
 
   const mode: 'idle' | 'searching' | 'offers' | 'tracking' =
@@ -1167,84 +1173,104 @@ export default function ClienteHomePage() {
                 const isUrgent = cd < 30;
                 return (
                   <div key={req.id} style={{
-                    background: 'var(--surface-2)',
+                    background: isDark ? 'rgba(18,18,30,0.97)' : '#ffffff',
                     borderRadius: 20,
                     marginBottom: 12,
-                    border: `1.5px solid ${cfg.color}35`,
+                    border: `1.5px solid ${isDark ? cfg.color + '30' : cfg.color + '45'}`,
                     overflow: 'hidden',
-                    boxShadow: `0 6px 28px ${cfg.color}18`,
+                    boxShadow: isDark
+                      ? `0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px ${cfg.color}12`
+                      : `0 4px 24px rgba(0,0,0,0.09), 0 0 0 1px ${cfg.color}18`,
                   }}>
-                    {/* Top gradient accent */}
+                    {/* Top gradient bar */}
                     <div style={{ height: 3, background: cfg.gradient }} />
 
-                    <div style={{ padding: '14px 16px 14px' }}>
-                      {/* Icon + type badge + countdown */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                        {/* Service icon circle */}
+                    <div style={{ padding: '14px 16px 16px' }}>
+                      {/* Header row: badge + title + countdown */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+
+                        {/* Vehicle badge — rounded square, 2 lines */}
                         <div style={{
-                          width: 52, height: 52, borderRadius: '50%',
+                          width: 60, height: 60, borderRadius: 16,
                           background: cfg.gradient,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '1.55rem', flexShrink: 0,
-                          boxShadow: `0 4px 16px ${cfg.color}45`,
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, gap: 2, padding: '6px 6px',
+                          boxShadow: `0 4px 18px ${cfg.color}50`,
                         }}>
-                          {req.icon}
+                          <span style={{
+                            fontSize: '0.5rem', fontWeight: 800,
+                            color: 'rgba(255,255,255,0.82)',
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                            lineHeight: 1, textAlign: 'center',
+                          }}>
+                            {req.line1}
+                          </span>
+                          <span style={{
+                            fontSize: req.line2.length > 4 ? '0.62rem' : '0.82rem',
+                            fontWeight: 900, color: '#ffffff',
+                            lineHeight: 1.15, textAlign: 'center',
+                            wordBreak: 'break-word',
+                          }}>
+                            {req.line2}
+                          </span>
                         </div>
 
-                        {/* Label column */}
+                        {/* Title + subtitle */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Type badge */}
-                          <span style={{
-                            display: 'inline-block',
-                            background: `${cfg.color}20`,
-                            color: cfg.color,
-                            border: `1px solid ${cfg.color}50`,
-                            borderRadius: 7,
-                            padding: '2px 10px',
-                            fontSize: '0.68rem',
+                          <div style={{
                             fontWeight: 900,
-                            letterSpacing: '0.07em',
-                            textTransform: 'uppercase',
-                            marginBottom: 5,
+                            color: isDark ? '#f1f5f9' : '#0f172a',
+                            fontSize: '1rem', lineHeight: 1.2, marginBottom: 4,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
-                            {cfg.badge}
-                          </span>
-                          {/* Main label */}
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.97rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {req.label}
                           </div>
+                          {req.subtitle && (
+                            <div style={{
+                              fontSize: '0.72rem',
+                              color: isDark ? '#94a3b8' : '#64748b',
+                              fontWeight: 500, lineHeight: 1.3,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              📍 {req.subtitle}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Countdown (top-right) */}
-                        <div style={{ textAlign: 'center', flexShrink: 0, background: isUrgent ? 'rgba(239,68,68,0.1)' : (isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.05)'), borderRadius: 10, padding: '5px 9px', border: isUrgent ? '1px solid rgba(239,68,68,0.3)' : `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.12)'}` }}>
-                          <div style={{ fontSize: '0.6rem', color: '#ef4444', fontWeight: 700, letterSpacing: '0.03em', marginBottom: 1 }}>Cancela en</div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ef4444', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                        {/* Countdown */}
+                        <div style={{
+                          textAlign: 'center', flexShrink: 0,
+                          background: isUrgent
+                            ? (isDark ? 'rgba(239,68,68,0.14)' : 'rgba(239,68,68,0.07)')
+                            : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
+                          borderRadius: 12, padding: '6px 10px', minWidth: 58,
+                          border: isUrgent
+                            ? '1px solid rgba(239,68,68,0.38)'
+                            : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.09)'}`,
+                        }}>
+                          <div style={{ fontSize: '0.56rem', color: isUrgent ? '#ef4444' : (isDark ? '#94a3b8' : '#64748b'), fontWeight: 700, letterSpacing: '0.03em', marginBottom: 2, textTransform: 'uppercase' }}>
+                            Cancela en
+                          </div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: isUrgent ? '#ef4444' : (isDark ? '#f1f5f9' : '#0f172a'), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                             {Math.floor(cd / 60).toString().padStart(2, '0')}:{(cd % 60).toString().padStart(2, '0')}
                           </div>
                         </div>
                       </div>
 
-                      {/* Route row */}
-                      {req.subtitle && (
-                        <div style={{
-                          background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-                          borderRadius: 11,
-                          padding: '8px 12px',
-                          marginBottom: 12,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 7,
-                        }}>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.55, flexShrink: 0 }}>📍</span>
-                          <span style={{ fontSize: '0.74rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
-                            {req.subtitle}
-                          </span>
-                        </div>
-                      )}
-
                       {/* Progress bar */}
-                      <div style={{ height: 3, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', borderRadius: 4, overflow: 'hidden', marginBottom: 13 }}>
-                        <div style={{ height: '100%', width: `${pct * 100}%`, background: barColor, borderRadius: 4, transition: 'width 1s linear, background 0.5s' }} />
+                      <div style={{
+                        height: 4,
+                        background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                        borderRadius: 4, overflow: 'hidden', marginBottom: 14,
+                      }}>
+                        <div style={{
+                          height: '100%', width: `${pct * 100}%`,
+                          background: isUrgent ? '#ef4444' : barColor,
+                          borderRadius: 4,
+                          transition: 'width 1s linear, background 0.5s',
+                          boxShadow: `0 0 8px ${isUrgent ? '#ef444460' : barColor + '60'}`,
+                        }} />
                       </div>
 
                       {/* Cancel button */}
@@ -1252,16 +1278,11 @@ export default function ClienteHomePage() {
                         onClick={() => setCancelConfirm({ id: req.id, type: req.type })}
                         disabled={busy}
                         style={{
-                          width: '100%',
-                          padding: '11px',
-                          borderRadius: 13,
-                          border: '1px solid rgba(239,68,68,0.28)',
-                          background: 'rgba(239,68,68,0.07)',
-                          color: '#f87171',
-                          fontWeight: 700,
-                          fontSize: '0.86rem',
-                          cursor: busy ? 'default' : 'pointer',
-                          letterSpacing: '0.01em',
+                          width: '100%', padding: '12px', borderRadius: 14,
+                          border: `1px solid ${isDark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.30)'}`,
+                          background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.05)',
+                          color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
+                          cursor: busy ? 'default' : 'pointer', letterSpacing: '0.01em',
                         }}
                       >
                         ✕ Cancelar solicitud
