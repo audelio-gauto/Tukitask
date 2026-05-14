@@ -1209,11 +1209,11 @@ export default function ClienteHomePage() {
                         {/* Badge */}
                         <div style={{
                           width: 60, height: 60, borderRadius: 16,
-                          background: 'linear-gradient(135deg, #7F5FF5 0%, #9d80f7 100%)',
+                          background: cfg.gradient,
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center', justifyContent: 'center',
                           flexShrink: 0, gap: 3,
-                          boxShadow: '0 4px 16px rgba(127,95,245,0.45)',
+                          boxShadow: `0 4px 16px ${cfg.color}55`,
                         }}>
                           <span style={{ fontSize: '0.58rem', fontWeight: 900, color: 'rgba(255,255,255,0.88)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>{svcLabel}</span>
                           <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.30)', borderRadius: 1 }} />
