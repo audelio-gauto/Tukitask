@@ -392,7 +392,7 @@ function OfferCard({
         {/* Note */}
         {offer.note && (
           <div style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '6px 10px', background: 'var(--glass-card)', borderRadius: 8, borderLeft: '2px solid rgba(245,197,24,0.4)' }}>
-            "{offer.note}"
+            &ldquo;{offer.note}&rdquo;
           </div>
         )}
 
