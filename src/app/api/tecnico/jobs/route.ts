@@ -616,8 +616,6 @@ export async function POST(req: Request) {
 
     // ── update_agreed_price (tecnico edits price while working — only en_proceso) ────
     if (action === 'update_agreed_price') {
-      const user = await getAuthUser(req);
-      if (!user) return unauthorized();
       const { jobId, newPrice } = body;
       if (!jobId || newPrice == null) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       const parsedPrice = Number(newPrice);
@@ -627,7 +625,7 @@ export async function POST(req: Request) {
       // Fetch current job — verify ownership and status
       const { data: cur } = await sb
         .from('tecnico_jobs')
-        .select('agreed_price, agreed_price_before, status, tecnico_email')
+        .select('agreed_price, agreed_price_before, status, tecnico_email, extra_charge')
         .eq('id', jobId)
         .maybeSingle();
       if (!cur) return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -635,23 +633,33 @@ export async function POST(req: Request) {
       if (cur.status !== 'en_proceso') {
         return NextResponse.json({ error: 'Solo se puede editar el precio en estado Trabajando' }, { status: 400 });
       }
-      // agreed_price_before: keep the original (first edit wins), don't overwrite on subsequent edits
       const priceBefore = cur.agreed_price_before != null ? cur.agreed_price_before : cur.agreed_price;
-      // Recalculate total_price preserving extras if any
-      const { data: job } = await sb.from('tecnico_jobs').select('extra_charge').eq('id', jobId).maybeSingle();
-      const extra = Number(job?.extra_charge ?? 0);
+      const extra = Number(cur.extra_charge ?? 0);
       const newTotal = parsedPrice + extra;
-      const { data, error } = await sb
+      // Try update with agreed_price_before; fall back without it if column doesn't exist yet
+      let data: unknown = null;
+      let upErr: unknown = null;
+      ({ data, error: upErr } = await sb
         .from('tecnico_jobs')
-        .update({
-          agreed_price_before: priceBefore,
-          agreed_price: parsedPrice,
-          total_price: newTotal > 0 ? newTotal : null,
-        })
+        .update({ agreed_price_before: priceBefore, agreed_price: parsedPrice, total_price: newTotal > 0 ? newTotal : null })
         .eq('id', jobId)
         .select()
-        .maybeSingle();
-      if (error) return serverError(error);
+        .maybeSingle() as { data: unknown; error: unknown });
+      if (upErr) {
+        const errMsg = (upErr as { message?: string }).message ?? '';
+        if (errMsg.includes('agreed_price_before')) {
+          // Column not yet migrated — update without it
+          ({ data, error: upErr } = await sb
+            .from('tecnico_jobs')
+            .update({ agreed_price: parsedPrice, total_price: newTotal > 0 ? newTotal : null })
+            .eq('id', jobId)
+            .select()
+            .maybeSingle() as { data: unknown; error: unknown });
+          if (upErr) return NextResponse.json({ error: (upErr as { message?: string }).message ?? 'DB error' }, { status: 500 });
+        } else {
+          return NextResponse.json({ error: errMsg || 'DB error' }, { status: 500 });
+        }
+      }
       return NextResponse.json({ job: data });
     }
 
