@@ -572,24 +572,24 @@ export default function CitasPage() {
                   )}
 
                   {/* Price row */}
-                  <div style={{ marginBottom: 12, fontSize: '0.82rem' }}>
+                  <div style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                       {job.agreed_price_before != null ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>💰 Precio acordado antes: {fmtGs(job.agreed_price_before)}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 800, color: '#10b981' }}>💰 Precio acordado ahora: {fmtGs(job.agreed_price)}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>💰 Precio acordado antes: {fmtGs(job.agreed_price_before)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#10b981' }}>💰 Acordado ahora: {fmtGs(job.agreed_price)}</span>
                             {job.status === 'en_proceso' && (
-                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#10b981', fontSize: '0.85rem', lineHeight: 1 }} title="Editar precio">✏️</button>
+                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#10b981', fontSize: '1rem', lineHeight: 1 }} title="Editar precio">✏️</button>
                             )}
                           </div>
                         </div>
                       ) : (
                         job.agreed_price != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 700, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
                             {job.status === 'en_proceso' && (
-                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#6b7280', fontSize: '0.85rem', lineHeight: 1 }} title="Editar precio">✏️</button>
+                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#6b7280', fontSize: '1rem', lineHeight: 1 }} title="Editar precio">✏️</button>
                             )}
                           </div>
                         )
