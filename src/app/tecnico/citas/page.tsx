@@ -343,7 +343,7 @@ export default function CitasPage() {
 
   const submitEditPrice = async () => {
     if (!editPriceModal || editPriceSending) return;
-    const parsed = Number(editPriceModal.input.replace(/\./g, '').replace(',', '.'));
+    const parsed = Number(editPriceModal.input);
     if (!isFinite(parsed) || parsed < 0) return;
     setEditPriceSending(true);
     try {
@@ -715,12 +715,14 @@ export default function CitasPage() {
               Ingresá el nuevo precio acordado con el cliente (en Gs.). El precio anterior quedará registrado.
             </p>
             <input
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={0}
-              value={editPriceModal.input}
-              onChange={e => setEditPriceModal(prev => prev ? { ...prev, input: e.target.value } : null)}
-              placeholder="Ej: 150000"
+              value={editPriceModal.input ? Number(editPriceModal.input).toLocaleString('es-PY') : ''}
+              onChange={e => {
+                const raw = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+                setEditPriceModal(prev => prev ? { ...prev, input: raw } : null);
+              }}
+              placeholder="Ej: 150.000"
               style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 16, boxSizing: 'border-box', outline: 'none', textAlign: 'center' }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
