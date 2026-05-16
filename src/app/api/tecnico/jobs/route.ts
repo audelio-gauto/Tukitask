@@ -634,14 +634,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Solo se puede editar el precio en estado Trabajando' }, { status: 400 });
       }
       const priceBefore = cur.agreed_price_before != null ? cur.agreed_price_before : cur.agreed_price;
-      const extra = Number(cur.extra_charge ?? 0);
-      const newTotal = parsedPrice + extra;
-      // Try update with agreed_price_before; fall back without it if column doesn't exist yet
+      // NOTE: total_price is a generated column — do NOT include it in the update payload
       let data: unknown = null;
       let upErr: unknown = null;
       ({ data, error: upErr } = await sb
         .from('tecnico_jobs')
-        .update({ agreed_price_before: priceBefore, agreed_price: parsedPrice, total_price: newTotal > 0 ? newTotal : null })
+        .update({ agreed_price_before: priceBefore, agreed_price: parsedPrice })
         .eq('id', jobId)
         .select()
         .maybeSingle() as { data: unknown; error: unknown });
@@ -651,7 +649,7 @@ export async function POST(req: Request) {
           // Column not yet migrated — update without it
           ({ data, error: upErr } = await sb
             .from('tecnico_jobs')
-            .update({ agreed_price: parsedPrice, total_price: newTotal > 0 ? newTotal : null })
+            .update({ agreed_price: parsedPrice })
             .eq('id', jobId)
             .select()
             .maybeSingle() as { data: unknown; error: unknown });
