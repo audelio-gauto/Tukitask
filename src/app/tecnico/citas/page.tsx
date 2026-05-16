@@ -577,11 +577,21 @@ export default function CitasPage() {
                       {job.agreed_price_before != null ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>💰 Precio acordado antes: {fmtGs(job.agreed_price_before)}</span>
-                          <span style={{ fontWeight: 800, color: '#10b981' }}>💰 Precio acordado ahora: {fmtGs(job.agreed_price)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 800, color: '#10b981' }}>💰 Precio acordado ahora: {fmtGs(job.agreed_price)}</span>
+                            {job.status === 'en_proceso' && (
+                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#10b981', fontSize: '0.85rem', lineHeight: 1 }} title="Editar precio">✏️</button>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         job.agreed_price != null && (
-                          <span style={{ fontWeight: 700, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 700, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
+                            {job.status === 'en_proceso' && (
+                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#6b7280', fontSize: '0.85rem', lineHeight: 1 }} title="Editar precio">✏️</button>
+                            )}
+                          </div>
                         )
                       )}
                       {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
@@ -649,11 +659,6 @@ export default function CitasPage() {
                           🛡️ {job.warranty_days ? `${job.warranty_days}d` : 'Garantía'}
                         </button>
                       </div>
-                      {/* Row 1b: Editar precio acordado */}
-                      <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })}
-                        style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '1.5px solid rgba(16,185,129,0.5)', background: 'rgba(16,185,129,0.08)', color: '#10b981', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-                        ✏️ Editar precio acordado
-                      </button>
                       {/* Row 2: Marcar completado full width */}
                       <button onClick={() => doActionConfirmed(job.id, 'completion_pending', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')} disabled={busy}
                         style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', background: busy ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? '#6b7280' : '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(16,185,129,0.3)' }}>
