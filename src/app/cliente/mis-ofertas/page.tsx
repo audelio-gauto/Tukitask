@@ -46,6 +46,7 @@ interface ActiveJob {
   service_type: string | null;
   address: string | null;
   agreed_price: number | null;
+  agreed_price_before: number | null;
   created_at: string;
   tecnico_name: string | null;
   tecnico_photo: string | null;
@@ -799,6 +800,18 @@ export default function MisOfertasPage() {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
                       🛡️ Garantía: {job.warranty_days} {job.warranty_days === 1 ? 'día' : 'días'}
                     </span>
+                  </div>
+                )}
+
+                {/* ── Price change notice (shown when tecnico edits agreed_price) */}
+                {job.agreed_price_before != null && (
+                  <div style={{ margin: '10px 16px 0', padding: '10px 14px', background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 12 }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'line-through', marginBottom: 3 }}>
+                      💰 Precio acordado antes: {Number(job.agreed_price_before).toLocaleString('es-PY')} Gs.
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#F5C518' }}>
+                      💰 Precio acordado ahora: {Number(job.agreed_price).toLocaleString('es-PY')} Gs.
+                    </div>
                   </div>
                 )}
 

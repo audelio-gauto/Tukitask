@@ -25,6 +25,7 @@ interface Job {
   lng: number | null;
   scheduled_at: string | null;
   agreed_price: number | null;
+  agreed_price_before: number | null;
   extra_charge: number | null;
   extra_items: ExtraItem[] | null;
   total_price: number | null;
@@ -114,6 +115,10 @@ export default function CitasPage() {
   // Warranty modal
   const [warrantyModal, setWarrantyModal] = useState<{ jobId: string; input: string } | null>(null);
   const [warrantySending, setWarrantySending] = useState(false);
+
+  // Edit agreed price modal
+  const [editPriceModal, setEditPriceModal] = useState<{ jobId: string; currentPrice: number | null; input: string } | null>(null);
+  const [editPriceSending, setEditPriceSending] = useState(false);
 
   // Extra charge modal
   interface ExtraModalState {
@@ -336,6 +341,24 @@ export default function CitasPage() {
     setWarrantyModal(null);
   };
 
+  const submitEditPrice = async () => {
+    if (!editPriceModal || editPriceSending) return;
+    const parsed = Number(editPriceModal.input.replace(/\./g, '').replace(',', '.'));
+    if (!isFinite(parsed) || parsed < 0) return;
+    setEditPriceSending(true);
+    try {
+      const res = await authFetch('/api/tecnico/jobs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_agreed_price', jobId: editPriceModal.jobId, newPrice: parsed }),
+      });
+      const json = await res.json();
+      if (json.job) setJobs(prev => prev.map(j => j.id === editPriceModal!.jobId ? { ...j, ...json.job } : j));
+    } catch {}
+    setEditPriceSending(false);
+    setEditPriceModal(null);
+  };
+
   const submitExtra = async () => {
     if (!extraModal || !email || extraSending) return;
     setExtraSending(true);
@@ -549,9 +572,16 @@ export default function CitasPage() {
 
                   {/* Price row */}
                   <div style={{ marginBottom: 12, fontSize: '0.82rem' }}>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      {job.agreed_price != null && (
-                        <span style={{ fontWeight: 700, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {job.agreed_price_before != null ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>💰 Precio acordado antes: {fmtGs(job.agreed_price_before)}</span>
+                          <span style={{ fontWeight: 800, color: '#10b981' }}>💰 Precio acordado ahora: {fmtGs(job.agreed_price)}</span>
+                        </div>
+                      ) : (
+                        job.agreed_price != null && (
+                          <span style={{ fontWeight: 700, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
+                        )
                       )}
                       {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
                         <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>= Total: {fmtGs(job.total_price)}</span>
@@ -618,6 +648,11 @@ export default function CitasPage() {
                           🛡️ {job.warranty_days ? `${job.warranty_days}d` : 'Garantía'}
                         </button>
                       </div>
+                      {/* Row 1b: Editar precio acordado */}
+                      <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })}
+                        style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '1.5px solid rgba(16,185,129,0.5)', background: 'rgba(16,185,129,0.08)', color: '#10b981', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                        ✏️ Editar precio acordado
+                      </button>
                       {/* Row 2: Marcar completado full width */}
                       <button onClick={() => doActionConfirmed(job.id, 'completion_pending', '¿Marcar el servicio como completado? El cliente deberá confirmarlo.')} disabled={busy}
                         style={{ width: '100%', padding: '13px', borderRadius: 13, border: 'none', background: busy ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #10b981, #059669)', color: busy ? '#6b7280' : '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: busy ? 'default' : 'pointer', boxShadow: busy ? 'none' : '0 4px 16px rgba(16,185,129,0.3)' }}>
@@ -669,6 +704,41 @@ export default function CitasPage() {
         otherName={chatOtherName}
         otherPhoto={chatOtherPhoto}
       />
+
+      {/* Edit agreed price modal */}
+      {editPriceModal && (
+        <>
+          <div onClick={() => setEditPriceModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--modal-bg)', borderRadius: '20px 20px 0 0', padding: '24px 18px 36px', zIndex: 9999, boxShadow: '0 -4px 24px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ margin: '0 0 6px', fontWeight: 800, color: 'var(--text-primary)' }}>✏️ Editar precio acordado</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.83rem', color: 'var(--text-secondary)' }}>
+              Ingresá el nuevo precio acordado con el cliente (en Gs.). El precio anterior quedará registrado.
+            </p>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={editPriceModal.input}
+              onChange={e => setEditPriceModal(prev => prev ? { ...prev, input: e.target.value } : null)}
+              placeholder="Ej: 150000"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 16, boxSizing: 'border-box', outline: 'none', textAlign: 'center' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={submitEditPrice}
+                disabled={editPriceSending || !editPriceModal.input || Number(editPriceModal.input) < 0}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: editPriceSending || !editPriceModal.input ? 'rgba(16,185,129,0.3)' : '#10b981', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {editPriceSending ? 'Guardando…' : '💾 Guardar precio'}
+              </button>
+              <button onClick={() => setEditPriceModal(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Warranty modal */}
       {warrantyModal && (

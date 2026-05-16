@@ -3,7 +3,7 @@ import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
-import { getAuthUser, unauthorized } from '@/lib/apiAuth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -608,6 +608,47 @@ export async function POST(req: Request) {
         .eq('id', jobId)
         .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
         .in('status', ['llegue'])
+        .select()
+        .maybeSingle();
+      if (error) return serverError(error);
+      return NextResponse.json({ job: data });
+    }
+
+    // ── update_agreed_price (tecnico edits price while working — only en_proceso) ────
+    if (action === 'update_agreed_price') {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      const { jobId, newPrice } = body;
+      if (!jobId || newPrice == null) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const parsedPrice = Number(newPrice);
+      if (!isFinite(parsedPrice) || parsedPrice < 0) {
+        return NextResponse.json({ error: 'Precio inválido' }, { status: 400 });
+      }
+      // Fetch current job — verify ownership and status
+      const { data: cur } = await sb
+        .from('tecnico_jobs')
+        .select('agreed_price, agreed_price_before, status, tecnico_email')
+        .eq('id', jobId)
+        .maybeSingle();
+      if (!cur) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      if (cur.tecnico_email?.toLowerCase() !== user.email) return forbidden('No autorizado');
+      if (cur.status !== 'en_proceso') {
+        return NextResponse.json({ error: 'Solo se puede editar el precio en estado Trabajando' }, { status: 400 });
+      }
+      // agreed_price_before: keep the original (first edit wins), don't overwrite on subsequent edits
+      const priceBefore = cur.agreed_price_before != null ? cur.agreed_price_before : cur.agreed_price;
+      // Recalculate total_price preserving extras if any
+      const { data: job } = await sb.from('tecnico_jobs').select('extra_charge').eq('id', jobId).maybeSingle();
+      const extra = Number(job?.extra_charge ?? 0);
+      const newTotal = parsedPrice + extra;
+      const { data, error } = await sb
+        .from('tecnico_jobs')
+        .update({
+          agreed_price_before: priceBefore,
+          agreed_price: parsedPrice,
+          total_price: newTotal > 0 ? newTotal : null,
+        })
+        .eq('id', jobId)
         .select()
         .maybeSingle();
       if (error) return serverError(error);
