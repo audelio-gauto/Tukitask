@@ -671,21 +671,13 @@ export async function POST(req: Request) {
         .filter(i => Number(i.amount) > 0)
         .map(i => ({ amount: Number(i.amount), reason: String(i.reason || '') }));
       const totalExtra = items.reduce((s, i) => s + i.amount, 0);
-      // Fetch agreed_price to compute total_price
-      const { data: cur } = await sb
-        .from('tecnico_jobs')
-        .select('agreed_price')
-        .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
-        .maybeSingle();
-      const agreed = Number(cur?.agreed_price ?? 0);
+      // NOTE: total_price is a generated column — computed automatically by DB
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({
           extra_items:  items,
           extra_charge: totalExtra > 0 ? totalExtra : null,
           extra_reason: items.length > 0 ? items.map(i => i.reason).filter(Boolean).join(', ') : null,
-          total_price:  agreed > 0 ? agreed + totalExtra : (totalExtra > 0 ? totalExtra : null),
         })
         .eq('id', jobId)
         .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
