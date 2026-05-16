@@ -348,13 +348,14 @@ export default function CitasPage() {
     setEditPriceSending(true);
     try {
       const res = await authFetch('/api/tecnico/jobs', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_agreed_price', jobId: editPriceModal.jobId, newPrice: parsed }),
       });
       const json = await res.json();
       if (json.job) setJobs(prev => prev.map(j => j.id === editPriceModal!.jobId ? { ...j, ...json.job } : j));
-    } catch {}
+      else if (json.error) { alert('Error: ' + json.error); return; }
+    } catch (e) { alert('Error al guardar precio'); return; }
     setEditPriceSending(false);
     setEditPriceModal(null);
   };
