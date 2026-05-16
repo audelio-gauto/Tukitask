@@ -26,15 +26,52 @@ function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: num
 }
 
 function createMarkerEl(label: string, color: string, badge?: string | null) {
+  // Container sized to pin (36×50) + optional badge above
   const el = document.createElement('div');
-  el.style.cssText = 'position:relative;width:30px;height:30px;cursor:default;';
-  const circle = document.createElement('div');
-  circle.style.cssText = `width:30px;height:30px;background:${color};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);`;
-  circle.textContent = label;
-  el.appendChild(circle);
+  el.style.cssText = 'position:relative;width:36px;height:50px;cursor:default;';
+
+  // SVG teardrop pin — tip at bottom center, circle face at top
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('width', '36');
+  svg.setAttribute('height', '50');
+  svg.setAttribute('viewBox', '0 0 36 50');
+  svg.style.cssText = 'display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.55));';
+
+  // Teardrop body
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', 'M18 1C10.268 1 4 7.268 4 15c0 11.25 14 34 14 34s14-22.75 14-34C32 7.268 25.732 1 18 1z');
+  path.setAttribute('fill', color);
+  path.setAttribute('stroke', 'rgba(255,255,255,0.6)');
+  path.setAttribute('stroke-width', '1.5');
+  svg.appendChild(path);
+
+  // Inner white circle highlight
+  const circle = document.createElementNS(ns, 'circle');
+  circle.setAttribute('cx', '18');
+  circle.setAttribute('cy', '15');
+  circle.setAttribute('r', '8');
+  circle.setAttribute('fill', 'rgba(255,255,255,0.22)');
+  svg.appendChild(circle);
+
+  // Letter label
+  const text = document.createElementNS(ns, 'text');
+  text.setAttribute('x', '18');
+  text.setAttribute('y', '20');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', '#fff');
+  text.setAttribute('font-size', '14');
+  text.setAttribute('font-weight', '900');
+  text.setAttribute('font-family', 'system-ui,-apple-system,sans-serif');
+  text.textContent = label;
+  svg.appendChild(text);
+
+  el.appendChild(svg);
+
+  // Badge tooltip above the pin
   if (badge) {
     const b = document.createElement('div');
-    b.style.cssText = `position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:rgba(8,8,18,0.88);color:#fff;border-radius:7px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap;border:1px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.55);pointer-events:none;line-height:1.3;`;
+    b.style.cssText = `position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:rgba(6,6,16,0.93);color:#fff;border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:800;white-space:nowrap;border:1.5px solid ${color};box-shadow:0 3px 12px rgba(0,0,0,0.65);pointer-events:none;line-height:1.4;`;
     b.textContent = badge;
     el.appendChild(b);
   }
@@ -205,15 +242,15 @@ export default function WorkerMap({
     pickupMarkerRef.current?.remove(); pickupMarkerRef.current = null;
     deliveryMarkerRef.current?.remove(); deliveryMarkerRef.current = null;
 
-    // Pickup marker A
+    // Pickup marker A (green — standard pickup colour)
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
-      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#f59e0b', pickupBadge) })
+      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981', pickupBadge), anchor: 'bottom' })
         .setLngLat([pickup.lng, pickup.lat]).addTo(map);
     }
 
-    // Delivery marker B
+    // Delivery marker B (red — standard delivery colour)
     if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
-      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#f59e0b', deliveryBadge) })
+      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444', deliveryBadge), anchor: 'bottom' })
         .setLngLat([delivery.lng, delivery.lat]).addTo(map);
     }
 
@@ -241,7 +278,8 @@ export default function WorkerMap({
         if (coords.length >= 2) {
           const bounds = new mapboxgl.LngLatBounds();
           coords.forEach((c: [number, number]) => bounds.extend(c));
-          map.fitBounds(bounds, { padding: { top: 80, bottom: 320, left: 40, right: 40 }, maxZoom: 15, duration: 700 });
+          // bottom: 460 = request card (~350px) + nav bar (~64px) + margin, so pins never hide under the card
+          map.fitBounds(bounds, { padding: { top: 100, bottom: 460, left: 60, right: 60 }, maxZoom: 15, duration: 700 });
         }
       };
       if (map.isStyleLoaded()) {
