@@ -64,7 +64,7 @@ export function WorkerDrawer({ open, onClose, email, displayName, profilePhoto, 
             {!profilePhoto && (displayName?.[0]?.toUpperCase() || email?.[0]?.toUpperCase() || (role === 'servicio' ? 'T' : 'D'))}
           </div>
           <div>
-            <h3 className="tuki-drawer-name">{displayName || (role === 'servicio' ? 'Técnico' : 'Conductor')}</h3>
+            <h3 className="tuki-drawer-name">{displayName || 'Tasker'}</h3>
             <span className="tuki-drawer-email">{email}</span>
           </div>
         </div>

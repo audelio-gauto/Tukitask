@@ -140,7 +140,7 @@ const SERVICE_TYPE_SHORT: Record<string, string> = {
   envio:     'Envío',
   mandadito: 'Mandadito',
   flete:     'Flete',
-  service:   'Técnico',
+  service:   'Tasker',
 };
 const VEHICLE_SHORT: Record<string, string> = {
   moto:      'Moto',
@@ -171,16 +171,16 @@ const TRACKING_STATUS_INFO: Record<string, { emoji: string; text: string; color:
   picking_up:          { emoji: '🔔', text: 'Llegó al punto de recogida',     color: '#f59e0b' },
   in_transit:          { emoji: '🚚', text: 'En camino al destino',           color: '#3b82f6' },
   in_progress:         { emoji: '🔧', text: 'Servicio en progreso',           color: '#6366f1' },
-  en_camino:           { emoji: '🚗', text: 'Técnico en camino',              color: '#22c55e' },
-  llegue:              { emoji: '🔔', text: 'Técnico llegó, listo para comenzar', color: '#f59e0b' },
+  en_camino:           { emoji: '🚗', text: 'Tasker en camino',              color: '#22c55e' },
+  llegue:              { emoji: '🔔', text: 'Tasker llegó, listo para comenzar', color: '#f59e0b' },
   en_proceso:          { emoji: '🔧', text: 'Servicio en progreso',           color: '#6366f1' },
   completion_pending:  { emoji: '⏳', text: 'Esperando confirmación',        color: '#a78bfa' },
-  returning:           { emoji: '↩️', text: 'El conductor solicita devolver el paquete', color: '#f97316' },
-  driver_returning:    { emoji: '🔄', text: 'El conductor va a devolverte el paquete', color: '#f59e0b' },
-  return_delivered:    { emoji: '📦', text: 'El conductor llegó a devolver el paquete', color: '#a78bfa' },
+  returning:           { emoji: '↩️', text: 'El Tasker solicita devolver el paquete', color: '#f97316' },
+  driver_returning:    { emoji: '🔄', text: 'El Tasker va a devolverte el paquete', color: '#f59e0b' },
+  return_delivered:    { emoji: '📦', text: 'El Tasker llegó a devolver el paquete', color: '#a78bfa' },
   // Terminal statuses — displayed in active tracking when order just finished
   cancelled:           { emoji: '🚫', text: 'Pedido cancelado por el cliente', color: '#9ca3af' },
-  failed:              { emoji: '⚠️', text: 'Entrega fallida — el conductor no pudo entregar', color: '#f87171' },
+  failed:              { emoji: '⚠️', text: 'Entrega fallida — el Tasker no pudo entregar', color: '#f87171' },
   return_rejected:     { emoji: '📦', text: 'Devolución rechazada — pedido cerrado', color: '#f97316' },
   returned:            { emoji: '↩️', text: 'Paquete devuelto al remitente', color: '#a78bfa' },
   delivered:           { emoji: '✅', text: '¡Entregado! Tu paquete llegó', color: '#22c55e' },
@@ -329,7 +329,7 @@ function OfferCard({
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Name */}
             <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {offer.name || (isDriver ? 'Conductor' : 'Técnico')}
+              {offer.name || 'Tasker'}
             </div>
             {/* Rating + trips on same line */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -815,7 +815,7 @@ export default function ClienteHomePage() {
       const line2 = svcLabel.replace(/^.{1,2}\s/, '');
       return {
         id: j.id, type: 'service' as const, icon: '🔧',
-        label: svcLabel, line1: 'Técnico', line2,
+        label: svcLabel, line1: 'Tasker', line2,
         orderType: 'service',
         subtitle: j.address ?? 'Sin dirección',
         createdAt: j.created_at ?? new Date().toISOString(),
@@ -856,7 +856,7 @@ export default function ClienteHomePage() {
         body: JSON.stringify({ offer_id: offerId, action: 'accept' }),
       });
       if (res.ok) {
-        showActionToast('✅ ¡Conductor aceptado! En camino...');
+        showActionToast('✅ ¡Tasker aceptado! En camino...');
         // Optimistic: instantly clear pending offers + mark order as accepted
         setDriverOffers(prev => {
           const next: typeof prev = {};
@@ -909,7 +909,7 @@ export default function ClienteHomePage() {
         body: JSON.stringify({ action: 'accept_offer', jobId, offerId, clientEmail: email }),
       });
       if (res.ok) {
-        showActionToast('✅ ¡Técnico aceptado! En camino...');
+        showActionToast('✅ ¡Tasker aceptado! En camino...');
         // Optimistic: clear offers for this job + mark it assigned
         setJobOffers(prev => ({ ...prev, [jobId]: (prev[jobId] ?? []).filter((o: TecnicoJobOffer) => o.id !== offerId) }));
         setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'assigned' } : j));
@@ -1182,7 +1182,7 @@ export default function ClienteHomePage() {
                         <RadarPulse />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 900, color: 'var(--text-primary)', fontSize: '0.97rem', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                            Buscando conductores…
+                            Buscando Taskers…
                           </div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: 2 }}>
                             Te avisamos cuando lleguen ofertas
@@ -1556,7 +1556,7 @@ export default function ClienteHomePage() {
                 <strong style={{ color: '#F5C518' }}>₲{Number(acceptConfirm.amount).toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>
-                Esta acción asignará al {acceptConfirm.requestType === 'delivery' ? 'conductor' : 'técnico'} a tu solicitud.
+                Esta acción asignará al Tasker a tu solicitud.
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1624,7 +1624,7 @@ export default function ClienteHomePage() {
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>
-              NUEVO MENSAJE · {chatToast.isJob ? 'TÉCNICO' : 'CONDUCTOR'}
+              NUEVO MENSAJE · TASKER
             </div>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}

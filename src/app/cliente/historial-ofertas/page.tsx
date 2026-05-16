@@ -34,7 +34,7 @@ export default function HistorialOfertasCliente() {
             <div key={of.id} style={{ background: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10, border: '1px solid #334155' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{of.driver_name || 'Conductor'}</div>
+                  <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{of.driver_name || 'Tasker'}</div>
                   <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{of.driver_email}</div>
                 </div>
                 <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.1rem' }}>₲{Number(of.amount).toLocaleString()}</div>
@@ -49,7 +49,7 @@ export default function HistorialOfertasCliente() {
             <div key={of.id} style={{ background: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10, border: '1px solid #334155' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{of.tecnico_name || 'Técnico'}</div>
+                  <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{of.tecnico_name || 'Tasker'}</div>
                   <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{of.tecnico_email}</div>
                 </div>
                 <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.1rem' }}>₲{Number(of.proposed_price).toLocaleString()}</div>

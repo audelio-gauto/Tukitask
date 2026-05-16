@@ -556,10 +556,10 @@ export default function EnviarPaquetePage() {
   }, [success, router]);
 
   const SERVICE_LABELS: Record<string, { title: string; sub: string; newLabel: string }> = {
-    envio:     { title: '¡Envío registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu envío.',     newLabel: 'Nuevo Envío' },
-    mandadito: { title: '¡Mandadito registrado!', sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu mandadito.', newLabel: 'Nuevo Mandadito' },
-    flete:     { title: '¡Flete registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu flete.',     newLabel: 'Nuevo Flete' },
-    viaje:     { title: '¡Viaje registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu viaje.',     newLabel: 'Nuevo Viaje' },
+    envio:     { title: '¡Envío registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu envío.',     newLabel: 'Nuevo Envío' },
+    mandadito: { title: '¡Mandadito registrado!', sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu mandadito.', newLabel: 'Nuevo Mandadito' },
+    flete:     { title: '¡Flete registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu flete.',     newLabel: 'Nuevo Flete' },
+    viaje:     { title: '¡Viaje registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu viaje.',     newLabel: 'Nuevo Viaje' },
   };
   const svcLabel = SERVICE_LABELS[orderType] ?? SERVICE_LABELS.envio;
 
@@ -997,7 +997,7 @@ export default function EnviarPaquetePage() {
                     </div>
                   )}
                   <div className="enviar-price-label">
-                    Tu oferta al conductor
+                    Tu oferta al Tasker
                     {(surgeData?.suggested ?? suggestedPrice) > 0 && (
                       <button
                         type="button"
@@ -1102,7 +1102,7 @@ export default function EnviarPaquetePage() {
                 <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
                     <div className="enviar-step-title-main" style={{ fontSize: 13 }}>{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmar datos del remitente'}</div>
-                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El conductor verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
+                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El Tasker verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
                   </div>
                 </div>
 
@@ -1140,7 +1140,7 @@ export default function EnviarPaquetePage() {
 
                 <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: 'var(--client-action-active)' }}>
                   <div className="enviar-field">
-                    <label className="enviar-field-label">Indicaciones para el conductor <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
+                    <label className="enviar-field-label">Indicaciones para el Tasker <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
                     <textarea
                       className="enviar-field-textarea"
                       placeholder={orderType === 'viaje' ? 'Ej: Viajo con mascota, llevo equipaje, u otras condiciones' : 'Ej: Dejar en portería, tocar timbre 2 veces, es frágil...'}

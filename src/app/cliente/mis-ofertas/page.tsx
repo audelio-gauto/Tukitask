@@ -70,7 +70,7 @@ const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', '
 const ACTIVE_JOB_STS   = ['accepted', 'en_proceso', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string }> = {
-  pending: { text: 'Buscando conductor...' },
+  pending: { text: 'Buscando Tasker...' },
   negotiating: { text: 'Negociando precio...' },
   accepted: { text: 'Asignado. En camino a recoger' },
   assigned: { text: 'Asignado. En camino a recoger' },
@@ -78,15 +78,15 @@ const TRACKING_STATUS: Record<string, { text: string }> = {
   at_pickup:  { text: 'Driver en punto de recogida' },
   in_transit: { text: 'En camino al destino' },
   failed: { text: 'Entrega fallida — pendiente de resolución' },
-  returning: { text: '⚠️ El conductor solicita devolver el paquete' },
-  return_rejected: { text: 'Devolución rechazada — el conductor puede solicitar de nuevo' },
-  driver_returning: { text: 'El conductor va a devolverte el paquete' },
-  return_delivered: { text: 'El conductor llegó a devolver el paquete' },
+  returning: { text: '⚠️ El Tasker solicita devolver el paquete' },
+  return_rejected: { text: 'Devolución rechazada — el Tasker puede solicitar de nuevo' },
+  driver_returning: { text: 'El Tasker va a devolverte el paquete' },
+  return_delivered: { text: 'El Tasker llegó a devolver el paquete' },
   // tecnico
-  'pending-job': { text: 'Buscando tecnico...' },
+  'pending-job': { text: 'Buscando Tasker...' },
   in_progress: { text: 'Servicio en progreso' },
-  en_camino: { text: 'Tecnico en camino' },
-  llegue: { text: 'Tecnico llego, listo para comenzar' },
+  en_camino: { text: 'Tasker en camino' },
+  llegue: { text: 'Tasker llegó, listo para comenzar' },
   completion_pending: { text: 'Esperando confirmacion' },
 };
 
@@ -467,7 +467,7 @@ export default function MisOfertasPage() {
             </div>
             <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-secondary)' }}>Sin solicitudes activas</div>
             <div style={{ fontSize: '0.83rem', color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
-              Cuando un conductor o técnico acepte<br />tu solicitud aparecerá aquí
+              Cuando un Tasker acepte<br />tu solicitud aparecerá aquí
             </div>
             <Link
               href="/cliente"
@@ -535,7 +535,7 @@ export default function MisOfertasPage() {
                     {/* Name + rating */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {order.driver_name || 'Conductor'}
+                        {order.driver_name || 'Tasker'}
                       </div>
                       <StarRating rating={order.driver_avg_rating ?? order.driver_rating} count={order.driver_total_ratings} label="envíos" />
                     </div>
@@ -651,18 +651,18 @@ export default function MisOfertasPage() {
                   {order.status === 'failed' ? (
                     // Delivery failed — waiting for driver to request return or retry
                     <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '10px 14px', fontSize: '0.82rem', color: '#fca5a5', textAlign: 'center' }}>
-                      <Icon name="exclamation" size={14} /> Entrega fallida — el conductor resolverá la situación pronto
+                      <Icon name="exclamation" size={14} /> Entrega fallida — el Tasker resolverá la situación pronto
                     </div>
                   ) : order.status === 'return_rejected' ? (
                     // Client rejected return — driver may ask again
                     <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '10px 14px', fontSize: '0.82rem', color: '#fde68a', textAlign: 'center' }}>
-                      <Icon name="clock" size={14} /> Rechazaste la devolución — el conductor puede solicitar nuevamente
+                      <Icon name="clock" size={14} /> Rechazaste la devolución — el Tasker puede solicitar nuevamente
                     </div>
                   ) : order.status === 'returning' ? (
                     // Driver requested return — client accepts or rejects
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 2 }}>
-                        El conductor solicita devolver el paquete
+                        El Tasker solicita devolver el paquete
                       </div>
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button
@@ -696,7 +696,7 @@ export default function MisOfertasPage() {
                   ) : ['driver_returning'].includes(order.status) ? (
                     // Waiting for driver to arrive — no action needed, just info
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
-                      El conductor va en camino a devolverte el paquete
+                      El Tasker va en camino a devolverte el paquete
                     </div>
                   ) : (
                     // Default: show cancel button (only for cancellable statuses — hidden once in_transit)
@@ -763,7 +763,7 @@ export default function MisOfertasPage() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {job.tecnico_name || 'Técnico'}
+                        {job.tecnico_name || 'Tasker'}
                       </div>
                       <StarRating rating={job.tecnico_avg_rating ?? job.tecnico_rating} count={job.total_services} label="servicios" />
                     </div>
@@ -781,7 +781,7 @@ export default function MisOfertasPage() {
                 {/* ── Pending state */}
                 {!hasWorker && (
                   <div style={{ padding: '10px 16px', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Esperando técnico…</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Esperando Tasker…</div>
                   </div>
                 )}
 
@@ -874,7 +874,7 @@ export default function MisOfertasPage() {
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: '2rem', marginBottom: 10 }}>⚠️</div>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: 8 }}>¿Cancelar solicitud?</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Esta acción no se puede deshacer. El conductor será notificado.</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Esta acción no se puede deshacer. El Tasker será notificado.</div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button

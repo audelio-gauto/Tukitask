@@ -234,7 +234,7 @@ export default function OfferIncomingToast({ email }: Props) {
 
   const isService = currentOffer.type === 'servicio';
   const icon = isService ? (SERVICE_ICONS[currentOffer.serviceType ?? ''] ?? '🔧') : '🚚';
-  const typeLabel = isService ? 'Servicio técnico' : 'Envío';
+  const typeLabel = isService ? 'Servicio Tasker' : 'Envío';
   const count = queue.current.length + 1; // currently shown + queued
 
   return (
@@ -324,7 +324,7 @@ export default function OfferIncomingToast({ email }: Props) {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: 2 }}>
-              {currentOffer.driverName ?? (isService ? 'Técnico' : 'Conductor')}
+              {currentOffer.driverName ?? 'Tasker'}
             </div>
             {currentOffer.address && (
               <div style={{ fontSize: '0.78rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

@@ -566,7 +566,7 @@ export default function TecnicoDashboard() {
         </div>
         <div style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, lineHeight: 1.2 }}>{getGreeting()}</div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Técnico'}</div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Tasker'}</div>
         </div>
       </div>
 

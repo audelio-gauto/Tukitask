@@ -242,7 +242,7 @@ export default function ChatModal({
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {otherName || (orderId ? 'Conductor' : 'Técnico')}
+              {otherName || 'Tasker'}
             </div>
             <div style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
@@ -275,7 +275,7 @@ export default function ChatModal({
                 </div>
               </div>
               <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
-                Comenzá la conversación.<br />Los mensajes son privados entre vos y {otherName || 'el conductor'}.
+                Comenzá la conversación.<br />Los mensajes son privados entre vos y {otherName || 'el Tasker'}.
               </div>
             </div>
           )}
@@ -286,7 +286,7 @@ export default function ChatModal({
                 {/* Nombre del remitente (solo para mensajes ajenos) */}
                 {!isMe && (
                   <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginBottom: 3, paddingLeft: 4, fontWeight: 600 }}>
-                    {msg.sender_name || (msg.sender_role === 'client' ? 'Cliente' : msg.sender_role === 'driver' ? 'Conductor' : 'Técnico')}
+                    {msg.sender_name || (msg.sender_role === 'client' ? 'Cliente' : 'Tasker')}
                   </div>
                 )}
                 <div style={{

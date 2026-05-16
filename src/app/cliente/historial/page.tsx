@@ -219,7 +219,7 @@ export default function ClienteHistorialPage() {
       incidente: { label: 'Incidente', icon: 'exclamation' },
       client_confirmed: { label: 'Confirmado', icon: 'check' },
       commission_charged: { label: 'Completado', icon: 'check' },
-      driver_returning: { label: 'Conductor devolviendo', icon: 'refresh' },
+      driver_returning: { label: 'Tasker devolviendo', icon: 'refresh' },
     };
     return labels[status] || { label: status, icon: 'tag' };
   };
@@ -361,7 +361,7 @@ export default function ClienteHistorialPage() {
                             style={{ fontSize: '0.83rem', marginBottom: 6 }}
                           >
                             <Icon name="chat" size={14} />
-                            Chat con el tecnico
+                            Chat con el Tasker
                           </button>
                         ) : null;
                       })()}
@@ -372,7 +372,7 @@ export default function ClienteHistorialPage() {
                           style={{ fontSize: '0.83rem' }}
                         >
                           <Icon name="star" size={14} />
-                          Calificar tecnico
+                          Calificar Tasker
                         </button>
                       )}
                       {item.data.tecnico_rating != null && (
@@ -622,7 +622,7 @@ export default function ClienteHistorialPage() {
 
       {ratingModal && (
         <RatingModal
-          title="Calificar técnico"
+          title="Calificar Tasker"
           subtitle={ratingModal.tecnicoName ?? undefined}
           avatarUrl={ratingModal.tecnicoPhoto ?? undefined}
           avatarName={ratingModal.tecnicoName ?? undefined}
@@ -674,7 +674,7 @@ export default function ClienteHistorialPage() {
           <div style={{ background: 'var(--modal-bg)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, border: '1px solid rgba(245,197,24,0.2)' }}>
             <h3 style={{ margin: '0 0 6px', color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 800 }}>Dar propina</h3>
             <p style={{ margin: '0 0 18px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              {tipModal.driverName ? `Para ${tipModal.driverName}` : 'Para el conductor'} · ingresa monto en Gs
+              {tipModal.driverName ? `Para ${tipModal.driverName}` : 'Para el Tasker'} · ingresa monto en Gs
             </p>
             <input
               type="number"

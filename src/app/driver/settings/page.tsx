@@ -270,7 +270,7 @@ export default function DriverSettingsPage() {
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: 0, lineHeight: 1.2 }}>
-              {[firstName, lastName].filter(Boolean).join(' ') || 'Conductor'}
+              {[firstName, lastName].filter(Boolean).join(' ') || 'Tasker'}
             </p>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '4px 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {email}

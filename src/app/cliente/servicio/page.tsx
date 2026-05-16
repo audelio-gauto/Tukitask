@@ -273,7 +273,7 @@ export default function SolicitarServicioPage() {
       <div className="enviar-success-screen">
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>¡Solicitud enviada!</h2>
-        <p style={{ color: '#6b7280', marginBottom: '1rem', maxWidth: 320 }}>Se registró tu solicitud. Te notificaremos cuando un técnico acepte.</p>
+        <p style={{ color: '#6b7280', marginBottom: '1rem', maxWidth: 320 }}>Se registró tu solicitud. Te notificaremos cuando un Tasker acepte.</p>
         <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '2rem' }}>Redirigiendo a Mis Servicios…</p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Link href="/cliente/mis-servicios" className="client-btn client-btn-primary">Ver mis servicios →</Link>
@@ -462,8 +462,8 @@ export default function SolicitarServicioPage() {
                 <div className="servicio-gender-grid">
                   {[
                     { key: 'mujer',       label: 'Mujer',        avatar: '👩', sub: 'Limpieza, niñera, cocina...' },
-                    { key: 'hombre',      label: 'Hombre',       avatar: '👨', sub: 'Técnicos, plomeros...' },
-                    { key: 'indiferente', label: 'Sin preferencia', avatar: '🧑', sub: 'Cualquier técnico' },
+                    { key: 'hombre',      label: 'Hombre',       avatar: '👨', sub: 'Taskers, plomeros...' },
+                    { key: 'indiferente', label: 'Sin preferencia', avatar: '🧑', sub: 'Cualquier Tasker' },
                   ].map(pref => (
                     <button
                       key={pref.key}
@@ -539,7 +539,7 @@ export default function SolicitarServicioPage() {
                 <div className="enviar-step-title">
                   <div>
                     <div className="enviar-step-title-main">Descripción del problema</div>
-                    <div className="enviar-step-title-sub">Contanos qué necesitás, el técnico te cotizará</div>
+                    <div className="enviar-step-title-sub">Contános qué necesitás, el Tasker te cotizará</div>
                   </div>
                 </div>
 

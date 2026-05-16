@@ -102,14 +102,14 @@ function fmtGs(n: number | null) {
 
 function statusLabel(status: string) {
   const map: Record<string, { text: string; icon: IconName }> = {
-    accepted: { text: 'Conductor asignado', icon: 'check' },
-    picking_up: { text: 'Conductor en camino', icon: 'truck' },
+    accepted: { text: 'Tasker asignado', icon: 'check' },
+    picking_up: { text: 'Tasker en camino', icon: 'truck' },
     in_transit: { text: 'En transito', icon: 'truck' },
     in_progress: { text: 'En curso', icon: 'tool' },
     returning: { text: 'Devolviendo paquete', icon: 'refresh' },
-    driver_returning: { text: 'Conductor regresando', icon: 'refresh' },
-    en_route: { text: 'Tecnico en camino', icon: 'tool' },
-    arrived: { text: 'Tecnico llego', icon: 'map-pin' },
+    driver_returning: { text: 'Tasker regresando', icon: 'refresh' },
+    en_route: { text: 'Tasker en camino', icon: 'tool' },
+    arrived: { text: 'Tasker llegó', icon: 'map-pin' },
     completion_pending: { text: 'Completando servicio', icon: 'clock' },
     delivered: { text: 'Entregado', icon: 'package' },
     completado: { text: 'Servicio completado', icon: 'check' },
@@ -417,7 +417,7 @@ export default function SeguimientoPage() {
     if (driverLoc) {
       const dLat = Number(driverLoc.lat);
       const dLng = Number(driverLoc.lng);
-      const name = order.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
+      const name = order.driver_name ?? 'Tasker';
       const inits = name.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
       const color = type === 'service' ? '#8b5cf6' : '#22c55e';
       const photo = vehicleRef.current?.photo ?? order.driver_photo ?? null;
@@ -715,7 +715,7 @@ export default function SeguimientoPage() {
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-  const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
+  const workerName   = order?.driver_name ?? 'Tasker';
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
   const workerRating = order?.driver_avg_rating ?? null;
   const st           = order ? statusLabel(order.status) : null;
@@ -739,7 +739,7 @@ export default function SeguimientoPage() {
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem' }}>
-            {type === 'service' ? 'Seguimiento del técnico' : 'Seguimiento del envío'}
+            {type === 'service' ? 'Seguimiento del Tasker' : 'Seguimiento del envío'}
           </div>
           {order && (
             <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 1 }}>
@@ -1011,7 +1011,7 @@ export default function SeguimientoPage() {
                           <div style={{ fontSize: '1.3rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums', opacity: pickupValidated ? 1 : 0.35 }}>{order.pickup_code}</div>
                           {pickupValidated && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
-                        <div style={{ fontSize: '0.58rem', color: pickupValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{pickupValidated ? '✓ Código validado por el conductor' : 'Mostrá esto al conductor al retirar'}</div>
+                        <div style={{ fontSize: '0.58rem', color: pickupValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{pickupValidated ? '✓ Código validado por el Tasker' : 'Mostrá esto al Tasker al retirar'}</div>
                       </div>
                     )}
                     {!order.is_multi_stop && order.delivery_pin && (
@@ -1104,7 +1104,7 @@ export default function SeguimientoPage() {
         >
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · {type === 'service' ? 'TÉCNICO' : 'CONDUCTOR'}</div>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · TASKER</div>
             <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
             </div>
