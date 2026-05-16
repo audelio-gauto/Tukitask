@@ -541,20 +541,17 @@ export default memo(function RequestsFeed({
                   </div>
                 )}
 
-                {/* Timer + dismiss */}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <CountdownRing createdAt={item.createdAt} />
-                  <button
-                    onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
-                    style={{
-                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
-                      color: 'var(--text-muted)', borderRadius: 99,
-                      width: 32, height: 32, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem',
-                    }}
-                    aria-label="Omitir solicitud"
-                  >✕</button>
-                </div>
+                {/* Dismiss button — sin cronómetro, la barra de progreso ya lo muestra */}
+                <button
+                  onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)',
+                    color: 'var(--text-secondary)', borderRadius: 99,
+                    width: 42, height: 42, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', cursor: 'pointer', fontSize: '1.15rem', fontWeight: 700,
+                  }}
+                  aria-label="Omitir solicitud"
+                >✕</button>
               </div>
             </div>
 
@@ -564,9 +561,9 @@ export default memo(function RequestsFeed({
             <div style={{
               background: 'rgba(255,255,255,0.04)', borderRadius: 12,
               border: '1px solid rgba(255,255,255,0.07)',
-              padding: '8px 10px', marginBottom: 8,
-              fontSize: '0.76rem', color: 'var(--text-secondary)',
-              display: 'flex', flexDirection: 'column', gap: 5,
+              padding: '9px 12px', marginBottom: 8,
+              fontSize: '0.88rem', color: 'var(--text-secondary)',
+              display: 'flex', flexDirection: 'column', gap: 6,
             }}>
               {item.from && (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
