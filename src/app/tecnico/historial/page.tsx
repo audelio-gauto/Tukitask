@@ -70,6 +70,7 @@ interface Job {
   address: string | null;
   agreed_price: number | null;
   extra_charge: number | null;
+  extra_items: Array<{ amount: number; reason: string }> | null;
   total_price: number | null;
   description: string | null;
   tecnico_rating: number | null;
@@ -200,19 +201,44 @@ export default function TecnicoHistorialPage() {
             </div>
           )}
 
-          {/* Price breakdown */}
-          {job.extra_charge && Number(job.extra_charge) > 0 ? (
-            <div style={{
-              background: 'rgba(245,197,24,0.08)', borderRadius: 8,
-              padding: '6px 10px', marginBottom: 10,
-              fontSize: '0.77rem', color: 'var(--text-muted)',
-            }}>
-              Base: ₲{Number(job.agreed_price ?? 0).toLocaleString('es-PY')}
-              {' + '}Extra: ₲{Number(job.extra_charge).toLocaleString('es-PY')}
-              {' = '}
-              <strong style={{ color: '#F5C518' }}>₲{totalPrice.toLocaleString('es-PY')}</strong>
-            </div>
-          ) : null}
+          {/* Price block unificado */}
+          {totalPrice > 0 && (() => {
+            const hasExtraItems = Array.isArray(job.extra_items) && job.extra_items.length > 0;
+            const hasExtraCharge = Number(job.extra_charge ?? 0) > 0;
+            const hasExtras = hasExtraItems || hasExtraCharge;
+            return (
+              <div style={{ marginBottom: 10, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(16,185,129,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#10b981' }}>₲{Number(job.agreed_price ?? totalPrice).toLocaleString('es-PY')}</span>
+                </div>
+                {hasExtras && (
+                  <>
+                    <div style={{ height: 1, background: 'rgba(16,185,129,0.15)', margin: '0 14px' }} />
+                    {hasExtraItems
+                      ? job.extra_items!.map((it, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>₲{Number(it.amount).toLocaleString('es-PY')}</span>
+                          </div>
+                        ))
+                      : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ Extra servicio</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>₲{Number(job.extra_charge).toLocaleString('es-PY')}</span>
+                          </div>
+                        )
+                    }
+                    <div style={{ height: 1, background: 'rgba(16,185,129,0.25)', margin: '0 14px' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: 'rgba(16,185,129,0.1)' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(16,185,129,0.8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                      <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#10b981' }}>₲{totalPrice.toLocaleString('es-PY')}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Warranty */}
           {job.warranty_days != null && job.warranty_days > 0 && (
