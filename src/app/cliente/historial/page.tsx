@@ -40,6 +40,9 @@ interface Job {
   tecnico_photo: string | null;
   tecnico_rating: number | null;
   total_price: number | null;
+  agreed_price: number | null;
+  extra_charge: number | null;
+  extra_items: Array<{ amount: number; reason: string }> | null;
   warranty_days: number | null;
   created_at: string;
   completed_at: string | null;
@@ -348,6 +351,35 @@ export default function ClienteHistorialPage() {
                       {(item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', marginBottom: 6, fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
                           🛡️ Garantía: {(item.data as Job).warranty_days} {(item.data as Job).warranty_days === 1 ? 'día' : 'días'}
+                        </div>
+                      )}
+                      {/* Bloque precio unificado */}
+                      {(item.data as Job).agreed_price != null && (
+                        <div style={{ marginBottom: 8, background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 14, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(245,197,24,0.65)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#F5C518' }}>{Number((item.data as Job).agreed_price).toLocaleString('es-PY')} Gs.</span>
+                          </div>
+                          {Array.isArray((item.data as Job).extra_items) && (item.data as Job).extra_items!.length > 0 && (
+                            <>
+                              <div style={{ height: 1, background: 'rgba(245,197,24,0.15)', margin: '0 14px' }} />
+                              {(item.data as Job).extra_items!.map((it, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
+                                  <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>{Number(it.amount).toLocaleString('es-PY')} Gs.</span>
+                                </div>
+                              ))}
+                              {item.data.total_price != null && (
+                                <>
+                                  <div style={{ height: 1, background: 'rgba(245,197,24,0.25)', margin: '0 14px' }} />
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: 'rgba(245,197,24,0.1)' }}>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(245,197,24,0.75)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                                    <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#F5C518' }}>{Number(item.data.total_price).toLocaleString('es-PY')} Gs.</span>
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                       {item.data.tecnico_name && (() => {
