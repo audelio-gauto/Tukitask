@@ -571,43 +571,46 @@ export default function CitasPage() {
                     </div>
                   )}
 
-                  {/* Price row */}
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {job.agreed_price_before != null ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>💰 Precio acordado antes: {fmtGs(job.agreed_price_before)}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#10b981' }}>💰 Acordado ahora: {fmtGs(job.agreed_price)}</span>
-                            {job.status === 'en_proceso' && (
-                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#10b981', fontSize: '1rem', lineHeight: 1 }} title="Editar precio">✏️</button>
-                            )}
-                          </div>
+                  {/* ── Bloque de precio unificado ── */}
+                  {job.agreed_price != null && (
+                    <div style={{ marginBottom: 12, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 14, overflow: 'hidden' }}>
+                      {/* Fila: Acordado */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(16,185,129,0.7)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Acordado</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {job.agreed_price_before != null && (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{fmtGs(job.agreed_price_before)}</span>
+                          )}
+                          <span style={{ fontSize: '1.18rem', fontWeight: 900, color: '#10b981' }}>{fmtGs(job.agreed_price)}</span>
+                          {job.status === 'en_proceso' && (
+                            <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, cursor: 'pointer', padding: '3px 7px', color: '#10b981', fontSize: '0.85rem', lineHeight: 1 }} title="Editar precio">✏️</button>
+                          )}
                         </div>
-                      ) : (
-                        job.agreed_price != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669' }}>💰 Acordado: {fmtGs(job.agreed_price)}</span>
-                            {job.status === 'en_proceso' && (
-                              <button onClick={() => setEditPriceModal({ jobId: job.id, currentPrice: job.agreed_price, input: job.agreed_price != null ? String(job.agreed_price) : '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#6b7280', fontSize: '1rem', lineHeight: 1 }} title="Editar precio">✏️</button>
-                            )}
-                          </div>
-                        )
+                      </div>
+                      {/* Extras */}
+                      {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
+                        <>
+                          <div style={{ height: 1, background: 'rgba(16,185,129,0.15)', margin: '0 14px' }} />
+                          {job.extra_items.map((it, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px' }}>
+                              <span style={{ fontSize: '0.82rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f59e0b' }}>{fmtGs(it.amount)}</span>
+                            </div>
+                          ))}
+                          {/* Total */}
+                          {job.total_price != null && (
+                            <>
+                              <div style={{ height: 1, background: 'rgba(16,185,129,0.25)', margin: '0 14px' }} />
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(16,185,129,0.1)' }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(16,185,129,0.8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total</span>
+                                <span style={{ fontSize: '1.22rem', fontWeight: 900, color: '#10b981' }}>{fmtGs(job.total_price)}</span>
+                              </div>
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
-                    {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
-                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {job.extra_items.map((it, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 600, color: '#f59e0b' }}>➕ {it.reason || 'Extra'}: {fmtGs(it.amount)}</span>
-                          </div>
-                        ))}
-                        {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
-                          <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Total: {fmtGs(job.total_price)}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   {/* State-based action buttons */}
                   {job.status === 'accepted' && (

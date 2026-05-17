@@ -806,30 +806,40 @@ export default function MisOfertasPage() {
                   </div>
                 )}
 
-                {/* ── Price change notice (shown when tecnico edits agreed_price) */}
-                {job.agreed_price_before != null && (
-                  <div style={{ margin: '10px 16px 0', padding: '10px 14px', background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 12 }}>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'line-through', marginBottom: 3 }}>
-                      💰 Precio acordado antes: {Number(job.agreed_price_before).toLocaleString('es-PY')} Gs.
-                    </div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#F5C518' }}>
-                      💰 Precio acordado ahora: {Number(job.agreed_price).toLocaleString('es-PY')} Gs.
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Extras + total (shown when tecnico adds extra charges) */}
-                {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
-                  <div style={{ margin: '10px 16px 0', padding: '10px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {job.extra_items.map((it, i) => (
-                      <div key={i} style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f59e0b' }}>
-                        ➕ {it.reason || 'Extra'}: {Number(it.amount).toLocaleString('es-PY')} Gs.
+                {/* ── Bloque de precio unificado ── */}
+                {job.agreed_price != null && (
+                  <div style={{ margin: '10px 16px 0', background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 14, overflow: 'hidden' }}>
+                    {/* Fila: Acordado */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(245,197,24,0.65)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {job.agreed_price_before != null && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{Number(job.agreed_price_before).toLocaleString('es-PY')} Gs.</span>
+                        )}
+                        <span style={{ fontSize: '1.18rem', fontWeight: 900, color: '#F5C518' }}>{Number(job.agreed_price).toLocaleString('es-PY')} Gs.</span>
                       </div>
-                    ))}
-                    {job.total_price != null && (
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(245,158,11,0.2)' }}>
-                        Total: {Number(job.total_price).toLocaleString('es-PY')} Gs.
-                      </div>
+                    </div>
+                    {/* Extras */}
+                    {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
+                      <>
+                        <div style={{ height: 1, background: 'rgba(245,197,24,0.15)', margin: '0 14px' }} />
+                        {job.extra_items.map((it, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px' }}>
+                            <span style={{ fontSize: '0.82rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f59e0b' }}>{Number(it.amount).toLocaleString('es-PY')} Gs.</span>
+                          </div>
+                        ))}
+                        {/* Total */}
+                        {job.total_price != null && (
+                          <>
+                            <div style={{ height: 1, background: 'rgba(245,197,24,0.25)', margin: '0 14px' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(245,197,24,0.1)' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(245,197,24,0.75)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                              <span style={{ fontSize: '1.22rem', fontWeight: 900, color: '#F5C518' }}>{Number(job.total_price).toLocaleString('es-PY')} Gs.</span>
+                            </div>
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
