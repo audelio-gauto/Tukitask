@@ -519,7 +519,7 @@ export async function PATCH(req: Request) {
     // Mandadito payment flow (only valid for mandadito order_type)
     awaiting_payment:  ['accepted'],
     payment_confirmed: ['awaiting_payment'],
-    picking_up: ['accepted', 'payment_confirmed'],
+    picking_up: ['accepted', 'payment_confirmed', 'awaiting_payment'],
     at_pickup:  ['picking_up'],
     in_transit: ['at_pickup', 'picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
@@ -657,7 +657,11 @@ export async function PATCH(req: Request) {
   };
   // Urgent statuses deserve popup + sound
   const urgentStatuses = ['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'delivered', 'failed', 'returned', 'returning'];
-  const label = statusLabels[status];
+  let label = statusLabels[status];
+  // Override for mandadito: driver confirms payment → goes to pick up in one step
+  if (status === 'picking_up' && order.order_type === 'mandadito' && order.status === 'awaiting_payment') {
+    label = '✅ Tu conductor confirmó el pago y va al local a buscar tus productos';
+  }
   if (label) {
     const targetEmail = isDriverStatus ? order.client_email : order.accepted_by;
     if (targetEmail) {

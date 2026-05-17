@@ -22,6 +22,7 @@ interface VehicleInfo {
   plate: string | null;    // e.g. 'ACF 5432'
   photo: string | null;    // profile photo URL
   phone: string | null;    // Tigo Money / contact number
+  tigoMoneyAlias: string | null; // dedicated payment alias
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
@@ -181,6 +182,7 @@ export default function SeguimientoPage() {
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [proofUploaded, setProofUploaded] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const proofInputRef = useRef<HTMLInputElement | null>(null);
 
   // ── Read type + chat from query param, get session ────────────────────────
@@ -224,6 +226,7 @@ export default function SeguimientoPage() {
         plate: p.license_plate || null,
         photo: p.profile_photo || null,
         phone: p.phone || null,
+        tigoMoneyAlias: p.tigo_money_alias || null,
       });
       vehicleRef.current = {
         label: VEHICLE_LABELS[vmode] || vmode || null,
@@ -231,6 +234,7 @@ export default function SeguimientoPage() {
         plate: p.license_plate || null,
         photo: p.profile_photo || null,
         phone: p.phone || null,
+        tigoMoneyAlias: p.tigo_money_alias || null,
       };
     } catch { /* silent */ }
   }, [getToken]);
@@ -777,6 +781,15 @@ export default function SeguimientoPage() {
     }
   };
 
+  // Auto-open payment modal when driver requests payment
+  useEffect(() => {
+    if (order?.order_type === 'mandadito' && order.status === 'awaiting_payment' && !proofUploaded && !order.payment_proof_url) {
+      setShowPaymentModal(true);
+    } else {
+      setShowPaymentModal(false);
+    }
+  }, [order?.status, order?.order_type, order?.payment_proof_url, proofUploaded]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
@@ -1018,101 +1031,27 @@ export default function SeguimientoPage() {
             </div>
           )}
 
-          {/* ── Mandadito: payment instructions & proof upload ── */}
+          {/* ── Mandadito: payment status badge (inline) ── */}
           {order.order_type === 'mandadito' && order.status === 'awaiting_payment' && (
-            <div style={{ marginTop: 12, borderRadius: 14, border: '1.5px solid rgba(245,158,11,0.45)', overflow: 'hidden', background: 'rgba(245,158,11,0.06)' }}>
-              <div style={{ padding: '10px 14px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '1.1rem' }}>💳</span>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Realizá la transferencia al conductor</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
-                    Monto máximo: <strong style={{ color: '#f59e0b' }}>{order.max_budget != null ? `${Number(order.max_budget).toLocaleString('es-PY')} Gs` : '—'}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Driver phone — where to send the transfer */}
-              {vehicle?.phone ? (
-                <div style={{ margin: '0 14px 10px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: 4, fontWeight: 600 }}>TRANSFERÍ A TIGO MONEY / BILLETERA:</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f59e0b', letterSpacing: '0.05em' }}>{vehicle.phone}</span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => navigator.clipboard?.writeText(vehicle.phone!).catch(() => {})}
-                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.4)', background: 'transparent', color: '#f59e0b', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Copiar
-                      </button>
-                      <a
-                        href={`https://wa.me/${(vehicle.phone).replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.35)', color: '#25d366', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}
-                      >
-                        WhatsApp
-                      </a>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 5 }}>
-                    Nombre del conductor: <strong style={{ color: 'var(--text-secondary)' }}>{workerName}</strong>
+            <div style={{ marginTop: 12 }}>
+              {(order.payment_proof_url || proofUploaded) ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 12, padding: '10px 14px' }}>
+                  <span style={{ fontSize: '1rem' }}>✅</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#4ade80' }}>Comprobante enviado</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>Esperando confirmación del conductor...</div>
                   </div>
                 </div>
               ) : (
-                <div style={{ margin: '0 14px 10px', background: 'rgba(245,158,11,0.08)', borderRadius: 10, padding: '8px 12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Consultá el número al conductor por el Chat
-                </div>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.08)', color: '#f59e0b', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>💳</span>
+                  <span>Ver datos y transferir al conductor</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>›</span>
+                </button>
               )}
-
-              {order.shopping_list && (
-                <div style={{ margin: '0 14px 8px', background: 'rgba(245,158,11,0.06)', borderRadius: 8, padding: '7px 10px', fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                  {order.shopping_list}
-                </div>
-              )}
-              <div style={{ padding: '4px 14px 12px' }}>
-                {order.payment_proof_url || proofUploaded ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 10, padding: '9px 12px' }}>
-                    <span style={{ fontSize: '1rem' }}>✅</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#4ade80' }}>Comprobante enviado</div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 1 }}>Esperando confirmación del conductor...</div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {proofPreview && (
-                      <div style={{ marginBottom: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.3)', maxHeight: 140, display: 'flex', justifyContent: 'center', background: 'var(--glass-card)' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={proofPreview} alt="Comprobante" style={{ maxHeight: 140, objectFit: 'contain' }} />
-                      </div>
-                    )}
-                    <input
-                      ref={proofInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      style={{ display: 'none' }}
-                      onChange={handleProofSelect}
-                    />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => proofInputRef.current?.click()}
-                        style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: '1.5px dashed rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.06)', color: '#f59e0b', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
-                      >
-                        {proofFile ? '📷 Cambiar foto' : '📷 Adjuntar comprobante'}
-                      </button>
-                      {proofFile && (
-                        <button
-                          onClick={handleProofUpload}
-                          disabled={uploadingProof}
-                          style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: 'none', background: uploadingProof ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: uploadingProof ? 'not-allowed' : 'pointer' }}
-                        >
-                          {uploadingProof ? 'Enviando...' : '✓ Enviar comprobante'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
             </div>
           )}
 
@@ -1289,6 +1228,119 @@ export default function SeguimientoPage() {
           otherName={workerName}
           otherPhoto={workerPhoto}
         />
+      )}
+
+      {/* ── Mandadito: Payment Modal ─────────────────────────────────────── */}
+      {showPaymentModal && order && (
+        <div
+          onClick={() => setShowPaymentModal(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 480, borderRadius: '20px 20px 0 0', background: 'var(--panel-bg, #1a1a2e)', padding: '0 0 env(safe-area-inset-bottom)', overflow: 'hidden', boxShadow: '0 -4px 40px rgba(0,0,0,0.5)' }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>💳 Transferí al conductor</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  Monto máximo: <strong style={{ color: '#f59e0b' }}>{order.max_budget != null ? `${Number(order.max_budget).toLocaleString('es-PY')} Gs` : '—'}</strong>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Alias / phone */}
+              {(() => {
+                const paymentId = vehicle?.tigoMoneyAlias || vehicle?.phone;
+                return paymentId ? (
+                  <div style={{ background: 'rgba(245,158,11,0.1)', border: '2px solid rgba(245,158,11,0.4)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.08em', marginBottom: 8 }}>NÚMERO / ALIAS DE TIGO MONEY:</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fbbf24', letterSpacing: '0.04em', flex: 1 }}>{paymentId}</span>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(paymentId).catch(() => {})}
+                        style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      Conductor: <strong style={{ color: 'var(--text-secondary)' }}>{workerName}</strong>
+                    </div>
+                    <a
+                      href={`https://wa.me/${paymentId.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.3)', borderRadius: 10, padding: '8px 12px', textDecoration: 'none' }}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>💬</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#25d366' }}>Abrir WhatsApp</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Podés enviar el comprobante por chat</div>
+                      </div>
+                    </a>
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(245,158,11,0.07)', borderRadius: 12, padding: '12px 14px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    El conductor no configuró su número de pago.<br />
+                    <span style={{ fontWeight: 700 }}>Consultalo por el Chat.</span>
+                  </div>
+                );
+              })()}
+
+              {/* Shopping list */}
+              {order.shopping_list && (
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.06em' }}>LISTA DE PRODUCTOS:</div>
+                  <pre style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.6 }}>{order.shopping_list}</pre>
+                </div>
+              )}
+
+              {/* Upload proof */}
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>Después de transferir, subí el comprobante:</div>
+                {proofPreview && (
+                  <div style={{ marginBottom: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.3)', maxHeight: 180, display: 'flex', justifyContent: 'center', background: '#0f172a' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={proofPreview} alt="Comprobante" style={{ maxHeight: 180, objectFit: 'contain', display: 'block' }} />
+                  </div>
+                )}
+                <input
+                  ref={proofInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleProofSelect}
+                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => proofInputRef.current?.click()}
+                    style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '1.5px dashed rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.06)', color: '#f59e0b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                  >
+                    {proofFile ? '📷 Cambiar foto' : '📷 Adjuntar comprobante'}
+                  </button>
+                  {proofFile && (
+                    <button
+                      onClick={async () => { await handleProofUpload(); setShowPaymentModal(false); }}
+                      disabled={uploadingProof}
+                      style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', background: uploadingProof ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: uploadingProof ? 'not-allowed' : 'pointer', boxShadow: uploadingProof ? 'none' : '0 4px 14px rgba(34,197,94,0.35)' }}
+                    >
+                      {uploadingProof ? 'Enviando...' : '✓ Confirmar y enviar'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

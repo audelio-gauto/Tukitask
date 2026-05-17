@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await sbAdmin()
       .from('driver_profiles')
-      .select('email, first_name, last_name, phone, profile_photo, avg_rating, total_ratings, transport_mode, vehicle_type, license_plate, acceptance_rate, avg_response_seconds, service_filters, pickup_range, delivery_range, nav_app, verified')
+      .select('email, first_name, last_name, phone, tigo_money_alias, profile_photo, avg_rating, total_ratings, transport_mode, vehicle_type, license_plate, acceptance_rate, avg_response_seconds, service_filters, pickup_range, delivery_range, nav_app, verified')
       .ilike('email', email)
       .maybeSingle();
     if (error) return serverError(error);

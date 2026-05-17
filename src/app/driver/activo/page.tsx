@@ -1075,7 +1075,7 @@ export default function ActivoPage() {
                   <img src={order.payment_proof_url} alt="Comprobante" style={{ width: '100%', maxHeight: 180, objectFit: 'contain', background: '#0f172a', display: 'block' }} />
                   <button
                     disabled={!!acting}
-                    onClick={() => updateStatus(order.id, 'payment_confirmed')}
+                    onClick={() => updateStatus(order.id, 'picking_up')}
                     style={{
                       width: '100%', padding: '13px', border: 'none',
                       background: acting ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
@@ -1083,7 +1083,7 @@ export default function ActivoPage() {
                       cursor: acting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
                     }}
                   >
-                    {acting === order.id + 'payment_confirmed' ? 'Confirmando...' : '✓ Confirmé el pago — Ir a comprar'}
+                    {acting === order.id + 'picking_up' ? 'Confirmando...' : '✓ Confirmé el pago — Ir a comprar'}
                   </button>
                 </div>
               ) : (

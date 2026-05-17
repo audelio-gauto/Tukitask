@@ -55,6 +55,7 @@ export default function DriverSettingsPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [tigoMoneyAlias, setTigoMoneyAlias] = useState('');
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
   const [docStatus, setDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
@@ -89,6 +90,7 @@ export default function DriverSettingsPage() {
           setFirstName(data.first_name || '');
           setLastName(data.last_name || '');
           setPhone(data.phone || '');
+          setTigoMoneyAlias(data.tigo_money_alias || '');
           if (data.avg_rating) setAvgRating(Number(data.avg_rating));
           if (data.total_ratings) setTotalRatings(Number(data.total_ratings));
         }
@@ -113,6 +115,7 @@ export default function DriverSettingsPage() {
           first_name: firstName,
           last_name: lastName,
           phone,
+          tigo_money_alias: tigoMoneyAlias || null,
         }),
       });
       const json = await res.json();
@@ -657,6 +660,26 @@ export default function DriverSettingsPage() {
             ))}
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
+            {/* ── Tigo Money alias (mandadito payment) ── */}
+            <div style={{ marginBottom: '0.75rem', background: 'rgba(245,158,11,0.07)', borderRadius: 12, border: '1.5px solid rgba(245,158,11,0.3)', padding: '12px 14px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#f59e0b', marginBottom: 6 }}>
+                💳 Alias de Tigo Money / Billetera
+              </label>
+              <input
+                type="text"
+                value={tigoMoneyAlias}
+                onChange={e => setTigoMoneyAlias(e.target.value)}
+                placeholder="Ej: 0981 123 456"
+                style={{
+                  width: '100%', padding: '0.65rem 0.75rem', borderRadius: 10,
+                  border: '1.5px solid rgba(245,158,11,0.4)', fontSize: '0.88rem',
+                  outline: 'none', boxSizing: 'border-box', color: 'var(--input-text)', background: 'var(--input-bg)',
+                }}
+              />
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 5 }}>
+                Este número se muestra al cliente cuando solicitás el pago en un Mandadito.
+              </div>
+            </div>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--label-color)', marginBottom: 6 }}>
               Teléfono
             </label>
