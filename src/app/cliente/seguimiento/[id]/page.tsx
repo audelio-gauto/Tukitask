@@ -21,6 +21,7 @@ interface VehicleInfo {
   brand: string | null;    // e.g. 'Taiga 150'
   plate: string | null;    // e.g. 'ACF 5432'
   photo: string | null;    // profile photo URL
+  phone: string | null;    // Tigo Money / contact number
 }
 
 const VEHICLE_LABELS: Record<string, string> = {
@@ -222,12 +223,14 @@ export default function SeguimientoPage() {
         brand: brand || null,
         plate: p.license_plate || null,
         photo: p.profile_photo || null,
+        phone: p.phone || null,
       });
       vehicleRef.current = {
         label: VEHICLE_LABELS[vmode] || vmode || null,
         brand: brand || null,
         plate: p.license_plate || null,
         photo: p.profile_photo || null,
+        phone: p.phone || null,
       };
     } catch { /* silent */ }
   }, [getToken]);
@@ -1018,17 +1021,51 @@ export default function SeguimientoPage() {
           {/* ── Mandadito: payment instructions & proof upload ── */}
           {order.order_type === 'mandadito' && order.status === 'awaiting_payment' && (
             <div style={{ marginTop: 12, borderRadius: 14, border: '1.5px solid rgba(245,158,11,0.45)', overflow: 'hidden', background: 'rgba(245,158,11,0.06)' }}>
-              <div style={{ padding: '10px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ padding: '10px 14px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: '1.1rem' }}>💳</span>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Realizá la transferencia al driver</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Realizá la transferencia al conductor</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
-                    Monto máximo autorizado: <strong style={{ color: '#f59e0b' }}>{order.max_budget != null ? `${Number(order.max_budget).toLocaleString('es-PY')} Gs` : '—'}</strong>
+                    Monto máximo: <strong style={{ color: '#f59e0b' }}>{order.max_budget != null ? `${Number(order.max_budget).toLocaleString('es-PY')} Gs` : '—'}</strong>
                   </div>
                 </div>
               </div>
+
+              {/* Driver phone — where to send the transfer */}
+              {vehicle?.phone ? (
+                <div style={{ margin: '0 14px 10px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: 4, fontWeight: 600 }}>TRANSFERÍ A TIGO MONEY / BILLETERA:</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f59e0b', letterSpacing: '0.05em' }}>{vehicle.phone}</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(vehicle.phone!).catch(() => {})}
+                        style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.4)', background: 'transparent', color: '#f59e0b', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Copiar
+                      </button>
+                      <a
+                        href={`https://wa.me/${(vehicle.phone).replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.35)', color: '#25d366', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 5 }}>
+                    Nombre del conductor: <strong style={{ color: 'var(--text-secondary)' }}>{workerName}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ margin: '0 14px 10px', background: 'rgba(245,158,11,0.08)', borderRadius: 10, padding: '8px 12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Consultá el número al conductor por el Chat
+                </div>
+              )}
+
               {order.shopping_list && (
-                <div style={{ margin: '4px 14px 6px', background: 'rgba(245,158,11,0.08)', borderRadius: 8, padding: '7px 10px', fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                <div style={{ margin: '0 14px 8px', background: 'rgba(245,158,11,0.06)', borderRadius: 8, padding: '7px 10px', fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                   {order.shopping_list}
                 </div>
               )}
