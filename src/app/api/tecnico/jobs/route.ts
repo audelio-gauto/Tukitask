@@ -684,7 +684,7 @@ export async function POST(req: Request) {
         .in('status', ['en_proceso', 'completion_pending'])
         .select()
         .maybeSingle();
-      if (error) return serverError(error);
+      if (error) return NextResponse.json({ error: `DB: ${error.message} | code: ${error.code}` }, { status: 500 });
       return NextResponse.json({ job: data });
     }
 
