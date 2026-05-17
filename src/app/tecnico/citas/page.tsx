@@ -370,16 +370,8 @@ export default function CitasPage() {
         body: JSON.stringify({ action: 'add_extra', jobId: extraModal.jobId, tecnicoEmail: email, extraItems: extraModal.items }),
       });
       const json = await res.json();
-      if (!res.ok || json.error) {
-        alert('Error extras: ' + (json.error || res.status));
-        setExtraSending(false);
-        return;
-      }
       if (json.job) setJobs(prev => prev.map(j => j.id === extraModal!.jobId ? { ...j, ...json.job } : j));
-      else alert('Extra guardado pero job null — estado del trabajo puede no ser en_proceso');
-    } catch (e) {
-      alert('Error extras (catch): ' + String(e));
-    }
+    } catch {}
     setExtraSending(false);
     setExtraModal(null);
   };
