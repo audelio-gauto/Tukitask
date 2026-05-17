@@ -70,7 +70,7 @@ interface DriverExtras {
 // Solo pedidos ACEPTADOS (no pending/negotiating — esos se ven en el panel principal)
 // 'failed' y 'return_rejected' se incluyen para que el cliente no pierda de vista el pedido
 // mientras el conductor solicita/gestiona la devolución.
-const ACTIVE_ORDER_STS = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'];
+const ACTIVE_ORDER_STS = ['accepted', 'awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'driver_returning', 'return_delivered', 'return_rejected'];
 const ACTIVE_JOB_STS   = ['accepted', 'en_proceso', 'en_camino', 'llegue', 'completion_pending'];
 
 const TRACKING_STATUS: Record<string, { text: string }> = {
@@ -78,6 +78,8 @@ const TRACKING_STATUS: Record<string, { text: string }> = {
   negotiating: { text: 'Negociando precio...' },
   accepted: { text: 'Asignado. En camino a recoger' },
   assigned: { text: 'Asignado. En camino a recoger' },
+  awaiting_payment: { text: '💳 Transferí al conductor — ver datos' },
+  payment_confirmed: { text: '✅ Pago confirmado — tu conductor va al local' },
   picking_up: { text: 'En camino al punto de recogida' },
   at_pickup:  { text: 'Driver en punto de recogida' },
   in_transit: { text: 'En camino al destino' },
@@ -488,7 +490,7 @@ export default function MisOfertasPage() {
           const statusInfo = TRACKING_STATUS[order.status] ?? { text: order.status };
           const statusTone = getStatusTone(order.status);
           const price = order.offer ?? order.suggested_price;
-          const hasWorker = ['accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'return_rejected', 'driver_returning', 'return_delivered'].includes(order.status);
+          const hasWorker = ['accepted', 'assigned', 'awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'return_rejected', 'driver_returning', 'return_delivered'].includes(order.status);
           const typeLabel = ORDER_TYPE_LABELS[order.order_type || ''] ?? 'Envío';
           const extras = driverExtras[order.id];
 
@@ -640,13 +642,15 @@ export default function MisOfertasPage() {
                       </span>
                     )}
                   </button>
-                  {['picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
+                  {['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
                     <Link
                       href={`/cliente/seguimiento/${order.id}`}
                       className="tuki-btn tuki-btn-info"
-                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
+                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem', background: order.status === 'awaiting_payment' ? 'rgba(245,158,11,0.18)' : undefined, borderColor: order.status === 'awaiting_payment' ? 'rgba(245,158,11,0.5)' : undefined, color: order.status === 'awaiting_payment' ? '#f59e0b' : undefined }}
                     >
-                      <Icon name="map" size={16} /> Ver mapa
+                      {order.status === 'awaiting_payment'
+                        ? <><Icon name="bolt" size={16} /> 💳 Transferir / Ver datos</>
+                        : <><Icon name="map" size={16} /> Ver mapa</>}
                     </Link>
                   )}
                 </div>
