@@ -516,7 +516,10 @@ export async function PATCH(req: Request) {
 
   // Driver-initiated transitions
   const driverAllowed: Record<string, string[]> = {
-    picking_up: ['accepted'],
+    // Mandadito payment flow (only valid for mandadito order_type)
+    awaiting_payment:  ['accepted'],
+    payment_confirmed: ['awaiting_payment'],
+    picking_up: ['accepted', 'payment_confirmed'],
     at_pickup:  ['picking_up'],
     in_transit: ['at_pickup', 'picking_up', 'failed', 'return_rejected'], // retry delivery
     delivered: ['in_transit'],
@@ -564,6 +567,11 @@ export async function PATCH(req: Request) {
   const allowedPrev = isClientStatus ? clientAllowed[status] : driverAllowed[status];
   if (!allowedPrev.includes(order.status)) {
     return NextResponse.json({ error: `Cannot transition from ${order.status} to ${status}` }, { status: 409 });
+  }
+
+  // ── Mandadito-only status guard ─────────────────────────────────────────
+  if (['awaiting_payment', 'payment_confirmed'].includes(status) && order.order_type !== 'mandadito') {
+    return NextResponse.json({ error: 'Status only valid for mandadito orders' }, { status: 409 });
   }
 
   // ── Anti-fraud PIN validation for envio orders ────────────────────────────
@@ -634,6 +642,8 @@ export async function PATCH(req: Request) {
 
   // ── Notify the other party about the status change ──
   const statusLabels: Record<string, string> = {
+    awaiting_payment: '💳 Tu conductor solicita el pago — transferí y sube tu comprobante',
+    payment_confirmed: '✅ Pago confirmado — tu conductor va a buscar tus productos',
     picking_up: '🚗 El conductor va en camino a recoger tu paquete',
     at_pickup:  '📍 El conductor llegó al punto de retiro',
     in_transit: '🚚 Tu paquete está en tránsito',
@@ -646,7 +656,7 @@ export async function PATCH(req: Request) {
     client_confirmed: 'El cliente confirmó la recepción',
   };
   // Urgent statuses deserve popup + sound
-  const urgentStatuses = ['picking_up', 'at_pickup', 'delivered', 'failed', 'returned', 'returning'];
+  const urgentStatuses = ['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'delivered', 'failed', 'returned', 'returning'];
   const label = statusLabels[status];
   if (label) {
     const targetEmail = isDriverStatus ? order.client_email : order.accepted_by;

@@ -55,6 +55,8 @@ const ORDER_STATUSES: Record<string, { label: string; color: string }> = {
   pending:            { label: 'Pendiente',        color: 'bg-amber-100 text-amber-800' },
   negotiating:        { label: 'Negociando',        color: 'bg-blue-100 text-blue-800' },
   accepted:           { label: 'Aceptado',          color: 'bg-indigo-100 text-indigo-800' },
+  awaiting_payment:   { label: 'Esperando pago',   color: 'bg-yellow-100 text-yellow-800' },
+  payment_confirmed:  { label: 'Pago confirmado',  color: 'bg-emerald-100 text-emerald-800' },
   picking_up:         { label: 'Recogiendo',        color: 'bg-purple-100 text-purple-800' },
   in_transit:         { label: 'En tránsito',       color: 'bg-cyan-100 text-cyan-800' },
   delivered:          { label: 'Entregado',         color: 'bg-green-100 text-green-800' },

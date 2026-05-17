@@ -31,6 +31,9 @@ export const ORDER_STATUS = {
   INCIDENT_CLOSED: 'incident_closed',
   CLIENT_CONFIRMED: 'client_confirmed',
   COMMISSION_CHARGED: 'commission_charged',
+  // Mandadito-specific statuses (payment transfer flow)
+  AWAITING_PAYMENT: 'awaiting_payment',
+  PAYMENT_CONFIRMED: 'payment_confirmed',
 } as const;
 
 export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];

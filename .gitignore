@@ -46,3 +46,6 @@ android/app/build/
 android/build/
 android/local.properties
 next-env.d.ts
+
+.vercel
+.env*.local

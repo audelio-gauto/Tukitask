@@ -78,6 +78,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   cancelled: RED,
   incidente: RED,
   incident_closed: RED,
+  // Mandadito payment flow
+  awaiting_payment: AMBER,
+  payment_confirmed: GREEN,
   return_rejected: AMBER,
   rejected: RED,
   returning: AMBER,

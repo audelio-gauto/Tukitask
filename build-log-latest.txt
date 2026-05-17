@@ -1,9 +1,3 @@
-
-> wep-app-local-driver@0.1.0 build
-> next build
-
 ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
-Ôû▓ Next.js 16.1.6 (Turbopack)
-- Environments: .env.local
-
-  Creating an optimized production build ...
+Ô¿» Unable to acquire lock at C:\Users\Aurelio\Documents\wep-app-local-driver\.next\lock, is another instance of next build running?
+  Suggestion: If you intended to restart next build, terminate the other process, and then try again.

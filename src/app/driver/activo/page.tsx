@@ -11,17 +11,19 @@ import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import { playMessageAlert } from '@/lib/audio';
 
-const ACTIVE_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered'] as const;
+const ACTIVE_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'awaiting_payment', 'payment_confirmed'] as const;
 type ActiveStatus = typeof ACTIVE_STATUSES[number];
 
 const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<typeof Icon>['name'] }> = {
-  accepted:          { label: 'Aceptado',                           icon: 'check'    },
-  picking_up:        { label: 'En camino al punto de recogida',     icon: 'car'      },
-  at_pickup:         { label: 'En punto de recogida',               icon: 'package'  },
-  in_transit:        { label: 'En camino al destino',               icon: 'car'      },
+  accepted:          { label: 'Aceptado',                           icon: 'check'          },
+  awaiting_payment:  { label: 'Esperando pago del cliente',         icon: 'clock'          },
+  payment_confirmed: { label: 'Pago recibido — Ir a comprar',        icon: 'shopping-cart'  },
+  picking_up:        { label: 'En camino al punto de recogida',     icon: 'car'            },
+  at_pickup:         { label: 'En punto de recogida',               icon: 'package'        },
+  in_transit:        { label: 'En camino al destino',               icon: 'car'            },
   returning:         { label: 'Devolución solicitada (esperando cliente)', icon: 'clock' },
-  driver_returning:  { label: 'Cliente aceptó — Ir a devolver',    icon: 'package'  },
-  return_delivered:  { label: 'Esperando confirmación del cliente', icon: 'clock'    },
+  driver_returning:  { label: 'Cliente aceptó — Ir a devolver',    icon: 'package'        },
+  return_delivered:  { label: 'Esperando confirmación del cliente', icon: 'clock'          },
 };
 
 const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: string; nextStatus: string }> = {
@@ -105,6 +107,17 @@ export default function ActivoPage() {
   const [stopPinVal, setStopPinVal] = useState<Record<string, string>>({});
   const [stopPinErr, setStopPinErr] = useState<Record<string, string>>({});
   const [stopPinAttempts, setStopPinAttempts] = useState<Record<string, number>>({});
+
+  // Mandadito: local checklist state per order (no DB — just helps driver track items)
+  const [checkedItems, setCheckedItems] = useState<Record<string, Set<number>>>({});
+
+  const toggleItem = (orderId: string, idx: number) => {
+    setCheckedItems(prev => {
+      const current = new Set(prev[orderId] ?? []);
+      current.has(idx) ? current.delete(idx) : current.add(idx);
+      return { ...prev, [orderId]: current };
+    });
+  };
 
   const showToast = (msg: string) => {
     const id = ++toastIdRef.current;
@@ -576,6 +589,65 @@ export default function ActivoPage() {
           </div>
 
           {/* Addresses */}
+          {/* Mandadito: shopping checklist — visible during shopping flow */}
+          {order.order_type === 'mandadito' && order.shopping_list &&
+            ['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit'].includes(status) && (() => {
+              const lines = (order.shopping_list as string)
+                .split('\n')
+                .map((l: string) => l.trim())
+                .filter(Boolean);
+              if (!lines.length) return null;
+              const checked = checkedItems[order.id] ?? new Set<number>();
+              const doneCount = checked.size;
+              return (
+                <div style={{ marginBottom: 14, borderRadius: 12, border: '1.5px solid rgba(245,197,24,0.3)', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(245,197,24,0.08)' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: BRAND }}>
+                      🛒 Lista de compras
+                    </span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: doneCount === lines.length ? '#4ade80' : 'rgba(245,197,24,0.7)' }}>
+                      {doneCount}/{lines.length}
+                    </span>
+                  </div>
+                  <div style={{ padding: '4px 0 6px' }}>
+                    {lines.map((item: string, idx: number) => {
+                      const done = checked.has(idx);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => toggleItem(order.id, idx)}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '8px 12px', border: 'none', background: 'transparent',
+                            cursor: 'pointer', textAlign: 'left',
+                          }}
+                        >
+                          <div style={{
+                            flexShrink: 0, width: 20, height: 20, borderRadius: 6,
+                            border: `2px solid ${done ? '#4ade80' : 'rgba(245,197,24,0.5)'}`,
+                            background: done ? 'rgba(34,197,94,0.2)' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}>
+                            {done && <span style={{ color: '#4ade80', fontSize: '0.75rem', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                          </div>
+                          <span style={{
+                            fontSize: '0.82rem', color: done ? 'var(--text-muted)' : 'var(--text-primary)',
+                            textDecoration: done ? 'line-through' : 'none',
+                            transition: 'all 0.15s', flex: 1,
+                          }}>
+                            {item}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()
+          }
+
+          {/* Addresses */}
           {(order.pickup_address || order.delivery_address) && (
             <div className="tuki-address-box" style={{ marginBottom: 14 }}>
               {(() => {
@@ -968,7 +1040,83 @@ export default function ActivoPage() {
             </div>
           )}
           {/* Delivery progress buttons: accepted → picking_up → at_pickup → in_transit */}
-          {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && (
+          {/* For mandadito: accepted shows "Solicitar pago" instead */}
+
+          {/* ── Mandadito: solicitar pago (accepted) ── */}
+          {order.order_type === 'mandadito' && status === 'accepted' && (
+            <button
+              disabled={!!acting}
+              onClick={() => updateStatus(order.id, 'awaiting_payment')}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                color: acting ? '#6b7280' : '#1C1C2E',
+                fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              {acting === order.id + 'awaiting_payment'
+                ? 'Actualizando...'
+                : <><Icon name="shopping-cart" size={15} color="#1C1C2E" /> Solicitar pago al cliente</>}
+            </button>
+          )}
+
+          {/* ── Mandadito: esperando comprobante (awaiting_payment) ── */}
+          {order.order_type === 'mandadito' && status === 'awaiting_payment' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Show proof if client already uploaded */}
+              {order.payment_proof_url ? (
+                <div style={{ borderRadius: 12, overflow: 'hidden', border: '1.5px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.06)' }}>
+                  <div style={{ padding: '8px 12px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#4ade80' }}>
+                    💳 Comprobante del cliente
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={order.payment_proof_url} alt="Comprobante" style={{ width: '100%', maxHeight: 180, objectFit: 'contain', background: '#0f172a', display: 'block' }} />
+                  <button
+                    disabled={!!acting}
+                    onClick={() => updateStatus(order.id, 'payment_confirmed')}
+                    style={{
+                      width: '100%', padding: '13px', border: 'none',
+                      background: acting ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                      color: '#fff', fontWeight: 800, fontSize: '0.95rem',
+                      cursor: acting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                    }}
+                  >
+                    {acting === order.id + 'payment_confirmed' ? 'Confirmando...' : '✓ Confirmé el pago — Ir a comprar'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '14px', textAlign: 'center' }}>
+                  <Icon name="clock" size={16} color="#f59e0b" />
+                  <div style={{ marginTop: 6, fontSize: '0.82rem', fontWeight: 700, color: '#fbbf24' }}>Esperando comprobante del cliente</div>
+                  <div style={{ marginTop: 3, fontSize: '0.7rem', color: 'var(--text-muted)' }}>El cliente debe transferir y subir la foto de la transferencia</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Mandadito: pago confirmado → ir a comprar (payment_confirmed) ── */}
+          {order.order_type === 'mandadito' && status === 'payment_confirmed' && (
+            <button
+              disabled={!!acting}
+              onClick={() => updateStatus(order.id, 'picking_up')}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                color: acting ? '#6b7280' : '#1C1C2E',
+                fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              {acting === order.id + 'picking_up'
+                ? 'Actualizando...'
+                : <><Icon name="shopping-cart" size={15} color="#1C1C2E" /> Ir a comprar al local</>}
+            </button>
+          )}
+
+          {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && order.order_type !== 'mandadito' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 disabled={!!acting}
@@ -994,11 +1142,7 @@ export default function ActivoPage() {
                   transition: 'all 0.2s',
                 }}
               >
-                {isActingProgress ? 'Actualizando...' : (
-                  status === 'at_pickup' && order.order_type === 'viaje'
-                    ? 'Iniciar viaje'
-                    : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label
-                )}
+                {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
               </button>
 
               {/* Cancel button — only for picking_up (En camino) and at_pickup (Recogida) */}
@@ -1039,7 +1183,7 @@ export default function ActivoPage() {
                 }}
               >
                 <Icon name="flag" size={16} color="#4ade80" />
-                {order.order_type === 'viaje' ? 'Finalizar viaje' : 'Finalizar entrega'}
+                Finalizar entrega
               </button>
             );
           })()}
@@ -1055,9 +1199,8 @@ export default function ActivoPage() {
                   className="tuki-btn tuki-btn-success"
                   style={{ flex: 1, fontSize: '0.88rem' }}
                 >
-                  {isActingDelivered ? '...' : <><Icon name="check" size={14} /> {order.order_type === 'viaje' ? 'Completado' : 'Entregado'}</>}
+                  {isActingDelivered ? '...' : <><Icon name="check" size={14} /> Entregado</>}
                 </button>
-                {order.order_type !== 'viaje' && (
                 <button
                   disabled={!!acting}
                   onClick={() => {
@@ -1076,7 +1219,6 @@ export default function ActivoPage() {
                 >
                   {isActingFailed ? '...' : <><Icon name="x" size={14} /> Entrega fallida</>}
                 </button>
-                )}
               </div>
 
               {/* Fail reason form */}
@@ -1172,10 +1314,10 @@ export default function ActivoPage() {
               📭
             </div>
             <p style={{ color: '#9ca3af', fontWeight: 600, margin: 0, fontSize: '1rem' }}>
-              Sin servicios activos
+              Sin envíos activos
             </p>
             <p style={{ color: '#6b7280', fontSize: '0.83rem', margin: 0, maxWidth: 240 }}>
-              Cuando un cliente acepte tu oferta, el servicio aparecerá aquí.
+              Cuando un cliente acepte tu oferta, el envío aparecerá aquí.
             </p>
           </div>
         )}
@@ -1208,18 +1350,16 @@ export default function ActivoPage() {
             width: '100%', maxWidth: 360, textAlign: 'center',
             boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>{ord?.order_type === 'viaje' ? '🚗' : '📦'}</div>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
             <h3 style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
-              {ord?.order_type === 'viaje' ? '¿Confirmar viaje?' : isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
+              {isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
-              {ord?.order_type === 'viaje'
-                ? 'Esta acción no se puede deshacer. El viaje se marcará como completado.'
-                : isEnvioSingle
-                  ? hasDPinConfigured
-                    ? 'Ingresa el código de 4 dígitos que le envió el remitente al receptor'
-                    : 'Pedile al receptor el código que le compartió el remitente'
-                  : 'Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.'
+              {isEnvioSingle
+                ? hasDPinConfigured
+                  ? 'Ingresa el código de 4 dígitos que le envió el remitente al receptor'
+                  : 'Pedile al receptor el código que le compartió el remitente'
+                : 'Esta acción no se puede deshacer. Se descontará la comisión y el pedido se marcará como finalizado.'
               }
             </p>
 
@@ -1291,8 +1431,7 @@ export default function ActivoPage() {
               </div>
             )}
 
-            {/* Optional delivery proof photo — not for viaje */}
-            {ord?.order_type !== 'viaje' && (
+            {/* Optional delivery proof photo */}
             <label style={{
               display: 'block', cursor: 'pointer', marginBottom: 18,
               background: 'var(--glass-card)', borderRadius: 12,
@@ -1316,7 +1455,6 @@ export default function ActivoPage() {
                 }}
               />
             </label>
-            )}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={() => {
@@ -1365,7 +1503,7 @@ export default function ActivoPage() {
                   opacity: confirmDisabled ? 0.7 : 1,
                 }}
               >
-                {acting === orderId + 'delivered' ? '...' : ord?.order_type === 'viaje' ? '✅ Sí, viaje completado' : '✅ Sí, entregado'}
+                {acting === orderId + 'delivered' ? '...' : '✅ Sí, entregado'}
               </button>
             </div>
           </div>

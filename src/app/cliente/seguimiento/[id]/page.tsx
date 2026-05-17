@@ -63,6 +63,11 @@ interface OrderDetail {
   delivery_pin?: string | null;
   client_email?: string | null;
   is_multi_stop?: boolean | null;
+  // mandadito fields
+  shopping_list?: string | null;
+  max_budget?: number | null;
+  payment_proof_url?: string | null;
+  actual_amount?: number | null;
 }
 
 interface DriverLoc {
@@ -92,9 +97,10 @@ const STATUS_ACTIVE = new Set([
   'accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress',
   'returning', 'driver_returning',
   'en_route', 'arrived', 'completion_pending',
+  'awaiting_payment', 'payment_confirmed',
 ]);
 
-const POLL_INTERVAL = 20_000; // 20s fallback (Supabase Realtime handles sub-20s updates)
+const POLL_INTERVAL = 8_000; // 8s for client tracking (faster than admin 15s)
 
 function fmtGs(n: number | null) {
   return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
@@ -102,14 +108,16 @@ function fmtGs(n: number | null) {
 
 function statusLabel(status: string) {
   const map: Record<string, { text: string; icon: IconName }> = {
-    accepted: { text: 'Tasker asignado', icon: 'check' },
-    picking_up: { text: 'Tasker en camino', icon: 'truck' },
+    awaiting_payment: { text: 'Transferí al driver', icon: 'clock' },
+    payment_confirmed: { text: 'Pago confirmado', icon: 'check' },
+    accepted: { text: 'Conductor asignado', icon: 'check' },
+    picking_up: { text: 'Conductor en camino', icon: 'truck' },
     in_transit: { text: 'En transito', icon: 'truck' },
     in_progress: { text: 'En curso', icon: 'tool' },
     returning: { text: 'Devolviendo paquete', icon: 'refresh' },
-    driver_returning: { text: 'Tasker regresando', icon: 'refresh' },
-    en_route: { text: 'Tasker en camino', icon: 'tool' },
-    arrived: { text: 'Tasker llegó', icon: 'map-pin' },
+    driver_returning: { text: 'Conductor regresando', icon: 'refresh' },
+    en_route: { text: 'Tecnico en camino', icon: 'tool' },
+    arrived: { text: 'Tecnico llego', icon: 'map-pin' },
     completion_pending: { text: 'Completando servicio', icon: 'clock' },
     delivered: { text: 'Entregado', icon: 'package' },
     completado: { text: 'Servicio completado', icon: 'check' },
@@ -167,6 +175,12 @@ export default function SeguimientoPage() {
   const [chatToast, setChatToast] = useState<{ text: string; from: string | null } | null>(null);
   const [chatUnread, setChatUnread] = useState(0);
   const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mandadito: payment proof upload state
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofUploaded, setProofUploaded] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement | null>(null);
 
   // ── Read type + chat from query param, get session ────────────────────────
   useEffect(() => {
@@ -417,7 +431,7 @@ export default function SeguimientoPage() {
     if (driverLoc) {
       const dLat = Number(driverLoc.lat);
       const dLng = Number(driverLoc.lng);
-      const name = order.driver_name ?? 'Tasker';
+      const name = order.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
       const inits = name.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
       const color = type === 'service' ? '#8b5cf6' : '#22c55e';
       const photo = vehicleRef.current?.photo ?? order.driver_photo ?? null;
@@ -715,7 +729,7 @@ export default function SeguimientoPage() {
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-  const workerName   = order?.driver_name ?? 'Tasker';
+  const workerName   = order?.driver_name ?? (type === 'service' ? 'Técnico' : 'Conductor');
   const workerPhoto  = vehicle?.photo ?? order?.driver_photo ?? null;
   const workerRating = order?.driver_avg_rating ?? null;
   const st           = order ? statusLabel(order.status) : null;
@@ -724,6 +738,41 @@ export default function SeguimientoPage() {
   const pickupValidated  = !!(order?.pickup_code  && PICKUP_VALIDATED_STATUSES.includes(order.status));
   const deliveryValidated = !!(order?.delivery_pin && ['delivered', 'client_confirmed'].includes(order.status));
   const priceVal     = order?.offer ?? order?.agreed_price ?? null;
+
+  // ── Mandadito: upload payment proof ────────────────────────────────────────
+  const handleProofSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProofFile(file);
+    const reader = new FileReader();
+    reader.onload = ev => setProofPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleProofUpload = async () => {
+    if (!proofFile || !order?.id) return;
+    setUploadingProof(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = ev => resolve((ev.target?.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(proofFile);
+      });
+      const res = await authFetch('/api/upload-payment-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, base64, mimeType: proofFile.type }),
+      });
+      if (res.ok) {
+        setProofUploaded(true);
+        setProofFile(null);
+        setProofPreview(null);
+      }
+    } finally {
+      setUploadingProof(false);
+    }
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -739,7 +788,7 @@ export default function SeguimientoPage() {
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem' }}>
-            {type === 'service' ? 'Seguimiento del Tasker' : 'Seguimiento del envío'}
+            {type === 'service' ? 'Seguimiento del técnico' : 'Seguimiento del envío'}
           </div>
           {order && (
             <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 1 }}>
@@ -966,6 +1015,81 @@ export default function SeguimientoPage() {
             </div>
           )}
 
+          {/* ── Mandadito: payment instructions & proof upload ── */}
+          {order.order_type === 'mandadito' && order.status === 'awaiting_payment' && (
+            <div style={{ marginTop: 12, borderRadius: 14, border: '1.5px solid rgba(245,158,11,0.45)', overflow: 'hidden', background: 'rgba(245,158,11,0.06)' }}>
+              <div style={{ padding: '10px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '1.1rem' }}>💳</span>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Realizá la transferencia al driver</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                    Monto máximo autorizado: <strong style={{ color: '#f59e0b' }}>{order.max_budget != null ? `${Number(order.max_budget).toLocaleString('es-PY')} Gs` : '—'}</strong>
+                  </div>
+                </div>
+              </div>
+              {order.shopping_list && (
+                <div style={{ margin: '4px 14px 6px', background: 'rgba(245,158,11,0.08)', borderRadius: 8, padding: '7px 10px', fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                  {order.shopping_list}
+                </div>
+              )}
+              <div style={{ padding: '4px 14px 12px' }}>
+                {order.payment_proof_url || proofUploaded ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 10, padding: '9px 12px' }}>
+                    <span style={{ fontSize: '1rem' }}>✅</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#4ade80' }}>Comprobante enviado</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 1 }}>Esperando confirmación del conductor...</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {proofPreview && (
+                      <div style={{ marginBottom: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.3)', maxHeight: 140, display: 'flex', justifyContent: 'center', background: 'var(--glass-card)' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={proofPreview} alt="Comprobante" style={{ maxHeight: 140, objectFit: 'contain' }} />
+                      </div>
+                    )}
+                    <input
+                      ref={proofInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={handleProofSelect}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => proofInputRef.current?.click()}
+                        style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: '1.5px dashed rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.06)', color: '#f59e0b', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                      >
+                        {proofFile ? '📷 Cambiar foto' : '📷 Adjuntar comprobante'}
+                      </button>
+                      {proofFile && (
+                        <button
+                          onClick={handleProofUpload}
+                          disabled={uploadingProof}
+                          style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: 'none', background: uploadingProof ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontWeight: 800, fontSize: '0.78rem', cursor: uploadingProof ? 'not-allowed' : 'pointer' }}
+                        >
+                          {uploadingProof ? 'Enviando...' : '✓ Enviar comprobante'}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mandadito: payment confirmed — driver confirmed, now going to buy */}
+          {order.order_type === 'mandadito' && order.status === 'payment_confirmed' && (
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12, padding: '10px 14px' }}>
+              <span style={{ fontSize: '1.1rem' }}>✅</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#4ade80' }}>Pago confirmado por el conductor</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>Tu conductor va a comprar tus productos</div>
+              </div>
+            </div>
+          )}
+
           {/* ── PIN Codes (envio sender only) ── */}
           {order.order_type === 'envio' && myEmail && order.client_email?.toLowerCase() === myEmail.toLowerCase() && (order.pickup_code || order.delivery_pin) && (
             <div style={{ marginTop: 10, borderRadius: 12, border: '1.5px solid rgba(245,197,24,0.3)', overflow: 'hidden' }}>
@@ -1011,7 +1135,7 @@ export default function SeguimientoPage() {
                           <div style={{ fontSize: '1.3rem', fontWeight: 900, color: pickupValidated ? '#4ade80' : '#F5C518', letterSpacing: '0.3em', fontVariantNumeric: 'tabular-nums', opacity: pickupValidated ? 1 : 0.35 }}>{order.pickup_code}</div>
                           {pickupValidated && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
-                        <div style={{ fontSize: '0.58rem', color: pickupValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{pickupValidated ? '✓ Código validado por el Tasker' : 'Mostrá esto al Tasker al retirar'}</div>
+                        <div style={{ fontSize: '0.58rem', color: pickupValidated ? '#4ade80' : '#94a3b8', marginTop: 2 }}>{pickupValidated ? '✓ Código validado por el conductor' : 'Mostrá esto al conductor al retirar'}</div>
                       </div>
                     )}
                     {!order.is_multi_stop && order.delivery_pin && (
@@ -1104,7 +1228,7 @@ export default function SeguimientoPage() {
         >
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · TASKER</div>
+            <div style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.72rem', marginBottom: 2 }}>NUEVO MENSAJE · {type === 'service' ? 'TÉCNICO' : 'CONDUCTOR'}</div>
             <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {chatToast.from ? `${chatToast.from}: ` : ''}{chatToast.text}
             </div>
