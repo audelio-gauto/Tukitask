@@ -47,6 +47,9 @@ interface ActiveJob {
   address: string | null;
   agreed_price: number | null;
   agreed_price_before: number | null;
+  extra_items: Array<{ amount: number; reason: string }> | null;
+  extra_charge: number | null;
+  total_price: number | null;
   created_at: string;
   tecnico_name: string | null;
   tecnico_photo: string | null;
@@ -812,6 +815,22 @@ export default function MisOfertasPage() {
                     <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#F5C518' }}>
                       💰 Precio acordado ahora: {Number(job.agreed_price).toLocaleString('es-PY')} Gs.
                     </div>
+                  </div>
+                )}
+
+                {/* ── Extras + total (shown when tecnico adds extra charges) */}
+                {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
+                  <div style={{ margin: '10px 16px 0', padding: '10px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {job.extra_items.map((it, i) => (
+                      <div key={i} style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f59e0b' }}>
+                        ➕ {it.reason || 'Extra'}: {Number(it.amount).toLocaleString('es-PY')} Gs.
+                      </div>
+                    ))}
+                    {job.total_price != null && (
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(245,158,11,0.2)' }}>
+                        Total: {Number(job.total_price).toLocaleString('es-PY')} Gs.
+                      </div>
+                    )}
                   </div>
                 )}
 
