@@ -594,9 +594,6 @@ export default function CitasPage() {
                           </div>
                         )
                       )}
-                      {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
-                        <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>= Total: {fmtGs(job.total_price)}</span>
-                      )}
                     </div>
                     {Array.isArray(job.extra_items) && job.extra_items.length > 0 && (
                       <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -605,6 +602,9 @@ export default function CitasPage() {
                             <span style={{ fontWeight: 600, color: '#f59e0b' }}>➕ {it.reason || 'Extra'}: {fmtGs(it.amount)}</span>
                           </div>
                         ))}
+                        {job.total_price != null && job.extra_charge != null && job.extra_charge > 0 && (
+                          <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Total: {fmtGs(job.total_price)}</span>
+                        )}
                       </div>
                     )}
                   </div>
