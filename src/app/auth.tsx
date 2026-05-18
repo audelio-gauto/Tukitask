@@ -14,12 +14,12 @@ export default function Auth() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const userEmail = (user.email || '').toLowerCase();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const userEmail = (session.user.email || '').toLowerCase();
         const res = await fetch('/api/check-role', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({ email: userEmail }),
         });
         const json = await res.json();
