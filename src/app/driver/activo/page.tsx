@@ -43,6 +43,15 @@ const DELIVERY_STEPS = [
   { key: 'delivered',  label: 'Entregado' },
 ] as const;
 
+const MANDADITO_STEPS = [
+  { key: 'accepted',         label: 'Aceptado'  },
+  { key: 'awaiting_payment', label: 'Pago'      },
+  { key: 'picking_up',       label: 'Al local'  },
+  { key: 'at_pickup',        label: 'Comprando' },
+  { key: 'in_transit',       label: 'En camino' },
+  { key: 'delivered',        label: 'Entregado' },
+] as const;
+
 function genTrackingCode(id: string) {
   return 'TK' + id.replace(/-/g, '').slice(0, 8).toUpperCase();
 }
@@ -573,10 +582,11 @@ export default function ActivoPage() {
           {/* Progress stepper */}
           {(() => {
             const returnMode = ['returning', 'driver_returning', 'return_delivered'].includes(status);
-            const activeIdx = returnMode ? 3 : DELIVERY_STEPS.findIndex(s => s.key === status);
+            const steps = order.order_type === 'mandadito' ? MANDADITO_STEPS : DELIVERY_STEPS;
+            const activeIdx = returnMode ? 3 : steps.findIndex(s => s.key === status);
             return (
               <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 18, padding: '4px 0 0' }}>
-                {DELIVERY_STEPS.map((step, i) => {
+                {steps.map((step, i) => {
                   const done = i < activeIdx;
                   const active = i === activeIdx;
                   return (
@@ -1213,6 +1223,72 @@ export default function ActivoPage() {
                 ? 'Actualizando...'
                 : <><Icon name="shopping-cart" size={15} color="#1C1C2E" /> Ir a comprar al local</>}
             </button>
+          )}
+
+          {/* ── Mandadito: yendo al local (picking_up) ── */}
+          {order.order_type === 'mandadito' && status === 'picking_up' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                disabled={!!acting}
+                onClick={() => updateStatus(order.id, 'at_pickup')}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                  background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                  color: acting ? '#6b7280' : '#1C1C2E',
+                  fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                  boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                  transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                {acting === order.id + 'at_pickup' ? 'Actualizando...' : <>🏪 Llegué al local</>}
+              </button>
+              <button
+                disabled={!!acting}
+                onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
+                style={{
+                  width: '100%', padding: '11px', borderRadius: 12,
+                  border: '1.5px solid rgba(239,68,68,0.4)',
+                  background: 'rgba(239,68,68,0.08)',
+                  color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
+                  cursor: acting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Icon name="x" size={14} color="#f87171" /> Cancelar
+              </button>
+            </div>
+          )}
+
+          {/* ── Mandadito: comprando en local (at_pickup) ── */}
+          {order.order_type === 'mandadito' && status === 'at_pickup' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                disabled={!!acting}
+                onClick={() => updateStatus(order.id, 'in_transit')}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                  background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                  color: acting ? '#6b7280' : '#1C1C2E',
+                  fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
+                  boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                  transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                {acting === order.id + 'in_transit' ? 'Actualizando...' : <>🛍️ Compras listas — Yendo a entregar</>}
+              </button>
+              <button
+                disabled={!!acting}
+                onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
+                style={{
+                  width: '100%', padding: '11px', borderRadius: 12,
+                  border: '1.5px solid rgba(239,68,68,0.4)',
+                  background: 'rgba(239,68,68,0.08)',
+                  color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
+                  cursor: acting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Icon name="x" size={14} color="#f87171" /> Cancelar
+              </button>
+            </div>
           )}
 
           {(status === 'accepted' || status === 'picking_up' || status === 'at_pickup') && order.order_type !== 'mandadito' && (
