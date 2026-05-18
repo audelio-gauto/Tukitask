@@ -1885,8 +1885,8 @@ export default function ActivoPage() {
         const shoppingLines = ord?.shopping_list
           ? (ord.shopping_list as string).split('\n').map((l: string) => l.trim()).filter(Boolean)
           : [];
-        const canCancel = payReqElapsed >= 600; // 10 minutes
-        const minsLeft = Math.max(0, Math.ceil((600 - payReqElapsed) / 60));
+        const canCancel = payReqElapsed >= 300; // 5 minutes
+        const minsLeft = Math.max(0, Math.ceil((300 - payReqElapsed) / 60));
         return (
           <div
             style={{
@@ -2020,11 +2020,11 @@ export default function ActivoPage() {
 
                     {/* Timer */}
                     <div style={{ textAlign: 'center', padding: '4px 0' }}>
-                      <div style={{ fontSize: '2.4rem', fontWeight: 900, color: payReqElapsed >= 600 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
+                      <div style={{ fontSize: '2.4rem', fontWeight: 900, color: payReqElapsed >= 300 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
                         {fmtElapsed(payReqElapsed)}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                        {payReqElapsed >= 600 ? 'Tiempo superado — podés cancelar la solicitud' : `esperando respuesta del cliente`}
+                        {payReqElapsed >= 300 ? 'Tiempo superado — podés cancelar la solicitud' : `esperando respuesta del cliente`}
                       </div>
                     </div>
 
@@ -2061,7 +2061,7 @@ export default function ActivoPage() {
                       </div>
                     )}
 
-                    {/* Cancel button — enabled after 10 min */}
+                    {/* Cancel button — enabled after 5 min */}
                     <div style={{ marginTop: 4 }}>
                       {canCancel ? (
                         <button

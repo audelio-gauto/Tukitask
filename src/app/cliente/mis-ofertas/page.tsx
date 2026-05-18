@@ -1104,8 +1104,8 @@ export default function MisOfertasPage() {
       {/* ── Client Payment Modal (Mandadito) ───────────────────────────── */}
       {payModal && (() => {
         const ord = orders.find(o => o.id === payModal.orderId);
-        const canCancel = payElapsed >= 600;
-        const minsLeft = Math.max(0, Math.ceil((600 - payElapsed) / 60));
+        const canCancel = payElapsed >= 300;
+        const minsLeft = Math.max(0, Math.ceil((300 - payElapsed) / 60));
         const alreadyUploaded = !!ord?.payment_proof_url;
         return (
           <div
@@ -1152,11 +1152,11 @@ export default function MisOfertasPage() {
 
                 {/* Timer */}
                 <div style={{ textAlign: 'center', padding: '2px 0' }}>
-                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: payElapsed >= 600 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: payElapsed >= 300 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
                     {fmtElapsed(payElapsed)}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                    {payElapsed >= 600 ? 'Tiempo superado — podés cancelar el servicio' : 'tiempo esperando tu comprobante'}
+                    {payElapsed >= 300 ? 'Tiempo superado — podés cancelar el servicio' : 'tiempo esperando tu comprobante'}
                   </div>
                 </div>
 
