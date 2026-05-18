@@ -57,13 +57,20 @@ export async function POST(req: Request) {
       .from('delivery-proofs')
       .upload(fileName, buffer, { contentType: mimeType, upsert: true });
 
-    if (uploadError) return serverError(uploadError);
+    if (uploadError) {
+      console.error('[upload-payment-proof] storage error:', uploadError);
+      return NextResponse.json({ error: 'Error subiendo imagen: ' + uploadError.message }, { status: 500 });
+    }
 
     const { data: urlData } = db.storage.from('delivery-proofs').getPublicUrl(fileName);
     const proofUrl = urlData.publicUrl;
 
-    // Save proof URL to order
-    await db.from('orders').update({ payment_proof_url: proofUrl }).eq('id', order_id);
+    // Save proof URL to order — requires migration 066 (payment_proof_url column)
+    const { error: updateError } = await db.from('orders').update({ payment_proof_url: proofUrl }).eq('id', order_id);
+    if (updateError) {
+      console.error('[upload-payment-proof] update error:', updateError);
+      return NextResponse.json({ error: 'Error guardando comprobante: ' + updateError.message + ' — Asegurate de correr la migración 066 en Supabase' }, { status: 500 });
+    }
 
     // Notify the driver that the client uploaded the proof
     if (order.accepted_by) {
@@ -79,7 +86,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ url: proofUrl });
-  } catch {
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[upload-payment-proof]', msg);
+    return NextResponse.json({ error: 'Error interno: ' + msg }, { status: 500 });
   }
 }

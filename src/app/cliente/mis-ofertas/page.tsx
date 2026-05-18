@@ -447,8 +447,15 @@ export default function MisOfertasPage() {
     setPayUploading(true);
     try {
       // API expects base64 + mimeType JSON (not FormData)
+      // Use chunked conversion to avoid call stack overflow with large images
       const arrayBuffer = await payProofFile.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const uint8 = new Uint8Array(arrayBuffer);
+      const CHUNK = 8192;
+      let binary = '';
+      for (let i = 0; i < uint8.length; i += CHUNK) {
+        binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+      }
+      const base64 = btoa(binary);
       const mimeType = payProofFile.type || 'image/jpeg';
       const res = await authFetch('/api/upload-payment-proof', {
         method: 'POST',
