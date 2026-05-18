@@ -84,6 +84,7 @@ export default function Auth() {
         else if (json?.role === 'driver')                    router.replace('/driver');
         else if (json?.role === 'cliente')                   router.replace('/cliente');
         else if (json?.role === 'servicio' || json?.role === 'tecnico') router.replace('/tecnico');
+        else if (json?.role === 'vendedor')                  router.replace('/vendedor');
         else if (json?.role)                                 router.replace('/');
         else setError('No se encontró tu cuenta en el sistema.');
       } catch { setError('Error al verificar permisos.'); }
