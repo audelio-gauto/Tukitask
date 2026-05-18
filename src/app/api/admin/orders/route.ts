@@ -207,16 +207,35 @@ export async function PATCH(req: Request) {
   if (action === 'set_status') {
     const { status: newStatus } = body;
     if (!newStatus) return NextResponse.json({ error: 'status required' }, { status: 400 });
-    const updates: Record<string, unknown> = { status: newStatus };
-    if (type === 'order' && newStatus === 'cancelled') updates.cancelled_at = new Date().toISOString();
-    if (type === 'order' && ['delivered', 'commission_charged'].includes(newStatus)) {
-      updates.completed_at = new Date().toISOString();
+
+    let rpcError: unknown = null;
+
+    if (type === 'order') {
+      const cancelledAt = newStatus === 'cancelled' ? new Date().toISOString() : null;
+      const completedAt = ['delivered', 'commission_charged'].includes(newStatus) ? new Date().toISOString() : null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (db as any).rpc('admin_force_set_order_status', {
+        p_id: id,
+        p_status: newStatus,
+        p_cancelled_at: cancelledAt,
+        p_completed_at: completedAt,
+      });
+      rpcError = error;
+    } else {
+      const completedAt = newStatus === 'completado' ? new Date().toISOString() : null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (db as any).rpc('admin_force_set_tecnico_status', {
+        p_id: id,
+        p_status: newStatus,
+        p_completed_at: completedAt,
+      });
+      rpcError = error;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (db as any).from(table).update(updates).eq('id', id);
-    if (error) {
-      console.error('[admin set_status] DB error:', JSON.stringify(error));
-      const msg = error.message || error.details || error.code || JSON.stringify(error);
+
+    if (rpcError) {
+      const e = rpcError as Record<string, unknown>;
+      console.error('[admin set_status] RPC error:', JSON.stringify(e));
+      const msg = String(e?.message || e?.details || e?.code || JSON.stringify(e) || 'DB error');
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
