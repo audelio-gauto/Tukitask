@@ -1,0 +1,452 @@
+'use client';
+import { useState } from 'react';
+
+type Tone = 'informal' | 'formal' | 'agresivo' | 'amigable';
+type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
+type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
+
+interface StoreConfig {
+  storeName: string;
+  storeDescription: string;
+  storeCategory: string;
+  pickupAddress: string;
+  pickupCity: string;
+  pickupReference: string;
+  whatsapp: string;
+  openFrom: string;
+  openTo: string;
+  openDays: string[];
+  botEnabled: boolean;
+  botTone: Tone;
+  botTimeoutMinutes: number;
+  botTimeoutAction: TimeoutAction;
+  botCounterFormula: CounterFormula;
+  botCounterPercent: number;
+  autoAcceptAbove: number;
+  autoRejectBelow: number;
+  freeDeliveryAbove: number;
+  commissionToDriver: boolean;
+}
+
+const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DAYS_FULL = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+const TONES: { key: Tone; label: string; emoji: string; desc: string }[] = [
+  { key: 'informal',  label: 'Informal',  emoji: '😎', desc: '"Che, te lo dejo en $18..."' },
+  { key: 'formal',    label: 'Formal',    emoji: '👔', desc: '"Estimado, le ofrecemos..."' },
+  { key: 'agresivo',  label: 'Agresivo',  emoji: '🔥', desc: '"¡Última oportunidad!"'     },
+  { key: 'amigable',  label: 'Amigable',  emoji: '😊', desc: '"Hola! Gracias por..."'     },
+];
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="vnd-card" style={{ marginBottom: 20 }}>
+      <div className="vnd-card-header">
+        <span className="vnd-card-title">
+          <span className="vnd-card-title-dot" />
+          {title}
+        </span>
+      </div>
+      <div className="vnd-card-body">{children}</div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════ */
+export default function ConfiguracionPage() {
+  const [saved, setSaved] = useState(false);
+  const [cfg, setCfg] = useState<StoreConfig>({
+    storeName:           'Mi Tienda',
+    storeDescription:    '',
+    storeCategory:       'electronica',
+    pickupAddress:       '',
+    pickupCity:          'Asunción',
+    pickupReference:     '',
+    whatsapp:            '',
+    openFrom:            '08:00',
+    openTo:              '20:00',
+    openDays:            ['lunes','martes','miercoles','jueves','viernes'],
+    botEnabled:          true,
+    botTone:             'informal',
+    botTimeoutMinutes:   15,
+    botTimeoutAction:    'auto_counter',
+    botCounterFormula:   'midpoint',
+    botCounterPercent:   10,
+    autoAcceptAbove:     90,
+    autoRejectBelow:     60,
+    freeDeliveryAbove:   0,
+    commissionToDriver:  true,
+  });
+
+  function update<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) {
+    setCfg(prev => ({ ...prev, [key]: value }));
+  }
+
+  function toggleDay(day: string) {
+    setCfg(prev => ({
+      ...prev,
+      openDays: prev.openDays.includes(day)
+        ? prev.openDays.filter(d => d !== day)
+        : [...prev.openDays, day],
+    }));
+  }
+
+  function handleSave() {
+    /* TODO: persist to Supabase vendor_settings table */
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 className="vnd-page-heading">Configuración de Tienda</h1>
+          <p className="vnd-page-sub">Personalizá tu tienda y configurá el Robot Negociador</p>
+        </div>
+        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+          {saved ? (
+            <>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              ¡Guardado!
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              Guardar cambios
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* ── Perfil de tienda ──────────────────────────────── */}
+      <Section title="🏪 Perfil de Mi Tienda">
+        <div className="vnd-form-grid">
+          <div className="vnd-field">
+            <label className="vnd-label">Nombre de la tienda *</label>
+            <input className="vnd-input" value={cfg.storeName}
+              onChange={e => update('storeName', e.target.value)}
+              placeholder="Ej: ElectroParaguay" />
+          </div>
+
+          <div className="vnd-field">
+            <label className="vnd-label">Categoría principal</label>
+            <select className="vnd-input" value={cfg.storeCategory}
+              onChange={e => update('storeCategory', e.target.value)}>
+              <option value="electronica">📱 Electrónica</option>
+              <option value="ropa">👗 Ropa y Accesorios</option>
+              <option value="hogar">🏠 Hogar y Decoración</option>
+              <option value="alimentos">🍔 Alimentos</option>
+              <option value="herramientas">🔧 Herramientas</option>
+              <option value="belleza">💄 Belleza y Cuidado</option>
+              <option value="deportes">⚽ Deportes</option>
+              <option value="otros">📦 Otros</option>
+            </select>
+          </div>
+
+          <div className="vnd-field vnd-form-grid-full">
+            <label className="vnd-label">Descripción de la tienda</label>
+            <textarea className="vnd-input" rows={3} value={cfg.storeDescription}
+              onChange={e => update('storeDescription', e.target.value)}
+              placeholder="Contá qué vendés, qué te hace especial..."
+              style={{ resize: 'vertical', minHeight: 80 }}
+            />
+          </div>
+
+          <div className="vnd-field">
+            <label className="vnd-label">WhatsApp de contacto</label>
+            <input className="vnd-input" value={cfg.whatsapp}
+              onChange={e => update('whatsapp', e.target.value)}
+              placeholder="0981-000000" type="tel" />
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Punto de recogida ─────────────────────────────── */}
+      <Section title="📍 Punto de Recogida para Drivers">
+        <div className="vnd-form-grid">
+          <div className="vnd-field">
+            <label className="vnd-label">Dirección de recogida *</label>
+            <input className="vnd-input" value={cfg.pickupAddress}
+              onChange={e => update('pickupAddress', e.target.value)}
+              placeholder="Av. Mcal. López 1234" />
+          </div>
+
+          <div className="vnd-field">
+            <label className="vnd-label">Ciudad</label>
+            <select className="vnd-input" value={cfg.pickupCity}
+              onChange={e => update('pickupCity', e.target.value)}>
+              <option>Asunción</option>
+              <option>Fernando de la Mora</option>
+              <option>San Lorenzo</option>
+              <option>Luque</option>
+              <option>Lambaré</option>
+              <option>Capiatá</option>
+              <option>Otra</option>
+            </select>
+          </div>
+
+          <div className="vnd-field vnd-form-grid-full">
+            <label className="vnd-label">Referencia de ubicación</label>
+            <input className="vnd-input" value={cfg.pickupReference}
+              onChange={e => update('pickupReference', e.target.value)}
+              placeholder="Frente al supermercado, portón azul..." />
+          </div>
+        </div>
+
+        {/* Horarios */}
+        <div style={{ marginTop: 20 }}>
+          <p className="vnd-label" style={{ marginBottom: 10 }}>Horario de atención</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="vnd-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Desde</label>
+              <input type="time" className="vnd-input" style={{ width: 120 }}
+                value={cfg.openFrom} onChange={e => update('openFrom', e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="vnd-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Hasta</label>
+              <input type="time" className="vnd-input" style={{ width: 120 }}
+                value={cfg.openTo} onChange={e => update('openTo', e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {DAYS.map((d, i) => {
+              const key = DAYS_FULL[i];
+              const active = cfg.openDays.includes(key);
+              return (
+                <button key={d}
+                  onClick={() => toggleDay(key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, border: '1px solid',
+                    borderColor: active ? '#F5C518' : 'var(--vnd-border)',
+                    background:  active ? 'rgba(245,197,24,0.12)' : 'var(--vnd-surface-2)',
+                    color:       active ? '#F5C518' : 'var(--vnd-text-muted)',
+                    fontWeight:  700, fontSize: '0.8rem', cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Robot Negociador ──────────────────────────────── */}
+      <Section title="🤖 Robot Negociador (TukiBot)">
+        {/* Enable toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: cfg.botEnabled ? 'rgba(245,197,24,0.06)' : 'var(--vnd-surface-2)', borderRadius: 12, border: `1px solid ${cfg.botEnabled ? 'rgba(245,197,24,0.20)' : 'var(--vnd-border)'}`, marginBottom: 22, transition: 'all 0.2s' }}>
+          <div>
+            <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', fontSize: '0.9rem' }}>
+              {cfg.botEnabled ? '🟢 Robot activo' : '⚫ Robot inactivo'}
+            </p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>
+              {cfg.botEnabled ? 'TukiBot responde automáticamente mientras dormís' : 'Activá el robot para negociar 24/7'}
+            </p>
+          </div>
+          <button
+            onClick={() => update('botEnabled', !cfg.botEnabled)}
+            style={{
+              width: 48, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer',
+              background: cfg.botEnabled ? '#F5C518' : 'var(--vnd-border)',
+              position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3, left: cfg.botEnabled ? 26 : 3,
+              width: 20, height: 20, borderRadius: '50%', background: cfg.botEnabled ? '#0b1220' : 'var(--vnd-text-muted)',
+              transition: 'left 0.2s', display: 'block',
+            }} />
+          </button>
+        </div>
+
+        {cfg.botEnabled && (
+          <>
+            {/* Tone picker */}
+            <div style={{ marginBottom: 22 }}>
+              <p className="vnd-label" style={{ marginBottom: 10 }}>Personalidad del robot</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                {TONES.map(t => (
+                  <button key={t.key} onClick={() => update('botTone', t.key)}
+                    style={{
+                      padding: '12px 10px', borderRadius: 12, border: '1px solid',
+                      borderColor: cfg.botTone === t.key ? '#F5C518' : 'var(--vnd-border)',
+                      background: cfg.botTone === t.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
+                      cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+                    }}>
+                    <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{t.emoji}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.8rem', color: cfg.botTone === t.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>{t.label}</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--vnd-text-muted)', marginTop: 3 }}>{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Price thresholds */}
+            <div className="vnd-form-grid" style={{ marginBottom: 22 }}>
+              <div className="vnd-field">
+                <label className="vnd-label">
+                  ✅ Auto-aceptar si ofrecen ≥ (% del precio publicado)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="range" min={50} max={100} value={cfg.autoAcceptAbove}
+                    onChange={e => update('autoAcceptAbove', +e.target.value)}
+                    style={{ flex: 1, accentColor: '#4ade80' }}
+                  />
+                  <span style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem', width: 40, textAlign: 'right' }}>
+                    {cfg.autoAcceptAbove}%
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
+                  Si publiqués a ₲100.000 → acepta desde ₲{(100000 * cfg.autoAcceptAbove / 100).toLocaleString('es-PY')}
+                </p>
+              </div>
+
+              <div className="vnd-field">
+                <label className="vnd-label">
+                  ❌ Auto-rechazar si ofrecen &lt; (% del precio publicado)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="range" min={0} max={80} value={cfg.autoRejectBelow}
+                    onChange={e => update('autoRejectBelow', +e.target.value)}
+                    style={{ flex: 1, accentColor: '#f87171' }}
+                  />
+                  <span style={{ fontWeight: 800, color: '#f87171', fontSize: '1rem', width: 40, textAlign: 'right' }}>
+                    {cfg.autoRejectBelow}%
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
+                  Si publiqués a ₲100.000 → rechaza menos de ₲{(100000 * cfg.autoRejectBelow / 100).toLocaleString('es-PY')}
+                </p>
+              </div>
+            </div>
+
+            {/* Timeout config */}
+            <div style={{ padding: 18, background: 'var(--vnd-surface-2)', borderRadius: 12, border: '1px solid var(--vnd-border)', marginBottom: 22 }}>
+              <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 14, fontSize: '0.875rem' }}>
+                ⏱ Si no respondés en…
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+                {[5,10,15,30,60].map(min => (
+                  <button key={min} onClick={() => update('botTimeoutMinutes', min)}
+                    style={{
+                      padding: '7px 16px', borderRadius: 8, border: '1px solid',
+                      borderColor: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-border)',
+                      background: cfg.botTimeoutMinutes === min ? 'rgba(245,197,24,0.12)' : 'transparent',
+                      color: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-text-muted)',
+                      fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
+                    }}
+                  >
+                    {min} min
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontWeight: 700, color: 'var(--vnd-text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
+                El robot debe…
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { key: 'auto_counter',    label: '🔁 Contraofertar automáticamente' },
+                  { key: 'auto_accept',     label: '✅ Aceptar la oferta'             },
+                  { key: 'pressure_client', label: '📢 Presionar al cliente'          },
+                ].map(opt => (
+                  <button key={opt.key}
+                    onClick={() => update('botTimeoutAction', opt.key as TimeoutAction)}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: '1px solid',
+                      borderColor: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-border)',
+                      background: cfg.botTimeoutAction === opt.key ? 'rgba(245,197,24,0.12)' : 'transparent',
+                      color: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-text-secondary)',
+                      fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Counter formula */}
+            {cfg.botTimeoutAction === 'auto_counter' && (
+              <div style={{ padding: 16, background: 'rgba(245,197,24,0.04)', borderRadius: 12, border: '1px solid rgba(245,197,24,0.15)' }}>
+                <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 12, fontSize: '0.875rem' }}>
+                  🧮 Fórmula de contraoferta automática
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'midpoint',   label: 'Punto medio', desc: '(Publicado + Oferta) ÷ 2' },
+                    { key: 'percentage', label: 'Porcentaje',  desc: `Bajar ${cfg.botCounterPercent}% del publicado` },
+                    { key: 'fixed',      label: 'Precio fijo', desc: 'Precio mínimo configurado' },
+                  ].map(f => (
+                    <button key={f.key} onClick={() => update('botCounterFormula', f.key as CounterFormula)}
+                      style={{
+                        padding: '10px 16px', borderRadius: 10, border: '1px solid', flex: 1, textAlign: 'left',
+                        borderColor: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-border)',
+                        background: cfg.botCounterFormula === f.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.82rem', color: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>{f.label}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--vnd-text-muted)', marginTop: 3 }}>{f.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </Section>
+
+      {/* ── Delivery config ───────────────────────────────── */}
+      <Section title="🚗 Configuración de Delivery">
+        <div className="vnd-form-grid">
+          <div className="vnd-field">
+            <label className="vnd-label">Envío gratis a partir de (₲)</label>
+            <input type="number" className="vnd-input"
+              value={cfg.freeDeliveryAbove || ''}
+              onChange={e => update('freeDeliveryAbove', +e.target.value)}
+              placeholder="0 = no aplica" min={0} step={10000}
+            />
+            <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
+              {cfg.freeDeliveryAbove > 0 ? `El delivery es gratis en pedidos mayores a ₲${cfg.freeDeliveryAbove.toLocaleString('es-PY')}` : 'Sin descuento por monto mínimo'}
+            </p>
+          </div>
+
+          <div className="vnd-field" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--vnd-surface-2)', borderRadius: 10, border: '1px solid var(--vnd-border)' }}>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--vnd-text-primary)' }}>Incluir costo de driver</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>La plataforma asigna y gestiona el driver</p>
+              </div>
+              <button onClick={() => update('commissionToDriver', !cfg.commissionToDriver)}
+                style={{
+                  width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
+                  background: cfg.commissionToDriver ? '#F5C518' : 'var(--vnd-border)',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                }}>
+                <span style={{
+                  position: 'absolute', top: 2, left: cfg.commissionToDriver ? 22 : 2,
+                  width: 20, height: 20, borderRadius: '50%',
+                  background: cfg.commissionToDriver ? '#0b1220' : 'var(--vnd-text-muted)',
+                  transition: 'left 0.2s', display: 'block',
+                }} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Save button bottom */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
+        <button className="vnd-btn vnd-btn-secondary">Descartar cambios</button>
+        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+          {saved ? '✓ ¡Guardado!' : 'Guardar cambios'}
+        </button>
+      </div>
+    </div>
+  );
+}
