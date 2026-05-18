@@ -50,6 +50,15 @@ const navItems: NavItem[] = [
     badge: 0,
   },
   {
+    label: 'Plantillas',
+    href: '/vendedor/plantillas',
+    icon: (
+      <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10-1a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1h-4zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-1a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4z" />
+      </svg>
+    ),
+  },
+  {
     label: 'Análisis',
     href: '/vendedor/analisis',
     icon: (
@@ -117,7 +126,7 @@ export default function VendedorSidebar() {
       <nav className="vnd-nav">
         <span className="vnd-nav-label">Principal</span>
 
-        {navItems.slice(0, 4).map((item) => (
+        {navItems.slice(0, 5).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -137,7 +146,7 @@ export default function VendedorSidebar() {
           href="/vendedor/analisis"
           className={`vnd-nav-item${isActive('/vendedor/analisis') ? ' active' : ''}`}
         >
-          {navItems[4].icon}
+          {navItems[5].icon}
           <span style={{ flex: 1 }}>Análisis</span>
         </Link>
 
@@ -147,7 +156,7 @@ export default function VendedorSidebar() {
           href="/vendedor/configuracion"
           className={`vnd-nav-item${isActive('/vendedor/configuracion') ? ' active' : ''}`}
         >
-          {navItems[5].icon}
+          {navItems[6].icon}
           <span style={{ flex: 1 }}>Configuración</span>
         </Link>
       </nav>
