@@ -68,8 +68,7 @@ export default function ProductosPage() {
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) ||
                  p.sku.toLowerCase().includes(search.toLowerCase()));
 
-  const countOf = (k: TabKey) => TABS.find(t => t.key === k)!.filter
-    ? products.filter(TABS.find(t => t.key === k)!.filter).length : 0;
+  const countOf = (k: TabKey) => products.filter(TABS.find(t => t.key === k)!.filter).length;
 
   const earnings = (p: Product) => ((p.price - p.floorPrice) / p.price * 100).toFixed(0);
 
