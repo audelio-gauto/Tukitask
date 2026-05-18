@@ -3,6 +3,24 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+/* ── Deal strength meter (floor price never revealed to user) ── */
+function getDealStrength(offer: number, price: number, floor: number) {
+  if (!offer || offer <= 0) return null;
+  if (offer >= price) return { pct: 100, color: '#4ade80', label: '🟢 ¡Precio completo!',   sub: 'Aceptación inmediata garantizada' };
+  if (offer >= floor * 1.02) {
+    const pct = 68 + ((offer - floor) / (price - floor)) * 31;
+    return { pct, color: '#4ade80', label: '🟢 Oferta muy buena',         sub: 'Alta probabilidad de aceptación' };
+  }
+  if (offer >= floor * 0.80) {
+    const pct = 38 + ((offer - floor * 0.80) / (floor * 0.22)) * 29;
+    return { pct, color: '#fbbf24', label: '🟡 Puede funcionar',          sub: 'El TukiBot podría contra-ofertar' };
+  }
+  const pct = Math.max(5, (offer / (floor * 0.80)) * 37);
+  return   { pct, color: '#f87171', label: '🔴 Muy baja',                 sub: 'El TukiBot probablemente la rechazará' };
+}
+
+type Mode = 'idle' | 'buy' | 'negotiate';
+
 /* ── Mock data ──────────────────────────────────────────────── */
 const PRODUCTS: Record<string, {
   id: string; vendorId: string; vendorName: string; name: string;
@@ -21,17 +39,18 @@ const PRODUCTS: Record<string, {
 
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
 
-/* ── Component ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
   const id     = params.id as string;
   const p      = PRODUCTS[id];
 
-  const [offerAmount, setOfferAmount] = useState('');
+  const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
+  const [offerAmount, setOfferAmount] = useState('');
   const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
-  const [submitted,   setSubmitted]   = useState(false);
+  const [done,        setDone]        = useState<{ type: Mode; amount?: number } | null>(null);
 
   if (!p) {
     return (
@@ -46,22 +65,36 @@ export default function ProductDetailPage() {
     );
   }
 
-  const discount = Math.round((1 - p.floorPrice / p.price) * 100);
   const isNegotiable = p.floorPrice < p.price * 0.92;
+  const offerNum     = parseInt(offerAmount, 10) || 0;
+  const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floorPrice) : null;
+  const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleBuy() {
+    setMode('buy');
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setSubmitting(false);
+    setDone({ type: 'buy' });
+  }
+
+  async function handleOffer(e: React.FormEvent) {
     e.preventDefault();
-    const amount = parseInt(offerAmount, 10);
-    if (!amount || amount < p.floorPrice) return;
+    if (!offerNum || offerNum <= 0) return;
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 1500));
     setSubmitting(false);
-    setSubmitted(true);
-  };
+    setDone({ type: 'negotiate', amount: offerNum });
+  }
+
+  function reset() {
+    setDone(null); setMode('idle');
+    setOfferAmount(''); setQuantity(1); setMessage('');
+  }
 
   return (
     <div className="tnd-page">
-      {/* Back trail */}
+      {/* Breadcrumb */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 24, fontSize: '0.82rem' }}>
         <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
         <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
@@ -70,17 +103,13 @@ export default function ProductDetailPage() {
         <span style={{ color: 'var(--tnd-text-muted)' }}>{p.name}</span>
       </div>
 
-      {/* ── 2-col detail grid ── */}
       <div className="tnd-detail-grid">
-
-        {/* Left — image */}
+        {/* ── Left: image ──────────────────────────────────── */}
         <div>
           <div className="tnd-detail-image">
             <span role="img" aria-label={p.name}>{p.emoji}</span>
             {isNegotiable && (
-              <span className="tnd-negoable-badge tnd-negoable-badge-lg">
-                🤝 Negociable hasta {discount}% dto.
-              </span>
+              <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
             )}
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
@@ -91,119 +120,168 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Right — info + offer */}
+        {/* ── Right: info + actions ─────────────────────── */}
         <div>
           <div className="tnd-detail-vendor-link">
             <Link href={`/tienda/${p.vendorId}`}>{p.vendorName}</Link>
           </div>
           <h1 className="tnd-detail-name">{p.name}</h1>
           <div className="tnd-detail-price">{gs(p.price)}</div>
-          <div className="tnd-detail-floor">
-            Precio mínimo de oferta: <strong>{gs(p.floorPrice)}</strong>
-          </div>
           <p className="tnd-detail-desc">{p.desc}</p>
 
           <div className="tnd-divider" />
 
-          {/* ── Offer box ── */}
-          {p.stock === 0 ? (
+          {/* ══ DONE state ══════════════════════════════════ */}
+          {done ? (
+            <div className="tnd-offer-success">
+              {done.type === 'buy' ? (
+                <>
+                  <div className="tnd-offer-success-icon">🛒</div>
+                  <div className="tnd-offer-success-title">¡Compra confirmada!</div>
+                  <p className="tnd-offer-success-sub">
+                    Tu pedido de <strong>{quantity} × {p.name}</strong> fue procesado.<br />
+                    Recibirás confirmación de <strong>{p.vendorName}</strong> pronto.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="tnd-offer-success-icon">🤖</div>
+                  <div className="tnd-offer-success-title">¡Oferta enviada al TukiBot!</div>
+                  <p className="tnd-offer-success-sub">
+                    Tu oferta de <strong>{gs(done.amount!)}</strong> × {quantity} und. está siendo evaluada.<br />
+                    El Robot Negociador de <strong>{p.vendorName}</strong> te responderá pronto.
+                  </p>
+                </>
+              )}
+              <button className="tnd-offer-submit" style={{ marginTop: 10 }} onClick={reset}>
+                Volver al producto
+              </button>
+            </div>
+
+          ) : p.stock === 0 ? (
             <div className="tnd-chip tnd-chip-out" style={{ fontSize: '0.95rem', padding: '12px 18px', display: 'inline-block' }}>
               ❌ Sin stock — producto no disponible
             </div>
-          ) : submitted ? (
-            <div className="tnd-offer-success">
-              <div className="tnd-offer-success-icon">✅</div>
-              <div className="tnd-offer-success-title">¡Oferta enviada!</div>
-              <p className="tnd-offer-success-sub">
-                Tu oferta de <strong>{gs(parseInt(offerAmount, 10))}</strong> × {quantity} unidades fue enviada a <strong>{p.vendorName}</strong>.<br />
-                El vendedor (o nuestro Robot Negociador 🤖) te responderá pronto.
-              </p>
-              <button
-                className="tnd-offer-submit"
-                style={{ marginTop: 10 }}
-                onClick={() => { setSubmitted(false); setOfferAmount(''); setQuantity(1); setMessage(''); }}
-              >
-                Hacer otra oferta
-              </button>
-            </div>
-          ) : (
-            <div className="tnd-offer-box">
-              <h3 className="tnd-offer-title">🤝 Hacer una oferta</h3>
 
-              {/* Robot notice */}
-              <div className="tnd-robot-notice">
-                <div className="tnd-robot-notice-icon">🤖</div>
-                <div>
-                  <strong>Robot Negociador activo</strong><br />
-                  Tu oferta será procesada por el Robot Negociador de TukiTask. Podría contra-ofertarte, aceptar o declinar de forma automática según los parámetros del vendedor.
+          ) : (
+            <>
+              {/* ── Quantity selector ── */}
+              <div className="tnd-qty-row">
+                <span style={{ color: 'var(--tnd-text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>Cantidad</span>
+                <div className="tnd-qty-ctrl">
+                  <button onClick={() => setQuantity(clampQty(quantity - 1))} disabled={quantity <= 1} className="tnd-qty-btn">−</button>
+                  <span className="tnd-qty-val">{quantity}</span>
+                  <button onClick={() => setQuantity(clampQty(quantity + 1))} disabled={quantity >= p.stock} className="tnd-qty-btn">+</button>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="tnd-offer-form">
-                <div className="tnd-offer-field">
-                  <label htmlFor="offerAmt" className="tnd-offer-label">
-                    Tu oferta <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>(mín: {gs(p.floorPrice)})</span>
-                  </label>
-                  <input
-                    id="offerAmt"
-                    type="number"
-                    className="tnd-offer-input"
-                    placeholder={`Mínimo ${p.floorPrice}`}
-                    value={offerAmount}
-                    min={p.floorPrice}
-                    max={p.price}
-                    onChange={e => setOfferAmount(e.target.value)}
-                    required
-                  />
-                  {offerAmount && parseInt(offerAmount, 10) < p.floorPrice && (
-                    <div className="tnd-offer-error">
-                      ⚠️ La oferta mínima aceptada es {gs(p.floorPrice)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="tnd-offer-field">
-                  <label htmlFor="qty" className="tnd-offer-label">Cantidad</label>
-                  <input
-                    id="qty"
-                    type="number"
-                    className="tnd-offer-input"
-                    min={1}
-                    max={p.stock}
-                    value={quantity}
-                    onChange={e => setQuantity(Math.max(1, Math.min(p.stock, parseInt(e.target.value, 10) || 1)))}
-                  />
-                </div>
-
-                <div className="tnd-offer-field">
-                  <label htmlFor="msg" className="tnd-offer-label">Mensaje al vendedor <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>(opcional)</span></label>
-                  <textarea
-                    id="msg"
-                    className="tnd-offer-input tnd-offer-textarea"
-                    placeholder="Ej: ¿Podría hacer envío a Luque? ¿Tiene garantía?"
-                    rows={3}
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    maxLength={300}
-                  />
-                </div>
-
-                {offerAmount && parseInt(offerAmount, 10) >= p.floorPrice && (
-                  <div className="tnd-offer-summary">
-                    Total estimado: <strong>{gs(parseInt(offerAmount, 10) * quantity)}</strong>
-                    &nbsp;({quantity} × {gs(parseInt(offerAmount, 10))})
-                  </div>
-                )}
-
+              {/* ── Primary CTAs ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
                 <button
-                  type="submit"
-                  className="tnd-offer-submit"
-                  disabled={submitting || !offerAmount || parseInt(offerAmount, 10) < p.floorPrice}
+                  className="tnd-btn-buy"
+                  onClick={handleBuy}
+                  disabled={submitting}
                 >
-                  {submitting ? '⏳ Enviando oferta...' : '🚀 Enviar oferta'}
+                  {submitting && mode === 'buy' ? '⏳ Procesando...' : '🛒 Comprar ahora'}
                 </button>
-              </form>
-            </div>
+
+                {isNegotiable && (
+                  <button
+                    className="tnd-btn-negotiate"
+                    onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')}
+                    disabled={submitting}
+                  >
+                    <span>🤖 Regatear al TukiBot</span>
+                    <span style={{ opacity: 0.55, fontSize: '0.75rem', marginLeft: 'auto' }}>
+                      {mode === 'negotiate' ? '▲ cerrar' : '▼ abrir'}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* ── Negotiate panel (collapsible) ── */}
+              {mode === 'negotiate' && (
+                <div className="tnd-negotiate-panel">
+                  <div className="tnd-robot-notice">
+                    <div className="tnd-robot-notice-icon">🤖</div>
+                    <div>
+                      <strong>Robot Negociador activo</strong><br />
+                      <span className="tnd-robot-notice-text">
+                        Ponle tu mejor precio — el TukiBot evalúa sin revelar el mínimo del vendedor. Puede aceptar, contra-ofertar o rechazar automáticamente.
+                      </span>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleOffer} className="tnd-offer-form" style={{ marginTop: 0 }}>
+                    <div className="tnd-offer-field">
+                      <label htmlFor="offerAmt" className="tnd-offer-label">
+                        Tu oferta <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>— precio por unidad</span>
+                      </label>
+                      <input
+                        id="offerAmt"
+                        type="number"
+                        className="tnd-offer-input"
+                        placeholder={`Hasta ${gs(p.price)}`}
+                        value={offerAmount}
+                        min={1}
+                        max={p.price}
+                        onChange={e => setOfferAmount(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Deal meter */}
+                    {dealStrength && (
+                      <div className="tnd-deal-meter">
+                        <div className="tnd-deal-meter-track">
+                          <div
+                            className="tnd-deal-meter-fill"
+                            style={{ width: `${Math.min(100, dealStrength.pct)}%`, background: dealStrength.color }}
+                          />
+                        </div>
+                        <div className="tnd-deal-meter-labels">
+                          <span className="tnd-deal-meter-status" style={{ color: dealStrength.color }}>
+                            {dealStrength.label}
+                          </span>
+                          <span className="tnd-deal-meter-sub">{dealStrength.sub}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="tnd-offer-field">
+                      <label htmlFor="msg" className="tnd-offer-label">
+                        Mensaje <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>(opcional)</span>
+                      </label>
+                      <textarea
+                        id="msg"
+                        className="tnd-offer-input tnd-offer-textarea"
+                        placeholder="Ej: ¿Hacés envío a San Lorenzo? ¿Tiene garantía?"
+                        rows={2}
+                        value={message}
+                        onChange={e => setMessage(e.target.value)}
+                        maxLength={280}
+                      />
+                    </div>
+
+                    {offerNum > 0 && (
+                      <div className="tnd-offer-summary">
+                        Total estimado: <strong>{gs(offerNum * quantity)}</strong>
+                        &nbsp;({quantity} × {gs(offerNum)})
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="tnd-offer-submit"
+                      disabled={submitting || offerNum <= 0}
+                    >
+                      {submitting ? '⏳ Enviando...' : '🤖 Enviar oferta al TukiBot'}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
