@@ -446,10 +446,15 @@ export default function MisOfertasPage() {
     if (!payProofFile || payUploading) return;
     setPayUploading(true);
     try {
-      const form = new FormData();
-      form.append('order_id', orderId);
-      form.append('file', payProofFile);
-      const res = await authFetch('/api/upload-payment-proof', { method: 'POST', body: form });
+      // API expects base64 + mimeType JSON (not FormData)
+      const arrayBuffer = await payProofFile.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const mimeType = payProofFile.type || 'image/jpeg';
+      const res = await authFetch('/api/upload-payment-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, base64, mimeType }),
+      });
       if (res.ok) {
         setPayModal(null);
         setPayProofFile(null);
