@@ -49,6 +49,7 @@ export async function GET(req: Request) {
         'id, created_at, status, client_email, pickup_address, delivery_address, ' +
         'vehicle_type, offer, suggested_price, accepted_by, accepted_at, completed_at, ' +
         'cancelled_at, payment_method, description, is_multi_stop, stop_count, ' +
+        'order_type, payment_proof_url, delivery_photo_url, ' +
         'order_stops(sequence, address, lat, lng, status, fail_reason)',
         { count: 'exact' }
       )

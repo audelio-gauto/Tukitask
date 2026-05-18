@@ -23,6 +23,9 @@ interface Order {
   description: string | null;
   is_multi_stop: boolean;
   stop_count: number | null;
+  order_type: string | null;
+  payment_proof_url: string | null;
+  delivery_photo_url: string | null;
   order_stops: { sequence: number; address: string; lat: number; lng: number; status: string; fail_reason: string | null }[] | null;
   _type: 'order';
   _driver_active: boolean;
@@ -331,6 +334,45 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
 
         {/* ── Admin actions ── */}
         <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
+
+          {/* Comprobantes (delivery proof + mandadito payment proof) */}
+          {isOrder && (o.delivery_photo_url || (o.order_type === 'mandadito' && o.payment_proof_url)) && (
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Comprobantes</p>
+              <div className="flex flex-col gap-3">
+                {o.order_type === 'mandadito' && o.payment_proof_url && (
+                  <div className="rounded-xl overflow-hidden border border-amber-200 bg-amber-50">
+                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-1.5 flex items-center gap-1">
+                      <span>💳</span> Comprobante de transferencia (Mandadito)
+                    </p>
+                    <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={o.payment_proof_url}
+                        alt="Comprobante de transferencia"
+                        className="w-full max-h-56 object-contain bg-gray-100 block"
+                      />
+                    </a>
+                    <p className="text-[10px] text-amber-600 px-3 pb-2">Tocá la imagen para verla a tamaño completo</p>
+                  </div>
+                )}
+                {o.delivery_photo_url && (
+                  <div className="rounded-xl overflow-hidden border border-green-200 bg-green-50">
+                    <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide px-3 py-1.5 flex items-center gap-1">
+                      <span>📦</span> Foto de entrega
+                    </p>
+                    <a href={o.delivery_photo_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={o.delivery_photo_url}
+                        alt="Foto de entrega"
+                        className="w-full max-h-56 object-contain bg-gray-100 block"
+                      />
+                    </a>
+                    <p className="text-[10px] text-green-600 px-3 pb-2">Tocá la imagen para verla a tamaño completo</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {/* Force status change */}
           <div>
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Cambiar estado</p>
