@@ -163,6 +163,16 @@ function isUUID(str: string): boolean {
 
 // PATCH — cancel, set_status, or reassign an order/tecnico job from admin
 export async function PATCH(req: Request) {
+  try {
+    return await handlePatch(req);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[admin PATCH] Unhandled error:', msg, err);
+    return NextResponse.json({ error: `Unhandled: ${msg}` }, { status: 500 });
+  }
+}
+
+async function handlePatch(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
@@ -234,8 +244,10 @@ export async function PATCH(req: Request) {
 
     if (rpcError) {
       const e = rpcError as Record<string, unknown>;
-      console.error('[admin set_status] RPC error:', JSON.stringify(e));
-      const msg = String(e?.message || e?.details || e?.code || JSON.stringify(e) || 'DB error');
+      // Use getOwnPropertyNames to capture non-enumerable Error properties (like message)
+      const fullErr = JSON.stringify(rpcError, Object.getOwnPropertyNames(rpcError as object));
+      console.error('[admin set_status] RPC error:', fullErr);
+      const msg = String(e?.message || e?.details || e?.code || fullErr || 'DB error desconocido');
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
