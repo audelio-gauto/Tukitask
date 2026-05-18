@@ -203,12 +203,14 @@ async function handlePatch(req: Request) {
     const { error } = await (db as any).from(table).update(updates).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Audit log
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db as any).from('admin_audit_log').insert({
-      admin_email: admin.email, action: 'cancel_order', target_type: type,
-      target_id: id, metadata: { prev_status: row.status },
-    }).throwOnError().catch(() => { /* table may not exist yet */ });
+    // Audit log (best-effort — table may not exist yet)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as any).from('admin_audit_log').insert({
+        admin_email: admin.email, action: 'cancel_order', target_type: type,
+        target_id: id, metadata: { prev_status: row.status },
+      });
+    } catch { /* ignore */ }
 
     return NextResponse.json({ success: true });
   }
@@ -251,11 +253,14 @@ async function handlePatch(req: Request) {
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db as any).from('admin_audit_log').insert({
-      admin_email: admin.email, action: 'set_status', target_type: type,
-      target_id: id, metadata: { prev_status: row.status, new_status: newStatus },
-    }).throwOnError().catch(() => { /* table may not exist yet */ });
+    // Audit log (best-effort)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as any).from('admin_audit_log').insert({
+        admin_email: admin.email, action: 'set_status', target_type: type,
+        target_id: id, metadata: { prev_status: row.status, new_status: newStatus },
+      });
+    } catch { /* ignore */ }
 
     return NextResponse.json({ success: true });
   }
@@ -283,11 +288,14 @@ async function handlePatch(req: Request) {
     const { error } = await (db as any).from(table).update(updates).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (db as any).from('admin_audit_log').insert({
-      admin_email: admin.email, action: 'reassign_driver', target_type: type,
-      target_id: id, metadata: { prev_driver: row.accepted_by, new_driver: driver_email },
-    }).throwOnError().catch(() => { /* table may not exist yet */ });
+    // Audit log (best-effort)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as any).from('admin_audit_log').insert({
+        admin_email: admin.email, action: 'reassign_driver', target_type: type,
+        target_id: id, metadata: { prev_driver: row.accepted_by, new_driver: driver_email },
+      });
+    } catch { /* ignore */ }
 
     return NextResponse.json({ success: true });
   }
