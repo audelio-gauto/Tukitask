@@ -5,7 +5,8 @@ import { initTheme, useTheme } from '@/lib/useTheme';
 import './tienda.css';
 
 export default function TiendaLayout({ children }: { children: React.ReactNode }) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     initTheme();
