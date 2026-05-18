@@ -519,6 +519,8 @@ export async function PATCH(req: Request) {
     // Mandadito payment flow (only valid for mandadito order_type)
     awaiting_payment:  ['accepted'],
     payment_confirmed: ['awaiting_payment'],
+    // Driver can cancel a payment request → back to accepted (10-min rule enforced on client)
+    accepted: ['awaiting_payment'],
     picking_up: ['accepted', 'payment_confirmed', 'awaiting_payment'],
     at_pickup:  ['picking_up'],
     in_transit: ['at_pickup', 'picking_up', 'failed', 'return_rejected'], // retry delivery

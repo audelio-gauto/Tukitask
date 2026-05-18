@@ -29,6 +29,9 @@ interface ActiveOrder {
   offer: number | null;
   suggested_price: number | null;
   created_at: string;
+  updated_at?: string;
+  payment_proof_url?: string | null;
+  shopping_list?: string | null;
   driver_name: string | null;
   driver_photo: string | null;
   driver_rating: number | null;
@@ -204,6 +207,13 @@ export default function MisOfertasPage() {
   const [chatTarget, setChatTarget] = useState<ChatTarget | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const prevUnreadRef = useRef<Record<string, number>>({});
+
+  // ── Client payment modal (mandadito awaiting_payment) ─────────────────────
+  const [payModal, setPayModal] = useState<{ orderId: string; alias: string | null } | null>(null);
+  const [payProofFile, setPayProofFile] = useState<File | null>(null);
+  const [payProofPreview, setPayProofPreview] = useState<string | null>(null);
+  const [payUploading, setPayUploading] = useState(false);
+  const [payElapsed, setPayElapsed] = useState(0);
 
   // Scroll to top on mount — works in both browser and Capacitor Android WebView
   useEffect(() => {
@@ -399,6 +409,66 @@ export default function MisOfertasPage() {
   function fmtDate(d: string) {
     return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
+
+  // Timer for client payment modal (counts up from order.updated_at)
+  useEffect(() => {
+    if (!payModal) return;
+    const ord = orders.find(o => o.id === payModal.orderId);
+    const updAt = ord?.updated_at ? new Date(ord.updated_at).getTime() : Date.now();
+    const initial = Math.max(0, Math.floor((Date.now() - updAt) / 1000));
+    setPayElapsed(initial);
+    const iv = setInterval(() => setPayElapsed(e => e + 1), 1000);
+    return () => clearInterval(iv);
+  }, [payModal?.orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-close modal if order status changes out of awaiting_payment
+  useEffect(() => {
+    if (!payModal) return;
+    const ord = orders.find(o => o.id === payModal.orderId);
+    if (ord && ord.status !== 'awaiting_payment') setPayModal(null);
+  }, [orders, payModal]);
+
+  const openClientPayModal = async (order: ActiveOrder) => {
+    setPayProofFile(null);
+    setPayProofPreview(null);
+    let alias: string | null = null;
+    if (order.accepted_by) {
+      try {
+        const r = await fetch(`/api/driver-profile?email=${encodeURIComponent(order.accepted_by)}`);
+        const d = await r.json();
+        alias = d?.profile?.tigo_money_alias || d?.profile?.phone || null;
+      } catch { /* keep null */ }
+    }
+    setPayModal({ orderId: order.id, alias });
+  };
+
+  const submitPaymentProof = async (orderId: string) => {
+    if (!payProofFile || payUploading) return;
+    setPayUploading(true);
+    try {
+      const form = new FormData();
+      form.append('order_id', orderId);
+      form.append('file', payProofFile);
+      const res = await authFetch('/api/upload-payment-proof', { method: 'POST', body: form });
+      if (res.ok) {
+        setPayModal(null);
+        setPayProofFile(null);
+        setPayProofPreview(null);
+        loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err?.error || 'Error al subir comprobante. Intentá de nuevo.');
+      }
+    } finally {
+      setPayUploading(false);
+    }
+  };
+
+  const fmtElapsed = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   function StarRating({ rating, count, label }: { rating: number | null; count?: number | null; label?: string }) {
     if (rating == null) return null;
@@ -642,15 +712,29 @@ export default function MisOfertasPage() {
                       </span>
                     )}
                   </button>
-                  {['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
+                  {order.status === 'awaiting_payment' && order.order_type === 'mandadito' && (
+                    <button
+                      onClick={() => openClientPayModal(order)}
+                      className="tuki-btn"
+                      style={{
+                        flex: 1, fontSize: '0.85rem',
+                        background: 'rgba(245,158,11,0.18)',
+                        border: '1.5px solid rgba(245,158,11,0.55)',
+                        color: '#f59e0b', fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        animation: 'mis-ofertas-pulse 2s ease-in-out infinite',
+                      }}
+                    >
+                      💳 Transferir al conductor
+                    </button>
+                  )}
+                  {['payment_confirmed', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
                     <Link
                       href={`/cliente/seguimiento/${order.id}`}
                       className="tuki-btn tuki-btn-info"
-                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem', background: order.status === 'awaiting_payment' ? 'rgba(245,158,11,0.18)' : undefined, borderColor: order.status === 'awaiting_payment' ? 'rgba(245,158,11,0.5)' : undefined, color: order.status === 'awaiting_payment' ? '#f59e0b' : undefined }}
+                      style={{ flex: 1, textDecoration: 'none', fontSize: '0.85rem' }}
                     >
-                      {order.status === 'awaiting_payment'
-                        ? <><Icon name="bolt" size={16} /> 💳 Transferir / Ver datos</>
-                        : <><Icon name="map" size={16} /> Ver mapa</>}
+                      <Icon name="map" size={16} /> Ver mapa
                     </Link>
                   )}
                 </div>
@@ -1004,6 +1088,155 @@ export default function MisOfertasPage() {
           otherPhoto={chatTarget.otherPhoto}
         />
       )}
+
+      {/* ── Client Payment Modal (Mandadito) ───────────────────────────── */}
+      {payModal && (() => {
+        const ord = orders.find(o => o.id === payModal.orderId);
+        const canCancel = payElapsed >= 600;
+        const minsLeft = Math.max(0, Math.ceil((600 - payElapsed) / 60));
+        const alreadyUploaded = !!ord?.payment_proof_url;
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 10010, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 20px' }}
+            onClick={e => { if (e.target === e.currentTarget) setPayModal(null); }}
+          >
+            <div style={{
+              background: 'var(--surface-1, #1C1C2E)',
+              border: '1.5px solid rgba(245,158,11,0.45)',
+              borderRadius: 22, width: '100%', maxWidth: 400,
+              maxHeight: '90dvh', overflowY: 'auto',
+              boxShadow: '0 28px 90px rgba(0,0,0,0.95)',
+            }}>
+              {/* Header */}
+              <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>💳 Transferir al conductor</div>
+                  <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Pagá y subí el comprobante para continuar</div>
+                </div>
+                <button onClick={() => setPayModal(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.4rem', cursor: 'pointer', padding: 4, lineHeight: 1 }}>×</button>
+              </div>
+
+              <div style={{ padding: '20px 22px 26px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                {/* Alias */}
+                <div style={{ background: 'rgba(245,158,11,0.09)', border: '1.5px solid rgba(245,158,11,0.4)', borderRadius: 14, padding: '16px 18px' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                    Número / Alias Tigo Money del conductor
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, fontSize: '1.3rem', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: 1.5 }}>
+                      {payModal.alias || '—'}
+                    </div>
+                    {payModal.alias && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(payModal.alias!).catch(() => {}); }}
+                        style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '6px 12px', color: '#f59e0b', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                      >
+                        Copiar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Timer */}
+                <div style={{ textAlign: 'center', padding: '2px 0' }}>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: payElapsed >= 600 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
+                    {fmtElapsed(payElapsed)}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                    {payElapsed >= 600 ? 'Tiempo superado — podés cancelar el servicio' : 'tiempo esperando tu comprobante'}
+                  </div>
+                </div>
+
+                {/* Proof upload */}
+                {!alreadyUploaded ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Comprobante de transferencia
+                    </div>
+                    <label style={{
+                      display: 'block', borderRadius: 12, overflow: 'hidden',
+                      border: '2px dashed rgba(245,158,11,0.4)',
+                      cursor: 'pointer', textAlign: 'center',
+                    }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setPayProofFile(f);
+                          const url = URL.createObjectURL(f);
+                          setPayProofPreview(url);
+                        }}
+                      />
+                      {payProofPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={payProofPreview} alt="Comprobante" style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#0f172a', display: 'block' }} />
+                      ) : (
+                        <div style={{ padding: '28px 16px', color: 'rgba(255,255,255,0.4)' }}>
+                          <div style={{ fontSize: '2.2rem', marginBottom: 8 }}>📸</div>
+                          <div style={{ fontSize: '0.84rem', fontWeight: 600 }}>Tocá para elegir o tomar foto</div>
+                          <div style={{ fontSize: '0.72rem', marginTop: 4, opacity: 0.6 }}>Captura de pantalla o foto del comprobante</div>
+                        </div>
+                      )}
+                    </label>
+                    {payProofFile && (
+                      <button
+                        disabled={payUploading}
+                        onClick={() => submitPaymentProof(payModal.orderId)}
+                        style={{
+                          width: '100%', padding: '14px', borderRadius: 12, border: 'none',
+                          background: payUploading ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                          color: '#fff', fontWeight: 800, fontSize: '1rem',
+                          cursor: payUploading ? 'default' : 'pointer',
+                        }}
+                      >
+                        {payUploading ? 'Subiendo...' : '✓ Confirmar y enviar comprobante'}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '10px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12 }}>
+                    <div style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.9rem' }}>✅ Comprobante enviado</div>
+                    <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', marginTop: 3 }}>Esperando confirmación del conductor</div>
+                  </div>
+                )}
+
+                {/* Cancel button */}
+                <div style={{ marginTop: 4 }}>
+                  {canCancel ? (
+                    <button
+                      disabled={busy}
+                      onClick={() => { setCancelConfirm({ id: payModal.orderId, type: 'delivery' }); setPayModal(null); }}
+                      style={{
+                        width: '100%', padding: '12px', borderRadius: 12,
+                        border: '1.5px solid rgba(239,68,68,0.5)',
+                        background: 'rgba(239,68,68,0.08)', color: '#f87171',
+                        fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                      }}
+                    >
+                      Cancelar el servicio
+                    </button>
+                  ) : (
+                    <div style={{
+                      textAlign: 'center', fontSize: '0.74rem', color: 'rgba(255,255,255,0.35)',
+                      padding: '10px 14px', borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.03)',
+                    }}>
+                      Cancelar disponible en {minsLeft} min si el conductor no confirma
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

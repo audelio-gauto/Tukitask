@@ -111,6 +111,14 @@ export default function ActivoPage() {
   // Mandadito: local checklist state per order (no DB — just helps driver track items)
   const [checkedItems, setCheckedItems] = useState<Record<string, Set<number>>>({});
 
+  // ── Mandadito payment request modal ──────────────────────────────────────
+  const [payReqModal, setPayReqModal] = useState<{ orderId: string } | null>(null);
+  const [payReqAlias, setPayReqAlias] = useState('');
+  const [payReqPhase, setPayReqPhase] = useState<'edit' | 'waiting'>('edit');
+  const [payReqSending, setPayReqSending] = useState(false);
+  const [driverAlias, setDriverAlias] = useState('');
+  const [payReqElapsed, setPayReqElapsed] = useState(0);
+
   const toggleItem = (orderId: string, idx: number) => {
     setCheckedItems(prev => {
       const current = new Set(prev[orderId] ?? []);
@@ -222,6 +230,100 @@ export default function ActivoPage() {
     if (hasNew) playMessageAlert();
     prevUnreadSnap.current = { ...unreadCounts };
   }, [unreadCounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load driver alias for payment modal
+  useEffect(() => {
+    if (!email) return;
+    fetch(`/api/driver-profile?email=${encodeURIComponent(email)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const alias = d?.profile?.tigo_money_alias || d?.profile?.phone || '';
+        setDriverAlias(alias);
+      })
+      .catch(() => {});
+  }, [email]);
+
+  // Timer for payment request waiting phase
+  useEffect(() => {
+    if (!payReqModal || payReqPhase !== 'waiting') return;
+    const lsKey = `payment_req_at_${payReqModal.orderId}`;
+    const storedAt = Number(localStorage.getItem(lsKey) || 0);
+    const initial = storedAt ? Math.max(0, Math.floor((Date.now() - storedAt) / 1000)) : 0;
+    setPayReqElapsed(initial);
+    const iv = setInterval(() => setPayReqElapsed(e => e + 1), 1000);
+    return () => clearInterval(iv);
+  }, [payReqModal?.orderId, payReqPhase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // React to order proof upload while modal is open (realtime polling)
+  useEffect(() => {
+    if (!payReqModal || payReqPhase !== 'waiting') return;
+    const ord = orders.find(o => o.id === payReqModal.orderId);
+    // If order reverted to accepted (client cancelled), close modal
+    if (ord && ord.status === 'accepted') { setPayReqModal(null); }
+  }, [orders, payReqModal, payReqPhase]);
+
+  // Open payment request modal
+  const openPayReqModal = (orderId: string, alreadyWaiting = false) => {
+    setPayReqAlias(driverAlias);
+    if (alreadyWaiting) {
+      const lsKey = `payment_req_at_${orderId}`;
+      if (!localStorage.getItem(lsKey)) localStorage.setItem(lsKey, String(Date.now() - 30_000));
+      setPayReqPhase('waiting');
+    } else {
+      setPayReqPhase('edit');
+    }
+    setPayReqModal({ orderId });
+  };
+
+  // Send payment request: save alias (if changed) → set awaiting_payment
+  const sendPaymentRequest = async () => {
+    if (!payReqModal || payReqSending) return;
+    setPayReqSending(true);
+    try {
+      if (payReqAlias.trim() !== driverAlias) {
+        authFetch('/api/driver-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, tigo_money_alias: payReqAlias.trim() || null }),
+        }).then(() => setDriverAlias(payReqAlias.trim())).catch(() => {});
+      }
+      const res = await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: payReqModal.orderId, status: 'awaiting_payment', driver_email: email }),
+      });
+      if (res.ok) {
+        localStorage.setItem(`payment_req_at_${payReqModal.orderId}`, String(Date.now()));
+        setOrders(prev => prev.map(o => o.id === payReqModal.orderId ? { ...o, status: 'awaiting_payment' } : o));
+        setPayReqPhase('waiting');
+      } else {
+        showToast('⚠️ Error al enviar solicitud. Intentá de nuevo.');
+      }
+    } finally {
+      setPayReqSending(false);
+    }
+  };
+
+  // Cancel payment request → back to accepted
+  const cancelPaymentRequest = async (orderId: string) => {
+    const res = await authFetch('/api/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId, status: 'accepted', driver_email: email }),
+    });
+    if (res.ok) {
+      localStorage.removeItem(`payment_req_at_${orderId}`);
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'accepted' } : o));
+      setPayReqModal(null);
+      showToast('Solicitud de pago cancelada');
+    }
+  };
+
+  const fmtElapsed = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const updateStatus = async (orderId: string, newStatus: string, extraBody?: Record<string, unknown>) => {
     const key = orderId + newStatus;
@@ -1045,53 +1147,50 @@ export default function ActivoPage() {
           {/* ── Mandadito: solicitar pago (accepted) ── */}
           {order.order_type === 'mandadito' && status === 'accepted' && (
             <button
-              disabled={!!acting}
-              onClick={() => updateStatus(order.id, 'awaiting_payment')}
+              onClick={() => openPayReqModal(order.id, false)}
               style={{
                 width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                background: acting ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
-                color: acting ? '#6b7280' : '#1C1C2E',
-                fontWeight: 800, fontSize: '1rem', cursor: acting ? 'not-allowed' : 'pointer',
-                boxShadow: acting ? 'none' : `0 4px 18px ${BRAND_SHADOW}`,
+                background: `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                color: '#1C1C2E', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
+                boxShadow: `0 4px 18px ${BRAND_SHADOW}`,
                 transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              {acting === order.id + 'awaiting_payment'
-                ? 'Actualizando...'
-                : <><Icon name="shopping-cart" size={15} color="#1C1C2E" /> Solicitar pago al cliente</>}
+              <Icon name="shopping-cart" size={15} color="#1C1C2E" /> Solicitar pago al cliente
             </button>
           )}
 
           {/* ── Mandadito: esperando comprobante (awaiting_payment) ── */}
           {order.order_type === 'mandadito' && status === 'awaiting_payment' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Show proof if client already uploaded */}
               {order.payment_proof_url ? (
-                <div style={{ borderRadius: 12, overflow: 'hidden', border: '1.5px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.06)' }}>
-                  <div style={{ padding: '8px 12px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#4ade80' }}>
-                    💳 Comprobante del cliente
-                  </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={order.payment_proof_url} alt="Comprobante" style={{ width: '100%', maxHeight: 180, objectFit: 'contain', background: '#0f172a', display: 'block' }} />
-                  <button
-                    disabled={!!acting}
-                    onClick={() => updateStatus(order.id, 'picking_up')}
-                    style={{
-                      width: '100%', padding: '13px', border: 'none',
-                      background: acting ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
-                      color: '#fff', fontWeight: 800, fontSize: '0.95rem',
-                      cursor: acting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
-                    }}
-                  >
-                    {acting === order.id + 'picking_up' ? 'Confirmando...' : '✓ Confirmé el pago — Ir a comprar'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => openPayReqModal(order.id, true)}
+                  style={{
+                    width: '100%', padding: '13px 16px', borderRadius: 14, border: '2px solid rgba(34,197,94,0.5)',
+                    background: 'rgba(34,197,94,0.10)', color: '#4ade80',
+                    fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  ✅ Comprobante recibido — Ver y confirmar pago
+                </button>
               ) : (
-                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '14px', textAlign: 'center' }}>
+                <button
+                  onClick={() => openPayReqModal(order.id, true)}
+                  style={{
+                    width: '100%', padding: '13px 16px', borderRadius: 14, border: '1px solid rgba(245,158,11,0.4)',
+                    background: 'rgba(245,158,11,0.08)', color: '#fbbf24',
+                    fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}
+                >
                   <Icon name="clock" size={16} color="#f59e0b" />
-                  <div style={{ marginTop: 6, fontSize: '0.82rem', fontWeight: 700, color: '#fbbf24' }}>Esperando comprobante del cliente</div>
-                  <div style={{ marginTop: 3, fontSize: '0.7rem', color: 'var(--text-muted)' }}>El cliente debe transferir y subir la foto de la transferencia</div>
-                </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div>Esperando comprobante del cliente</div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 400, opacity: 0.75, marginTop: 2 }}>Tocá para ver detalles y tiempo</div>
+                  </div>
+                </button>
               )}
             </div>
           )}
@@ -1779,6 +1878,221 @@ export default function ActivoPage() {
           otherPhoto={chatModal.clientPhoto}
         />
       )}
+
+      {/* ── Payment Request Modal (Mandadito) ─────────────────────────────── */}
+      {payReqModal && (() => {
+        const ord = orders.find(o => o.id === payReqModal.orderId);
+        const shoppingLines = ord?.shopping_list
+          ? (ord.shopping_list as string).split('\n').map((l: string) => l.trim()).filter(Boolean)
+          : [];
+        const canCancel = payReqElapsed >= 600; // 10 minutes
+        const minsLeft = Math.max(0, Math.ceil((600 - payReqElapsed) / 60));
+        return (
+          <div
+            style={{
+              position: 'fixed', inset: 0, zIndex: 10000,
+              background: 'rgba(0,0,0,0.85)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px 20px',
+            }}
+            onClick={e => { if (e.target === e.currentTarget) setPayReqModal(null); }}
+          >
+            <div style={{
+              background: 'var(--surface-1)',
+              border: `1.5px solid ${payReqPhase === 'waiting' ? 'rgba(245,158,11,0.45)' : 'rgba(245,197,24,0.35)'}`,
+              borderRadius: 22,
+              width: '100%', maxWidth: 400,
+              maxHeight: '88dvh', overflowY: 'auto',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.9)',
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '20px 22px 16px',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: BRAND }}>
+                    {payReqPhase === 'edit' ? '💳 Solicitar pago' : '⏳ Esperando comprobante'}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                    {payReqPhase === 'edit' ? 'Revisá tu alias antes de enviar' : 'El cliente debe transferir y subir foto'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPayReqModal(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer', padding: 4 }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ padding: '20px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                {/* Phase: EDIT ALIAS */}
+                {payReqPhase === 'edit' && (
+                  <>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                        Alias / Número de Tigo Money
+                      </label>
+                      <input
+                        type="text"
+                        value={payReqAlias}
+                        onChange={e => setPayReqAlias(e.target.value)}
+                        placeholder="Ej: 0991-123456 o @tu.alias"
+                        autoFocus
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          padding: '13px 16px', borderRadius: 12,
+                          border: '1.5px solid rgba(245,197,24,0.4)',
+                          background: 'var(--surface-2)', color: 'var(--text-primary)',
+                          fontSize: '1.05rem', fontWeight: 700, outline: 'none', fontFamily: 'monospace',
+                        }}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                        Este número verá el cliente para hacer la transferencia
+                      </div>
+                    </div>
+
+                    {shoppingLines.length > 0 && (
+                      <div style={{ borderRadius: 12, border: '1px solid rgba(245,197,24,0.2)', overflow: 'hidden' }}>
+                        <div style={{ padding: '8px 14px', background: 'rgba(245,197,24,0.07)', fontSize: '0.73rem', fontWeight: 800, color: BRAND }}>
+                          🛒 Lista de compras del cliente
+                        </div>
+                        <div style={{ padding: '6px 0' }}>
+                          {shoppingLines.map((item: string, i: number) => (
+                            <div key={i} style={{ padding: '6px 14px', fontSize: '0.82rem', color: 'var(--text-secondary)', borderBottom: i < shoppingLines.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                              • {item}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        onClick={() => setPayReqModal(null)}
+                        style={{
+                          flex: 1, padding: '13px', borderRadius: 12,
+                          border: '1.5px solid var(--border-strong)',
+                          background: 'var(--glass-card)', color: 'var(--text-secondary)',
+                          fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        disabled={!payReqAlias.trim() || payReqSending}
+                        onClick={sendPaymentRequest}
+                        style={{
+                          flex: 2, padding: '13px', borderRadius: 12, border: 'none',
+                          background: !payReqAlias.trim() || payReqSending
+                            ? 'rgba(255,255,255,0.08)'
+                            : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
+                          color: !payReqAlias.trim() || payReqSending ? 'rgba(255,255,255,0.3)' : '#1C1C2E',
+                          fontWeight: 800, fontSize: '0.95rem',
+                          cursor: !payReqAlias.trim() || payReqSending ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {payReqSending ? 'Enviando...' : '📤 Enviar solicitud de pago'}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Phase: WAITING */}
+                {payReqPhase === 'waiting' && (
+                  <>
+                    {/* Alias display */}
+                    <div style={{
+                      background: 'rgba(245,158,11,0.08)',
+                      border: '1.5px solid rgba(245,158,11,0.35)',
+                      borderRadius: 14, padding: '14px 18px',
+                    }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                        Alias enviado al cliente
+                      </div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: 1 }}>
+                        {payReqAlias || driverAlias || '—'}
+                      </div>
+                    </div>
+
+                    {/* Timer */}
+                    <div style={{ textAlign: 'center', padding: '4px 0' }}>
+                      <div style={{ fontSize: '2.4rem', fontWeight: 900, color: payReqElapsed >= 600 ? '#ef4444' : BRAND, fontFamily: 'monospace', letterSpacing: 2 }}>
+                        {fmtElapsed(payReqElapsed)}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                        {payReqElapsed >= 600 ? 'Tiempo superado — podés cancelar la solicitud' : `esperando respuesta del cliente`}
+                      </div>
+                    </div>
+
+                    {/* Proof image if uploaded */}
+                    {ord?.payment_proof_url ? (
+                      <div style={{ borderRadius: 12, overflow: 'hidden', border: '1.5px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.05)' }}>
+                        <div style={{ padding: '8px 14px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#4ade80' }}>
+                          ✅ Comprobante recibido
+                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={ord.payment_proof_url} alt="Comprobante de pago" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#0f172a', display: 'block' }} />
+                        <button
+                          disabled={!!acting}
+                          onClick={async () => {
+                            await updateStatus(payReqModal.orderId, 'picking_up');
+                            localStorage.removeItem(`payment_req_at_${payReqModal.orderId}`);
+                            setPayReqModal(null);
+                          }}
+                          style={{
+                            width: '100%', padding: '14px', border: 'none',
+                            background: acting ? 'rgba(34,197,94,0.3)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                            color: '#fff', fontWeight: 800, fontSize: '1rem',
+                            cursor: acting ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {acting === payReqModal.orderId + 'picking_up' ? 'Confirmando...' : '✓ Confirmé el pago — Ir a comprar'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                          Aún sin comprobante · La pantalla se actualiza automáticamente
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cancel button — enabled after 10 min */}
+                    <div style={{ marginTop: 4 }}>
+                      {canCancel ? (
+                        <button
+                          onClick={() => cancelPaymentRequest(payReqModal.orderId)}
+                          style={{
+                            width: '100%', padding: '12px', borderRadius: 12,
+                            border: '1.5px solid rgba(239,68,68,0.5)',
+                            background: 'rgba(239,68,68,0.08)', color: '#f87171',
+                            fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                          }}
+                        >
+                          Cancelar solicitud de pago
+                        </button>
+                      ) : (
+                        <div style={{
+                          textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)',
+                          padding: '10px 14px', borderRadius: 10,
+                          border: '1px solid var(--border-subtle)',
+                          background: 'rgba(255,255,255,0.03)',
+                        }}>
+                          Cancelar disponible en {minsLeft} min {minsLeft === 1 ? '' : ''}si no hay respuesta
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </DriverScreenLayout>
   );
 }
