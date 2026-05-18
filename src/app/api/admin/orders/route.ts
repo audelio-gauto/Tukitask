@@ -214,7 +214,11 @@ export async function PATCH(req: Request) {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (db as any).from(table).update(updates).eq('id', id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error('[admin set_status] DB error:', JSON.stringify(error));
+      const msg = error.message || error.details || error.code || JSON.stringify(error);
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (db as any).from('admin_audit_log').insert({
