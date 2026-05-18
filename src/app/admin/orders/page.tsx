@@ -59,6 +59,7 @@ const ORDER_STATUSES: Record<string, { label: string; color: string }> = {
   awaiting_payment:   { label: 'Esperando pago',   color: 'bg-yellow-100 text-yellow-800' },
   payment_confirmed:  { label: 'Pago confirmado',  color: 'bg-emerald-100 text-emerald-800' },
   picking_up:         { label: 'Recogiendo',        color: 'bg-purple-100 text-purple-800' },
+  at_pickup:          { label: 'En local',           color: 'bg-orange-100 text-orange-800' },
   in_transit:         { label: 'En tránsito',       color: 'bg-cyan-100 text-cyan-800' },
   delivered:          { label: 'Entregado',         color: 'bg-green-100 text-green-800' },
   commission_charged: { label: 'Comisión cobrada',  color: 'bg-emerald-100 text-emerald-800' },
@@ -162,16 +163,15 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
     if (row) { setNewStatus(row.status); setReassignEmail(''); setProofs(null); }
   }, [row?.id]);
 
-  // Fetch proof URLs separately (columns may not exist — query is safe with try/catch)
+  // Fetch proof URLs separately (columns may not exist — query fails silently)
   React.useEffect(() => {
     if (!row || row._type !== 'order') return;
-    supabase
+    void supabase
       .from('orders')
       .select('payment_proof_url, delivery_photo_url')
       .eq('id', row.id)
       .maybeSingle()
-      .then(({ data }) => { if (data) setProofs(data as never); })
-      .catch(() => { /* columns may not exist yet */ });
+      .then(({ data }) => { if (data) setProofs(data as never); });
   }, [row?.id]);
 
   if (!row) return null;
@@ -591,15 +591,18 @@ export default function AdminOrdersPage() {
         headers: { Authorization: `Bearer ${session?.access_token || ''}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type, action: 'set_status', status }),
       });
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error'); }
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `HTTP ${res.status}`);
+      }
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       setSelected(prev => prev && prev.id === id ? { ...prev, status } : prev);
       setToast({ msg: `Estado cambiado a: ${status}`, ok: true });
-      setTimeout(() => setToast(null), 3000);
+      setTimeout(() => setToast(null), 4000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setToast({ msg, ok: false });
-      setTimeout(() => setToast(null), 3000);
+      setToast({ msg: `Error al cambiar estado: ${msg}`, ok: false });
+      setTimeout(() => setToast(null), 6000);
     }
   };
 
