@@ -147,6 +147,25 @@ const DELIVERY_STEPS = [
   { key: 'delivered',  label: 'Entregado' },
 ] as const;
 
+const MANDADITO_STEPS = [
+  { key: 'accepted',         label: 'Aceptado'  },
+  { key: 'awaiting_payment', label: 'Pago'      },
+  { key: 'picking_up',       label: 'Al local'  },
+  { key: 'at_pickup',        label: 'Comprando' },
+  { key: 'in_transit',       label: 'En camino' },
+  { key: 'delivered',        label: 'Entregado' },
+] as const;
+
+const MANDADITO_TRACKING_STATUS: Record<string, string> = {
+  accepted:         '✅ Conductor asignado — te va a pedir el pago pronto',
+  awaiting_payment: '💳 Transferí al conductor para que salga a comprar',
+  payment_confirmed:'✅ Pago confirmado — el conductor va al local',
+  picking_up:       '🏪 El conductor está yendo al local a comprar tu pedido',
+  at_pickup:        '🛍️ El conductor está comprando tu pedido en el local',
+  in_transit:       '🛵 Tu pedido viene en camino a tu dirección',
+  delivered:        '✅ Tu pedido fue entregado',
+};
+
 const JOB_STEPS = [
   { key: 'accepted',           label: 'Aceptado'  },
   { key: 'en_camino',          label: 'En camino' },
@@ -569,7 +588,11 @@ export default function MisOfertasPage() {
 
         {/* ── Driver orders ──────────────────────────────────────────── */}
         {orders.map(order => {
-          const statusInfo = TRACKING_STATUS[order.status] ?? { text: order.status };
+          const isMandadito = order.order_type === 'mandadito';
+          const statusText = isMandadito && MANDADITO_TRACKING_STATUS[order.status]
+            ? MANDADITO_TRACKING_STATUS[order.status]
+            : (TRACKING_STATUS[order.status]?.text ?? order.status);
+          const statusInfo = { text: statusText };
           const statusTone = getStatusTone(order.status);
           const price = order.offer ?? order.suggested_price;
           const hasWorker = ['accepted', 'assigned', 'awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit', 'failed', 'returning', 'return_rejected', 'driver_returning', 'return_delivered'].includes(order.status);
@@ -598,9 +621,17 @@ export default function MisOfertasPage() {
                 </div>
 
                 {/* ── Progress stepper (only for active delivery statuses) */}
-                {['accepted', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
-                  <ProgressStepper steps={DELIVERY_STEPS} currentKey={order.status} />
-                )}
+                {isMandadito
+                  ? ['accepted', 'awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit', 'delivered'].includes(order.status) && (
+                      <ProgressStepper
+                        steps={MANDADITO_STEPS}
+                        currentKey={order.status === 'payment_confirmed' ? 'picking_up' : order.status}
+                      />
+                    )
+                  : ['accepted', 'picking_up', 'at_pickup', 'in_transit'].includes(order.status) && (
+                      <ProgressStepper steps={DELIVERY_STEPS} currentKey={order.status} />
+                    )
+                }
 
                 {/* ── Worker row (only if assigned) */}
                 {hasWorker && (
