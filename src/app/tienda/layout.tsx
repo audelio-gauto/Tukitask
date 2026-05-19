@@ -150,14 +150,15 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/* ── Header (mismo estilo que panel cliente) ─────────────── */
+/* ── Header — ML style single row ───────────────────────── */
 function TiendaHeader({
   email, displayName, profilePhoto, avgRating, onMenuOpen,
 }: { email: string; displayName: string; profilePhoto: string; avgRating: number; onMenuOpen: () => void }) {
   const { count } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
-  const [greeting, setGreeting]   = useState('');          // evita error de hidratación
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [greeting, setGreeting] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -168,80 +169,79 @@ function TiendaHeader({
     router.push(q ? `/tienda?q=${encodeURIComponent(q)}` : '/tienda');
   }, [searchVal, router]);
 
+  const handleBack = useCallback(() => {
+    setSearchOpen(false);
+    setSearchVal('');
+    router.push('/tienda');
+    inputRef.current?.blur();
+  }, [router]);
+
   return (
     <>
-      {/* ── Fila 1: perfil + acciones (igual al cliente) ── */}
-      <div className="tnd-client-bar">
-        {/* Foto + rating */}
-        <Link href="/cliente" className="tnd-client-avatar-wrap" aria-label="Volver al inicio">
-          {profilePhoto ? (
-            <img src={profilePhoto} alt="" className="tnd-client-avatar" />
-          ) : (
-            <div className="tnd-client-avatar-placeholder">
-              {displayName?.[0]?.toUpperCase() || '👤'}
-            </div>
-          )}
-          {avgRating > 0 && (
-            <div className="tnd-client-rating">
-              <span>★</span>{avgRating.toFixed(1)}
-            </div>
-          )}
+      <header className={`tnd-header${searchOpen ? ' tnd-header--searching' : ''}`}>
+
+        {/* ← Volver — solo visible en mobile cuando search está abierto */}
+        <button className="tnd-header-back" onClick={handleBack} aria-label="Volver">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+
+        {/* Perfil compacto: foto redonda + saludo + nombre + rating */}
+        <Link href="/cliente" className="tnd-header-profile" aria-label="Mi perfil">
+          <div className="tnd-header-avatar">
+            {profilePhoto
+              ? <img src={profilePhoto} alt="" />
+              : <span>{displayName?.[0]?.toUpperCase() || '👤'}</span>
+            }
+          </div>
+          <div className="tnd-header-info">
+            <span className="tnd-header-greeting">{greeting},</span>
+            <span className="tnd-header-name">{displayName || 'Cliente'}</span>
+            {avgRating > 0 && (
+              <span className="tnd-header-rating">★ {avgRating.toFixed(1)}</span>
+            )}
+          </div>
         </Link>
 
-        {/* Saludo + nombre */}
-        <div className="tnd-client-info">
-          <div className="tnd-client-greeting">{greeting}</div>
-          <div className="tnd-client-name">{displayName || 'Cliente'}</div>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Campana de notificaciones */}
-        {email && <NotificationBell userEmail={email} />}
-
-        {/* Botón menú — abre el drawer */}
-        <button
-          className="tnd-client-menu-btn"
-          onClick={onMenuOpen}
-          aria-label="Abrir menú"
-        >
-          <span /><span /><span />
-        </button>
-
-        {/* Carrito */}
-        <button
-          className="tnd-cart-btn"
-          onClick={() => setCartOpen(true)}
-          aria-label={`Carrito (${count} items)`}
-        >
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-          {count > 0 && <span className="tnd-cart-badge">{count > 99 ? '99+' : count}</span>}
-        </button>
-      </div>
-
-      {/* ── Fila 2: buscador ── */}
-      <div className="tnd-search-bar-row">
-        <div className="tnd-search-bar-inner">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-search-bar-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        {/* Buscador central estilo ML */}
+        <div className="tnd-header-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-header-search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input
             ref={inputRef}
-            className="tnd-search-bar-input"
-            placeholder="Buscar productos, tiendas..."
+            className="tnd-header-search-input"
+            placeholder="Estoy buscando..."
             value={searchVal}
             onChange={e => setSearchVal(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => { setTimeout(() => { if (!searchVal) setSearchOpen(false); }, 150); }}
+            onKeyDown={e => { if (e.key === 'Enter') { doSearch(); inputRef.current?.blur(); } }}
             aria-label="Buscar productos"
           />
           {searchVal && (
             <button
-              className="tnd-search-bar-clear"
+              className="tnd-header-search-clear"
+              onMouseDown={e => e.preventDefault()}
               onClick={() => { setSearchVal(''); router.push('/tienda'); inputRef.current?.focus(); }}
-              aria-label="Limpiar"
+              aria-label="Limpiar búsqueda"
             >✕</button>
           )}
-          <button className="tnd-search-bar-btn" onClick={doSearch}>Buscar</button>
         </div>
-      </div>
+
+        {/* Acciones: campana + menú + carrito */}
+        <div className="tnd-header-actions">
+          {email && <NotificationBell userEmail={email} />}
+          <button className="tnd-client-menu-btn" onClick={onMenuOpen} aria-label="Abrir menú">
+            <span /><span /><span />
+          </button>
+          <button
+            className="tnd-cart-btn"
+            onClick={() => setCartOpen(true)}
+            aria-label={`Carrito (${count} items)`}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            {count > 0 && <span className="tnd-cart-badge">{count > 99 ? '99+' : count}</span>}
+          </button>
+        </div>
+      </header>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
