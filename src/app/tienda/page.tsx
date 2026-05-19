@@ -107,6 +107,7 @@ function TiendaPageInner() {
           <h2 className="tnd-section-title">🏪 Tiendas destacadas</h2>
         </div>
         <div className="tnd-carousel-wrap">
+          <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => storesRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-stores-carousel" ref={storesRef}>
             {VENDORS.map(v => (
               <Link key={v.id} href={`/tienda/${v.id}`} className="tnd-store-card">
@@ -129,8 +130,7 @@ function TiendaPageInner() {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
+          </div>          <button className="tnd-carousel-btn tnd-carousel-next" onClick={() => storesRef.current?.scrollBy({ left: 240, behavior: 'smooth' })} aria-label="Siguiente">&#8250;</button>        </div>
       </div>
 
       {/* ── Productos más vendidos (carousel) ── */}
@@ -139,6 +139,7 @@ function TiendaPageInner() {
           <h2 className="tnd-section-title">🔥 Productos más vendidos</h2>
         </div>
         <div className="tnd-carousel-wrap">
+          <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => featuredRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-featured-carousel" ref={featuredRef}>
             {PRODUCTS.map(p => (
               <div key={p.id} className="tnd-product-card tnd-featured-card">
@@ -167,6 +168,7 @@ function TiendaPageInner() {
               </div>
             ))}
           </div>
+          <button className="tnd-carousel-btn tnd-carousel-next" onClick={() => featuredRef.current?.scrollBy({ left: 240, behavior: 'smooth' })} aria-label="Siguiente">&#8250;</button>
         </div>
       </div>
 
