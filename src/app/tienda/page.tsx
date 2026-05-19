@@ -199,7 +199,7 @@ function TiendaPageInner() {
               Buscando: <strong style={{ color: 'var(--tnd-text-primary)' }}>&quot;{search}&quot;</strong>
             </span>
             <button
-              onClick={() => { setSearch(''); setHeroSearch(''); }}
+              onClick={() => { setSearch(''); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tnd-accent)', fontSize: '0.78rem', fontWeight: 700 }}
             >
               ✕ Limpiar
