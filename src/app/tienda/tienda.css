@@ -28,6 +28,10 @@
   --tnd-warning-bg:     rgba(217,119,6,0.10);
   --tnd-danger:         #dc2626;
   --tnd-danger-bg:      rgba(220,38,38,0.10);
+  /* icon buttons — contraste sobre el fondo claro */
+  --tnd-icon-btn-bg:     rgba(0,0,0,0.08);
+  --tnd-icon-btn-border: rgba(0,0,0,0.14);
+  --tnd-icon-btn-color:  #1e293b;
 }
 
 /* ── Dark ─────────────────────────────────────────────────── */
@@ -53,6 +57,10 @@
   --tnd-warning-bg:     rgba(245,158,11,0.10);
   --tnd-danger:         #f87171;
   --tnd-danger-bg:      rgba(239,68,68,0.10);
+  /* icon buttons — contraste sobre el fondo oscuro */
+  --tnd-icon-btn-bg:     rgba(255,255,255,0.10);
+  --tnd-icon-btn-border: rgba(255,255,255,0.14);
+  --tnd-icon-btn-color:  #e5e7eb;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -143,23 +151,28 @@
 .tnd-client-menu-btn {
   width: 42px;
   height: 42px;
-  background: var(--tnd-surface-2);
-  border: 1px solid var(--tnd-border);
+  background: var(--tnd-icon-btn-bg);
+  border: 1.5px solid var(--tnd-icon-btn-border);
   border-radius: 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tnd-client-menu-btn:hover {
+  background: var(--tnd-accent-glow);
+  border-color: var(--tnd-accent);
 }
 .tnd-client-menu-btn span {
   display: block;
-  width: 16px;
-  height: 2px;
-  background: var(--tnd-text-primary);
+  width: 17px;
+  height: 2.5px;
+  background: var(--tnd-icon-btn-color);
   border-radius: 2px;
 }
 
@@ -240,9 +253,9 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: var(--tnd-surface-2);
-  border: 1px solid var(--tnd-border);
-  color: var(--tnd-text-primary);
+  background: var(--tnd-icon-btn-bg);
+  border: 1.5px solid var(--tnd-icon-btn-border);
+  color: var(--tnd-icon-btn-color);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1199,7 +1212,7 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  border: 2px solid #0b1220;
+  border: 2px solid var(--tnd-bg);
 }
 
 /* ══════════════════════════════════════════════════════════════
