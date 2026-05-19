@@ -478,10 +478,16 @@
 .tnd-cats {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   margin-bottom: 32px;
+  padding-bottom: 4px;
 }
+.tnd-cats::-webkit-scrollbar { display: none; }
 .tnd-cat {
+  flex-shrink: 0;
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 0.82rem;
