@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -145,7 +145,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
 /* ═══════════════════════════════════════════════════════════════
    EDITOR FIELD HELPERS
    ═══════════════════════════════════════════════════════════════ */
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label className="vnd-label">{label}</label>
@@ -155,7 +155,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="vnd-card" style={{ marginBottom: 16 }}>
       <div className="vnd-card-header">
