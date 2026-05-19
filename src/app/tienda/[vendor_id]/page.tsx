@@ -20,6 +20,18 @@ interface StoreTemplateConfig {
   statLabel: string;
   robotEnabled: boolean;
   categories: string[];
+  // Secciones visibles (undefined = visible)
+  showReviewsStrip?: boolean;
+  showHeroSearch?: boolean;
+  showInfoBar?: boolean;
+  showMasVendidos?: boolean;
+  showStats?: boolean;
+  showWhatsApp?: boolean;
+  // Contenido personalizable
+  reviewsCount?: string;
+  reviewsAvatars?: string[];
+  heroSearchPlaceholder?: string;
+  masVendidosTitle?: string;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -157,71 +169,81 @@ export default function VendorStorePage() {
           </p>
 
           {/* ⭐ Reviews strip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-            <div style={{ display: 'flex' }}>
-              {['👩','👨','👩🏽','👨🏻'].map((av, i) => (
-                <div key={i} style={{
-                  width: 30, height: 30, borderRadius: '50%',
-                  background: `${acc}28`, border: `2px solid ${acc}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1rem', marginLeft: i > 0 ? -9 : 0,
-                  position: 'relative', zIndex: 4 - i,
-                }}>{av}</div>
-              ))}
-            </div>
-            <div>
-              <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
-                {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: '0.88rem' }}>{s}</span>)}
+          {activeCfg.showReviewsStrip !== false && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+              <div style={{ display: 'flex' }}>
+                {(activeCfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).map((av, i) => (
+                  <div key={i} style={{
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: `${acc}28`, border: `2px solid ${acc}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', marginLeft: i > 0 ? -9 : 0,
+                    position: 'relative', zIndex: 4 - i,
+                  }}>{av}</div>
+                ))}
               </div>
-              <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)' }}>+127 clientes satisfechos</div>
+              <div>
+                <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                  {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: '0.88rem' }}>{s}</span>)}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)' }}>{activeCfg.reviewsCount ?? '+127 clientes satisfechos'}</div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Search */}
-          <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 28 }}>
-            <input
-              type="search"
-              placeholder="Buscar productos, tiendas o categorías..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ flex: 1, height: 50, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 13, padding: '0 18px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-            />
-            <button
-              style={{ height: 50, padding: '0 22px', background: acc, color: accText, border: 'none', borderRadius: 13, fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-              onClick={() => {}}
-            >
-              Buscar
-            </button>
-          </div>
+          {activeCfg.showHeroSearch !== false && (
+            <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 28 }}>
+              <input
+                type="search"
+                placeholder={activeCfg.heroSearchPlaceholder || 'Buscar productos...'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ flex: 1, height: 50, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 13, padding: '0 18px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <button
+                style={{ height: 50, padding: '0 22px', background: acc, color: accText, border: 'none', borderRadius: 13, fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                onClick={() => {}}
+              >
+                Buscar
+              </button>
+            </div>
+          )}
 
           {/* Stats row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>{activeCfg.statNum || products.length}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{activeCfg.statLabel}</div>
-            </div>
-            {vendor && (
-              <div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>⭐ {vendor.rating}</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Calificación</div>
-              </div>
+            {activeCfg.showStats !== false && (
+              <>
+                <div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>{activeCfg.statNum || products.length}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{activeCfg.statLabel}</div>
+                </div>
+                {vendor && (
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>⭐ {vendor.rating}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Calificación</div>
+                  </div>
+                )}
+                {activeCfg.robotEnabled && (
+                  <div>
+                    <div style={{ fontSize: '1.4rem' }}>🤖</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Robot Negociador</div>
+                  </div>
+                )}
+              </>
             )}
-            {activeCfg.robotEnabled && (
-              <div>
-                <div style={{ fontSize: '1.4rem' }}>🤖</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Robot Negociador</div>
-              </div>
+            {activeCfg.showWhatsApp !== false && (
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', background: '#25D366', color: '#fff', borderRadius: 10, fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none', marginLeft: 'auto' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.542 5.953L.057 23.887a.5.5 0 0 0 .615.615l5.95-1.48A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.948 0-3.808-.524-5.408-1.449l-.388-.222-4.01.996.999-3.935-.244-.401A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                WhatsApp
+              </a>
             )}
-            <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', background: '#25D366', color: '#fff', borderRadius: 10, fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none', marginLeft: 'auto' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.542 5.953L.057 23.887a.5.5 0 0 0 .615.615l5.95-1.48A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.948 0-3.808-.524-5.408-1.449l-.388-.222-4.01.996.999-3.935-.244-.401A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-              WhatsApp
-            </a>
           </div>
         </div>
       </div>
 
       {/* ── Barra de info de la tienda ── */}
-      {vendor && (
+      {activeCfg.showInfoBar !== false && vendor && (
         <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
@@ -245,10 +267,10 @@ export default function VendorStorePage() {
       <div className="tnd-page" style={{ paddingTop: 32 }}>
 
         {/* ══ MÁS VENDIDOS ══════════════════════════════════ */}
-        {products.length >= 2 && (
+        {activeCfg.showMasVendidos !== false && products.length >= 2 && (
           <div style={{ marginBottom: 32 }}>
             <div className="tnd-section-head" style={{ marginBottom: 16 }}>
-              <h2 className="tnd-section-title">🔥 Productos más vendidos</h2>
+              <h2 className="tnd-section-title">{activeCfg.masVendidosTitle ?? '🔥 Productos más vendidos'}</h2>
             </div>
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
               {products.slice(0, Math.min(4, products.length)).map((p, i) => {

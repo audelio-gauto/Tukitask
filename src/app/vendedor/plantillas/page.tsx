@@ -21,6 +21,18 @@ export interface StoreTemplateConfig {
   statLabel: string;
   robotEnabled: boolean;
   categories: string[];
+  // Secciones visibles (undefined = visible)
+  showReviewsStrip?: boolean;
+  showHeroSearch?: boolean;
+  showInfoBar?: boolean;
+  showMasVendidos?: boolean;
+  showStats?: boolean;
+  showWhatsApp?: boolean;
+  // Contenido personalizable
+  reviewsCount?: string;
+  reviewsAvatars?: string[];
+  heroSearchPlaceholder?: string;
+  masVendidosTitle?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -39,6 +51,16 @@ const DEFAULTS: StoreTemplateConfig = {
   statLabel:        'Productos',
   robotEnabled:     true,
   categories:       ['Todos', 'Electrónica', 'Ropa', 'Hogar', 'Libros'],
+  showReviewsStrip: true,
+  showHeroSearch:   true,
+  showInfoBar:      true,
+  showMasVendidos:  true,
+  showStats:        true,
+  showWhatsApp:     true,
+  reviewsCount:     '+127 clientes satisfechos',
+  reviewsAvatars:   ['👩', '👨', '👩🏽', '👨🏻'],
+  heroSearchPlaceholder: 'Buscar productos...',
+  masVendidosTitle: '🔥 Productos más vendidos',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -206,6 +228,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <div className="vnd-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function Toggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px', background: 'var(--vnd-bg)', borderRadius: 10, border: '1px solid var(--vnd-border)', cursor: 'pointer' }} onClick={onToggle}>
+      <button
+        type="button"
+        style={{ width: 38, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', background: enabled ? 'var(--vnd-accent)' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+        role="switch"
+        aria-checked={enabled}
+        onClick={e => { e.stopPropagation(); onToggle(); }}
+      >
+        <span style={{ position: 'absolute', top: 2, left: enabled ? 19 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+      </button>
+      <span style={{ fontSize: '0.82rem', color: enabled ? 'var(--vnd-text)' : 'var(--vnd-text-muted)' }}>{label}</span>
+      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 700, color: enabled ? '#16a34a' : '#94a3b8' }}>{enabled ? 'ON' : 'OFF'}</span>
     </div>
   );
 }
@@ -449,18 +489,42 @@ export default function PlantillasPage() {
             </div>
 
             {/* Robot toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--vnd-bg-elevated)', borderRadius: 10, border: '1px solid var(--vnd-border)' }}>
-              <button
-                type="button"
-                onClick={() => update('robotEnabled', !cfg.robotEnabled)}
-                style={{ width: 38, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', background: cfg.robotEnabled ? 'var(--vnd-accent)' : 'var(--vnd-border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
-                role="switch"
-                aria-checked={cfg.robotEnabled}
-              >
-                <span style={{ position: 'absolute', top: 2, left: cfg.robotEnabled ? 19 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
-              </button>
-              <div style={{ fontSize: '0.82rem', color: 'var(--vnd-text)' }}>🤖 Mostrar Robot Negociador en hero</div>
-            </div>
+            <Toggle
+              enabled={cfg.robotEnabled}
+              onToggle={() => update('robotEnabled', !cfg.robotEnabled)}
+              label="🤖 Robot Negociador en portada"
+            />
+            <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
+              <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
+            </Field>
+          </Section>
+
+          {/* Secciones */}
+          <Section title="🧩 Secciones">
+            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>Activá o desactivá cada bloque de tu tienda con un click.</p>
+
+            <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => update('showReviewsStrip', cfg.showReviewsStrip === false)} label="⭐ Strip de reseñas en portada" />
+            {cfg.showReviewsStrip !== false && (
+              <>
+                <Field label="Avatares de clientes" hint="Emojis separados por coma">
+                  <input className="vnd-input" value={(cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).join(', ')} onChange={e => update('reviewsAvatars', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder="👩, 👨, 👩🏽, 👨🏻" maxLength={40} />
+                </Field>
+                <Field label="Texto de satisfacción">
+                  <input className="vnd-input" value={cfg.reviewsCount ?? ''} onChange={e => update('reviewsCount', e.target.value)} placeholder="+127 clientes satisfechos" maxLength={50} />
+                </Field>
+              </>
+            )}
+
+            <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => update('showHeroSearch', cfg.showHeroSearch === false)} label="🔍 Buscador en portada" />
+            <Toggle enabled={cfg.showStats !== false} onToggle={() => update('showStats', cfg.showStats === false)} label="📊 Estadísticas en portada" />
+            <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => update('showWhatsApp', cfg.showWhatsApp === false)} label="💬 Botón WhatsApp" />
+            <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => update('showInfoBar', cfg.showInfoBar === false)} label="ℹ️ Barra de info (horario y dirección)" />
+            <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => update('showMasVendidos', cfg.showMasVendidos === false)} label="🔥 Sección de más vendidos" />
+            {cfg.showMasVendidos !== false && (
+              <Field label="Título de más vendidos">
+                <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
+              </Field>
+            )}
           </Section>
 
           {/* Colors */}
