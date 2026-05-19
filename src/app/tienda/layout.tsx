@@ -157,8 +157,11 @@ function TiendaHeader({
   const { count } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [greeting, setGreeting]   = useState('');          // evita error de hidratación
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => { setGreeting(getGreeting()); }, []);
 
   const doSearch = useCallback(() => {
     const q = searchVal.trim();
@@ -187,7 +190,7 @@ function TiendaHeader({
 
         {/* Saludo + nombre */}
         <div className="tnd-client-info">
-          <div className="tnd-client-greeting">{getGreeting()}</div>
+          <div className="tnd-client-greeting">{greeting}</div>
           <div className="tnd-client-name">{displayName || 'Cliente'}</div>
         </div>
 

@@ -29,8 +29,8 @@
   --tnd-danger:         #dc2626;
   --tnd-danger-bg:      rgba(220,38,38,0.10);
   /* icon buttons — contraste sobre el fondo claro */
-  --tnd-icon-btn-bg:     rgba(0,0,0,0.08);
-  --tnd-icon-btn-border: rgba(0,0,0,0.14);
+  --tnd-icon-btn-bg:     #e2e8f0;
+  --tnd-icon-btn-border: #c8d4e0;
   --tnd-icon-btn-color:  #1e293b;
 }
 
@@ -58,9 +58,9 @@
   --tnd-danger:         #f87171;
   --tnd-danger-bg:      rgba(239,68,68,0.10);
   /* icon buttons — contraste sobre el fondo oscuro */
-  --tnd-icon-btn-bg:     rgba(255,255,255,0.10);
-  --tnd-icon-btn-border: rgba(255,255,255,0.14);
-  --tnd-icon-btn-color:  #e5e7eb;
+  --tnd-icon-btn-bg:     #1e2d42;
+  --tnd-icon-btn-border: #2b3d55;
+  --tnd-icon-btn-color:  #cbd5e1;
 }
 
 /* ══════════════════════════════════════════════════════════════
