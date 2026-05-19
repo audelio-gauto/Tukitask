@@ -37,14 +37,12 @@ function TiendaPageInner() {
 
   const [search, setSearch]           = useState(urlQ);
   const [activeCategory, setCategory] = useState('Todos');
-  const [heroSearch, setHeroSearch]   = useState(urlQ);
   const storesRef   = useRef<HTMLDivElement>(null);
   const featuredRef = useRef<HTMLDivElement>(null);
 
   /* sync URL → local state */
   useEffect(() => {
     setSearch(urlQ);
-    setHeroSearch(urlQ);
   }, [urlQ]);
 
   /* auto-scroll carousels */
@@ -87,12 +85,6 @@ function TiendaPageInner() {
     };
   }, []);
 
-  const handleHeroSearch = () => {
-    setSearch(heroSearch);
-    const el = document.getElementById('productos-section');
-    el?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const handleAddToCart = (p: typeof PRODUCTS[0]) => {
     addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, vendorName: p.vendorName });
     setAdded(prev => ({ ...prev, [p.id]: true }));
@@ -108,42 +100,6 @@ function TiendaPageInner() {
 
   return (
     <div className="tnd-page">
-
-      {/* ── Hero ── */}
-      <div className="tnd-hero">
-        <div className="tnd-hero-eyebrow">🛒 TukiMarket</div>
-        <h1 className="tnd-hero-title">
-          Comprá, ofertá y <span>negociá</span><br />al mejor precio
-        </h1>
-        <p className="tnd-hero-sub">
-          Miles de productos de vendedores verificados en Paraguay.<br />
-          Hacé tu oferta — el vendedor responde al instante con el Robot Negociador.
-        </p>
-        <div className="tnd-hero-search">
-          <input
-            className="tnd-hero-input"
-            placeholder="Buscar productos, tiendas o categorías..."
-            value={heroSearch}
-            onChange={e => setHeroSearch(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleHeroSearch(); }}
-          />
-          <button className="tnd-hero-btn" onClick={handleHeroSearch}>Buscar</button>
-        </div>
-        <div className="tnd-hero-stats">
-          <div>
-            <div className="tnd-hero-stat-value">5</div>
-            <div className="tnd-hero-stat-label">Tiendas activas</div>
-          </div>
-          <div>
-            <div className="tnd-hero-stat-value">134</div>
-            <div className="tnd-hero-stat-label">Productos</div>
-          </div>
-          <div>
-            <div className="tnd-hero-stat-value">🤖</div>
-            <div className="tnd-hero-stat-label">Robot Negociador</div>
-          </div>
-        </div>
-      </div>
 
       {/* ── Tiendas destacadas (carousel) ── */}
       <div>
