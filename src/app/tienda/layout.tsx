@@ -17,6 +17,73 @@ function getGreeting() {
   return 'Buenas noches';
 }
 
+/* ── Menu Drawer ─────────────────────────────────────────── */
+const menuLinks = [
+  { href: '/cliente',          label: 'Inicio',              icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2"/></svg> },
+  { href: '/tienda',           label: 'TukiMarket',          icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> },
+  { href: '/cliente/enviar',   label: 'Enviar paquete',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> },
+  { href: '/cliente/servicio', label: 'Contratar servicio',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg> },
+  { href: '/cliente/settings', label: 'Configuración',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> },
+];
+
+function TiendaMenuDrawer({
+  open, onClose, email, displayName, profilePhoto,
+}: { open: boolean; onClose: () => void; email: string; displayName: string; profilePhoto: string }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  const handleLogout = useCallback(async () => {
+    onClose();
+    await supabase.auth.signOut();
+    router.replace('/auth');
+  }, [router, onClose]);
+
+  return (
+    <>
+      <div className={`tnd-menu-overlay${open ? ' open' : ''}`} onClick={onClose} aria-hidden="true" />
+      <aside className={`tnd-menu-drawer${open ? ' open' : ''}`} aria-label="Menú principal">
+        {/* Perfil */}
+        <div className="tnd-menu-profile">
+          <div className="tnd-menu-avatar">
+            {profilePhoto
+              ? <img src={profilePhoto} alt="" className="tnd-menu-avatar-img" />
+              : <div className="tnd-menu-avatar-ph">{displayName?.[0]?.toUpperCase() || '👤'}</div>
+            }
+          </div>
+          <div>
+            <div className="tnd-menu-name">{displayName || 'Cliente'}</div>
+            <div className="tnd-menu-email">{email}</div>
+          </div>
+          <button className="tnd-menu-close" onClick={onClose} aria-label="Cerrar menú">✕</button>
+        </div>
+
+        {/* Links */}
+        <nav className="tnd-menu-links">
+          {menuLinks.map(({ href, label, icon }) => (
+            <Link key={href} href={href} className="tnd-menu-link" onClick={onClose}>
+              <span className="tnd-menu-link-icon">{icon}</span>
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="tnd-menu-footer">
+          <button className="tnd-menu-logout" onClick={handleLogout}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
 /* ── Cart Drawer ─────────────────────────────────────────── */
 function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, removeItem, updateQty, total, clear } = useCart();
@@ -85,8 +152,8 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 /* ── Header (mismo estilo que panel cliente) ─────────────── */
 function TiendaHeader({
-  email, displayName, profilePhoto, avgRating,
-}: { email: string; displayName: string; profilePhoto: string; avgRating: number }) {
+  email, displayName, profilePhoto, avgRating, onMenuOpen,
+}: { email: string; displayName: string; profilePhoto: string; avgRating: number; onMenuOpen: () => void }) {
   const { count } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
@@ -129,14 +196,14 @@ function TiendaHeader({
         {/* Campana de notificaciones */}
         {email && <NotificationBell userEmail={email} />}
 
-        {/* Menú / volver al cliente */}
-        <Link
-          href="/cliente"
+        {/* Botón menú — abre el drawer */}
+        <button
           className="tnd-client-menu-btn"
-          aria-label="Menú principal"
+          onClick={onMenuOpen}
+          aria-label="Abrir menú"
         >
           <span /><span /><span />
-        </Link>
+        </button>
 
         {/* Carrito */}
         <button
@@ -184,6 +251,7 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   const [displayName, setName]      = useState('');
   const [profilePhoto, setPhoto]    = useState('');
   const [avgRating, setRating]      = useState(0);
+  const [menuOpen, setMenuOpen]     = useState(false);
 
   useEffect(() => {
     initTheme();
@@ -223,6 +291,14 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
           displayName={displayName}
           profilePhoto={profilePhoto}
           avgRating={avgRating}
+          onMenuOpen={() => setMenuOpen(true)}
+        />
+        <TiendaMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          email={email}
+          displayName={displayName}
+          profilePhoto={profilePhoto}
         />
         {children}
       </div>
