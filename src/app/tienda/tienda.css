@@ -443,13 +443,47 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   STORE CARDS GRID
+   CAROUSELS — Tiendas destacadas + Productos más vendidos
    ══════════════════════════════════════════════════════════════ */
-.tnd-stores-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 16px;
-  margin-bottom: 52px;
+.tnd-carousel-wrap {
+  position: relative;
+  margin-bottom: 40px;
+}
+.tnd-stores-carousel,
+.tnd-featured-carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 10px;
+}
+.tnd-stores-carousel::-webkit-scrollbar,
+.tnd-featured-carousel::-webkit-scrollbar { display: none; }
+
+/* Tiendas: ancho fijo por tarjeta */
+.tnd-stores-carousel .tnd-store-card {
+  flex-shrink: 0;
+  width: 200px;
+  scroll-snap-align: start;
+}
+@media (max-width: 639px) {
+  .tnd-stores-carousel .tnd-store-card { width: 168px; }
+}
+
+/* Productos destacados: ancho fijo por tarjeta */
+.tnd-featured-carousel .tnd-product-card {
+  flex-shrink: 0;
+  width: 175px;
+  scroll-snap-align: start;
+}
+@media (max-width: 639px) {
+  .tnd-featured-carousel .tnd-product-card { width: 148px; }
+}
+.tnd-product-action.tnd-added {
+  background: var(--tnd-success, #22c55e);
+  color: #fff;
 }
 .tnd-store-card {
   background: var(--tnd-surface);
