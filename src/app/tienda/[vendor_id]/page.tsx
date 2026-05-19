@@ -202,6 +202,46 @@ export default function VendorStorePage() {
       {/* ══ CONTENT ═══════════════════════════════════════════ */}
       <div className="tnd-page" style={{ paddingTop: 32 }}>
 
+        {/* ══ MÁS VENDIDOS ══════════════════════════════════ */}
+        {products.length >= 2 && (
+          <div style={{ marginBottom: 28 }}>
+            <div className="tnd-section-head" style={{ marginBottom: 14 }}>
+              <h2 className="tnd-section-title">🔥 Productos más vendidos</h2>
+            </div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
+              {products.slice(0, Math.min(4, products.length)).map((p, i) => (
+                <Link
+                  key={p.id}
+                  href={`/tienda/producto/${p.id}`}
+                  style={{
+                    minWidth: 145, flex: '0 0 auto', borderRadius: 16,
+                    background: 'var(--tnd-surface)', border: `1.5px solid ${acc}40`,
+                    textDecoration: 'none', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column',
+                    boxShadow: `0 2px 12px ${acc}14`,
+                  }}
+                >
+                  {/* Rank badge */}
+                  <div style={{
+                    position: 'absolute', top: 8, left: 8, zIndex: 2,
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: i === 0 ? '#ff4d00' : i === 1 ? '#ff8c00' : '#fbbf24',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.6rem', fontWeight: 900, color: '#fff',
+                  }}>#{i + 1}</div>
+                  {/* Emoji img */}
+                  <div style={{ height: 80, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem' }}>
+                    {p.emoji}
+                  </div>
+                  <div style={{ padding: '8px 10px 12px' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 5, lineHeight: 1.3 }}>{p.name}</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: acc }}>{gs(p.price)}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Category tabs */}
         <div className="tnd-cats">
           {cats.map(c => (

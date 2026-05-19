@@ -138,6 +138,25 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
           ))}
         </div>
       </div>
+
+      {/* 🔥 Más vendidos strip */}
+      <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: 9, fontWeight: 800, color: '#0f172a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
+          🔥 Más vendidos
+        </div>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[{ e: '📱', label: '#1' }, { e: '🎧', label: '#2' }, { e: '💻', label: '#3' }].map((item, i) => (
+            <div key={i} style={{
+              flex: 1, background: `${acc}12`, border: `1px solid ${acc}44`,
+              borderRadius: 7, padding: '5px 0', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 2,
+            }}>
+              <span style={{ fontSize: 13 }}>{item.e}</span>
+              <span style={{ fontSize: 6.5, fontWeight: 900, color: i === 0 ? '#ff4d00' : i === 1 ? '#ff8c00' : '#fbbf24' }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -219,58 +238,82 @@ export default function PlantillasPage() {
   if (view === 'gallery') {
     return (
       <div>
-        {/* Page header */}
-        <div style={{ marginBottom: 28 }}>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 4 }}>Plantillas de Tienda</h1>
-          <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.85rem' }}>Elegí y personalizá la apariencia de tu tienda pública.</p>
+        {/* ── Page header modernizado ── */}
+        <div style={{
+          marginBottom: 28, borderRadius: 18, overflow: 'hidden', position: 'relative',
+          background: 'linear-gradient(135deg, #F5C518 0%, #f0b000 100%)',
+          padding: '28px 28px 24px',
+        }}>
+          <div style={{ position: 'absolute', top: -32, right: -32, width: 160, height: 160, background: 'rgba(255,255,255,0.13)', borderRadius: '50%', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: -20, right: 90, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '2rem', marginBottom: 10, lineHeight: 1 }}>🏪</div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0b1220', margin: '0 0 6px', letterSpacing: '-0.01em' }}>Plantillas de Tienda</h1>
+            <p style={{ color: 'rgba(11,18,32,0.6)', fontSize: '0.84rem', margin: '0 0 16px' }}>Elegí y personalizá la apariencia de tu tienda pública</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {['🔥 Más vendidos', '🎨 Personalizable', '🤖 Robot Negociador', '📱 100% Mobile'].map(f => (
+                <span key={f} style={{ background: 'rgba(11,18,32,0.12)', color: '#0b1220', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, padding: '3px 10px' }}>{f}</span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
           {/* ── Plantilla 1: Vitrina Marketplace ── */}
-          <div className="vnd-card" style={{ overflow: 'hidden', padding: 0 }}>
+          <div style={{
+            borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
+            border: '1.5px solid var(--vnd-accent)', boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
+          }}>
+            {/* Colored top bar */}
+            <div style={{ background: 'linear-gradient(90deg, #F5C518 0%, #f0b000 100%)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.35)' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Activa</span>
+              </div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Vitrina Marketplace</span>
+            </div>
+
             {/* Preview thumbnail */}
-            <div style={{ padding: '16px 16px 0' }}>
+            <div style={{ padding: '14px 14px 0' }}>
               <MiniPreview cfg={cfg} />
             </div>
 
-            {/* Template info */}
-            <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ background: 'var(--vnd-accent)', color: 'var(--vnd-text)', fontSize: '0.65rem', fontWeight: 800, borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activa</div>
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--vnd-text)' }}>Vitrina Marketplace</span>
-              </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', margin: 0, lineHeight: 1.6 }}>
-                Hero personalizable · Buscador · Tabs de categorías · Grilla de productos · Botón WhatsApp
-              </p>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button
-                  className="vnd-btn vnd-btn-primary"
-                  style={{ flex: 1 }}
-                  onClick={() => setView('editor')}
-                >
-                  ✏️ Personalizar
-                </button>
-                <a
-                  href={storeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="vnd-btn vnd-btn-secondary"
-                  style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
-                >
-                  👁️ Ver tienda
-                </a>
-              </div>
+            {/* Feature pills */}
+            <div style={{ padding: '12px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {['Hero', 'Buscador', 'Categorías', 'Grilla', '🔥 Más vendidos', 'WhatsApp'].map(f => (
+                <span key={f} style={{ background: 'var(--vnd-bg)', border: '1px solid var(--vnd-border)', borderRadius: 20, fontSize: '0.68rem', fontWeight: 600, color: 'var(--vnd-text)', padding: '2px 9px' }}>{f}</span>
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div style={{ padding: '12px 18px 18px', display: 'flex', gap: 10 }}>
+              <button
+                className="vnd-btn vnd-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => setView('editor')}
+              >
+                ✏️ Personalizar
+              </button>
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="vnd-btn vnd-btn-secondary"
+                style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                👁️ Ver tienda
+              </a>
             </div>
           </div>
 
           {/* ── Próximamente ── */}
           {['Catálogo Minimalista', 'Tienda Premium', 'Boutique'].map(name => (
-            <div key={name} className="vnd-card" style={{ overflow: 'hidden', padding: 0, opacity: 0.5, pointerEvents: 'none' }}>
-              <div style={{ height: 200, background: 'var(--vnd-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--vnd-border)' }}>
+            <div key={name} style={{ borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)', border: '1.5px solid var(--vnd-border)', opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ height: 200, background: 'var(--vnd-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--vnd-border)' }}>
                 <span style={{ fontSize: '2.5rem' }}>🔒</span>
-                <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)' }}>Próximamente</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', fontWeight: 600 }}>Próximamente</span>
               </div>
               <div style={{ padding: '14px 18px 18px' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--vnd-text)' }}>{name}</span>
