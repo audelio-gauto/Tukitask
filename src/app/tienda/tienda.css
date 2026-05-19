@@ -646,6 +646,42 @@
 /* ══════════════════════════════════════════════════════════════
    PRODUCT CARDS GRID  — 2 col mobile · 3 col tablet · 4 col desktop
    ══════════════════════════════════════════════════════════════ */
+/* ── Carrusel "Explorar todos los productos" ── */
+.tnd-all-products-carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 10px;
+}
+.tnd-all-products-carousel::-webkit-scrollbar { display: none; }
+
+/* Desktop: ancho fijo por tarjeta */
+.tnd-all-products-carousel .tnd-product-card {
+  flex-shrink: 0;
+  width: 210px;
+  scroll-snap-align: start;
+}
+
+/* Tablet: 3 tarjetas visibles */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tnd-all-products-carousel { gap: 12px; }
+  .tnd-all-products-carousel .tnd-product-card {
+    width: calc((100vw - 28px - 24px) / 3);
+  }
+}
+
+/* Móvil: 2 tarjetas visibles */
+@media (max-width: 639px) {
+  .tnd-all-products-carousel { gap: 10px; }
+  .tnd-all-products-carousel .tnd-product-card {
+    width: calc((100vw - 16px - 10px) / 2);
+  }
+}
+
+/* Grid fallback (no longer used but kept for reference) */
 .tnd-products-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
