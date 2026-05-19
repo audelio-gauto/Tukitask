@@ -303,8 +303,13 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   HERO
+   HERO — hidden (section removed from JSX)
    ══════════════════════════════════════════════════════════════ */
+.tnd-hero { display: none !important; }
+.tnd-hero-eyebrow, .tnd-hero-title, .tnd-hero-sub,
+.tnd-hero-search, .tnd-hero-input, .tnd-hero-btn,
+.tnd-hero-stats, .tnd-hero-stat-value, .tnd-hero-stat-label { display: none !important; }
+
 .tnd-hero {
   background: linear-gradient(135deg, #0b1220 0%, #14213d 55%, #0f1e38 100%);
   border-radius: 20px;
