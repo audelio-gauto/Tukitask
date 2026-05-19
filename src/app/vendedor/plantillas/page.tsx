@@ -175,6 +175,7 @@ export default function PlantillasPage() {
   const [cfg, setCfg]         = useState<StoreTemplateConfig>(DEFAULTS);
   const [saved, setSaved]     = useState(false);
   const [catInput, setCatInput] = useState('');
+  const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
 
   /* Load from localStorage on mount */
   useEffect(() => {
@@ -214,14 +215,89 @@ export default function PlantillasPage() {
 
   const storeUrl = `/tienda/${cfg.storeSlug}`;
 
+  /* ══ GALLERY VIEW ══════════════════════════════════════════ */
+  if (view === 'gallery') {
+    return (
+      <div>
+        {/* Page header */}
+        <div style={{ marginBottom: 28 }}>
+          <h1 className="vnd-page-heading" style={{ marginBottom: 4 }}>Plantillas de Tienda</h1>
+          <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.85rem' }}>Elegí y personalizá la apariencia de tu tienda pública.</p>
+        </div>
+
+        {/* Template grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+
+          {/* ── Plantilla 1: Vitrina Marketplace ── */}
+          <div className="vnd-card" style={{ overflow: 'hidden', padding: 0 }}>
+            {/* Preview thumbnail */}
+            <div style={{ padding: '16px 16px 0' }}>
+              <MiniPreview cfg={cfg} />
+            </div>
+
+            {/* Template info */}
+            <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ background: 'var(--vnd-accent)', color: 'var(--vnd-text)', fontSize: '0.65rem', fontWeight: 800, borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activa</div>
+                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--vnd-text)' }}>Vitrina Marketplace</span>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', margin: 0, lineHeight: 1.6 }}>
+                Hero personalizable · Buscador · Tabs de categorías · Grilla de productos · Botón WhatsApp
+              </p>
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button
+                  className="vnd-btn vnd-btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={() => setView('editor')}
+                >
+                  ✏️ Personalizar
+                </button>
+                <a
+                  href={storeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="vnd-btn vnd-btn-secondary"
+                  style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
+                >
+                  👁️ Ver tienda
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Próximamente ── */}
+          {['Catálogo Minimalista', 'Tienda Premium', 'Boutique'].map(name => (
+            <div key={name} className="vnd-card" style={{ overflow: 'hidden', padding: 0, opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ height: 200, background: 'var(--vnd-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--vnd-border)' }}>
+                <span style={{ fontSize: '2.5rem' }}>🔒</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)' }}>Próximamente</span>
+              </div>
+              <div style={{ padding: '14px 18px 18px' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--vnd-text)' }}>{name}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ══ EDITOR VIEW ════════════════════════════════════════════ */
   return (
     <div>
       {/* ── Page header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Plantillas de Tienda</h1>
+          <button
+            type="button"
+            onClick={() => setView('gallery')}
+            style={{ background: 'none', border: 'none', color: 'var(--vnd-text-muted)', cursor: 'pointer', fontSize: '0.82rem', padding: 0, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            ← Plantillas
+          </button>
+          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Vitrina Marketplace</h1>
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
-            Personalizá tu tienda pública · Template: <strong style={{ color: 'var(--vnd-accent)' }}>Vitrina Marketplace</strong>
+            Personalizá tu tienda pública en tiempo real
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
