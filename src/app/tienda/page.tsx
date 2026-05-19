@@ -16,7 +16,6 @@ function TiendaPageInner() {
   const [activeCategory, setCategory] = useState('Todos');
   const storesRef    = useRef<HTMLDivElement>(null);
   const featuredRef  = useRef<HTMLDivElement>(null);
-  const productsRef  = useRef<HTMLDivElement>(null);
 
   /* sync URL → local state */
   useEffect(() => {
@@ -194,9 +193,7 @@ function TiendaPageInner() {
             <div className="tnd-empty-sub">Probá con otra búsqueda o categoría</div>
           </div>
         ) : (
-          <div className="tnd-carousel-wrap">
-            <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => productsRef.current?.scrollBy({ left: -260, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
-            <div className="tnd-all-products-carousel" ref={productsRef}>
+          <div className="tnd-products-grid">
             {filtered.map(p => (
               <Link key={p.id} href={`/tienda/producto/${p.id}`} className="tnd-product-card">
                 <div
@@ -229,8 +226,6 @@ function TiendaPageInner() {
                 </div>
               </Link>
             ))}
-            </div>
-            <button className="tnd-carousel-btn tnd-carousel-next" onClick={() => productsRef.current?.scrollBy({ left: 260, behavior: 'smooth' })} aria-label="Siguiente">&#8250;</button>
           </div>
         )}
       </div>
