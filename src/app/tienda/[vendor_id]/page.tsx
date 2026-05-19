@@ -2,7 +2,25 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import type { StoreTemplateConfig } from '@/app/vendedor/plantillas/page';
+
+/* Inline type — mirrors StoreTemplateConfig from /vendedor/plantillas/page */
+interface StoreTemplateConfig {
+  templateId: 'vitrina';
+  storeSlug: string;
+  storeName: string;
+  logoEmoji: string;
+  whatsapp: string;
+  heroTagline: string;
+  heroDescription: string;
+  heroGrad1: string;
+  heroGrad2: string;
+  accentColor: string;
+  accentText: string;
+  statNum: string;
+  statLabel: string;
+  robotEnabled: boolean;
+  categories: string[];
+}
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
 const VENDORS: Record<string, {
