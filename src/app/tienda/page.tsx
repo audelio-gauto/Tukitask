@@ -1,6 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCart } from './cart-context';
 
 /* ── Mock data ─────────────────────────────────────────────── */
 const VENDORS = [
@@ -27,10 +29,21 @@ const CATEGORIES = ['Todos', 'Electrónica', 'Ropa', 'Gastronomía', 'Hogar', 'L
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
 
 /* ── Component ─────────────────────────────────────────────── */
-export default function TiendaPage() {
-  const [search, setSearch]           = useState('');
+function TiendaPageInner() {
+  const searchParams  = useSearchParams();
+  const urlQ          = searchParams.get('q') ?? '';
+  const { addItem }   = useCart();
+  const [added, setAdded] = useState<Record<string, boolean>>({});
+
+  const [search, setSearch]           = useState(urlQ);
   const [activeCategory, setCategory] = useState('Todos');
-  const [heroSearch, setHeroSearch]   = useState('');
+  const [heroSearch, setHeroSearch]   = useState(urlQ);
+
+  /* sync URL → local state */
+  useEffect(() => {
+    setSearch(urlQ);
+    setHeroSearch(urlQ);
+  }, [urlQ]);
 
   const handleHeroSearch = () => {
     setSearch(heroSearch);
@@ -38,9 +51,15 @@ export default function TiendaPage() {
     el?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleAddToCart = (p: typeof PRODUCTS[0]) => {
+    addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, vendorName: p.vendorName });
+    setAdded(prev => ({ ...prev, [p.id]: true }));
+    setTimeout(() => setAdded(prev => ({ ...prev, [p.id]: false })), 1800);
+  };
+
   const filtered = PRODUCTS.filter(p => {
-    const matchCat = activeCategory === 'Todos' || p.category === activeCategory;
-    const q = search.toLowerCase();
+    const matchCat    = activeCategory === 'Todos' || p.category === activeCategory;
+    const q           = search.toLowerCase();
     const matchSearch = !q || p.name.toLowerCase().includes(q) || p.vendorName.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
     return matchCat && matchSearch;
   });
@@ -175,7 +194,19 @@ export default function TiendaPage() {
                   <div className="tnd-product-name">{p.name}</div>
                   <div className="tnd-product-price">{gs(p.price)}</div>
                   <div className="tnd-product-floor">Ofertá desde {gs(p.floorPrice)}</div>
-                  <span className="tnd-product-action">Ver y ofertar</span>
+                  <div className="tnd-product-card-actions">
+                    <Link href={`/tienda/producto/${p.id}`} className="tnd-product-action">Ver y ofertar</Link>
+                    <button
+                      className={`tnd-add-cart-btn${added[p.id] ? ' added' : ''}`}
+                      onClick={e => { e.preventDefault(); handleAddToCart(p); }}
+                      aria-label="Agregar al carrito"
+                    >
+                      {added[p.id]
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                      }
+                    </button>
+                  </div>
                 </div>
               </Link>
             ))}
@@ -184,5 +215,13 @@ export default function TiendaPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function TiendaPage() {
+  return (
+    <Suspense>
+      <TiendaPageInner />
+    </Suspense>
   );
 }
