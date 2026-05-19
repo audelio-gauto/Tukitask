@@ -461,7 +461,7 @@
   margin-bottom: 40px;
 }
 
-/* ── Desktop: carousel horizontal con scroll ── */
+/* ── Carousel horizontal en todos los tamaños ── */
 .tnd-stores-carousel,
 .tnd-featured-carousel {
   display: flex;
@@ -525,40 +525,23 @@
   .tnd-carousel-next { right: 0; }
 }
 
-/* ── Tablet (640–1023px): grid 3 columnas ── */
+/* ── Tablet (640–1023px): 3 tarjetas visibles al deslizar ── */
 @media (min-width: 640px) and (max-width: 1023px) {
-  .tnd-stores-carousel,
-  .tnd-featured-carousel {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    overflow-x: visible;
-    scroll-snap-type: none;
-    padding-bottom: 0;
-  }
+  .tnd-stores-carousel { gap: 12px; }
+  .tnd-featured-carousel { gap: 12px; }
   .tnd-stores-carousel .tnd-store-card,
   .tnd-featured-carousel .tnd-product-card {
-    width: auto;
-    flex-shrink: unset;
-    scroll-snap-align: unset;
+    width: calc((100vw - 28px - 24px) / 3);
   }
 }
 
-/* ── Móvil (<640px): grid 2 columnas ── */
+/* ── Móvil (<640px): 2 tarjetas visibles al deslizar ── */
 @media (max-width: 639px) {
-  .tnd-stores-carousel,
-  .tnd-featured-carousel {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    overflow-x: visible;
-    scroll-snap-type: none;
-    gap: 10px;
-    padding-bottom: 0;
-  }
+  .tnd-stores-carousel { gap: 10px; }
+  .tnd-featured-carousel { gap: 10px; }
   .tnd-stores-carousel .tnd-store-card,
   .tnd-featured-carousel .tnd-product-card {
-    width: auto;
-    flex-shrink: unset;
-    scroll-snap-align: unset;
+    width: calc((100vw - 16px - 10px) / 2);
   }
 }
 .tnd-product-action.tnd-added {
