@@ -1,12 +1,22 @@
 'use client';
-import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback, Suspense, type ReactNode } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { NotificationBell } from '@/components/NotificationBell';
 import { initTheme } from '@/lib/useTheme';
 import { CartProvider, useCart, type CartItem } from './cart-context';
+import { PRODUCTS, VENDORS, gs } from './data';
 import './tienda.css';
+
+/* ── Autocomplete types ─────────────────────────────────── */
+type Sugg = {
+  type: 'product' | 'vendor' | 'recent';
+  label: string;
+  sub: string;
+  emoji: string;
+  href: string;
+};
 
 /* ── Helpers ─────────────────────────────────────────────── */
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
@@ -150,42 +160,123 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/* ── Header — ML style single row ───────────────────────── */
+/* ── Header — ML style single row + autocomplete ────────── */
 function TiendaHeader({
   email, displayName, profilePhoto, avgRating, onMenuOpen,
 }: { email: string; displayName: string; profilePhoto: string; avgRating: number; onMenuOpen: () => void }) {
   const { count } = useCart();
-  const [cartOpen, setCartOpen] = useState(false);
-  const [searchVal, setSearchVal] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [greeting, setGreeting] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
+  const [cartOpen, setCartOpen]       = useState(false);
+  const [searchVal, setSearchVal]     = useState('');
+  const [searchOpen, setSearchOpen]   = useState(false);
+  const [suggestions, setSuggestions] = useState<Sugg[]>([]);
+  const [suggIdx, setSuggIdx]         = useState(-1);
+  const [greeting, setGreeting]       = useState('');
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const wrapRef     = useRef<HTMLDivElement>(null);
+  const router      = useRouter();
+  const searchParams = useSearchParams();
 
+  /* Sincronizar con URL (buscar page) */
+  const urlQ = searchParams.get('q') ?? '';
+  useEffect(() => { setSearchVal(urlQ); }, [urlQ]);
   useEffect(() => { setGreeting(getGreeting()); }, []);
 
-  const doSearch = useCallback(() => {
-    const q = searchVal.trim();
-    router.push(q ? `/tienda?q=${encodeURIComponent(q)}` : '/tienda');
-  }, [searchVal, router]);
+  /* Click fuera cierra dropdown */
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setSuggestions([]);
+        setSuggIdx(-1);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  /* Leer / guardar búsquedas recientes */
+  const getRecent = (): string[] => {
+    try { return JSON.parse(localStorage.getItem('tuki_recent_searches') ?? '[]'); } catch { return []; }
+  };
+  const saveRecent = (q: string) => {
+    try {
+      const updated = [q, ...getRecent().filter(r => r !== q)].slice(0, 5);
+      localStorage.setItem('tuki_recent_searches', JSON.stringify(updated));
+    } catch {}
+  };
+
+  /* Compute suggestions */
+  const computeSuggestions = useCallback((val: string) => {
+    const results: Sugg[] = [];
+    if (!val.trim()) {
+      /* Sin texto: mostrar recientes */
+      getRecent().forEach(r => results.push({ type: 'recent', label: r, sub: 'Búsqueda reciente', emoji: '🕐', href: `/tienda/buscar?q=${encodeURIComponent(r)}` }));
+    } else {
+      const q = val.toLowerCase();
+      PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || p.vendorName.toLowerCase().includes(q))
+        .slice(0, 5)
+        .forEach(p => results.push({ type: 'product', label: p.name, sub: p.vendorName, emoji: p.emoji, href: `/tienda/buscar?q=${encodeURIComponent(p.name)}` }));
+      VENDORS.filter(v => v.name.toLowerCase().includes(q) || v.category.toLowerCase().includes(q))
+        .slice(0, 2)
+        .forEach(v => results.push({ type: 'vendor', label: v.name, sub: v.category, emoji: v.emoji, href: `/tienda/${v.id}` }));
+    }
+    setSuggestions(results);
+    setSuggIdx(-1);
+  }, []);
+
+  /* Navigate suggestion or search */
+  const doSearch = useCallback((overrideQ?: string) => {
+    const q = (overrideQ ?? searchVal).trim();
+    setSuggestions([]);
+    setSuggIdx(-1);
+    inputRef.current?.blur();
+    if (!q) { router.push('/tienda'); return; }
+    saveRecent(q);
+    router.push(`/tienda/buscar?q=${encodeURIComponent(q)}`);
+  }, [searchVal, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBack = useCallback(() => {
     setSearchOpen(false);
     setSearchVal('');
-    router.push('/tienda');
+    setSuggestions([]);
     inputRef.current?.blur();
-  }, [router]);
+    if (!urlQ) router.push('/tienda');
+  }, [router, urlQ]);
+
+  /* Keyboard navigation */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSuggIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSuggIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === 'Enter') {
+      if (suggIdx >= 0 && suggestions[suggIdx]) {
+        router.push(suggestions[suggIdx].href);
+        setSuggestions([]);
+        inputRef.current?.blur();
+      } else {
+        doSearch();
+      }
+    } else if (e.key === 'Escape') {
+      setSuggestions([]);
+      setSuggIdx(-1);
+      inputRef.current?.blur();
+    }
+  };
+
+  const showDrop = searchOpen && suggestions.length > 0;
 
   return (
     <>
       <header className={`tnd-header${searchOpen ? ' tnd-header--searching' : ''}`}>
 
-        {/* ← Volver — solo visible en mobile cuando search está abierto */}
+        {/* ← Volver — mobile cuando search abierto */}
         <button className="tnd-header-back" onClick={handleBack} aria-label="Volver">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
 
-        {/* Perfil compacto: foto redonda + saludo + nombre + rating */}
+        {/* Perfil compacto */}
         <Link href="/cliente" className="tnd-header-profile" aria-label="Mi perfil">
           <div className="tnd-header-avatar">
             {profilePhoto
@@ -196,33 +287,80 @@ function TiendaHeader({
           <div className="tnd-header-info">
             <span className="tnd-header-greeting">{greeting},</span>
             <span className="tnd-header-name">{displayName || 'Cliente'}</span>
-            {avgRating > 0 && (
-              <span className="tnd-header-rating">★ {avgRating.toFixed(1)}</span>
-            )}
+            {avgRating > 0 && <span className="tnd-header-rating">★ {avgRating.toFixed(1)}</span>}
           </div>
         </Link>
 
-        {/* Buscador central estilo ML */}
-        <div className="tnd-header-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-header-search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input
-            ref={inputRef}
-            className="tnd-header-search-input"
-            placeholder="Estoy buscando..."
-            value={searchVal}
-            onChange={e => setSearchVal(e.target.value)}
-            onFocus={() => setSearchOpen(true)}
-            onBlur={() => { setTimeout(() => { if (!searchVal) setSearchOpen(false); }, 150); }}
-            onKeyDown={e => { if (e.key === 'Enter') { doSearch(); inputRef.current?.blur(); } }}
-            aria-label="Buscar productos"
-          />
-          {searchVal && (
-            <button
-              className="tnd-header-search-clear"
-              onMouseDown={e => e.preventDefault()}
-              onClick={() => { setSearchVal(''); router.push('/tienda'); inputRef.current?.focus(); }}
-              aria-label="Limpiar búsqueda"
-            >✕</button>
+        {/* Buscador central + autocomplete */}
+        <div className="tnd-header-search-wrap" ref={wrapRef}>
+          <div className="tnd-header-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-header-search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input
+              ref={inputRef}
+              className="tnd-header-search-input"
+              placeholder="Estoy buscando..."
+              value={searchVal}
+              onChange={e => { setSearchVal(e.target.value); computeSuggestions(e.target.value); }}
+              onFocus={() => { setSearchOpen(true); computeSuggestions(searchVal); }}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+              aria-label="Buscar productos"
+              aria-autocomplete="list"
+              aria-expanded={showDrop}
+            />
+            {searchVal && (
+              <button
+                className="tnd-header-search-clear"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setSearchVal(''); setSuggestions([]); computeSuggestions(''); inputRef.current?.focus(); }}
+                aria-label="Limpiar búsqueda"
+              >✕</button>
+            )}
+          </div>
+
+          {/* Autocomplete dropdown */}
+          {showDrop && (
+            <ul className="tnd-autocomplete" role="listbox">
+              {suggestions.map((s, i) => (
+                <li
+                  key={`${s.type}-${s.label}`}
+                  className={`tnd-autocomplete-item${i === suggIdx ? ' tnd-autocomplete-item--active' : ''}`}
+                  role="option"
+                  aria-selected={i === suggIdx}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setSearchVal(s.label); doSearch(s.label); router.push(s.href); setSuggestions([]); }}
+                >
+                  <span className="tnd-autocomplete-emoji">
+                    {s.type === 'recent'
+                      ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      : s.type === 'vendor'
+                      ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                      : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    }
+                  </span>
+                  <div className="tnd-autocomplete-text">
+                    <span className="tnd-autocomplete-label">{s.label}</span>
+                    <span className="tnd-autocomplete-sub">{s.sub}</span>
+                  </div>
+                  {s.type === 'product' && (
+                    <span className="tnd-autocomplete-arrow">›</span>
+                  )}
+                </li>
+              ))}
+              {searchVal.trim() && (
+                <li
+                  className="tnd-autocomplete-item tnd-autocomplete-item--all"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => doSearch()}
+                  role="option"
+                >
+                  <span className="tnd-autocomplete-emoji">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  </span>
+                  <span className="tnd-autocomplete-label">Ver todos los resultados de &ldquo;{searchVal}&rdquo;</span>
+                </li>
+              )}
+            </ul>
           )}
         </div>
 
@@ -232,11 +370,7 @@ function TiendaHeader({
           <button className="tnd-client-menu-btn" onClick={onMenuOpen} aria-label="Abrir menú">
             <span /><span /><span />
           </button>
-          <button
-            className="tnd-cart-btn"
-            onClick={() => setCartOpen(true)}
-            aria-label={`Carrito (${count} items)`}
-          >
+          <button className="tnd-cart-btn" onClick={() => setCartOpen(true)} aria-label={`Carrito (${count} items)`}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             {count > 0 && <span className="tnd-cart-badge">{count > 99 ? '99+' : count}</span>}
           </button>
@@ -289,13 +423,15 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
   return (
     <CartProvider>
       <div className="tnd-root">
-        <TiendaHeader
-          email={email}
-          displayName={displayName}
-          profilePhoto={profilePhoto}
-          avgRating={avgRating}
-          onMenuOpen={() => setMenuOpen(true)}
-        />
+        <Suspense fallback={<div className="tnd-header" style={{ height: 58 }} />}>
+          <TiendaHeader
+            email={email}
+            displayName={displayName}
+            profilePhoto={profilePhoto}
+            avgRating={avgRating}
+            onMenuOpen={() => setMenuOpen(true)}
+          />
+        </Suspense>
         <TiendaMenuDrawer
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
