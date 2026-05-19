@@ -49,7 +49,7 @@ function BuscarInner() {
   const handleAdd = (productId: string) => {
     const p = PRODUCTS.find(x => x.id === productId);
     if (!p) return;
-    addItem({ id: p.id, name: p.name, price: p.floorPrice, qty: 1, emoji: p.emoji });
+    addItem({ id: p.id, name: p.name, price: p.floorPrice, emoji: p.emoji, vendorName: p.vendorName });
     setAdded(prev => ({ ...prev, [productId]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [productId]: false })), 1400);
   };

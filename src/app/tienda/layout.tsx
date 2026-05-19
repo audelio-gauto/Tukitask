@@ -19,7 +19,6 @@ type Sugg = {
 };
 
 /* ── Helpers ─────────────────────────────────────────────── */
-const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buen día';
