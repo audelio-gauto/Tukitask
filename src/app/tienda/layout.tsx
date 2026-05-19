@@ -1,18 +1,25 @@
 'use client';
 import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { initTheme, useTheme } from '@/lib/useTheme';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { NotificationBell } from '@/components/NotificationBell';
+import { initTheme } from '@/lib/useTheme';
 import { CartProvider, useCart, type CartItem } from './cart-context';
 import './tienda.css';
 
-/* ── Cart Drawer ─────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────── */
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buen día';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
 
+/* ── Cart Drawer ─────────────────────────────────────────── */
 function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, removeItem, updateQty, total, clear } = useCart();
-
-  /* close on Escape */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -21,15 +28,8 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className={`tnd-cart-overlay${open ? ' open' : ''}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      {/* Panel */}
+      <div className={`tnd-cart-overlay${open ? ' open' : ''}`} onClick={onClose} aria-hidden="true" />
       <aside className={`tnd-cart-drawer${open ? ' open' : ''}`} aria-label="Carrito de compras">
-        {/* Header */}
         <div className="tnd-cart-header">
           <span className="tnd-cart-header-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -37,8 +37,6 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
           </span>
           <button className="tnd-cart-close" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
-
-        {/* Items */}
         {items.length === 0 ? (
           <div className="tnd-cart-empty">
             <div className="tnd-cart-empty-icon">🛒</div>
@@ -67,8 +65,6 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
                 </div>
               ))}
             </div>
-
-            {/* Footer */}
             <div className="tnd-cart-footer">
               <div className="tnd-cart-total-row">
                 <span className="tnd-cart-total-label">Total</span>
@@ -87,95 +83,95 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/* ── Navbar inner (needs Cart context) ───────────────────── */
-function TiendaNavbar() {
-  const { theme, setTheme } = useTheme();
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+/* ── Header (mismo estilo que panel cliente) ─────────────── */
+function TiendaHeader({
+  email, displayName, profilePhoto, avgRating,
+}: { email: string; displayName: string; profilePhoto: string; avgRating: number }) {
   const { count } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const doSearch = useCallback(() => {
     const q = searchVal.trim();
     router.push(q ? `/tienda?q=${encodeURIComponent(q)}` : '/tienda');
   }, [searchVal, router]);
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') doSearch();
-  };
-
-  const clearSearch = () => {
-    setSearchVal('');
-    router.push('/tienda');
-    inputRef.current?.focus();
-  };
-
   return (
     <>
-      <nav className="tnd-nav">
-        {/* Brand */}
-        <Link href="/tienda" className="tnd-nav-brand">
-          <div className="tnd-nav-logo">TK</div>
-          <div>
-            <div className="tnd-nav-title">TukiTask</div>
-            <div className="tnd-nav-sub">Marketplace</div>
-          </div>
+      {/* ── Fila 1: perfil + acciones (igual al cliente) ── */}
+      <div className="tnd-client-bar">
+        {/* Foto + rating */}
+        <Link href="/cliente" className="tnd-client-avatar-wrap" aria-label="Volver al inicio">
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="" className="tnd-client-avatar" />
+          ) : (
+            <div className="tnd-client-avatar-placeholder">
+              {displayName?.[0]?.toUpperCase() || '👤'}
+            </div>
+          )}
+          {avgRating > 0 && (
+            <div className="tnd-client-rating">
+              <span>★</span>{avgRating.toFixed(1)}
+            </div>
+          )}
         </Link>
 
-        <div className="tnd-nav-divider" />
-        <Link href="/tienda" className="tnd-nav-link">Catálogo</Link>
-
-        {/* ── Search (center) ── */}
-        <div className="tnd-nav-search-wrap">
-          <div className="tnd-nav-search-inner">
-            <svg className="tnd-nav-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input
-              ref={inputRef}
-              className="tnd-nav-search-input"
-              placeholder="Buscar productos..."
-              value={searchVal}
-              onChange={e => setSearchVal(e.target.value)}
-              onKeyDown={handleKey}
-              aria-label="Buscar productos"
-            />
-            {searchVal && (
-              <button className="tnd-nav-search-clear" onClick={clearSearch} aria-label="Limpiar búsqueda">✕</button>
-            )}
-            <button className="tnd-nav-search-btn" onClick={doSearch} aria-label="Buscar">
-              Buscar
-            </button>
-          </div>
+        {/* Saludo + nombre */}
+        <div className="tnd-client-info">
+          <div className="tnd-client-greeting">{getGreeting()}</div>
+          <div className="tnd-client-name">{displayName || 'Cliente'}</div>
         </div>
 
-        {/* ── Actions (right) ── */}
-        <div className="tnd-nav-actions">
-          <button
-            onClick={toggleTheme}
-            className="tnd-nav-btn tnd-nav-btn-ghost tnd-nav-btn-icon"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-          <Link href="/vendedor" className="tnd-nav-btn tnd-nav-btn-ghost tnd-nav-hide-sm">
-            Panel Vendedor
-          </Link>
-          <Link href="/auth" className="tnd-nav-btn tnd-nav-btn-primary tnd-nav-hide-sm">
-            Ingresar
-          </Link>
+        <div style={{ flex: 1 }} />
 
-          {/* Cart button */}
-          <button
-            className="tnd-cart-btn"
-            onClick={() => setCartOpen(true)}
-            aria-label={`Carrito (${count} items)`}
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            {count > 0 && <span className="tnd-cart-badge">{count > 99 ? '99+' : count}</span>}
-          </button>
+        {/* Campana de notificaciones */}
+        {email && <NotificationBell userEmail={email} />}
+
+        {/* Menú / volver al cliente */}
+        <Link
+          href="/cliente"
+          className="tnd-client-menu-btn"
+          aria-label="Menú principal"
+        >
+          <span /><span /><span />
+        </Link>
+
+        {/* Carrito */}
+        <button
+          className="tnd-cart-btn"
+          onClick={() => setCartOpen(true)}
+          aria-label={`Carrito (${count} items)`}
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          {count > 0 && <span className="tnd-cart-badge">{count > 99 ? '99+' : count}</span>}
+        </button>
+      </div>
+
+      {/* ── Fila 2: buscador ── */}
+      <div className="tnd-search-bar-row">
+        <div className="tnd-search-bar-inner">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-search-bar-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input
+            ref={inputRef}
+            className="tnd-search-bar-input"
+            placeholder="Buscar productos, tiendas..."
+            value={searchVal}
+            onChange={e => setSearchVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') doSearch(); }}
+            aria-label="Buscar productos"
+          />
+          {searchVal && (
+            <button
+              className="tnd-search-bar-clear"
+              onClick={() => { setSearchVal(''); router.push('/tienda'); inputRef.current?.focus(); }}
+              aria-label="Limpiar"
+            >✕</button>
+          )}
+          <button className="tnd-search-bar-btn" onClick={doSearch}>Buscar</button>
         </div>
-      </nav>
+      </div>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
@@ -184,14 +180,54 @@ function TiendaNavbar() {
 
 /* ── Layout root ─────────────────────────────────────────── */
 export default function TiendaLayout({ children }: { children: ReactNode }) {
-  useEffect(() => { initTheme(); }, []);
+  const [email, setEmail]           = useState('');
+  const [displayName, setName]      = useState('');
+  const [profilePhoto, setPhoto]    = useState('');
+  const [avgRating, setRating]      = useState(0);
+
+  useEffect(() => {
+    initTheme();
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const userEmail = session.user.email || '';
+      setEmail(userEmail);
+      /* Cache rápido (mismo patrón que el layout del cliente) */
+      try {
+        const cached = JSON.parse(localStorage.getItem(`tuki_profile_${userEmail}`) || 'null');
+        if (cached?.displayName) setName(cached.displayName);
+        else setName(userEmail.split('@')[0]);
+        if (cached?.profilePhoto) setPhoto(cached.profilePhoto);
+      } catch {
+        setName(userEmail.split('@')[0]);
+      }
+      /* Fetch fresco en background */
+      fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
+        .then(r => r.json())
+        .then(data => {
+          const p = data?.profile;
+          if (!p) return;
+          if (p.display_name) setName(p.display_name);
+          if (p.photo_url)    setPhoto(p.photo_url);
+          if (p.avg_rating)   setRating(Number(p.avg_rating));
+        })
+        .catch(() => {});
+    })();
+  }, []);
 
   return (
     <CartProvider>
       <div className="tnd-root">
-        <TiendaNavbar />
+        <TiendaHeader
+          email={email}
+          displayName={displayName}
+          profilePhoto={profilePhoto}
+          avgRating={avgRating}
+        />
         {children}
       </div>
     </CartProvider>
   );
 }
+
+
