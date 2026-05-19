@@ -253,9 +253,9 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: var(--tnd-icon-btn-bg);
-  border: 1.5px solid var(--tnd-icon-btn-border);
-  color: var(--tnd-icon-btn-color);
+  background: #F58A07;
+  border: 1.5px solid #e07a00;
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -264,9 +264,9 @@
   flex-shrink: 0;
 }
 .tnd-cart-btn:hover {
-  border-color: #F5C518;
-  background: rgba(245,197,24,0.1);
-  color: #F5C518;
+  background: #e07a00;
+  border-color: #c96e00;
+  color: #fff;
 }
 .tnd-cart-badge {
   position: absolute;
@@ -1181,9 +1181,9 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.85);
+  background: #F58A07;
+  border: 1px solid #e07a00;
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1192,9 +1192,9 @@
   flex-shrink: 0;
 }
 .tnd-cart-btn:hover {
-  background: rgba(245,197,24,0.15);
-  border-color: rgba(245,197,24,0.4);
-  color: #F5C518;
+  background: #e07a00;
+  border-color: #c96e00;
+  color: #fff;
 }
 .tnd-cart-badge {
   position: absolute;
