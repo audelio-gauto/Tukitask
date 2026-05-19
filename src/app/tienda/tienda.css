@@ -295,6 +295,12 @@
   margin: 0 auto;
   padding: 32px 24px 80px;
 }
+@media (max-width: 1023px) {
+  .tnd-page { padding: 20px 14px 80px; }
+}
+@media (max-width: 639px) {
+  .tnd-page { padding: 12px 8px 80px; }
+}
 
 /* ══════════════════════════════════════════════════════════════
    HERO
