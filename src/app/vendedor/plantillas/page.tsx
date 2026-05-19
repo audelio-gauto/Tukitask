@@ -63,96 +63,119 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
   return (
     <div style={{ fontFamily: 'system-ui,sans-serif', background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
 
-      {/* Navbar */}
-      <div style={{ background: '#0b1220', padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
-        <div style={{ width: 20, height: 20, background: acc, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: cfg.accentText, flexShrink: 0 }}>TK</div>
-        <div style={{ fontSize: 9, color: '#fff', fontWeight: 800 }}>TukiTask</div>
-        <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.15)' }} />
-        <div style={{ fontSize: 14 }}>{cfg.logoEmoji}</div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>{cfg.storeName}</div>
-        <div style={{ flex: 1 }} />
-        <div style={{ background: '#25D366', color: '#fff', borderRadius: 5, padding: '2px 7px', fontSize: 8, fontWeight: 700 }}>WhatsApp</div>
-        <div style={{ background: acc, color: cfg.accentText, borderRadius: 5, padding: '2px 7px', fontSize: 8, fontWeight: 700 }}>Ingresar</div>
+      {/* ── TukiTask Header (yellow, como lo ve el cliente) ── */}
+      <div style={{ background: '#F5C518', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Avatar */}
+        <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0b1220', border: '1.5px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 800, flexShrink: 0 }}>V</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <span style={{ fontSize: 6, color: 'rgba(11,18,32,0.5)', lineHeight: 1 }}>Buen día,</span>
+          <span style={{ fontSize: 7.5, color: '#0b1220', fontWeight: 800, lineHeight: 1 }}>Cliente</span>
+        </div>
+        {/* Search (hidden / invisible on vendor page) */}
+        <div style={{ flex: 1, height: 20, background: 'rgba(11,18,32,0.06)', borderRadius: 6, opacity: 0.25 }} />
+        {/* Hamburger */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 3px' }}>
+          <div style={{ width: 12, height: 1.5, background: '#0b1220', borderRadius: 1 }} />
+          <div style={{ width: 12, height: 1.5, background: '#0b1220', borderRadius: 1 }} />
+          <div style={{ width: 12, height: 1.5, background: '#0b1220', borderRadius: 1 }} />
+        </div>
+        {/* Cart */}
+        <div style={{ width: 22, height: 22, background: '#0b1220', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🛒</div>
       </div>
 
-      {/* Hero */}
-      <div style={{ background: grad, padding: '22px 16px 18px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, background: `radial-gradient(circle, ${acc}22 0%, transparent 70%)`, borderRadius: '50%' }} />
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '2px 8px', marginBottom: 8 }}>
-          <span style={{ fontSize: 10 }}>🛒</span>
-          <span style={{ fontSize: 8, fontWeight: 700, color: acc }}>{cfg.storeName}</span>
-        </div>
-        <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', lineHeight: 1.25, marginBottom: 5, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
-        <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.5)', marginBottom: 10, maxWidth: 260, lineHeight: 1.5 }}>{cfg.heroDescription}</div>
+      {/* ── Breadcrumb ── */}
+      <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+        <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
+        <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
+        <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
+      </div>
 
-        {/* Search */}
-        <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 7, height: 22, display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-            <span style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.32)' }}>Buscar productos, tiendas o categorías...</span>
-          </div>
-          <div style={{ background: acc, color: cfg.accentText, borderRadius: 7, padding: '0 10px', fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center' }}>Buscar</div>
-        </div>
-
-        {/* Stats */}
-        <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+      {/* ── Hero (colores del vendedor) ── */}
+      <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
+        {/* Store identity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 900, color: acc }}>{cfg.statNum}</div>
-            <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.38)' }}>{cfg.statLabel}</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+              <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#fff', lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.5)', marginBottom: 9, lineHeight: 1.45 }}>{cfg.heroDescription}</div>
+
+        {/* Search (del vendedor, dentro del hero) */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 6, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px' }}>
+            <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)' }}>Buscar productos...</span>
+          </div>
+          <div style={{ background: acc, color: cfg.accentText, borderRadius: 6, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center' }}>Buscar</div>
+        </div>
+
+        {/* Stats + WhatsApp */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div>
+            <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>{cfg.statLabel}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div>
+            <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>Calificación</div>
           </div>
           {cfg.robotEnabled && (
             <div>
-              <div style={{ fontSize: 12 }}>🤖</div>
-              <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.38)' }}>Robot Negociador</div>
+              <div style={{ fontSize: 11 }}>🤖</div>
+              <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>Robot</div>
             </div>
           )}
+          <div style={{ marginLeft: 'auto', background: '#25D366', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span>📱</span> WhatsApp
+          </div>
         </div>
       </div>
 
-      {/* Category tabs */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '8px 12px' }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>🏪 Tiendas destacadas</div>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {/* ── Content area ── */}
+      <div style={{ background: '#f8fafc', padding: '10px 10px 6px' }}>
+
+        {/* Category chips */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
           {cfg.categories.map((c, i) => (
-            <div key={c} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 7.5, fontWeight: 600, background: i === 0 ? acc : '#f1f5f9', color: i === 0 ? cfg.accentText : '#475569', border: '1px solid', borderColor: i === 0 ? acc : '#e2e8f0' }}>{c}</div>
+            <div key={c} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 7, fontWeight: 600, background: i === 0 ? acc : '#fff', color: i === 0 ? cfg.accentText : '#475569', border: '1px solid', borderColor: i === 0 ? acc : '#e2e8f0' }}>{c}</div>
           ))}
         </div>
-      </div>
 
-      {/* Products grid mock */}
-      <div style={{ padding: '10px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: '#0f172a' }}>Productos destacados</span>
-          <span style={{ fontSize: 7.5, color: acc, fontWeight: 600 }}>Ver todos →</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7 }}>
-          {['📱','🎧','💻','👗','👟','📚','🥟','🪑'].map((e, i) => (
-            <div key={i} style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ height: 34, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
-              <div style={{ padding: '4px 5px' }}>
-                <div style={{ height: 5, background: '#e2e8f0', borderRadius: 2, marginBottom: 3 }} />
-                <div style={{ height: 4, background: '#f1f5f9', borderRadius: 2, width: '60%', marginBottom: 4 }} />
-                <div style={{ fontSize: 7.5, fontWeight: 800, color: acc, marginBottom: 4 }}>Gs. X.XXX.XXX</div>
-                <div style={{ background: acc, color: cfg.accentText, borderRadius: 4, textAlign: 'center', fontSize: 7, fontWeight: 700, padding: '2px 0' }}>Ver producto</div>
+        {/* 🔥 Más vendidos */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 8.5, fontWeight: 800, color: '#0f172a', marginBottom: 5 }}>🔥 Más vendidos</div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {[{ e: '📱', rank: '#1', c: '#ff4d00' }, { e: '🎧', rank: '#2', c: '#ff8c00' }, { e: '💻', rank: '#3', c: '#fbbf24' }].map((item, i) => (
+              <div key={i} style={{ flex: 1, background: '#fff', border: `1px solid ${acc}44`, borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 3, left: 3, width: 14, height: 14, borderRadius: '50%', background: item.c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 5.5, fontWeight: 900, color: '#fff' }}>{item.rank}</div>
+                <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{item.e}</div>
+                <div style={{ padding: '3px 4px 4px' }}>
+                  <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
+                  <div style={{ fontSize: 6.5, fontWeight: 800, color: acc }}>Gs. X.XXX</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* 🔥 Más vendidos strip */}
-      <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #e2e8f0' }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: '#0f172a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
-          🔥 Más vendidos
+        {/* Products grid */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 8.5, fontWeight: 800, color: '#0f172a' }}>Productos</span>
+          <span style={{ fontSize: 7, color: '#64748b' }}>3 resultados</span>
         </div>
-        <div style={{ display: 'flex', gap: 5 }}>
-          {[{ e: '📱', label: '#1' }, { e: '🎧', label: '#2' }, { e: '💻', label: '#3' }].map((item, i) => (
-            <div key={i} style={{
-              flex: 1, background: `${acc}12`, border: `1px solid ${acc}44`,
-              borderRadius: 7, padding: '5px 0', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 2,
-            }}>
-              <span style={{ fontSize: 13 }}>{item.e}</span>
-              <span style={{ fontSize: 6.5, fontWeight: 900, color: i === 0 ? '#ff4d00' : i === 1 ? '#ff8c00' : '#fbbf24' }}>{item.label}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {['📱', '🎧', '💻'].map((e, i) => (
+            <div key={i} style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              <div style={{ height: 34, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
+              <div style={{ padding: '4px 5px' }}>
+                <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
+                <div style={{ fontSize: 7, fontWeight: 800, color: acc, marginBottom: 3 }}>Gs. X.XXX.XXX</div>
+                <div style={{ background: acc, color: cfg.accentText, borderRadius: 4, textAlign: 'center', fontSize: 6.5, fontWeight: 700, padding: '2px 0' }}>Ver y ofertar</div>
+              </div>
             </div>
           ))}
         </div>
