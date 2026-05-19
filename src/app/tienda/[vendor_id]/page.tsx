@@ -152,9 +152,30 @@ export default function VendorStorePage() {
             </div>
           </div>
 
-          <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.58)', maxWidth: 560, lineHeight: 1.65, marginBottom: 28 }}>
+          <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.58)', maxWidth: 560, lineHeight: 1.65, marginBottom: 20 }}>
             {activeCfg.heroDescription}
           </p>
+
+          {/* ⭐ Reviews strip */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <div style={{ display: 'flex' }}>
+              {['👩','👨','👩🏽','👨🏻'].map((av, i) => (
+                <div key={i} style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: `${acc}28`, border: `2px solid ${acc}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1rem', marginLeft: i > 0 ? -9 : 0,
+                  position: 'relative', zIndex: 4 - i,
+                }}>{av}</div>
+              ))}
+            </div>
+            <div>
+              <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: '0.88rem' }}>{s}</span>)}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)' }}>+127 clientes satisfechos</div>
+            </div>
+          </div>
 
           {/* Search */}
           <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 28 }}>
@@ -199,61 +220,96 @@ export default function VendorStorePage() {
         </div>
       </div>
 
+      {/* ── Barra de info de la tienda ── */}
+      {vendor && (
+        <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
+              🕐 <span>{vendor.hours}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
+              📍 <span>{vendor.address}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
+              ✓ Tienda verificada
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor.open ? '#16a34a' : '#ef4444' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor.open ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: vendor.open ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
+              {vendor.open ? 'Abierto ahora' : 'Cerrado'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ CONTENT ═══════════════════════════════════════════ */}
       <div className="tnd-page" style={{ paddingTop: 32 }}>
 
         {/* ══ MÁS VENDIDOS ══════════════════════════════════ */}
         {products.length >= 2 && (
-          <div style={{ marginBottom: 28 }}>
-            <div className="tnd-section-head" style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 32 }}>
+            <div className="tnd-section-head" style={{ marginBottom: 16 }}>
               <h2 className="tnd-section-title">🔥 Productos más vendidos</h2>
             </div>
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
-              {products.slice(0, Math.min(4, products.length)).map((p, i) => (
-                <Link
-                  key={p.id}
-                  href={`/tienda/producto/${p.id}`}
-                  style={{
-                    minWidth: 145, flex: '0 0 auto', borderRadius: 16,
-                    background: 'var(--tnd-surface)', border: `1.5px solid ${acc}40`,
-                    textDecoration: 'none', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column',
-                    boxShadow: `0 2px 12px ${acc}14`,
-                  }}
-                >
-                  {/* Rank badge */}
-                  <div style={{
-                    position: 'absolute', top: 8, left: 8, zIndex: 2,
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: i === 0 ? '#ff4d00' : i === 1 ? '#ff8c00' : '#fbbf24',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.6rem', fontWeight: 900, color: '#fff',
-                  }}>#{i + 1}</div>
-                  {/* Emoji img */}
-                  <div style={{ height: 80, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem' }}>
-                    {p.emoji}
-                  </div>
-                  <div style={{ padding: '8px 10px 12px' }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 5, lineHeight: 1.3 }}>{p.name}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: acc }}>{gs(p.price)}</div>
-                  </div>
-                </Link>
-              ))}
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
+              {products.slice(0, Math.min(4, products.length)).map((p, i) => {
+                const rankStyle = [
+                  { border: '2px solid #FFD700', shadow: '0 4px 20px rgba(255,215,0,0.35)', imgH: 100, crown: '👑' },
+                  { border: '2px solid #C0C0C0', shadow: '0 2px 12px rgba(192,192,192,0.3)', imgH: 86, crown: '🥈' },
+                  { border: '2px solid #CD7F32', shadow: '0 2px 10px rgba(205,127,50,0.3)', imgH: 78, crown: '🥉' },
+                  { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`,              imgH: 72, crown: ''  },
+                ][i] ?? { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`, imgH: 72, crown: '' };
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/tienda/producto/${p.id}`}
+                    style={{
+                      minWidth: i === 0 ? 165 : 145, flex: '0 0 auto', borderRadius: 16,
+                      background: 'var(--tnd-surface)', border: rankStyle.border,
+                      textDecoration: 'none', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column',
+                      boxShadow: rankStyle.shadow,
+                    }}
+                  >
+                    {/* Crown / rank icon */}
+                    {rankStyle.crown && (
+                      <div style={{ position: 'absolute', top: 6, right: 8, fontSize: i === 0 ? '1.2rem' : '1rem', zIndex: 2 }}>{rankStyle.crown}</div>
+                    )}
+                    {/* Rank number badge */}
+                    <div style={{
+                      position: 'absolute', top: 8, left: 8, zIndex: 2,
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#94a3b8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.62rem', fontWeight: 900, color: i === 0 ? '#7a5c00' : '#fff',
+                    }}>#{i + 1}</div>
+                    {/* Image area */}
+                    <div style={{ height: rankStyle.imgH, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '2.8rem' : '2.2rem' }}>
+                      {p.emoji}
+                    </div>
+                    <div style={{ padding: '8px 10px 12px' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 4, lineHeight: 1.3 }}>{p.name}</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: acc }}>{gs(p.price)}</div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Category tabs */}
-        <div className="tnd-cats">
-          {cats.map(c => (
-            <button
-              key={c}
-              className={`tnd-cat${activeCat === c ? ' active' : ''}`}
-              style={activeCat === c ? { background: acc, color: accText, borderColor: acc } : {}}
-              onClick={() => setActiveCat(c)}
-            >
-              {c}
-            </button>
-          ))}
+        {/* Category tabs — sticky */}
+        <div className="tnd-cats-sticky">
+          <div className="tnd-cats">
+            {cats.map(c => (
+              <button
+                key={c}
+                className={`tnd-cat${activeCat === c ? ' active' : ''}`}
+                style={activeCat === c ? { background: acc, color: accText, borderColor: acc } : {}}
+                onClick={() => setActiveCat(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Products heading */}

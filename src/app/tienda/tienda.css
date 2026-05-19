@@ -490,6 +490,21 @@
   padding-bottom: 4px;
 }
 .tnd-cats::-webkit-scrollbar { display: none; }
+
+/* Sticky wrapper — vendor store pages only */
+.tnd-cats-sticky {
+  position: sticky;
+  top: 58px;
+  z-index: 30;
+  background: var(--tnd-bg);
+  margin: 0 -24px;
+  padding: 10px 24px 2px;
+  border-bottom: 1px solid var(--tnd-border);
+  margin-bottom: 24px;
+}
+.tnd-cats-sticky .tnd-cats { margin-bottom: 0; }
+@media (max-width: 1023px) { .tnd-cats-sticky { margin: 0 -14px; padding: 10px 14px 2px; } }
+@media (max-width: 639px)  { .tnd-cats-sticky { margin: 0 -8px;  padding: 8px 8px 2px; } }
 .tnd-cat {
   flex-shrink: 0;
   padding: 6px 16px;
