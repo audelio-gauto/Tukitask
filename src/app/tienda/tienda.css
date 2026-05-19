@@ -185,6 +185,9 @@
   min-width: 0;
   position: relative;
 }
+.tnd-header-search-wrap--hidden {
+  display: none;
+}
 
 /* ── Search bar ── */
 .tnd-header-search {

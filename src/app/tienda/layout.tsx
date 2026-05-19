@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, useCallback, Suspense, type ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -174,6 +174,13 @@ function TiendaHeader({
   const wrapRef     = useRef<HTMLDivElement>(null);
   const router      = useRouter();
   const searchParams = useSearchParams();
+  const pathname    = usePathname();
+
+  /* Detectar si estamos en la tienda de un vendedor (/tienda/[vendor_id]) */
+  const isVendorStore = (() => {
+    const parts = pathname.split('/').filter(Boolean); // ['tienda', 'techpy']
+    return parts.length === 2 && parts[0] === 'tienda' && parts[1] !== 'buscar' && parts[1] !== 'producto';
+  })();
 
   /* Sincronizar con URL (buscar page) */
   const urlQ = searchParams.get('q') ?? '';
@@ -290,8 +297,8 @@ function TiendaHeader({
           </div>
         </Link>
 
-        {/* Buscador central + autocomplete */}
-        <div className="tnd-header-search-wrap" ref={wrapRef}>
+        {/* Buscador central + autocomplete — oculto en tienda de vendedor */}
+        <div className={`tnd-header-search-wrap${isVendorStore ? ' tnd-header-search-wrap--hidden' : ''}`} ref={wrapRef}>
           <div className="tnd-header-search">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="tnd-header-search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input
