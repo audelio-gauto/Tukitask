@@ -186,7 +186,8 @@
   position: relative;
 }
 .tnd-header-search-wrap--hidden {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ── Search bar ── */
