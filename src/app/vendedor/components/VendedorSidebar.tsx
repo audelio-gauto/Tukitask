@@ -50,11 +50,20 @@ const navItems: NavItem[] = [
     badge: 0,
   },
   {
-    label: 'Mi tienda',
+    label: 'Plantillas',
     href: '/vendedor/plantillas',
     icon: (
       <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10-1a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1h-4zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-1a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'TukiBot',
+    href: '/vendedor/tukibot',
+    icon: (
+      <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 001.357 2.059l.537.268a2.25 2.25 0 001.357.2l3.304-.826a2.25 2.25 0 00.898-.42 2.25 2.25 0 00.713-2.577l-1.07-3.213a2.25 2.25 0 00-.98-1.238l-1.293-.776a2.25 2.25 0 00-2.25 0l-1.5.866M15 3.104c.251.023.501.05.75.082M15 3.104A24.301 24.301 0 009.75 3.104M3 9.75h18M3 15.75h18" />
       </svg>
     ),
   },
@@ -126,7 +135,7 @@ export default function VendedorSidebar() {
       <nav className="vnd-nav">
         <span className="vnd-nav-label">Principal</span>
 
-        {navItems.slice(0, 5).map((item) => (
+        {navItems.slice(0, 6).map((item) => (
           <Link
             key={item.href}
             href={item.href}

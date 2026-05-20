@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   '/vendedor/negociaciones':   'Negociaciones',
   '/vendedor/analisis':        'Análisis y Reportes',
   '/vendedor/configuracion':   'Configuración de Tienda',
+  '/vendedor/tukibot':          '🤖 TukiBot',
 };
 
 export default function VendedorHeader() {

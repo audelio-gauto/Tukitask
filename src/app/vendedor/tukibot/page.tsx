@@ -1,35 +1,20 @@
 'use client';
 import { useState } from 'react';
 
-type Tone = 'informal' | 'formal' | 'agresivo' | 'amigable';
+type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
 
-interface StoreConfig {
-  storeName: string;
-  storeDescription: string;
-  storeCategory: string;
-  pickupAddress: string;
-  pickupCity: string;
-  pickupReference: string;
-  whatsapp: string;
-  openFrom: string;
-  openTo: string;
-  openDays: string[];
-  botEnabled: boolean;
-  botTone: Tone;
-  botTimeoutMinutes: number;
-  botTimeoutAction: TimeoutAction;
-  botCounterFormula: CounterFormula;
-  botCounterPercent: number;
-  autoAcceptAbove: number;
-  autoRejectBelow: number;
-  freeDeliveryAbove: number;
-  commissionToDriver: boolean;
+interface BotConfig {
+  botEnabled:         boolean;
+  botTone:            Tone;
+  botTimeoutMinutes:  number;
+  botTimeoutAction:   TimeoutAction;
+  botCounterFormula:  CounterFormula;
+  botCounterPercent:  number;
+  autoAcceptAbove:    number;
+  autoRejectBelow:    number;
 }
-
-const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const DAYS_FULL = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
 const TONES: { key: Tone; label: string; emoji: string; desc: string }[] = [
   { key: 'informal',  label: 'Informal',  emoji: '😎', desc: '"Che, te lo dejo en $18..."' },
@@ -52,47 +37,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-/* ══════════════════════════════════════════════════════════ */
-export default function ConfiguracionPage() {
+export default function TukiBotPage() {
   const [saved, setSaved] = useState(false);
-  const [cfg, setCfg] = useState<StoreConfig>({
-    storeName:           'Mi Tienda',
-    storeDescription:    '',
-    storeCategory:       'electronica',
-    pickupAddress:       '',
-    pickupCity:          'Asunción',
-    pickupReference:     '',
-    whatsapp:            '',
-    openFrom:            '08:00',
-    openTo:              '20:00',
-    openDays:            ['lunes','martes','miercoles','jueves','viernes'],
-    botEnabled:          true,
-    botTone:             'informal',
-    botTimeoutMinutes:   15,
-    botTimeoutAction:    'auto_counter',
-    botCounterFormula:   'midpoint',
-    botCounterPercent:   10,
-    autoAcceptAbove:     90,
-    autoRejectBelow:     60,
-    freeDeliveryAbove:   0,
-    commissionToDriver:  true,
+  const [cfg, setCfg] = useState<BotConfig>({
+    botEnabled:         true,
+    botTone:            'informal',
+    botTimeoutMinutes:  15,
+    botTimeoutAction:   'auto_counter',
+    botCounterFormula:  'midpoint',
+    botCounterPercent:  10,
+    autoAcceptAbove:    90,
+    autoRejectBelow:    60,
   });
 
-  function update<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) {
+  function update<K extends keyof BotConfig>(key: K, value: BotConfig[K]) {
     setCfg(prev => ({ ...prev, [key]: value }));
   }
 
-  function toggleDay(day: string) {
-    setCfg(prev => ({
-      ...prev,
-      openDays: prev.openDays.includes(day)
-        ? prev.openDays.filter(d => d !== day)
-        : [...prev.openDays, day],
-    }));
-  }
-
   function handleSave() {
-    /* TODO: persist to Supabase vendor_settings table */
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -101,8 +63,8 @@ export default function ConfiguracionPage() {
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="vnd-page-heading">Configuración de Tienda</h1>
-          <p className="vnd-page-sub">Personalizá tu tienda y configurá el Robot Negociador</p>
+          <h1 className="vnd-page-heading">🤖 TukiBot</h1>
+          <p className="vnd-page-sub">Robot Negociador — responde ofertas automáticamente 24/7</p>
         </div>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
           {saved ? (
@@ -123,138 +85,7 @@ export default function ConfiguracionPage() {
         </button>
       </div>
 
-      {/* ── Perfil de tienda ──────────────────────────────── */}
-      <Section title="🏪 Perfil de Mi Tienda">
-        <div className="vnd-form-grid">
-          <div className="vnd-field">
-            <label className="vnd-label">Nombre de la tienda *</label>
-            <input className="vnd-input" value={cfg.storeName}
-              onChange={e => update('storeName', e.target.value)}
-              placeholder="Ej: ElectroParaguay" />
-          </div>
-
-          <div className="vnd-field">
-            <label className="vnd-label">Categoría principal</label>
-            <select className="vnd-input" value={cfg.storeCategory}
-              onChange={e => update('storeCategory', e.target.value)}>
-              <option value="electronica">📱 Electrónica</option>
-              <option value="ropa">👗 Ropa y Accesorios</option>
-              <option value="hogar">🏠 Hogar y Decoración</option>
-              <option value="alimentos">🍔 Alimentos</option>
-              <option value="herramientas">🔧 Herramientas</option>
-              <option value="belleza">💄 Belleza y Cuidado</option>
-              <option value="deportes">⚽ Deportes</option>
-              <option value="otros">📦 Otros</option>
-            </select>
-          </div>
-
-          <div className="vnd-field vnd-form-grid-full">
-            <label className="vnd-label">Descripción de la tienda</label>
-            <textarea className="vnd-input" rows={3} value={cfg.storeDescription}
-              onChange={e => update('storeDescription', e.target.value)}
-              placeholder="Contá qué vendés, qué te hace especial..."
-              style={{ resize: 'vertical', minHeight: 80 }}
-            />
-          </div>
-
-          <div className="vnd-field">
-            <label className="vnd-label">WhatsApp de contacto</label>
-            <input className="vnd-input" value={cfg.whatsapp}
-              onChange={e => update('whatsapp', e.target.value)}
-              placeholder="0981-000000" type="tel" />
-          </div>
-        </div>
-      </Section>
-
-      {/* ── Punto de recogida ─────────────────────────────── */}
-      <Section title="📍 Punto de Recogida para Drivers">
-        <div className="vnd-form-grid">
-          <div className="vnd-field">
-            <label className="vnd-label">Dirección de recogida *</label>
-            <input className="vnd-input" value={cfg.pickupAddress}
-              onChange={e => update('pickupAddress', e.target.value)}
-              placeholder="Av. Mcal. López 1234" />
-          </div>
-
-          <div className="vnd-field">
-            <label className="vnd-label">Ciudad</label>
-            <select className="vnd-input" value={cfg.pickupCity}
-              onChange={e => update('pickupCity', e.target.value)}>
-              <option>Asunción</option>
-              <option>Fernando de la Mora</option>
-              <option>San Lorenzo</option>
-              <option>Luque</option>
-              <option>Lambaré</option>
-              <option>Capiatá</option>
-              <option>Otra</option>
-            </select>
-          </div>
-
-          <div className="vnd-field vnd-form-grid-full">
-            <label className="vnd-label">Referencia de ubicación</label>
-            <input className="vnd-input" value={cfg.pickupReference}
-              onChange={e => update('pickupReference', e.target.value)}
-              placeholder="Frente al supermercado, portón azul..." />
-          </div>
-        </div>
-
-        {/* Horarios */}
-        <div style={{ marginTop: 20 }}>
-          <p className="vnd-label" style={{ marginBottom: 10 }}>Horario de atención</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label className="vnd-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Desde</label>
-              <input type="time" className="vnd-input" style={{ width: 120 }}
-                value={cfg.openFrom} onChange={e => update('openFrom', e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label className="vnd-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Hasta</label>
-              <input type="time" className="vnd-input" style={{ width: 120 }}
-                value={cfg.openTo} onChange={e => update('openTo', e.target.value)} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {DAYS.map((d, i) => {
-              const key = DAYS_FULL[i];
-              const active = cfg.openDays.includes(key);
-              return (
-                <button key={d}
-                  onClick={() => toggleDay(key)}
-                  style={{
-                    padding: '6px 14px', borderRadius: 8, border: '1px solid',
-                    borderColor: active ? '#F5C518' : 'var(--vnd-border)',
-                    background:  active ? 'rgba(245,197,24,0.12)' : 'var(--vnd-surface-2)',
-                    color:       active ? '#F5C518' : 'var(--vnd-text-muted)',
-                    fontWeight:  700, fontSize: '0.8rem', cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {d}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </Section>
-
-      {/* ── Robot Negociador — movido a /vendedor/tukibot ─── */}
       <Section title="🤖 Robot Negociador (TukiBot)">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'rgba(245,197,24,0.05)', borderRadius: 12, border: '1px solid rgba(245,197,24,0.20)' }}>
-          <div>
-            <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', fontSize: '0.9rem', marginBottom: 4 }}>
-              🤖 TukiBot tiene su propia sección
-            </p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)' }}>
-              Configurá el robot negociador desde el menú <strong>TukiBot</strong> en la barra lateral
-            </p>
-          </div>
-          <a href="/vendedor/tukibot" className="vnd-btn vnd-btn-primary" style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}>
-            Ir a TukiBot →
-          </a>
-        </div>
-      </Section>
-      {/* ── PLACEHOLDER — old TukiBot section removed ──────── */}
-      {false && <Section title="🤖 Robot Negociador (TukiBot) — REMOVED">
         {/* Enable toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: cfg.botEnabled ? 'rgba(245,197,24,0.06)' : 'var(--vnd-surface-2)', borderRadius: 12, border: `1px solid ${cfg.botEnabled ? 'rgba(245,197,24,0.20)' : 'var(--vnd-border)'}`, marginBottom: 22, transition: 'all 0.2s' }}>
           <div>
@@ -348,7 +179,7 @@ export default function ConfiguracionPage() {
                 ⏱ Si no respondés en…
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-                {[5,10,15,30,60].map(min => (
+                {[5, 10, 15, 30, 60].map(min => (
                   <button key={min} onClick={() => update('botTimeoutMinutes', min)}
                     style={{
                       padding: '7px 16px', borderRadius: 8, border: '1px solid',
@@ -415,50 +246,13 @@ export default function ConfiguracionPage() {
             )}
           </>
         )}
-      </Section>}
-
-      {/* ── Delivery config ───────────────────────────────── */}
-      <Section title="🚗 Configuración de Delivery">
-        <div className="vnd-form-grid">
-          <div className="vnd-field">
-            <label className="vnd-label">Envío gratis a partir de (₲)</label>
-            <input type="number" className="vnd-input"
-              value={cfg.freeDeliveryAbove || ''}
-              onChange={e => update('freeDeliveryAbove', +e.target.value)}
-              placeholder="0 = no aplica" min={0} step={10000}
-            />
-            <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
-              {cfg.freeDeliveryAbove > 0 ? `El delivery es gratis en pedidos mayores a ₲${cfg.freeDeliveryAbove.toLocaleString('es-PY')}` : 'Sin descuento por monto mínimo'}
-            </p>
-          </div>
-
-          <div className="vnd-field" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--vnd-surface-2)', borderRadius: 10, border: '1px solid var(--vnd-border)' }}>
-              <div>
-                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--vnd-text-primary)' }}>Incluir costo de driver</p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>La plataforma asigna y gestiona el driver</p>
-              </div>
-              <button onClick={() => update('commissionToDriver', !cfg.commissionToDriver)}
-                style={{
-                  width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
-                  background: cfg.commissionToDriver ? '#F5C518' : 'var(--vnd-border)',
-                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-                }}>
-                <span style={{
-                  position: 'absolute', top: 2, left: cfg.commissionToDriver ? 22 : 2,
-                  width: 20, height: 20, borderRadius: '50%',
-                  background: cfg.commissionToDriver ? '#0b1220' : 'var(--vnd-text-muted)',
-                  transition: 'left 0.2s', display: 'block',
-                }} />
-              </button>
-            </div>
-          </div>
-        </div>
       </Section>
 
-      {/* Save button bottom */}
+      {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary">Descartar cambios</button>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90, autoRejectBelow: 60 })}>
+          Restaurar valores
+        </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
           {saved ? '✓ ¡Guardado!' : 'Guardar cambios'}
         </button>
