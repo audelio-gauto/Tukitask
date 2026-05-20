@@ -27,6 +27,8 @@ interface StoreTemplateConfig {
   showMasVendidos?: boolean;
   showStats?: boolean;
   showWhatsApp?: boolean;
+  showBreadcrumb?: boolean;
+  showStoreBadge?: boolean;
   // Contenido personalizable
   reviewsCount?: string;
   reviewsAvatars?: string[];
@@ -165,9 +167,11 @@ export default function VendorStorePage() {
             {activeCfg.logoEmoji}
           </div>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
-            </div>
+            {activeCfg.showStoreBadge !== false && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
+              </div>
+            )}
             <div style={{ fontSize: heroTitleSz, fontWeight: 900, color: heroTitleClr, lineHeight: 1.15, whiteSpace: 'pre-line' }}>{activeCfg.heroTagline}</div>
           </div>
         </div>
@@ -360,12 +364,13 @@ export default function VendorStorePage() {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
-        <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
-        <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
-        <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
-      </div>
+      {activeCfg.showBreadcrumb !== false && (
+        <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
+          <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
+          <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
+          <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
+        </div>
+      )}
       {sectionOrd.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
     </div>
   );

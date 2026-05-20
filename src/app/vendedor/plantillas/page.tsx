@@ -28,6 +28,8 @@ export interface StoreTemplateConfig {
   showMasVendidos?: boolean;
   showStats?: boolean;
   showWhatsApp?: boolean;
+  showBreadcrumb?: boolean;
+  showStoreBadge?: boolean;
   // Contenido personalizable
   reviewsCount?: string;
   reviewsAvatars?: string[];
@@ -68,6 +70,8 @@ const DEFAULTS: StoreTemplateConfig = {
   showMasVendidos:  true,
   showStats:        true,
   showWhatsApp:     true,
+  showBreadcrumb:   true,
+  showStoreBadge:   true,
   reviewsCount:     '+127 clientes satisfechos',
   reviewsAvatars:   ['👩', '👨', '👩🏽', '👨🏻'],
   heroSearchPlaceholder: 'Buscar productos...',
@@ -134,9 +138,11 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
-            <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
-          </div>
+          {cfg.showStoreBadge !== false && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+              <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+            </div>
+          )}
           <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
         </div>
       </div>
@@ -260,11 +266,13 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
         <div style={{ width: 22, height: 22, background: '#0b1220', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🛒</div>
       </div>
       {/* ── Breadcrumb ── */}
-      <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
-        <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
-        <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
-        <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
-      </div>
+      {cfg.showBreadcrumb !== false && (
+        <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
+          <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
+          <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
+        </div>
+      )}
       {/* ── Sections in user-defined order ── */}
       {order.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
     </div>
@@ -622,6 +630,8 @@ export default function PlantillasPage() {
             <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => update('showWhatsApp', cfg.showWhatsApp === false)} label="💬 Botón WhatsApp" />
             <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => update('showInfoBar', cfg.showInfoBar === false)} label="ℹ️ Barra de info (horario y dirección)" />
             <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => update('showMasVendidos', cfg.showMasVendidos === false)} label="🔥 Sección de más vendidos" />
+            <Toggle enabled={cfg.showBreadcrumb !== false} onToggle={() => update('showBreadcrumb', cfg.showBreadcrumb === false)} label="🧭 Migas de pan (Catálogo › Tienda)" />
+            <Toggle enabled={cfg.showStoreBadge !== false} onToggle={() => update('showStoreBadge', cfg.showStoreBadge === false)} label="🛒 Chip con nombre en portada" />
             {cfg.showMasVendidos !== false && (
               <Field label="Título de más vendidos">
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
