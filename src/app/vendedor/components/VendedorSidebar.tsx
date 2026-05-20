@@ -92,6 +92,8 @@ export default function VendedorSidebar() {
   const pathname = usePathname();
   const [storeName, setStoreName] = useState('Mi Tienda');
   const [initial, setInitial] = useState('T');
+  const analisisIcon = navItems.find(i => i.href === '/vendedor/analisis')?.icon;
+  const configuracionIcon = navItems.find(i => i.href === '/vendedor/configuracion')?.icon;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -149,13 +151,25 @@ export default function VendedorSidebar() {
           </Link>
         ))}
 
+        <Link
+          href="/vendedor/tukibot?tab=results"
+          className={`vnd-nav-item${isActive('/vendedor/tukibot') ? ' active' : ''}`}
+          style={{ marginLeft: 18, width: 'calc(100% - 18px)' }}
+        >
+          <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l6-6 4.5 4.5L21 4.5M16.5 4.5H21v4.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5h16" />
+          </svg>
+          <span style={{ flex: 1, fontSize: '0.8rem' }}>Resultados Automáticos</span>
+        </Link>
+
         <span className="vnd-nav-label" style={{ marginTop: 8 }}>Reportes</span>
 
         <Link
           href="/vendedor/analisis"
           className={`vnd-nav-item${isActive('/vendedor/analisis') ? ' active' : ''}`}
         >
-          {navItems[5].icon}
+          {analisisIcon}
           <span style={{ flex: 1 }}>Análisis</span>
         </Link>
 
@@ -165,7 +179,7 @@ export default function VendedorSidebar() {
           href="/vendedor/configuracion"
           className={`vnd-nav-item${isActive('/vendedor/configuracion') ? ' active' : ''}`}
         >
-          {navItems[6].icon}
+          {configuracionIcon}
           <span style={{ flex: 1 }}>Configuración</span>
         </Link>
       </nav>

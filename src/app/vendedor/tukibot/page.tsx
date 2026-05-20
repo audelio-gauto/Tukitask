@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useSearchParams } from 'next/navigation';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
@@ -73,6 +74,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function TukiBotPage() {
+  const searchParams = useSearchParams();
   const [saved, setSaved] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<'config' | 'results'>('config');
   const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
@@ -118,6 +120,12 @@ export default function TukiBotPage() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'results') setActiveSubmenu('results');
+    if (tab === 'config') setActiveSubmenu('config');
+  }, [searchParams]);
 
   useEffect(() => {
     if (!vendorId) return;
