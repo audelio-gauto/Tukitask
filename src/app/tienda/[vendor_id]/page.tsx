@@ -119,16 +119,11 @@ export default function VendorStorePage() {
 
   useEffect(() => {
     try {
-      /* Try saved template first, then slug-specific key */
-      const raw = localStorage.getItem(`tukimarket_config_${vendorId}`)
-               || localStorage.getItem('tukimarket_template');
-      if (raw) {
-        const parsed: StoreTemplateConfig = JSON.parse(raw);
-        if (parsed.storeSlug === vendorId) {
-          setCfg(parsed);
-          return;
-        }
-      }
+      /* Slug-specific key takes priority; fallback to active template without slug check */
+      const slugRaw = localStorage.getItem(`tukimarket_config_${vendorId}`);
+      if (slugRaw) { setCfg(JSON.parse(slugRaw)); return; }
+      const tplRaw = localStorage.getItem('tukimarket_template');
+      if (tplRaw) { setCfg(JSON.parse(tplRaw)); return; }
     } catch { /* ignore */ }
     setCfg(defaultCfg);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -305,33 +300,34 @@ export default function VendorStorePage() {
     </div>
   );
 
-  const infoBarEl = (activeCfg.showInfoBar !== false && vendor) ? (
+  const infoBarEl = activeCfg.showInfoBar !== false ? (
     <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-          🕐 <span>{vendor.hours}</span>
+          🕐 <span>{vendor?.hours ?? '08:00 – 18:00'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-          📍 <span>{vendor.address}</span>
+          📍 <span>{vendor?.address ?? 'Paraguay'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
           ✓ Tienda verificada
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor.open ? '#16a34a' : '#ef4444' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor.open ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: vendor.open ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
-          {vendor.open ? 'Abierto ahora' : 'Cerrado'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor ? (vendor.open ? '#16a34a' : '#ef4444') : '#16a34a' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor ? (vendor.open ? '#16a34a' : '#ef4444') : '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.25)' }} />
+          {vendor ? (vendor.open ? 'Abierto ahora' : 'Cerrado') : 'Abierto'}
         </div>
       </div>
     </div>
   ) : null;
 
-  const masVendidosEl = (activeCfg.showMasVendidos !== false && products.length >= 2) ? (
+  const demoProducts = products.length > 0 ? products : ALL_PRODUCTS.slice(0, 4);
+  const masVendidosEl = activeCfg.showMasVendidos !== false ? (
     <div className="tnd-page" style={{ paddingBottom: 0, background: bgBody }}>
       <div className="tnd-section-head" style={{ marginBottom: 16 }}>
         <h2 className="tnd-section-title" style={{ color: secTitleClr }}>{activeCfg.masVendidosTitle ?? '🔥 Productos más vendidos'}</h2>
       </div>
       <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
-        {products.slice(0, Math.min(4, products.length)).map((p, i) => {
+        {demoProducts.slice(0, Math.min(4, demoProducts.length)).map((p, i) => {
           const rankStyle = [
             { border: '2px solid #FFD700', shadow: '0 4px 20px rgba(255,215,0,0.35)', imgH: 100, crown: '👑' },
             { border: '2px solid #C0C0C0', shadow: '0 2px 12px rgba(192,192,192,0.3)', imgH: 86,  crown: '🥈' },
