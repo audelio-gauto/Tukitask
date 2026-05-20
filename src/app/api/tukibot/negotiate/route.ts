@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
+type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
+
+const sb = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+);
 
 function normalizeTone(input: unknown): BotTone {
   if (input === 'informal' || input === 'formal' || input === 'agresivo' || input === 'amigable') {
@@ -11,7 +18,22 @@ function normalizeTone(input: unknown): BotTone {
   return 'amigable';
 }
 
+function normalizeTimeoutAction(input: unknown): TimeoutAction {
+  if (input === 'auto_counter' || input === 'auto_accept' || input === 'pressure_client') {
+    return input;
+  }
+  return 'auto_counter';
+}
+
+function normalizeTimeoutMinutes(input: unknown): number {
+  const n = Number(input);
+  if ([1, 5, 10, 15, 30, 60].includes(n)) return n;
+  return 15;
+}
+
 type NegotiateRequest = {
+  vendorId?: string;
+  productId?: string;
   buyerOffer: number;
   quantity?: number;
   listedPrice: number;
@@ -21,6 +43,8 @@ type NegotiateRequest = {
   vendorName?: string;
   buyerMessage?: string;
   botTone?: BotTone;
+  botTimeoutMinutes?: number;
+  botTimeoutAction?: TimeoutAction;
 };
 
 type NegotiateResponse = {
@@ -29,6 +53,8 @@ type NegotiateResponse = {
   counterAmount?: number;
   totalAmount: number;
   message: string;
+  timeoutAt?: string;
+  timeoutAction?: TimeoutAction;
 };
 
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
@@ -125,10 +151,14 @@ export async function POST(req: Request) {
     const floorPrice = Number(body?.floorPrice || 0);
     const quantity = Math.max(1, Number(body?.quantity || 1));
     const autoAcceptFrom = Number(body?.autoAcceptFrom || floorPrice);
+    const vendorId = body?.vendorId?.trim() || 'default-vendor';
+    const productId = body?.productId?.trim() || null;
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
     const buyerMessage = body?.buyerMessage?.trim();
     const botTone = normalizeTone(body?.botTone);
+    const botTimeoutMinutes = normalizeTimeoutMinutes(body?.botTimeoutMinutes);
+    const botTimeoutAction = normalizeTimeoutAction(body?.botTimeoutAction);
 
     if (!buyerOffer || !listedPrice || !floorPrice) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
@@ -164,10 +194,13 @@ export async function POST(req: Request) {
       const midpoint = Math.round((buyerOffer + floorPrice) / 2 / 1000) * 1000;
       const counterAmount = Math.max(floorPrice, midpoint);
       finalAmount = counterAmount;
+      const timeoutAt = new Date(Date.now() + botTimeoutMinutes * 60 * 1000).toISOString();
       payload = {
         status,
         counterAmount: finalAmount,
         totalAmount: finalAmount * quantity,
+        timeoutAt,
+        timeoutAction: botTimeoutAction,
         message: fallbackMessage({
           status,
           vendorName,
@@ -189,6 +222,31 @@ export async function POST(req: Request) {
       buyerMessage,
     });
     if (aiMessage) payload.message = aiMessage;
+
+    if (payload.status === 'countered' && payload.counterAmount && payload.timeoutAt) {
+      try {
+        await sb.from('tukibot_negotiations').insert({
+          vendor_id: vendorId,
+          product_id: productId,
+          product_name: productName,
+          listed_price: listedPrice,
+          floor_price: floorPrice,
+          buyer_offer: buyerOffer,
+          counter_amount: payload.counterAmount,
+          status: 'countered',
+          timeout_action: payload.timeoutAction,
+          timeout_at: payload.timeoutAt,
+          meta: {
+            vendorName,
+            quantity,
+            botTone,
+            buyerMessage,
+          },
+        });
+      } catch {
+        // Best effort queue write.
+      }
+    }
 
     return NextResponse.json(payload, {
       headers: { 'Cache-Control': 'no-store, max-age=0' },

@@ -21,6 +21,7 @@ function getDealStrength(offer: number, price: number, floor: number) {
 
 type Mode = 'idle' | 'buy' | 'negotiate';
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
+type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 
 const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
 
@@ -28,20 +29,63 @@ function getVendorBotConfigKey(vendorId: string) {
   return `tukibot:config:${vendorId}`;
 }
 
-function getStoredBotTone(vendorId: string): BotTone {
+function getStoredBotConfig(vendorId: string): { botTone: BotTone; botTimeoutMinutes: number; botTimeoutAction: TimeoutAction } {
   try {
     const rawScoped = localStorage.getItem(getVendorBotConfigKey(vendorId));
     const rawLegacy = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
     const raw = rawScoped || rawLegacy;
-    if (!raw) return 'amigable';
-    const parsed = JSON.parse(raw) as { botTone?: BotTone };
-    if (parsed.botTone === 'informal' || parsed.botTone === 'formal' || parsed.botTone === 'agresivo' || parsed.botTone === 'amigable') {
-      return parsed.botTone;
+    if (!raw) {
+      return { botTone: 'amigable', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter' };
     }
+    const parsed = JSON.parse(raw) as {
+      botTone?: BotTone;
+      botTimeoutMinutes?: number;
+      botTimeoutAction?: TimeoutAction;
+    };
+    const botTone: BotTone =
+      parsed.botTone === 'informal' || parsed.botTone === 'formal' || parsed.botTone === 'agresivo' || parsed.botTone === 'amigable'
+        ? parsed.botTone
+        : 'amigable';
+    const botTimeoutMinutes = [1, 5, 10, 15, 30, 60].includes(Number(parsed.botTimeoutMinutes))
+      ? Number(parsed.botTimeoutMinutes)
+      : 15;
+    const botTimeoutAction: TimeoutAction =
+      parsed.botTimeoutAction === 'auto_counter' || parsed.botTimeoutAction === 'auto_accept' || parsed.botTimeoutAction === 'pressure_client'
+        ? parsed.botTimeoutAction
+        : 'auto_counter';
+    return { botTone, botTimeoutMinutes, botTimeoutAction };
   } catch {
     // Ignore parse/storage errors
   }
-  return 'amigable';
+  return { botTone: 'amigable', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter' };
+}
+
+function getTimeoutActionLabel(action?: TimeoutAction) {
+  if (action === 'auto_accept') return 'Auto-aceptar';
+  if (action === 'pressure_client') return 'Presionar cliente';
+  return 'Auto-contraoferta';
+}
+
+function formatTimeoutAt(timeoutAt?: string) {
+  if (!timeoutAt) return null;
+  try {
+    const date = new Date(timeoutAt);
+    return date.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return null;
+  }
+}
+
+function getStoredBotTone(vendorId: string): BotTone {
+  return getStoredBotConfig(vendorId).botTone;
+}
+
+function getStoredBotTimeout(vendorId: string): { minutes: number; action: TimeoutAction } {
+  const cfg = getStoredBotConfig(vendorId);
+  return {
+    minutes: cfg.botTimeoutMinutes,
+    action: cfg.botTimeoutAction,
+  };
 }
 
 /* ── Mock data ──────────────────────────────────────────────── */
@@ -73,7 +117,7 @@ export default function ProductDetailPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
-  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string } | null>(null);
+  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction } | null>(null);
 
   if (!p) {
     return (
@@ -108,10 +152,13 @@ export default function ProductDetailPage() {
     try {
       const autoAcceptFrom = Math.round((p.floorPrice + p.price) / 2 / 1000) * 1000;
       const botTone = getStoredBotTone(p.vendorId);
+      const timeoutCfg = getStoredBotTimeout(p.vendorId);
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          vendorId: p.vendorId,
+          productId: p.id,
           buyerOffer: offerNum,
           quantity,
           listedPrice: p.price,
@@ -121,6 +168,8 @@ export default function ProductDetailPage() {
           vendorName: p.vendorName,
           buyerMessage: message,
           botTone,
+          botTimeoutMinutes: timeoutCfg.minutes,
+          botTimeoutAction: timeoutCfg.action,
         }),
       });
 
@@ -141,6 +190,8 @@ export default function ProductDetailPage() {
           botResponse: 'countered',
           counterAmount: data.counterAmount,
           botMessage: data.message,
+          timeoutAt: data.timeoutAt,
+          timeoutAction: data.timeoutAction,
         });
       }
     } catch {
@@ -248,6 +299,11 @@ export default function ProductDetailPage() {
                       {done.botMessage && (
                         <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
                           {done.botMessage}
+                        </p>
+                      )}
+                      {(done.timeoutAt || done.timeoutAction) && (
+                        <p className="tnd-offer-success-sub" style={{ marginTop: 6 }}>
+                          {done.timeoutAt ? `⏱ Vigente hasta ${formatTimeoutAt(done.timeoutAt)}.` : '⏱ Oferta con tiempo límite.'} {done.timeoutAction ? `Si no respondés aplica: ${getTimeoutActionLabel(done.timeoutAction)}.` : ''}
                         </p>
                       )}
                       <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
