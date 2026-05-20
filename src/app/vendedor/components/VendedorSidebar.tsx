@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     badge: 0,
   },
   {
-    label: 'Plantillas',
+    label: 'Mi tienda',
     href: '/vendedor/plantillas',
     icon: (
       <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

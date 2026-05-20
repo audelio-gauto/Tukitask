@@ -455,26 +455,6 @@ export default function PlantillasPage() {
   if (view === 'gallery') {
     return (
       <div>
-        {/* ── Page header modernizado ── */}
-        <div style={{
-          marginBottom: 28, borderRadius: 18, overflow: 'hidden', position: 'relative',
-          background: 'linear-gradient(135deg, #F5C518 0%, #f0b000 100%)',
-          padding: '28px 28px 24px',
-        }}>
-          <div style={{ position: 'absolute', top: -32, right: -32, width: 160, height: 160, background: 'rgba(255,255,255,0.13)', borderRadius: '50%', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: -20, right: 90, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%', pointerEvents: 'none' }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: '2rem', marginBottom: 10, lineHeight: 1 }}>🏪</div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0b1220', margin: '0 0 6px', letterSpacing: '-0.01em' }}>Plantillas de Tienda</h1>
-            <p style={{ color: 'rgba(11,18,32,0.6)', fontSize: '0.84rem', margin: '0 0 16px' }}>Elegí y personalizá la apariencia de tu tienda pública</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {['🔥 Más vendidos', '🎨 Personalizable', '🤖 Robot Negociador', '📱 100% Mobile'].map(f => (
-                <span key={f} style={{ background: 'rgba(11,18,32,0.12)', color: '#0b1220', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, padding: '3px 10px' }}>{f}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
