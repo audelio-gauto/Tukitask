@@ -458,7 +458,7 @@ export default function PlantillasPage() {
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
-          {/* ── Plantilla 1: Vitrina Marketplace ── */}
+          {/* ── Plantilla 1: Mi Store ── */}
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
             border: `1.5px solid var(--vnd-accent)`,
@@ -470,7 +470,7 @@ export default function PlantillasPage() {
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.35)' }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Activa</span>
               </div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Vitrina Marketplace</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Mi Store</span>
             </div>
 
             {/* Preview thumbnail */}
@@ -530,7 +530,7 @@ export default function PlantillasPage() {
             ← Plantillas
           </button>
           <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>
-            Vitrina Marketplace
+            Mi Store
           </h1>
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
             Personalizá tu tienda pública en tiempo real
