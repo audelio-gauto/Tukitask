@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
-  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number } | null>(null);
+  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string } | null>(null);
 
   if (!p) {
     return (
@@ -82,16 +82,52 @@ export default function ProductDetailPage() {
     e.preventDefault();
     if (!offerNum || offerNum <= 0) return;
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setSubmitting(false);
-    // TukiBot evaluation: never rejects — accepts or counter-offers
-    if (offerNum >= p.floorPrice) {
-      setDone({ type: 'negotiate', amount: offerNum, botResponse: 'accepted' });
-    } else {
-      // Counter-offer: midpoint between floor price and offer (never below floor)
-      const counter = Math.round((p.floorPrice + offerNum) / 2 / 1000) * 1000;
-      const counterAmount = Math.max(p.floorPrice, counter);
-      setDone({ type: 'negotiate', amount: offerNum, botResponse: 'countered', counterAmount });
+    try {
+      const autoAcceptFrom = Math.round((p.floorPrice + p.price) / 2 / 1000) * 1000;
+      const res = await fetch('/api/tukibot/negotiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyerOffer: offerNum,
+          quantity,
+          listedPrice: p.price,
+          floorPrice: p.floorPrice,
+          autoAcceptFrom,
+          productName: p.name,
+          vendorName: p.vendorName,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Negociación fallida');
+
+      const data = await res.json();
+      if (data.status === 'accepted') {
+        setDone({
+          type: 'negotiate',
+          amount: data.acceptedAmount ?? offerNum,
+          botResponse: 'accepted',
+          botMessage: data.message,
+        });
+      } else {
+        setDone({
+          type: 'negotiate',
+          amount: offerNum,
+          botResponse: 'countered',
+          counterAmount: data.counterAmount,
+          botMessage: data.message,
+        });
+      }
+    } catch {
+      // Fallback local logic to keep UX responsive even if API fails
+      if (offerNum >= p.floorPrice) {
+        setDone({ type: 'negotiate', amount: offerNum, botResponse: 'accepted' });
+      } else {
+        const counter = Math.round((p.floorPrice + offerNum) / 2 / 1000) * 1000;
+        const counterAmount = Math.max(p.floorPrice, counter);
+        setDone({ type: 'negotiate', amount: offerNum, botResponse: 'countered', counterAmount });
+      }
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -159,6 +195,11 @@ export default function ProductDetailPage() {
                     <>
                       <div className="tnd-offer-success-icon" style={{ fontSize: '2rem', marginTop: 4 }}>✅</div>
                       <div className="tnd-offer-success-title" style={{ color: '#4ade80' }}>¡Oferta aceptada!</div>
+                      {done.botMessage && (
+                        <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
+                          {done.botMessage}
+                        </p>
+                      )}
                       <p className="tnd-offer-success-sub">
                         El TukiBot de <strong>{p.vendorName}</strong> aceptó <strong>{gs(done.amount!)}</strong> × {quantity} und.<br />
                         Procedé al pago para confirmar tu compra.
@@ -167,6 +208,11 @@ export default function ProductDetailPage() {
                     </>
                   ) : done.botResponse === 'countered' ? (
                     <>
+                      {done.botMessage && (
+                        <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
+                          {done.botMessage}
+                        </p>
+                      )}
                       <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
                         Tu oferta de <strong>{gs(done.amount!)}</strong> fue baja.<br />
                         El Robot propone:
