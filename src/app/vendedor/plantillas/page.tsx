@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode, type ReactElement } from 'react';
 import Link from 'next/link';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -235,7 +235,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
     </div>
   );
 
-  const SECTION_ELS: Record<string, JSX.Element | null> = {
+  const SECTION_ELS: Record<string, ReactElement | null> = {
     hero: heroEl, infoBar: infoBarEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
