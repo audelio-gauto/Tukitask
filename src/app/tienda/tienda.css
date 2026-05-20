@@ -353,6 +353,11 @@
   .tnd-page { padding: 12px 8px 80px; }
 }
 
+/* Categories sticky wrapper — matches tnd-page horizontal padding for negative-margin trick */
+.tnd-section-padded { padding: 0 24px; }
+@media (max-width: 1023px) { .tnd-section-padded { padding: 0 14px; } }
+@media (max-width: 639px)  { .tnd-section-padded { padding: 0 8px;  } }
+
 /* ══════════════════════════════════════════════════════════════
    HERO — hidden (section removed from JSX)
    ══════════════════════════════════════════════════════════════ */

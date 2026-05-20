@@ -33,6 +33,17 @@ export interface StoreTemplateConfig {
   reviewsAvatars?: string[];
   heroSearchPlaceholder?: string;
   masVendidosTitle?: string;
+  // Orden de secciones
+  sectionOrder?: string[];
+  // Tipografía
+  heroTitleFontSize?: number;
+  heroTitleColor?: string;
+  heroDescFontSize?: number;
+  heroDescColor?: string;
+  sectionTitleColor?: string;
+  // Botones y fondo
+  btnRadius?: number;
+  bodyBg?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -61,6 +72,14 @@ const DEFAULTS: StoreTemplateConfig = {
   reviewsAvatars:   ['👩', '👨', '👩🏽', '👨🏻'],
   heroSearchPlaceholder: 'Buscar productos...',
   masVendidosTitle: '🔥 Productos más vendidos',
+  sectionOrder:      ['hero', 'infoBar', 'categories', 'masVendidos', 'products'],
+  heroTitleFontSize: 28,
+  heroTitleColor:    '#ffffff',
+  heroDescFontSize:  14,
+  heroDescColor:     '#94a3b8',
+  sectionTitleColor: '#0f172a',
+  btnRadius:         8,
+  bodyBg:            '#f8fafc',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -76,20 +95,154 @@ const PALETTES = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════
+   SECTION META
+   ═══════════════════════════════════════════════════════════════ */
+const SECTION_LABELS: Record<string, string> = {
+  hero:        '🎨 Hero / Portada',
+  infoBar:     'ℹ️ Barra de info',
+  categories:  '🏷️ Categorías',
+  masVendidos: '🔥 Más vendidos',
+  products:    '📦 Productos',
+};
+const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
+
+/* ═══════════════════════════════════════════════════════════════
    MINI PREVIEW — renders a scaled-down version of Template 1
    ═══════════════════════════════════════════════════════════════ */
 function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
-  const acc              = cfg.accentColor;
-  const grad             = `linear-gradient(135deg, ${cfg.heroGrad1} 0%, ${cfg.heroGrad2} 100%)`;
-  const avatars          = cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻'];
-  const reviewsText      = cfg.reviewsCount ?? '+127 clientes satisfechos';
-  const searchPlaceholder = cfg.heroSearchPlaceholder || 'Buscar productos...';
-  const masVTitle        = cfg.masVendidosTitle || '🔥 Más vendidos';
+  const acc         = cfg.accentColor;
+  const grad        = `linear-gradient(135deg, ${cfg.heroGrad1} 0%, ${cfg.heroGrad2} 100%)`;
+  const avatars     = cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻'];
+  const reviewsText = cfg.reviewsCount ?? '+127 clientes satisfechos';
+  const searchPH    = cfg.heroSearchPlaceholder || 'Buscar productos...';
+  const masVTitle   = cfg.masVendidosTitle || '🔥 Más vendidos';
+  const titleSz     = (cfg.heroTitleFontSize ?? 28) / 2.5;
+  const titleClr    = cfg.heroTitleColor ?? '#ffffff';
+  const descSz      = (cfg.heroDescFontSize ?? 14) / 1.85;
+  const descClr     = cfg.heroDescColor ?? '#94a3b8';
+  const secTitleClr = cfg.sectionTitleColor ?? '#0f172a';
+  const radius      = Math.max(2, (cfg.btnRadius ?? 8) / 1.6);
+  const bodyBg      = cfg.bodyBg ?? '#f8fafc';
+  const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
+
+  /* ── Section elements ── */
+  const heroEl = (
+    <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+            <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+          </div>
+          <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
+        </div>
+      </div>
+      <div style={{ fontSize: descSz, color: descClr, marginBottom: 7, lineHeight: 1.45 }}>{cfg.heroDescription}</div>
+      {cfg.showReviewsStrip !== false && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <div style={{ display: 'flex' }}>
+            {avatars.slice(0, 4).map((av, i) => (
+              <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
+            ))}
+          </div>
+          <div>
+            <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
+            <div style={{ fontSize: 5.5, color: descClr }}>{reviewsText}</div>
+          </div>
+        </div>
+      )}
+      {cfg.showHeroSearch !== false && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
+            <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
+          </div>
+          <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        {cfg.showStats !== false && (
+          <>
+            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
+            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
+            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>🤖</div><div style={{ fontSize: 6.5, color: descClr }}>Robot</div></div>}
+          </>
+        )}
+        {cfg.showWhatsApp !== false && (
+          <div style={{ marginLeft: 'auto', background: '#25D366', color: '#fff', borderRadius: radius, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span>📱</span> WhatsApp
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const infoBarEl = cfg.showInfoBar !== false ? (
+    <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '4px 10px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 6, color: '#64748b' }}>🕐 08:00–18:00</span>
+      <span style={{ fontSize: 6, color: '#64748b' }}>📍 Asunción</span>
+      <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a' }}>✓ Verificada</span>
+      <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 2 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Abierto
+      </span>
+    </div>
+  ) : null;
+
+  const catsEl = (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '8px 10px 4px', background: bodyBg }}>
+      {cfg.categories.map((c, i) => (
+        <div key={c} style={{ padding: '2px 8px', borderRadius: radius * 2, fontSize: 7, fontWeight: 600, background: i === 0 ? acc : '#fff', color: i === 0 ? cfg.accentText : '#475569', border: '1px solid', borderColor: i === 0 ? acc : '#e2e8f0' }}>{c}</div>
+      ))}
+    </div>
+  );
+
+  const masVendidosEl = cfg.showMasVendidos !== false ? (
+    <div style={{ padding: '6px 10px', background: bodyBg }}>
+      <div style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr, marginBottom: 5 }}>{masVTitle}</div>
+      <div style={{ display: 'flex', gap: 5 }}>
+        {[{ e: '📱', rank: '#1', b: '#FFD700', t: '#7a5c00' }, { e: '🎧', rank: '#2', b: '#C0C0C0', t: '#fff' }, { e: '💻', rank: '#3', b: '#CD7F32', t: '#fff' }].map((item, i) => (
+          <div key={i} style={{ flex: 1, background: '#fff', border: `1px solid ${acc}44`, borderRadius: radius, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 3, left: 3, width: 14, height: 14, borderRadius: '50%', background: item.b, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 5.5, fontWeight: 900, color: item.t }}>{item.rank}</div>
+            <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{item.e}</div>
+            <div style={{ padding: '3px 4px 4px' }}>
+              <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
+              <div style={{ fontSize: 6.5, fontWeight: 800, color: acc }}>Gs. X.XXX</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const productsEl = (
+    <div style={{ padding: '6px 10px 10px', background: bodyBg }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr }}>Productos</span>
+        <span style={{ fontSize: 7, color: '#64748b' }}>3 resultados</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {['📱', '🎧', '💻'].map((e, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: radius, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ height: 34, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
+            <div style={{ padding: '4px 5px' }}>
+              <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
+              <div style={{ fontSize: 7, fontWeight: 800, color: acc, marginBottom: 3 }}>Gs. X.XXX.XXX</div>
+              <div style={{ background: acc, color: cfg.accentText, borderRadius: Math.max(2, radius / 1.5), textAlign: 'center', fontSize: 6.5, fontWeight: 700, padding: '2px 0' }}>Ver y ofertar</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const SECTION_ELS: Record<string, JSX.Element | null> = {
+    hero: heroEl, infoBar: infoBarEl, categories: catsEl,
+    masVendidos: masVendidosEl, products: productsEl,
+  };
 
   return (
     <div style={{ fontFamily: 'system-ui,sans-serif', background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
-
-      {/* ── TukiTask Header ── */}
+      {/* ── App Header ── */}
       <div style={{ background: '#F5C518', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0b1220', border: '1.5px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 800, flexShrink: 0 }}>V</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -104,142 +257,14 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
         </div>
         <div style={{ width: 22, height: 22, background: '#0b1220', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🛒</div>
       </div>
-
       {/* ── Breadcrumb ── */}
       <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
         <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
         <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
       </div>
-
-      {/* ── Hero ── */}
-      <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
-
-        {/* Store identity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-          <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
-              <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#fff', lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
-          </div>
-        </div>
-        <div style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.5)', marginBottom: 7, lineHeight: 1.45 }}>{cfg.heroDescription}</div>
-
-        {/* Reviews strip */}
-        {cfg.showReviewsStrip !== false && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
-            <div style={{ display: 'flex' }}>
-              {avatars.slice(0, 4).map((av, i) => (
-                <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
-              ))}
-            </div>
-            <div>
-              <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
-              <div style={{ fontSize: 5.5, color: 'rgba(255,255,255,0.5)' }}>{reviewsText}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Search */}
-        {cfg.showHeroSearch !== false && (
-          <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 6, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
-              <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPlaceholder}</span>
-            </div>
-            <div style={{ background: acc, color: cfg.accentText, borderRadius: 6, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
-          </div>
-        )}
-
-        {/* Stats + WhatsApp */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          {cfg.showStats !== false && (
-            <>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div>
-                <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>{cfg.statLabel}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div>
-                <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>Calificación</div>
-              </div>
-              {cfg.robotEnabled && (
-                <div>
-                  <div style={{ fontSize: 11 }}>🤖</div>
-                  <div style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.38)' }}>Robot</div>
-                </div>
-              )}
-            </>
-          )}
-          {cfg.showWhatsApp !== false && (
-            <div style={{ marginLeft: 'auto', background: '#25D366', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span>📱</span> WhatsApp
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Info bar ── */}
-      {cfg.showInfoBar !== false && (
-        <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '4px 10px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 6, color: '#64748b' }}>🕐 08:00–18:00</span>
-          <span style={{ fontSize: 6, color: '#64748b' }}>📍 Asunción</span>
-          <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a' }}>✓ Verificada</span>
-          <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 2 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Abierto
-          </span>
-        </div>
-      )}
-
-      {/* ── Content area ── */}
-      <div style={{ background: '#f8fafc', padding: '10px 10px 6px' }}>
-
-        {/* Category chips */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-          {cfg.categories.map((c, i) => (
-            <div key={c} style={{ padding: '2px 8px', borderRadius: 12, fontSize: 7, fontWeight: 600, background: i === 0 ? acc : '#fff', color: i === 0 ? cfg.accentText : '#475569', border: '1px solid', borderColor: i === 0 ? acc : '#e2e8f0' }}>{c}</div>
-          ))}
-        </div>
-
-        {/* 🔥 Más vendidos */}
-        {cfg.showMasVendidos !== false && (
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 8.5, fontWeight: 800, color: '#0f172a', marginBottom: 5 }}>{masVTitle}</div>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {[{ e: '📱', rank: '#1', b: '#FFD700', t: '#7a5c00' }, { e: '🎧', rank: '#2', b: '#C0C0C0', t: '#fff' }, { e: '💻', rank: '#3', b: '#CD7F32', t: '#fff' }].map((item, i) => (
-                <div key={i} style={{ flex: 1, background: '#fff', border: `1px solid ${acc}44`, borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ position: 'absolute', top: 3, left: 3, width: 14, height: 14, borderRadius: '50%', background: item.b, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 5.5, fontWeight: 900, color: item.t }}>{item.rank}</div>
-                  <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{item.e}</div>
-                  <div style={{ padding: '3px 4px 4px' }}>
-                    <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
-                    <div style={{ fontSize: 6.5, fontWeight: 800, color: acc }}>Gs. X.XXX</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Products grid */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 8.5, fontWeight: 800, color: '#0f172a' }}>Productos</span>
-          <span style={{ fontSize: 7, color: '#64748b' }}>3 resultados</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-          {['📱', '🎧', '💻'].map((e, i) => (
-            <div key={i} style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ height: 34, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
-              <div style={{ padding: '4px 5px' }}>
-                <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, marginBottom: 2 }} />
-                <div style={{ fontSize: 7, fontWeight: 800, color: acc, marginBottom: 3 }}>Gs. X.XXX.XXX</div>
-                <div style={{ background: acc, color: cfg.accentText, borderRadius: 4, textAlign: 'center', fontSize: 6.5, fontWeight: 700, padding: '2px 0' }}>Ver y ofertar</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── Sections in user-defined order ── */}
+      {order.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
     </div>
   );
 }
@@ -296,6 +321,7 @@ export default function PlantillasPage() {
   const [saved, setSaved]     = useState(false);
   const [catInput, setCatInput] = useState('');
   const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* Load from localStorage on mount */
   useEffect(() => {
@@ -539,7 +565,42 @@ export default function PlantillasPage() {
 
           {/* Secciones */}
           <Section title="🧩 Secciones">
-            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>Activá o desactivá cada bloque de tu tienda con un click.</p>
+            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>Arrastrá para reordenar · Activá o desactivá con el toggle.</p>
+
+            {/* Drag-to-reorder section list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER).map((id, idx) => (
+                <div
+                  key={id}
+                  draggable
+                  onDragStart={() => setDragIdx(idx)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => {
+                    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); return; }
+                    const newOrder = [...(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER)];
+                    const [moved] = newOrder.splice(dragIdx, 1);
+                    newOrder.splice(idx, 0, moved);
+                    update('sectionOrder', newOrder);
+                    setDragIdx(null);
+                  }}
+                  onDragEnd={() => setDragIdx(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                    borderRadius: 10, cursor: 'grab', userSelect: 'none',
+                    background: dragIdx === idx ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
+                    border: `1px solid ${dragIdx === idx ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                    transition: 'background 0.15s, border-color 0.15s',
+                    opacity: dragIdx !== null && dragIdx !== idx ? 0.55 : 1,
+                  }}
+                >
+                  <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1.1rem', lineHeight: 1 }}>⠿</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--vnd-text)', flex: 1 }}>{SECTION_LABELS[id]}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 6, padding: '1px 6px' }}>#{idx + 1}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ height: 1, background: 'var(--vnd-border)' }} />
 
             <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => update('showReviewsStrip', cfg.showReviewsStrip === false)} label="⭐ Strip de reseñas en portada" />
             {cfg.showReviewsStrip !== false && (
@@ -563,6 +624,81 @@ export default function PlantillasPage() {
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
               </Field>
             )}
+          </Section>
+
+          {/* Tipografía */}
+          <Section title="📐 Tipografía">
+            <Field label="Título de portada" hint={`Tamaño: ${cfg.heroTitleFontSize ?? 28}px`}>
+              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={cfg.heroTitleColor ?? '#ffffff'}
+                  onChange={e => update('heroTitleColor', e.target.value)}
+                  title="Color del título"
+                  style={{ width: 40, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2, background: 'var(--vnd-border)' }}
+                />
+                <input
+                  type="range" min={16} max={52} step={2}
+                  value={cfg.heroTitleFontSize ?? 28}
+                  onChange={e => update('heroTitleFontSize', Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--vnd-accent)' }}
+                />
+              </div>
+            </Field>
+            <Field label="Descripción de portada" hint={`Tamaño: ${cfg.heroDescFontSize ?? 14}px`}>
+              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={cfg.heroDescColor ?? '#94a3b8'}
+                  onChange={e => update('heroDescColor', e.target.value)}
+                  title="Color de la descripción"
+                  style={{ width: 40, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2, background: 'var(--vnd-border)' }}
+                />
+                <input
+                  type="range" min={10} max={22} step={1}
+                  value={cfg.heroDescFontSize ?? 14}
+                  onChange={e => update('heroDescFontSize', Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--vnd-accent)' }}
+                />
+              </div>
+            </Field>
+            <Field label="Títulos de sección">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={cfg.sectionTitleColor ?? '#0f172a'}
+                  onChange={e => update('sectionTitleColor', e.target.value)}
+                  style={{ width: 40, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2, background: 'var(--vnd-border)', flexShrink: 0 }}
+                />
+                <input className="vnd-input" value={cfg.sectionTitleColor ?? '#0f172a'} onChange={e => update('sectionTitleColor', e.target.value)} maxLength={9} style={{ flex: 1 }} />
+              </div>
+            </Field>
+          </Section>
+
+          {/* Botones y fondo */}
+          <Section title="🔲 Botones y Fondo">
+            <Field label="Radio de esquinas de botones" hint={`${cfg.btnRadius ?? 8}px`}>
+              <input
+                type="range" min={0} max={32} step={2}
+                value={cfg.btnRadius ?? 8}
+                onChange={e => update('btnRadius', Number(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--vnd-accent)' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--vnd-text-muted)', marginTop: -2 }}>
+                <span>Cuadrado</span><span>Redondeado</span>
+              </div>
+            </Field>
+            <Field label="Color de fondo del contenido">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={cfg.bodyBg ?? '#f8fafc'}
+                  onChange={e => update('bodyBg', e.target.value)}
+                  style={{ width: 40, height: 40, border: 'none', borderRadius: 8, cursor: 'pointer', padding: 2, background: 'var(--vnd-border)', flexShrink: 0 }}
+                />
+                <input className="vnd-input" value={cfg.bodyBg ?? '#f8fafc'} onChange={e => update('bodyBg', e.target.value)} maxLength={9} style={{ flex: 1 }} />
+              </div>
+            </Field>
           </Section>
 
           {/* Colors */}
