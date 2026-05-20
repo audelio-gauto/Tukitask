@@ -20,6 +20,8 @@ export interface StoreTemplateConfig {
   statNum: string;
   statLabel: string;
   robotEnabled: boolean;
+  robotEmoji?: string;
+  robotLabel?: string;
   categories: string[];
   // Secciones visibles (undefined = visible)
   showReviewsStrip?: boolean;
@@ -63,6 +65,8 @@ const DEFAULTS: StoreTemplateConfig = {
   statNum:          '0',
   statLabel:        'Productos',
   robotEnabled:     true,
+  robotEmoji:       '🤖',
+  robotLabel:       'Robot Negociador',
   categories:       ['Todos', 'Electrónica', 'Ropa', 'Hogar', 'Libros'],
   showReviewsStrip: true,
   showHeroSearch:   true,
@@ -173,7 +177,7 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
           <>
             <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
             <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
-            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>🤖</div><div style={{ fontSize: 6.5, color: descClr }}>Robot</div></div>}
+            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>{cfg.robotEmoji ?? '🤖'}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.robotLabel ?? 'Robot'}</div></div>}
           </>
         )}
         {cfg.showWhatsApp !== false && (
@@ -569,6 +573,16 @@ export default function PlantillasPage() {
               onToggle={() => update('robotEnabled', !cfg.robotEnabled)}
               label="🤖 Robot Negociador en portada"
             />
+            {cfg.robotEnabled && (
+              <div className="vnd-form-grid">
+                <Field label="Emoji del robot">
+                  <input className="vnd-input" value={cfg.robotEmoji ?? '🤖'} onChange={e => update('robotEmoji', e.target.value)} maxLength={4} placeholder="🤖" />
+                </Field>
+                <Field label="Etiqueta del robot">
+                  <input className="vnd-input" value={cfg.robotLabel ?? 'Robot Negociador'} onChange={e => update('robotLabel', e.target.value)} maxLength={30} placeholder="Robot Negociador" />
+                </Field>
+              </div>
+            )}
             <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
               <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
             </Field>

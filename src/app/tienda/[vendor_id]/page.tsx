@@ -19,6 +19,8 @@ interface StoreTemplateConfig {
   statNum: string;
   statLabel: string;
   robotEnabled: boolean;
+  robotEmoji?: string;
+  robotLabel?: string;
   categories: string[];
   // Secciones visibles (undefined = visible)
   showReviewsStrip?: boolean;
@@ -223,8 +225,8 @@ export default function VendorStorePage() {
               )}
               {activeCfg.robotEnabled && (
                 <div>
-                  <div style={{ fontSize: '1.4rem' }}>🤖</div>
-                  <div style={{ fontSize: '0.72rem', color: heroDescClr }}>Robot Negociador</div>
+                  <div style={{ fontSize: '1.4rem' }}>{activeCfg.robotEmoji ?? '🤖'}</div>
+                  <div style={{ fontSize: '0.72rem', color: heroDescClr }}>{activeCfg.robotLabel ?? 'Robot Negociador'}</div>
                 </div>
               )}
             </>
