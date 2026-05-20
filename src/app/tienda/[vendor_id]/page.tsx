@@ -47,6 +47,12 @@ interface StoreTemplateConfig {
   // Botones y fondo
   btnRadius?: number;
   bodyBg?: string;
+  // Logo imagen y branding
+  logoImage?: string;
+  // Fuente tipográfica
+  fontFamily?: string;
+  // Hero background image
+  heroBgImage?: string;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -122,6 +128,18 @@ export default function VendorStorePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
+  useEffect(() => {
+    const fontName = cfg?.fontFamily ?? defaultCfg?.fontFamily;
+    if (!fontName || fontName === 'Inter') return;
+    const id = `gfont-${fontName.replace(/ /g, '-')}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;600;700;900&display=swap`;
+    document.head.appendChild(link);
+  }, [cfg?.fontFamily, defaultCfg?.fontFamily]);
+
   const activeCfg = cfg ?? defaultCfg;
 
   if (!activeCfg) {
@@ -163,10 +181,11 @@ export default function VendorStorePage() {
     <div style={{ background: heroGrad, padding: '48px 24px 40px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, background: `radial-gradient(circle, ${acc}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: -40, left: -40, width: 220, height: 220, background: `radial-gradient(circle, ${acc}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
+      {activeCfg.heroBgImage && <img src={activeCfg.heroBgImage} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, pointerEvents: 'none' }} />}
       <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div style={{ width: 52, height: 52, background: `${acc}22`, border: `2px solid ${acc}55`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0 }}>
-            {activeCfg.logoEmoji}
+          <div style={{ width: 52, height: 52, background: `${acc}22`, border: `2px solid ${acc}55`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
+            {activeCfg.logoImage ? <img src={activeCfg.logoImage} alt={activeCfg.storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : activeCfg.logoEmoji}
           </div>
           <div>
             {activeCfg.showStoreBadge !== false && (
@@ -365,7 +384,7 @@ export default function VendorStorePage() {
   };
 
   return (
-    <div>
+    <div style={{ fontFamily: activeCfg.fontFamily ? `'${activeCfg.fontFamily}', system-ui, sans-serif` : undefined }}>
       {activeCfg.showBreadcrumb !== false && (
         <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
           <Link href="/tienda" className="tnd-back-link">Catálogo</Link>

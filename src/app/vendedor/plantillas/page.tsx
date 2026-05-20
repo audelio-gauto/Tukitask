@@ -48,6 +48,12 @@ export interface StoreTemplateConfig {
   // Botones y fondo
   btnRadius?: number;
   bodyBg?: string;
+  // Logo imagen y branding
+  logoImage?: string;
+  // Fuente tipográfica
+  fontFamily?: string;
+  // Hero — imagen de fondo opcional
+  heroBgImage?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -88,7 +94,24 @@ const DEFAULTS: StoreTemplateConfig = {
   sectionTitleColor: '#0f172a',
   btnRadius:         8,
   bodyBg:            '#f8fafc',
+  logoImage:         '',
+  fontFamily:        'Inter',
+  heroBgImage:       '',
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   FONTS
+   ═══════════════════════════════════════════════════════════════ */
+const FONTS = [
+  { name: 'Inter',            css: 'Inter' },
+  { name: 'Poppins',          css: 'Poppins' },
+  { name: 'Montserrat',       css: 'Montserrat' },
+  { name: 'Playfair Display', css: 'Playfair Display' },
+  { name: 'Nunito',           css: 'Nunito' },
+  { name: 'Oswald',           css: 'Oswald' },
+  { name: 'Raleway',          css: 'Raleway' },
+  { name: 'Roboto',           css: 'Roboto' },
+];
 
 /* ═══════════════════════════════════════════════════════════════
    PALETTES
@@ -134,13 +157,18 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   const radius      = Math.max(2, (cfg.btnRadius ?? 8) / (isDesktop ? 1.2 : 1.6));
   const bodyBg      = cfg.bodyBg ?? '#f8fafc';
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
+  const font         = cfg.fontFamily ?? 'Inter';
+  const bgImg        = cfg.heroBgImage ?? '';
 
   /* ── Section elements ── */
   const heroEl = (
     <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
+      {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, pointerEvents: 'none' }} />}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
+        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
+          {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
+        </div>
         <div>
           {cfg.showStoreBadge !== false && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
@@ -253,7 +281,7 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   };
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
+    <div style={{ fontFamily: `'${font}', system-ui, sans-serif`, background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
       {/* ── App Header ── */}
       <div style={{ background: '#F5C518', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0b1220', border: '1.5px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 800, flexShrink: 0 }}>V</div>
@@ -514,8 +542,39 @@ export default function PlantillasPage() {
             <Field label="Nombre de la tienda">
               <input className="vnd-input" value={cfg.storeName} onChange={e => update('storeName', e.target.value)} maxLength={60} />
             </Field>
+            <Field label="Logo de la tienda" hint="Subí una imagen (PNG/JPG, máx. 500 KB) o pegá una URL">
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ width: 64, height: 64, background: `${cfg.accentColor}22`, border: `2px solid ${cfg.accentColor}55`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
+                  {cfg.logoImage ? <img src={cfg.logoImage} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--vnd-bg-elevated)', border: '1px solid var(--vnd-border)', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--vnd-text)', width: 'fit-content' }}>
+                    📁 Subir imagen
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 500_000) { alert('La imagen debe pesar menos de 500 KB'); return; }
+                      const reader = new FileReader();
+                      reader.onload = ev => update('logoImage', ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }} />
+                  </label>
+                  <input
+                    className="vnd-input"
+                    value={cfg.logoImage?.startsWith('data:') ? '' : (cfg.logoImage ?? '')}
+                    placeholder={cfg.logoImage?.startsWith('data:') ? '(imagen subida ✓)' : 'https://ejemplo.com/logo.png'}
+                    onChange={e => update('logoImage', e.target.value)}
+                  />
+                  {cfg.logoImage && (
+                    <button type="button" onClick={() => update('logoImage', '')} style={{ fontSize: '0.73rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                      ✕ Quitar imagen (usar emoji)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Field>
             <div className="vnd-form-grid">
-              <Field label="Emoji / Logo">
+              <Field label="Emoji (si no hay imagen)">
                 <input className="vnd-input" value={cfg.logoEmoji} onChange={e => update('logoEmoji', e.target.value)} maxLength={4} style={{ fontSize: '1.4rem', textAlign: 'center' }} />
               </Field>
               <Field label="WhatsApp">
@@ -557,6 +616,9 @@ export default function PlantillasPage() {
                 style={{ resize: 'vertical', fontFamily: 'inherit' }}
                 maxLength={220}
               />
+            </Field>
+            <Field label="Imagen de fondo del hero" hint="URL de imagen superpuesta al gradiente (opcional)">
+              <input className="vnd-input" value={cfg.heroBgImage ?? ''} onChange={e => update('heroBgImage', e.target.value)} placeholder="https://ejemplo.com/fondo.jpg" />
             </Field>
             <div className="vnd-form-grid">
               <Field label="Estadística (número)">
@@ -655,6 +717,23 @@ export default function PlantillasPage() {
 
           {/* Tipografía */}
           <Section title="📐 Tipografía">
+            <Field label="Fuente de la tienda">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {FONTS.map(f => (
+                  <button
+                    key={f.name}
+                    type="button"
+                    onClick={() => update('fontFamily', f.css)}
+                    style={{
+                      padding: '7px 4px', borderRadius: 8,
+                      border: `2px solid ${(cfg.fontFamily ?? 'Inter') === f.css ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                      background: (cfg.fontFamily ?? 'Inter') === f.css ? 'rgba(245,197,24,0.1)' : 'var(--vnd-bg)',
+                      cursor: 'pointer', fontSize: '0.67rem', fontWeight: 600, color: 'var(--vnd-text)',
+                    }}
+                  >{f.name}</button>
+                ))}
+              </div>
+            </Field>
             <Field label="Título de portada" hint={`Tamaño: ${cfg.heroTitleFontSize ?? 28}px`}>
               <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 8, alignItems: 'center' }}>
                 <input
