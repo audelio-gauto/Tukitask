@@ -24,9 +24,15 @@ type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 
 const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
 
-function getStoredBotTone(): BotTone {
+function getVendorBotConfigKey(vendorId: string) {
+  return `tukibot:config:${vendorId}`;
+}
+
+function getStoredBotTone(vendorId: string): BotTone {
   try {
-    const raw = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
+    const rawScoped = localStorage.getItem(getVendorBotConfigKey(vendorId));
+    const rawLegacy = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
+    const raw = rawScoped || rawLegacy;
     if (!raw) return 'amigable';
     const parsed = JSON.parse(raw) as { botTone?: BotTone };
     if (parsed.botTone === 'informal' || parsed.botTone === 'formal' || parsed.botTone === 'agresivo' || parsed.botTone === 'amigable') {
@@ -101,7 +107,7 @@ export default function ProductDetailPage() {
     setSubmitting(true);
     try {
       const autoAcceptFrom = Math.round((p.floorPrice + p.price) / 2 / 1000) * 1000;
-      const botTone = getStoredBotTone();
+      const botTone = getStoredBotTone(p.vendorId);
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

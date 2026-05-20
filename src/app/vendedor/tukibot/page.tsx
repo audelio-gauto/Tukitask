@@ -1,11 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
 
 const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
+
+function getVendorBotConfigKey(vendorId: string) {
+  return `tukibot:config:${vendorId}`;
+}
 
 interface BotConfig {
   botEnabled:         boolean;
@@ -40,6 +45,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function TukiBotPage() {
   const [saved, setSaved] = useState(false);
+  const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
   const [cfg, setCfg] = useState<BotConfig>({
     botEnabled:         true,
     botTone:            'informal',
@@ -51,17 +57,25 @@ export default function TukiBotPage() {
   });
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<BotConfig>;
-      setCfg(prev => ({
-        ...prev,
-        ...parsed,
-      }));
-    } catch {
-      // Ignore malformed data and keep defaults
-    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const vendorId = user?.id || user?.user_metadata?.store_slug || user?.email || 'default';
+      const key = getVendorBotConfigKey(String(vendorId));
+      setStorageKey(key);
+
+      try {
+        const rawScoped = localStorage.getItem(key);
+        const rawLegacy = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
+        const raw = rawScoped || rawLegacy;
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Partial<BotConfig>;
+        setCfg(prev => ({
+          ...prev,
+          ...parsed,
+        }));
+      } catch {
+        // Ignore malformed data and keep defaults
+      }
+    });
   }, []);
 
   function update<K extends keyof BotConfig>(key: K, value: BotConfig[K]) {
@@ -70,6 +84,8 @@ export default function TukiBotPage() {
 
   function handleSave() {
     try {
+      localStorage.setItem(storageKey, JSON.stringify(cfg));
+      // Backward compatibility while existing buyers still read legacy key
       localStorage.setItem(BOT_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
     } catch {
       // Non-blocking in restricted environments
