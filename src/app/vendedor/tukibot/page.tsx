@@ -74,6 +74,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function TukiBotPage() {
   const [saved, setSaved] = useState(false);
+  const [activeSubmenu, setActiveSubmenu] = useState<'config' | 'results'>('config');
   const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -120,61 +121,62 @@ export default function TukiBotPage() {
 
   useEffect(() => {
     if (!vendorId) return;
-
-    async function loadTimeoutStats() {
-      setLoadingStats(true);
-      setStatsError(null);
-
-      try {
-        const [rowsResp, counterResp, acceptResp, pressureResp] = await Promise.all([
-          supabase
-            .from('tukibot_negotiations')
-            .select('id, product_name, buyer_offer, counter_amount, final_amount, status, timeout_action, timed_out_at')
-            .eq('vendor_id', vendorId)
-            .in('status', TIMEOUT_STATUSES)
-            .order('timed_out_at', { ascending: false })
-            .limit(8),
-          supabase
-            .from('tukibot_negotiations')
-            .select('id', { count: 'exact', head: true })
-            .eq('vendor_id', vendorId)
-            .eq('status', 'timeout_auto_counter'),
-          supabase
-            .from('tukibot_negotiations')
-            .select('id', { count: 'exact', head: true })
-            .eq('vendor_id', vendorId)
-            .eq('status', 'timeout_auto_accept'),
-          supabase
-            .from('tukibot_negotiations')
-            .select('id', { count: 'exact', head: true })
-            .eq('vendor_id', vendorId)
-            .eq('status', 'timeout_pressure'),
-        ]);
-
-        if (rowsResp.error || counterResp.error || acceptResp.error || pressureResp.error) {
-          throw new Error('No se pudieron cargar métricas de timeout.');
-        }
-
-        const autoCounter = counterResp.count ?? 0;
-        const autoAccept = acceptResp.count ?? 0;
-        const pressure = pressureResp.count ?? 0;
-
-        setStats({
-          total: autoCounter + autoAccept + pressure,
-          autoCounter,
-          autoAccept,
-          pressure,
-        });
-        setRecentTimeouts((rowsResp.data ?? []) as TimeoutRow[]);
-      } catch (err) {
-        setStatsError(err instanceof Error ? err.message : 'Error cargando métricas.');
-      } finally {
-        setLoadingStats(false);
-      }
-    }
-
     loadTimeoutStats();
   }, [vendorId]);
+
+  async function loadTimeoutStats() {
+    if (!vendorId) return;
+
+    setLoadingStats(true);
+    setStatsError(null);
+
+    try {
+      const [rowsResp, counterResp, acceptResp, pressureResp] = await Promise.all([
+        supabase
+          .from('tukibot_negotiations')
+          .select('id, product_name, buyer_offer, counter_amount, final_amount, status, timeout_action, timed_out_at')
+          .eq('vendor_id', vendorId)
+          .in('status', TIMEOUT_STATUSES)
+          .order('timed_out_at', { ascending: false })
+          .limit(8),
+        supabase
+          .from('tukibot_negotiations')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', vendorId)
+          .eq('status', 'timeout_auto_counter'),
+        supabase
+          .from('tukibot_negotiations')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', vendorId)
+          .eq('status', 'timeout_auto_accept'),
+        supabase
+          .from('tukibot_negotiations')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', vendorId)
+          .eq('status', 'timeout_pressure'),
+      ]);
+
+      if (rowsResp.error || counterResp.error || acceptResp.error || pressureResp.error) {
+        throw new Error('No se pudieron cargar métricas de timeout.');
+      }
+
+      const autoCounter = counterResp.count ?? 0;
+      const autoAccept = acceptResp.count ?? 0;
+      const pressure = pressureResp.count ?? 0;
+
+      setStats({
+        total: autoCounter + autoAccept + pressure,
+        autoCounter,
+        autoAccept,
+        pressure,
+      });
+      setRecentTimeouts((rowsResp.data ?? []) as TimeoutRow[]);
+    } catch (err) {
+      setStatsError(err instanceof Error ? err.message : 'Error cargando métricas.');
+    } finally {
+      setLoadingStats(false);
+    }
+  }
 
   function update<K extends keyof BotConfig>(key: K, value: BotConfig[K]) {
     setCfg(prev => ({ ...prev, [key]: value }));
@@ -199,25 +201,59 @@ export default function TukiBotPage() {
           <h1 className="vnd-page-heading">🤖 TukiBot</h1>
           <p className="vnd-page-sub">Robot Negociador — responde ofertas automáticamente 24/7</p>
         </div>
-        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
-          {saved ? (
-            <>
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              ¡Guardado!
-            </>
-          ) : (
-            <>
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              Guardar cambios
-            </>
-          )}
+        {activeSubmenu === 'config' ? (
+          <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+            {saved ? (
+              <>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                ¡Guardado!
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Guardar cambios
+              </>
+            )}
+          </button>
+        ) : (
+          <button className="vnd-btn vnd-btn-secondary" onClick={loadTimeoutStats} disabled={loadingStats}>
+            {loadingStats ? 'Actualizando…' : '↻ Actualizar resultados'}
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setActiveSubmenu('config')}
+          className="vnd-btn"
+          style={{
+            background: activeSubmenu === 'config' ? '#F5C518' : 'var(--vnd-surface-2)',
+            color: activeSubmenu === 'config' ? '#0b1220' : 'var(--vnd-text-secondary)',
+            border: `1px solid ${activeSubmenu === 'config' ? '#F5C518' : 'var(--vnd-border)'}`,
+          }}
+        >
+          ⚙️ Configuración
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubmenu('results')}
+          className="vnd-btn"
+          style={{
+            background: activeSubmenu === 'results' ? '#F5C518' : 'var(--vnd-surface-2)',
+            color: activeSubmenu === 'results' ? '#0b1220' : 'var(--vnd-text-secondary)',
+            border: `1px solid ${activeSubmenu === 'results' ? '#F5C518' : 'var(--vnd-border)'}`,
+          }}
+        >
+          📊 Resultados Automáticos
         </button>
       </div>
 
+      {activeSubmenu === 'config' && (
       <Section title="🤖 Robot Negociador (TukiBot)">
         {/* Enable toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: cfg.botEnabled ? 'rgba(245,197,24,0.06)' : 'var(--vnd-surface-2)', borderRadius: 12, border: `1px solid ${cfg.botEnabled ? 'rgba(245,197,24,0.20)' : 'var(--vnd-border)'}`, marginBottom: 22, transition: 'all 0.2s' }}>
@@ -373,7 +409,9 @@ export default function TukiBotPage() {
           </>
         )}
       </Section>
+      )}
 
+      {activeSubmenu === 'results' && (
       <Section title="📊 Resultados Automáticos (Fase 4.1)">
         {loadingStats ? (
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.85rem' }}>Cargando resultados del TukiBot...</p>
@@ -430,16 +468,19 @@ export default function TukiBotPage() {
           </>
         )}
       </Section>
+      )}
 
       {/* Save bottom */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90 })}>
-          Restaurar valores
-        </button>
-        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
-          {saved ? '✓ ¡Guardado!' : 'Guardar cambios'}
-        </button>
-      </div>
+      {activeSubmenu === 'config' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
+          <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90 })}>
+            Restaurar valores
+          </button>
+          <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+            {saved ? '✓ ¡Guardado!' : 'Guardar cambios'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
