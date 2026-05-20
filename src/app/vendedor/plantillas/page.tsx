@@ -54,6 +54,12 @@ export interface StoreTemplateConfig {
   fontFamily?: string;
   // Hero — imagen de fondo opcional
   heroBgImage?: string;
+  // Alineación y orden del hero
+  heroAlignment?: 'left' | 'center' | 'right';
+  heroElementOrder?: string[];
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -97,6 +103,10 @@ const DEFAULTS: StoreTemplateConfig = {
   logoImage:         '',
   fontFamily:        'Inter',
   heroBgImage:       '',
+  heroAlignment:     'left',
+  heroElementOrder:  ['logoTitle', 'description', 'reviews', 'search', 'stats'],
+  seoTitle:          '',
+  seoDescription:    '',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -137,6 +147,15 @@ const SECTION_LABELS: Record<string, string> = {
 };
 const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
 
+const HERO_ELEM_LABELS: Record<string, string> = {
+  logoTitle:   '🏡 Logo + Título',
+  description: '📝 Descripción',
+  reviews:     '⭐ Strip de reseñas',
+  search:      '🔍 Buscador',
+  stats:       '📊 Estadísticas + WhatsApp',
+};
+const DEFAULT_HERO_ELEM_ORDER = ['logoTitle', 'description', 'reviews', 'search', 'stats'];
+
 /* ═══════════════════════════════════════════════════════════════
    MINI PREVIEW — renders a scaled-down version of Template 1
    ═══════════════════════════════════════════════════════════════ */
@@ -159,61 +178,82 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
   const font         = cfg.fontFamily ?? 'Inter';
   const bgImg        = cfg.heroBgImage ?? '';
+  const heroAlign   = cfg.heroAlignment ?? 'left';
+  const heroElemOrd = cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER;
+  const hJustify    = heroAlign === 'center' ? 'center' : heroAlign === 'right' ? 'flex-end' : 'flex-start';
+  const hText       = heroAlign as 'left' | 'center' | 'right';
+
+  const hLogoTitle: ReactElement = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: hJustify }}>
+      <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
+        {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
+      </div>
+      <div style={{ textAlign: hText }}>
+        {cfg.showStoreBadge !== false && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+            <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+          </div>
+        )}
+        <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
+      </div>
+    </div>
+  );
+
+  const hDescription: ReactElement = (
+    <div style={{ fontSize: descSz, color: descClr, marginBottom: 4, lineHeight: 1.45, textAlign: hText }}>{cfg.heroDescription}</div>
+  );
+
+  const hReviews: ReactElement | null = cfg.showReviewsStrip !== false ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, justifyContent: hJustify }}>
+      <div style={{ display: 'flex' }}>
+        {avatars.slice(0, 4).map((av, i) => (
+          <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
+        ))}
+      </div>
+      <div>
+        <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
+        <div style={{ fontSize: 5.5, color: descClr }}>{reviewsText}</div>
+      </div>
+    </div>
+  ) : null;
+
+  const hSearch: ReactElement | null = cfg.showHeroSearch !== false ? (
+    <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+      <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
+        <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
+      </div>
+      <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
+    </div>
+  ) : null;
+
+  const hStats: ReactElement | null = (cfg.showStats !== false || cfg.showWhatsApp !== false) ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: hJustify }}>
+      {cfg.showStats !== false && (
+        <>
+          <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
+          <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
+          {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>{cfg.robotEmoji ?? '🤖'}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.robotLabel ?? 'Robot'}</div></div>}
+        </>
+      )}
+      {cfg.showWhatsApp !== false && (
+        <div style={{ background: '#25D366', color: '#fff', borderRadius: radius, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span>📱</span> WhatsApp
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const HERO_ELEMS: Record<string, ReactElement | null> = {
+    logoTitle: hLogoTitle, description: hDescription,
+    reviews: hReviews, search: hSearch, stats: hStats,
+  };
 
   /* ── Section elements ── */
   const heroEl = (
     <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
       {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, pointerEvents: 'none' }} />}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
-          {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
-        </div>
-        <div>
-          {cfg.showStoreBadge !== false && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
-              <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
-            </div>
-          )}
-          <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: descSz, color: descClr, marginBottom: 7, lineHeight: 1.45 }}>{cfg.heroDescription}</div>
-      {cfg.showReviewsStrip !== false && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
-          <div style={{ display: 'flex' }}>
-            {avatars.slice(0, 4).map((av, i) => (
-              <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
-            ))}
-          </div>
-          <div>
-            <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
-            <div style={{ fontSize: 5.5, color: descClr }}>{reviewsText}</div>
-          </div>
-        </div>
-      )}
-      {cfg.showHeroSearch !== false && (
-        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
-            <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
-          </div>
-          <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
-        </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        {cfg.showStats !== false && (
-          <>
-            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
-            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
-            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>{cfg.robotEmoji ?? '🤖'}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.robotLabel ?? 'Robot'}</div></div>}
-          </>
-        )}
-        {cfg.showWhatsApp !== false && (
-          <div style={{ marginLeft: 'auto', background: '#25D366', color: '#fff', borderRadius: radius, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span>📱</span> WhatsApp
-          </div>
-        )}
-      </div>
+      {heroElemOrd.map(id => HERO_ELEMS[id] ? <div key={id}>{HERO_ELEMS[id]}</div> : null)}
     </div>
   );
 
@@ -364,6 +404,7 @@ export default function PlantillasPage() {
   const [catInput, setCatInput] = useState('');
   const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [heroElemDragIdx, setHeroElemDragIdx] = useState<number | null>(null);
   const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
 
   /* Load from localStorage on mount */
@@ -620,6 +661,47 @@ export default function PlantillasPage() {
             <Field label="Imagen de fondo del hero" hint="URL de imagen superpuesta al gradiente (opcional)">
               <input className="vnd-input" value={cfg.heroBgImage ?? ''} onChange={e => update('heroBgImage', e.target.value)} placeholder="https://ejemplo.com/fondo.jpg" />
             </Field>
+            <Field label="Alineación del contenido del hero">
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([['left', '⬅️ Izquierda'], ['center', '↔️ Centro'], ['right', 'Derecha ➡️']] as [string, string][]).map(([a, lbl]) => (
+                  <button key={a} type="button"
+                    onClick={() => update('heroAlignment', a as 'left' | 'center' | 'right')}
+                    style={{ flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 600,
+                      border: `2px solid ${(cfg.heroAlignment ?? 'left') === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                      background: (cfg.heroAlignment ?? 'left') === a ? 'rgba(245,197,24,0.1)' : 'var(--vnd-bg)',
+                      cursor: 'pointer', color: 'var(--vnd-text)' }}
+                  >{lbl}</button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Orden de elementos del hero" hint="Arrastrá para reordenar">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {(cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER).map((id, idx) => (
+                  <div key={id} draggable
+                    onDragStart={() => setHeroElemDragIdx(idx)}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => {
+                      if (heroElemDragIdx === null || heroElemDragIdx === idx) { setHeroElemDragIdx(null); return; }
+                      const newOrder = [...(cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER)];
+                      const [moved] = newOrder.splice(heroElemDragIdx, 1);
+                      newOrder.splice(idx, 0, moved);
+                      update('heroElementOrder', newOrder);
+                      setHeroElemDragIdx(null);
+                    }}
+                    onDragEnd={() => setHeroElemDragIdx(null)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8,
+                      cursor: 'grab', userSelect: 'none',
+                      background: heroElemDragIdx === idx ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
+                      border: `1px solid ${heroElemDragIdx === idx ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                      opacity: heroElemDragIdx !== null && heroElemDragIdx !== idx ? 0.55 : 1 }}
+                  >
+                    <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1rem', lineHeight: 1 }}>⠸⠇</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text)', flex: 1 }}>{HERO_ELEM_LABELS[id]}</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 5, padding: '1px 5px' }}>#{idx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </Field>
             <div className="vnd-form-grid">
               <Field label="Estadística (número)">
                 <input className="vnd-input" value={cfg.statNum} onChange={e => update('statNum', e.target.value)} maxLength={8} />
@@ -872,6 +954,18 @@ export default function PlantillasPage() {
               />
               <button type="button" className="vnd-btn vnd-btn-secondary vnd-btn-sm" onClick={addCategory}>+ Agregar</button>
             </div>
+          </Section>
+
+          {/* SEO */}
+          <Section title="🔍 SEO">
+            <Field label="Meta título" hint="Aparece en Google y pestañas del navegador (máx. 70 car.)">
+              <input className="vnd-input" value={cfg.seoTitle ?? ''} onChange={e => update('seoTitle', e.target.value)} placeholder={`${cfg.storeName} | TukiMarket`} maxLength={70} />
+              <span style={{ fontSize: '0.67rem', color: 'var(--vnd-text-muted)' }}>{(cfg.seoTitle ?? '').length}/70</span>
+            </Field>
+            <Field label="Meta descripción" hint="Descripción en resultados de Google (máx. 160 car.)">
+              <textarea className="vnd-input" value={cfg.seoDescription ?? ''} onChange={e => update('seoDescription', e.target.value)} rows={2} style={{ resize: 'vertical', fontFamily: 'inherit' }} placeholder="Tu tienda en TukiMarket — los mejores productos..." maxLength={160} />
+              <span style={{ fontSize: '0.67rem', color: 'var(--vnd-text-muted)' }}>{(cfg.seoDescription ?? '').length}/160</span>
+            </Field>
           </Section>
 
         </div>
