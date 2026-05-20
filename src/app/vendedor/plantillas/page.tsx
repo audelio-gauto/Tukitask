@@ -481,8 +481,8 @@ export default function PlantillasPage() {
           {/* ── Plantilla 1: Vitrina Marketplace ── */}
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
-            border: `1.5px solid ${currentTplId === 'vitrina' ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-            boxShadow: currentTplId === 'vitrina' ? '0 0 0 4px rgba(245,197,24,0.12)' : 'none',
+            border: `1.5px solid var(--vnd-accent)`,
+            boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
           }}>
             {/* Colored top bar */}
             <div style={{ background: 'linear-gradient(90deg, #F5C518 0%, #f0b000 100%)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
