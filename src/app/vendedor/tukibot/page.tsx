@@ -1,9 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
+
+const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
 
 interface BotConfig {
   botEnabled:         boolean;
@@ -48,11 +50,30 @@ export default function TukiBotPage() {
     autoAcceptAbove:    90,
   });
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<BotConfig>;
+      setCfg(prev => ({
+        ...prev,
+        ...parsed,
+      }));
+    } catch {
+      // Ignore malformed data and keep defaults
+    }
+  }, []);
+
   function update<K extends keyof BotConfig>(key: K, value: BotConfig[K]) {
     setCfg(prev => ({ ...prev, [key]: value }));
   }
 
   function handleSave() {
+    try {
+      localStorage.setItem(BOT_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
+    } catch {
+      // Non-blocking in restricted environments
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -170,7 +191,7 @@ export default function TukiBotPage() {
                 ⏱ Si no respondés en…
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-                {[5, 10, 15, 30, 60].map(min => (
+                {[1, 5, 10, 15, 30, 60].map(min => (
                   <button key={min} onClick={() => update('botTimeoutMinutes', min)}
                     style={{
                       padding: '7px 16px', borderRadius: 8, border: '1px solid',

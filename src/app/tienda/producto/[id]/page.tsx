@@ -20,6 +20,23 @@ function getDealStrength(offer: number, price: number, floor: number) {
 }
 
 type Mode = 'idle' | 'buy' | 'negotiate';
+type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
+
+const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
+
+function getStoredBotTone(): BotTone {
+  try {
+    const raw = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
+    if (!raw) return 'amigable';
+    const parsed = JSON.parse(raw) as { botTone?: BotTone };
+    if (parsed.botTone === 'informal' || parsed.botTone === 'formal' || parsed.botTone === 'agresivo' || parsed.botTone === 'amigable') {
+      return parsed.botTone;
+    }
+  } catch {
+    // Ignore parse/storage errors
+  }
+  return 'amigable';
+}
 
 /* ── Mock data ──────────────────────────────────────────────── */
 const PRODUCTS: Record<string, {
@@ -84,6 +101,7 @@ export default function ProductDetailPage() {
     setSubmitting(true);
     try {
       const autoAcceptFrom = Math.round((p.floorPrice + p.price) / 2 / 1000) * 1000;
+      const botTone = getStoredBotTone();
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +114,7 @@ export default function ProductDetailPage() {
           productName: p.name,
           vendorName: p.vendorName,
           buyerMessage: message,
-          botTone: 'amigable',
+          botTone,
         }),
       });
 

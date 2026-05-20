@@ -4,6 +4,13 @@ export const dynamic = 'force-dynamic';
 
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 
+function normalizeTone(input: unknown): BotTone {
+  if (input === 'informal' || input === 'formal' || input === 'agresivo' || input === 'amigable') {
+    return input;
+  }
+  return 'amigable';
+}
+
 type NegotiateRequest = {
   buyerOffer: number;
   quantity?: number;
@@ -121,7 +128,7 @@ export async function POST(req: Request) {
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
     const buyerMessage = body?.buyerMessage?.trim();
-    const botTone = (body?.botTone || 'amigable') as BotTone;
+    const botTone = normalizeTone(body?.botTone);
 
     if (!buyerOffer || !listedPrice || !floorPrice) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
