@@ -13,7 +13,6 @@ interface BotConfig {
   botCounterFormula:  CounterFormula;
   botCounterPercent:  number;
   autoAcceptAbove:    number;
-  autoRejectBelow:    number;
 }
 
 const TONES: { key: Tone; label: string; emoji: string; desc: string }[] = [
@@ -47,7 +46,6 @@ export default function TukiBotPage() {
     botCounterFormula:  'midpoint',
     botCounterPercent:  10,
     autoAcceptAbove:    90,
-    autoRejectBelow:    60,
   });
 
   function update<K extends keyof BotConfig>(key: K, value: BotConfig[K]) {
@@ -155,21 +153,14 @@ export default function TukiBotPage() {
               </div>
 
               <div className="vnd-field">
-                <label className="vnd-label">
-                  ❌ Auto-rechazar si ofrecen &lt; (% del precio publicado)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="range" min={0} max={80} value={cfg.autoRejectBelow}
-                    onChange={e => update('autoRejectBelow', +e.target.value)}
-                    style={{ flex: 1, accentColor: '#f87171' }}
-                  />
-                  <span style={{ fontWeight: 800, color: '#f87171', fontSize: '1rem', width: 40, textAlign: 'right' }}>
-                    {cfg.autoRejectBelow}%
-                  </span>
+                <div style={{ padding: '14px 16px', background: 'rgba(74,222,128,0.06)', borderRadius: 10, border: '1px solid rgba(74,222,128,0.20)' }}>
+                  <p style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--vnd-text-primary)', marginBottom: 6 }}>
+                    💡 El TukiBot nunca rechaza
+                  </p>
+                  <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', lineHeight: 1.5 }}>
+                    Si la oferta es menor al precio mínimo configurado en el producto (<em>Precio piso</em>), el robot automáticamente contraoferta en vez de rechazar — así jamás perdés una venta.
+                  </p>
                 </div>
-                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
-                  Si publiqués a ₲100.000 → rechaza menos de ₲{(100000 * cfg.autoRejectBelow / 100).toLocaleString('es-PY')}
-                </p>
               </div>
             </div>
 
@@ -250,7 +241,7 @@ export default function TukiBotPage() {
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90, autoRejectBelow: 60 })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90 })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>

@@ -16,7 +16,7 @@ function getDealStrength(offer: number, price: number, floor: number) {
     return { pct, color: '#fbbf24', label: '🟡 Puede funcionar',          sub: 'El TukiBot podría contra-ofertar' };
   }
   const pct = Math.max(5, (offer / (floor * 0.80)) * 37);
-  return   { pct, color: '#f87171', label: '🔴 Muy baja',                 sub: 'El TukiBot probablemente la rechazará' };
+  return   { pct, color: '#f87171', label: '🔴 Oferta muy baja',              sub: 'El TukiBot te hará una contraoferta al mínimo' };
 }
 
 type Mode = 'idle' | 'buy' | 'negotiate';
@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
-  const [done,        setDone]        = useState<{ type: Mode; amount?: number } | null>(null);
+  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number } | null>(null);
 
   if (!p) {
     return (
@@ -82,9 +82,17 @@ export default function ProductDetailPage() {
     e.preventDefault();
     if (!offerNum || offerNum <= 0) return;
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 1400));
     setSubmitting(false);
-    setDone({ type: 'negotiate', amount: offerNum });
+    // TukiBot evaluation: never rejects — accepts or counter-offers
+    if (offerNum >= p.floorPrice) {
+      setDone({ type: 'negotiate', amount: offerNum, botResponse: 'accepted' });
+    } else {
+      // Counter-offer: midpoint between floor price and offer (never below floor)
+      const counter = Math.round((p.floorPrice + offerNum) / 2 / 1000) * 1000;
+      const counterAmount = Math.max(p.floorPrice, counter);
+      setDone({ type: 'negotiate', amount: offerNum, botResponse: 'countered', counterAmount });
+    }
   }
 
   function reset() {
@@ -147,10 +155,46 @@ export default function ProductDetailPage() {
                 <>
                   <div className="tnd-offer-success-icon">🤖</div>
                   <div className="tnd-offer-success-title">¡Oferta enviada al TukiBot!</div>
-                  <p className="tnd-offer-success-sub">
-                    Tu oferta de <strong>{gs(done.amount!)}</strong> × {quantity} und. está siendo evaluada.<br />
-                    El Robot Negociador de <strong>{p.vendorName}</strong> te responderá pronto.
-                  </p>
+                  {done.botResponse === 'accepted' ? (
+                    <>
+                      <div className="tnd-offer-success-icon" style={{ fontSize: '2rem', marginTop: 4 }}>✅</div>
+                      <div className="tnd-offer-success-title" style={{ color: '#4ade80' }}>¡Oferta aceptada!</div>
+                      <p className="tnd-offer-success-sub">
+                        El TukiBot de <strong>{p.vendorName}</strong> aceptó <strong>{gs(done.amount!)}</strong> × {quantity} und.<br />
+                        Procedé al pago para confirmar tu compra.
+                      </p>
+                      <button className="tnd-btn-buy" style={{ marginTop: 12 }}>💳 Proceder al pago</button>
+                    </>
+                  ) : done.botResponse === 'countered' ? (
+                    <>
+                      <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
+                        Tu oferta de <strong>{gs(done.amount!)}</strong> fue baja.<br />
+                        El Robot propone:
+                      </p>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', margin: '10px 0' }}>
+                        {gs(done.counterAmount!)}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                        <button
+                          className="tnd-btn-buy"
+                          onClick={() => setDone(prev => prev ? { ...prev, botResponse: 'accepted', amount: prev.counterAmount } : null)}
+                        >
+                          ✅ Aceptar {gs(done.counterAmount!)}
+                        </button>
+                        <button
+                          className="tnd-offer-submit"
+                          style={{ background: 'transparent', border: '1px solid var(--tnd-border)', color: 'var(--tnd-text-secondary)' }}
+                          onClick={reset}
+                        >
+                          Volver y reofertar
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="tnd-offer-success-sub">
+                      Tu oferta de <strong>{gs(done.amount!)}</strong> está siendo evaluada por el TukiBot de <strong>{p.vendorName}</strong>.
+                    </p>
+                  )}
                 </>
               )}
               <button className="tnd-offer-submit" style={{ marginTop: 10 }} onClick={reset}>
@@ -207,7 +251,7 @@ export default function ProductDetailPage() {
                     <div>
                       <strong>Robot Negociador activo</strong><br />
                       <span className="tnd-robot-notice-text">
-                        Ponle tu mejor precio — el TukiBot evalúa sin revelar el mínimo del vendedor. Puede aceptar, contra-ofertar o rechazar automáticamente.
+                        Ponele tu mejor precio — si es justo lo acepta, si es bajo te contraoferta. Nunca rechaza.
                       </span>
                     </div>
                   </div>
