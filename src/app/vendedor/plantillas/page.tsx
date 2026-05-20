@@ -1061,9 +1061,7 @@ export default function PlantillasPage() {
                 </div>
                 {/* Screen content */}
                 <div style={{ background: '#fff', overflowY: 'auto', maxHeight: 480, scrollbarWidth: 'none' }}>
-                  {cfg.templateId === 'minimalista'
-                    ? <MiniPreview2 cfg={cfg} />
-                    : <MiniPreview cfg={cfg} mode="mobile" />}
+                  <MiniPreview cfg={cfg} mode="mobile" />
                 </div>
                 {/* Home indicator */}
                 <div style={{ height: 22, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1106,9 +1104,7 @@ export default function PlantillasPage() {
               </div>
               {/* Page content */}
               <div style={{ border: '1px solid #d8d8df', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden', background: '#fff', maxHeight: 520, overflowY: 'auto', scrollbarWidth: 'none' }}>
-                {cfg.templateId === 'minimalista'
-                  ? <MiniPreview2 cfg={cfg} />
-                  : <MiniPreview cfg={cfg} mode="desktop" />}
+                <MiniPreview cfg={cfg} mode="desktop" />
               </div>
             </div>
           )}
