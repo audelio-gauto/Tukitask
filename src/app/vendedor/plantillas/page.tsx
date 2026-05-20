@@ -994,7 +994,7 @@ export default function PlantillasPage() {
 
             <div style={{ height: 1, background: 'var(--vnd-border)' }} />
 
-            <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => update('showReviewsStrip', cfg.showReviewsStrip === false)} label="⭐ Strip de reseñas en portada" />
+            <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => setCfg(prev => ({ ...prev, showReviewsStrip: prev.showReviewsStrip !== false ? false : true }))} label="⭐ Strip de reseñas en portada" />
             {cfg.showReviewsStrip !== false && (
               <>
                 <Field label="Avatares de clientes" hint="Emojis separados por coma">
@@ -1006,13 +1006,13 @@ export default function PlantillasPage() {
               </>
             )}
 
-            <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => update('showHeroSearch', cfg.showHeroSearch === false)} label="🔍 Buscador en portada" />
-            <Toggle enabled={cfg.showStats !== false} onToggle={() => update('showStats', cfg.showStats === false)} label="📊 Estadísticas en portada" />
-            <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => update('showWhatsApp', cfg.showWhatsApp === false)} label="💬 Botón WhatsApp" />
-            <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => update('showInfoBar', cfg.showInfoBar === false)} label="ℹ️ Barra de info (horario y dirección)" />
-            <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => update('showMasVendidos', cfg.showMasVendidos === false)} label="🔥 Sección de más vendidos" />
-            <Toggle enabled={cfg.showBreadcrumb !== false} onToggle={() => update('showBreadcrumb', cfg.showBreadcrumb === false)} label="🧭 Migas de pan (Catálogo › Tienda)" />
-            <Toggle enabled={cfg.showStoreBadge !== false} onToggle={() => update('showStoreBadge', cfg.showStoreBadge === false)} label="🛒 Chip con nombre en portada" />
+            <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => setCfg(prev => ({ ...prev, showHeroSearch: prev.showHeroSearch !== false ? false : true }))} label="🔍 Buscador en portada" />
+            <Toggle enabled={cfg.showStats !== false} onToggle={() => setCfg(prev => ({ ...prev, showStats: prev.showStats !== false ? false : true }))} label="📊 Estadísticas en portada" />
+            <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => setCfg(prev => ({ ...prev, showWhatsApp: prev.showWhatsApp !== false ? false : true }))} label="💬 Botón WhatsApp" />
+            <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => setCfg(prev => ({ ...prev, showInfoBar: prev.showInfoBar !== false ? false : true }))} label="ℹ️ Barra de info (horario y dirección)" />
+            <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => setCfg(prev => ({ ...prev, showMasVendidos: prev.showMasVendidos !== false ? false : true }))} label="🔥 Sección de más vendidos" />
+            <Toggle enabled={cfg.showBreadcrumb !== false} onToggle={() => setCfg(prev => ({ ...prev, showBreadcrumb: prev.showBreadcrumb !== false ? false : true }))} label="🧭 Migas de pan (Catálogo › Tienda)" />
+            <Toggle enabled={cfg.showStoreBadge !== false} onToggle={() => setCfg(prev => ({ ...prev, showStoreBadge: prev.showStoreBadge !== false ? false : true }))} label="🛒 Chip con nombre en portada" />
             {cfg.showMasVendidos !== false && (
               <Field label="Título de más vendidos">
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
