@@ -6,7 +6,7 @@ import Link from 'next/link';
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 export interface StoreTemplateConfig {
-  templateId: 'vitrina';
+  templateId: 'vitrina' | 'minimalista';
   storeSlug: string;
   storeName: string;
   logoEmoji: string;
@@ -105,6 +105,53 @@ const DEFAULTS: StoreTemplateConfig = {
   heroBgImage:       '',
   heroElementAlignments: {},
   heroElementOrder:  ['logoTitle', 'description', 'reviews', 'search', 'stats'],
+  seoTitle:          '',
+  seoDescription:    '',
+};
+
+const DEFAULTS2: StoreTemplateConfig = {
+  templateId:       'minimalista',
+  storeSlug:        'mi-tienda',
+  storeName:        'Mi Tienda',
+  logoEmoji:        '🏷️',
+  whatsapp:         '0981000000',
+  heroTagline:      'Descubrí nuestra colección',
+  heroDescription:  'Productos seleccionados con la mejor calidad y precio.',
+  heroGrad1:        '#0c1a2e',
+  heroGrad2:        '#0e3054',
+  accentColor:      '#0ea5e9',
+  accentText:       '#ffffff',
+  statNum:          '0',
+  statLabel:        'Productos',
+  robotEnabled:     false,
+  robotEmoji:       '🤖',
+  robotLabel:       'Asistente',
+  categories:       ['Todos', 'Destacados', 'Ropa', 'Hogar'],
+  showReviewsStrip: false,
+  showHeroSearch:   true,
+  showInfoBar:      false,
+  showMasVendidos:  false,
+  showStats:        false,
+  showWhatsApp:     true,
+  showBreadcrumb:   false,
+  showStoreBadge:   false,
+  reviewsCount:     '+80 clientes',
+  reviewsAvatars:   ['👩','👨','👩🏽','👨🏻'],
+  heroSearchPlaceholder: 'Buscar productos...',
+  masVendidosTitle: '🔥 Destacados',
+  sectionOrder:      ['hero', 'categories', 'products'],
+  heroTitleFontSize: 22,
+  heroTitleColor:    '#0f172a',
+  heroDescFontSize:  13,
+  heroDescColor:     '#475569',
+  sectionTitleColor: '#0f172a',
+  btnRadius:         6,
+  bodyBg:            '#ffffff',
+  logoImage:         '',
+  fontFamily:        'Inter',
+  heroBgImage:       '',
+  heroElementAlignments: {},
+  heroElementOrder:  ['logoTitle', 'description', 'search'],
   seoTitle:          '',
   seoDescription:    '',
 };
@@ -353,6 +400,82 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   MINI PREVIEW 2 — Catálogo Minimalista
+   ═══════════════════════════════════════════════════════════════ */
+function MiniPreview2({ cfg }: { cfg: StoreTemplateConfig }) {
+  const acc    = cfg.accentColor;
+  const accTxt = cfg.accentText;
+  const font   = cfg.fontFamily ?? 'Inter';
+  const radius = Math.max(2, (cfg.btnRadius ?? 6) / 1.4);
+  const PRODUCTS = [
+    { emoji: '📱', name: 'iPhone 15 128GB',    price: 'Gs. 5.000.000' },
+    { emoji: '🎧', name: 'Auriculares BT Pro',  price: 'Gs. 350.000'   },
+    { emoji: '💻', name: 'Laptop Gaming 16"',   price: 'Gs. 8.500.000' },
+    { emoji: '⌚', name: 'Smartwatch Pro X',    price: 'Gs. 1.200.000' },
+  ];
+  return (
+    <div style={{ fontFamily: `'${font}', system-ui, sans-serif`, background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
+      {/* Accent top bar */}
+      <div style={{ height: 3, background: acc }} />
+      {/* Header */}
+      <div style={{ background: '#fff', padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 7, borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${acc}18`, border: `1.5px solid ${acc}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
+          {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 8, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{cfg.storeName}</div>
+          <div style={{ fontSize: 5.5, color: '#64748b', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <span style={{ color: '#f59e0b' }}>★★★★★</span><span>4.8 · Verificada</span>
+          </div>
+        </div>
+        <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>💬</div>
+      </div>
+      {/* Hero — light, clean */}
+      <div style={{ background: `${acc}07`, padding: '9px 10px 8px', borderBottom: `1.5px solid ${acc}22` }}>
+        <div style={{ fontSize: 9.5, fontWeight: 900, color: cfg.heroTitleColor ?? '#0f172a', lineHeight: 1.25, marginBottom: 3 }}>
+          {(cfg.heroTagline || 'Tu tienda online').split('\n')[0]}
+        </div>
+        <div style={{ fontSize: 5.5, color: cfg.heroDescColor ?? '#64748b', lineHeight: 1.5, marginBottom: 7 }}>
+          {(cfg.heroDescription || '').slice(0, 70)}{(cfg.heroDescription || '').length > 70 ? '…' : ''}
+        </div>
+        {/* Search */}
+        {cfg.showHeroSearch !== false && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ flex: 1, background: '#fff', border: '1px solid #e2e8f0', borderRadius: radius, height: 16, display: 'flex', alignItems: 'center', gap: 3, padding: '0 5px' }}>
+              <span style={{ fontSize: 7, opacity: 0.4 }}>🔍</span>
+              <span style={{ fontSize: 5.5, color: '#94a3b8', whiteSpace: 'nowrap' }}>{cfg.heroSearchPlaceholder || 'Buscar...'}</span>
+            </div>
+            <div style={{ background: acc, color: accTxt, borderRadius: radius, padding: '0 7px', height: 16, display: 'flex', alignItems: 'center', fontSize: 5.5, fontWeight: 700, flexShrink: 0 }}>Buscar</div>
+          </div>
+        )}
+      </div>
+      {/* Categories */}
+      <div style={{ background: '#fff', padding: '5px 8px', display: 'flex', gap: 4, borderBottom: '1px solid #f1f5f9', overflowX: 'hidden' }}>
+        {cfg.categories.slice(0, 5).map((c, i) => (
+          <div key={c} style={{ padding: '2px 7px', borderRadius: 20, fontSize: 5.5, fontWeight: 700, flexShrink: 0, background: i === 0 ? acc : 'transparent', color: i === 0 ? accTxt : '#64748b', border: `1px solid ${i === 0 ? acc : '#e2e8f0'}` }}>{c}</div>
+        ))}
+      </div>
+      {/* Product list */}
+      <div style={{ background: '#fff' }}>
+        {PRODUCTS.map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', borderBottom: i < PRODUCTS.length - 1 ? '1px solid #f8fafc' : 'none' }}>
+            <div style={{ width: 26, height: 26, borderRadius: radius, background: `${acc}10`, border: `1px solid ${acc}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{p.emoji}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 6.5, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+              <div style={{ fontSize: 5.5, color: '#64748b' }}>En stock · Envío gratis</div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontSize: 7, fontWeight: 800, color: acc }}>{p.price}</div>
+              <div style={{ background: acc, color: accTxt, borderRadius: radius / 1.5, padding: '1px 5px', fontSize: 5, fontWeight: 700, marginTop: 2 }}>Agregar</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    EDITOR FIELD HELPERS
    ═══════════════════════════════════════════════════════════════ */
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -407,12 +530,20 @@ export default function PlantillasPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [heroElemDragIdx, setHeroElemDragIdx] = useState<number | null>(null);
   const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
+  const [galleryMiniCfg, setGalleryMiniCfg] = useState<StoreTemplateConfig>(DEFAULTS2);
+  const [currentTplId, setCurrentTplId] = useState<'vitrina' | 'minimalista'>('vitrina');
 
   /* Load from localStorage on mount */
   useEffect(() => {
     try {
       const raw = localStorage.getItem('tukimarket_template');
-      if (raw) setCfg(JSON.parse(raw));
+      if (raw) {
+        const parsed: StoreTemplateConfig = JSON.parse(raw);
+        setCfg(parsed);
+        if (parsed.templateId === 'minimalista') setCurrentTplId('minimalista');
+      }
+      const raw2 = localStorage.getItem('tukimarket_template_minimalista');
+      if (raw2) setGalleryMiniCfg(JSON.parse(raw2));
     } catch { /* ignore */ }
   }, []);
 
@@ -437,8 +568,13 @@ export default function PlantillasPage() {
 
   function handleSave() {
     try {
-      localStorage.setItem('tukimarket_template', JSON.stringify(cfg));
+      const key = cfg.templateId === 'minimalista'
+        ? 'tukimarket_template_minimalista'
+        : 'tukimarket_template';
+      localStorage.setItem(key, JSON.stringify(cfg));
       localStorage.setItem(`tukimarket_config_${cfg.storeSlug}`, JSON.stringify(cfg));
+      setCurrentTplId(cfg.templateId);
+      if (cfg.templateId === 'minimalista') setGalleryMiniCfg({ ...cfg });
     } catch { /* ignore */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -476,20 +612,21 @@ export default function PlantillasPage() {
           {/* ── Plantilla 1: Vitrina Marketplace ── */}
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
-            border: '1.5px solid var(--vnd-accent)', boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
+            border: `1.5px solid ${currentTplId === 'vitrina' ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+            boxShadow: currentTplId === 'vitrina' ? '0 0 0 4px rgba(245,197,24,0.12)' : 'none',
           }}>
             {/* Colored top bar */}
             <div style={{ background: 'linear-gradient(90deg, #F5C518 0%, #f0b000 100%)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.35)' }} />
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Activa</span>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: currentTplId === 'vitrina' ? '#16a34a' : '#94a3b8', display: 'inline-block', boxShadow: currentTplId === 'vitrina' ? '0 0 0 3px rgba(22,163,74,0.35)' : 'none' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{currentTplId === 'vitrina' ? 'Activa' : 'Disponible'}</span>
               </div>
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Vitrina Marketplace</span>
             </div>
 
             {/* Preview thumbnail */}
             <div style={{ padding: '14px 14px 0' }}>
-              <MiniPreview cfg={cfg} />
+              <MiniPreview cfg={currentTplId === 'vitrina' ? cfg : DEFAULTS} />
             </div>
 
             {/* Feature pills */}
@@ -504,12 +641,68 @@ export default function PlantillasPage() {
               <button
                 className="vnd-btn vnd-btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => setView('editor')}
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem('tukimarket_template');
+                    if (raw) {
+                      const parsed: StoreTemplateConfig = JSON.parse(raw);
+                      if (parsed.templateId !== 'minimalista') { setCfg(parsed); setView('editor'); return; }
+                    }
+                  } catch { /* ignore */ }
+                  setCfg(DEFAULTS); setView('editor');
+                }}
               >
                 ✏️ Personalizar
               </button>
               <a
-                href={storeUrl}
+                href={`/tienda/${currentTplId === 'vitrina' ? cfg.storeSlug : DEFAULTS.storeSlug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="vnd-btn vnd-btn-secondary"
+                style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                👁️ Ver tienda
+              </a>
+            </div>
+          </div>
+
+          {/* ── Plantilla 2: Catálogo Minimalista ── */}
+          <div style={{
+            borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
+            border: `1.5px solid ${currentTplId === 'minimalista' ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+            boxShadow: currentTplId === 'minimalista' ? '0 0 0 4px rgba(245,197,24,0.12)' : 'none',
+          }}>
+            <div style={{ background: currentTplId === 'minimalista' ? 'linear-gradient(90deg, #F5C518 0%, #f0b000 100%)' : 'var(--vnd-bg)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--vnd-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: currentTplId === 'minimalista' ? '#16a34a' : '#94a3b8', display: 'inline-block', boxShadow: currentTplId === 'minimalista' ? '0 0 0 3px rgba(22,163,74,0.35)' : 'none' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: currentTplId === 'minimalista' ? '#0b1220' : 'var(--vnd-text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{currentTplId === 'minimalista' ? 'Activa' : 'Disponible'}</span>
+              </div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: currentTplId === 'minimalista' ? 'rgba(11,18,32,0.65)' : 'var(--vnd-text-muted)' }}>Catálogo Minimalista</span>
+            </div>
+            <div style={{ padding: '14px 14px 0' }}>
+              <MiniPreview2 cfg={currentTplId === 'minimalista' ? cfg : galleryMiniCfg} />
+            </div>
+            <div style={{ padding: '12px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {['Lista limpia', 'Buscador', 'Categorías', 'WhatsApp', '✨ Minimalista'].map(f => (
+                <span key={f} style={{ background: 'var(--vnd-bg)', border: '1px solid var(--vnd-border)', borderRadius: 20, fontSize: '0.68rem', fontWeight: 600, color: 'var(--vnd-text)', padding: '2px 9px' }}>{f}</span>
+              ))}
+            </div>
+            <div style={{ padding: '12px 18px 18px', display: 'flex', gap: 10 }}>
+              <button
+                className="vnd-btn vnd-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem('tukimarket_template_minimalista');
+                    if (raw) { setCfg(JSON.parse(raw)); setView('editor'); return; }
+                  } catch { /* ignore */ }
+                  setCfg(DEFAULTS2); setView('editor');
+                }}
+              >
+                ✏️ Personalizar
+              </button>
+              <a
+                href={`/tienda/${galleryMiniCfg.storeSlug}`}
                 target="_blank"
                 rel="noreferrer"
                 className="vnd-btn vnd-btn-secondary"
@@ -521,7 +714,7 @@ export default function PlantillasPage() {
           </div>
 
           {/* ── Próximamente ── */}
-          {['Catálogo Minimalista', 'Tienda Premium', 'Boutique'].map(name => (
+          {['Tienda Premium', 'Boutique'].map(name => (
             <div key={name} style={{ borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)', border: '1.5px solid var(--vnd-border)', opacity: 0.5, pointerEvents: 'none' }}>
               <div style={{ height: 200, background: 'var(--vnd-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--vnd-border)' }}>
                 <span style={{ fontSize: '2.5rem' }}>🔒</span>
@@ -550,7 +743,9 @@ export default function PlantillasPage() {
           >
             ← Plantillas
           </button>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Vitrina Marketplace</h1>
+          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>
+            {cfg.templateId === 'minimalista' ? 'Catálogo Minimalista' : 'Vitrina Marketplace'}
+          </h1>
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
             Personalizá tu tienda pública en tiempo real
           </p>
@@ -1060,7 +1255,9 @@ export default function PlantillasPage() {
                 </div>
                 {/* Screen content */}
                 <div style={{ background: '#fff', overflowY: 'auto', maxHeight: 480, scrollbarWidth: 'none' }}>
-                  <MiniPreview cfg={cfg} mode="mobile" />
+                  {cfg.templateId === 'minimalista'
+                    ? <MiniPreview2 cfg={cfg} />
+                    : <MiniPreview cfg={cfg} mode="mobile" />}
                 </div>
                 {/* Home indicator */}
                 <div style={{ height: 22, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1103,7 +1300,9 @@ export default function PlantillasPage() {
               </div>
               {/* Page content */}
               <div style={{ border: '1px solid #d8d8df', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden', background: '#fff', maxHeight: 520, overflowY: 'auto', scrollbarWidth: 'none' }}>
-                <MiniPreview cfg={cfg} mode="desktop" />
+                {cfg.templateId === 'minimalista'
+                  ? <MiniPreview2 cfg={cfg} />
+                  : <MiniPreview cfg={cfg} mode="desktop" />}
               </div>
             </div>
           )}
