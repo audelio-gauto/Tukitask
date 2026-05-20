@@ -68,6 +68,16 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    label: 'Resultados Automáticos',
+    href: '/vendedor/tukibot/resultados',
+    icon: (
+      <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l6-6 4.5 4.5L21 4.5M16.5 4.5H21v4.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5h16" />
+      </svg>
+    ),
+  },
+  {
     label: 'Análisis',
     href: '/vendedor/analisis',
     icon: (
@@ -137,7 +147,7 @@ export default function VendedorSidebar() {
       <nav className="vnd-nav">
         <span className="vnd-nav-label">Principal</span>
 
-        {navItems.slice(0, 6).map((item) => (
+        {navItems.slice(0, 7).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -150,18 +160,6 @@ export default function VendedorSidebar() {
             )}
           </Link>
         ))}
-
-        <Link
-          href="/vendedor/tukibot?tab=results"
-          className={`vnd-nav-item${isActive('/vendedor/tukibot') ? ' active' : ''}`}
-          style={{ marginLeft: 18, width: 'calc(100% - 18px)' }}
-        >
-          <svg className="vnd-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l6-6 4.5 4.5L21 4.5M16.5 4.5H21v4.5" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5h16" />
-          </svg>
-          <span style={{ flex: 1, fontSize: '0.8rem' }}>Resultados Automáticos</span>
-        </Link>
 
         <span className="vnd-nav-label" style={{ marginTop: 8 }}>Reportes</span>
 
