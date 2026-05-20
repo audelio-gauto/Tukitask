@@ -86,6 +86,7 @@ export default function NuevoProductoPage() {
   const [form, setForm]         = useState<ProductForm>(INITIAL);
   const [saving, setSaving]     = useState(false);
   const [errors, setErrors]     = useState<Partial<Record<keyof ProductForm, string>>>({});
+  const [tierError, setTierError] = useState<string | null>(null);
   const [saved, setSaved]       = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
 
@@ -105,18 +106,22 @@ export default function NuevoProductoPage() {
       floorPrice:     0,
       autoAcceptFrom: 0,
     }]);
+    setTierError(null);
   }
 
   function removeTier(id: string) {
     update('pricingTiers', form.pricingTiers.filter(t => t.id !== id));
+    setTierError(null);
   }
 
   function updateTier(id: string, field: keyof Omit<PricingTier, 'id'>, value: number | null) {
     update('pricingTiers', form.pricingTiers.map(t => t.id === id ? { ...t, [field]: value } : t));
+    setTierError(null);
   }
 
   function validate(): boolean {
     const errs: Partial<Record<keyof ProductForm, string>> = {};
+    let tiersErr: string | null = null;
     if (!form.name.trim())             errs.name       = 'El nombre es obligatorio';
     if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
                                        errs.price      = 'Precio inválido';
@@ -126,10 +131,57 @@ export default function NuevoProductoPage() {
       if (Number(form.floorPrice) >= Number(form.price))
                                        errs.floorPrice = 'El precio suelo debe ser menor al precio';
     }
+
+    if (form.hasTieredPricing) {
+      if (form.pricingTiers.length === 0) {
+        tiersErr = 'Debes agregar al menos 1 tramo.';
+      } else {
+        const sorted = [...form.pricingTiers].sort((a, b) => a.minQty - b.minQty);
+        for (let i = 0; i < sorted.length; i++) {
+          const tier = sorted[i];
+
+          if (!Number.isFinite(tier.minQty) || tier.minQty < 1) {
+            tiersErr = `Tramo ${i + 1}: la cantidad mínima debe ser mayor o igual a 1.`;
+            break;
+          }
+          if (tier.maxQty !== null && tier.maxQty < tier.minQty) {
+            tiersErr = `Tramo ${i + 1}: Qty máx no puede ser menor que Qty mín.`;
+            break;
+          }
+          if (tier.listedPrice <= 0 || tier.floorPrice <= 0 || tier.autoAcceptFrom <= 0) {
+            tiersErr = `Tramo ${i + 1}: todos los precios deben ser mayores a 0.`;
+            break;
+          }
+          if (!(tier.floorPrice <= tier.autoAcceptFrom && tier.autoAcceptFrom <= tier.listedPrice)) {
+            tiersErr = `Tramo ${i + 1}: debe cumplirse piso <= auto-aceptar <= precio lista.`;
+            break;
+          }
+
+          if (i === 0 && tier.minQty !== 1) {
+            tiersErr = 'El primer tramo debe iniciar en cantidad 1.';
+            break;
+          }
+
+          if (i > 0) {
+            const prev = sorted[i - 1];
+            if (prev.maxQty === null) {
+              tiersErr = `Tramo ${i}: el tramo anterior no tiene límite, no puedes agregar más tramos después.`;
+              break;
+            }
+            if (tier.minQty !== prev.maxQty + 1) {
+              tiersErr = `Tramo ${i + 1}: debe iniciar en ${prev.maxQty + 1} para mantener continuidad sin huecos ni solapamientos.`;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     if (!form.stock || isNaN(Number(form.stock)) || Number(form.stock) < 0)
                                        errs.stock      = 'Stock inválido';
     setErrors(errs);
-    return Object.keys(errs).length === 0;
+    setTierError(tiersErr);
+    return Object.keys(errs).length === 0 && !tiersErr;
   }
 
   async function handleSave(status: ProductStatus) {
@@ -320,7 +372,10 @@ export default function NuevoProductoPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--vnd-bg-elevated)', borderRadius: 10, border: '1px solid var(--vnd-border)' }}>
                 <button
                   type="button"
-                  onClick={() => update('hasTieredPricing', !form.hasTieredPricing)}
+                  onClick={() => {
+                    update('hasTieredPricing', !form.hasTieredPricing);
+                    setTierError(null);
+                  }}
                   style={{
                     width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
                     background: form.hasTieredPricing ? '#F5C518' : 'var(--vnd-border)',
@@ -436,6 +491,12 @@ export default function NuevoProductoPage() {
                   >
                     + Agregar tramo
                   </button>
+
+                  {tierError && (
+                    <div style={{ color: '#f87171', fontSize: '0.78rem', fontWeight: 600 }}>
+                      {tierError}
+                    </div>
+                  )}
 
                   {/* Info box */}
                   <div style={{ padding: '10px 14px', background: 'rgba(245,197,24,0.05)', borderRadius: 8, border: '1px solid rgba(245,197,24,0.18)' }}>
