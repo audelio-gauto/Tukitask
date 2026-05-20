@@ -54,7 +54,7 @@ interface StoreTemplateConfig {
   // Hero background image
   heroBgImage?: string;
   // Alineación y orden del hero
-  heroAlignment?: 'left' | 'center' | 'right';
+  heroElementAlignments?: Record<string, 'left' | 'center' | 'right'>;
   heroElementOrder?: string[];
   // SEO
   seoTitle?: string;
@@ -188,10 +188,10 @@ export default function VendorStorePage() {
   const btnRad       = activeCfg.btnRadius         ?? 13;
   const bgBody       = activeCfg.bodyBg            ?? '#f8fafc';
   const sectionOrd   = activeCfg.sectionOrder      ?? ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
-  const heroAlign    = activeCfg.heroAlignment     ?? 'left';
   const heroElemOrd  = activeCfg.heroElementOrder  ?? ['logoTitle', 'description', 'reviews', 'search', 'stats'];
-  const hJustify     = heroAlign === 'center' ? 'center' : heroAlign === 'right' ? 'flex-end' : 'flex-start';
-  const hText        = heroAlign as 'left' | 'center' | 'right';
+  const hea = (id: string) => activeCfg.heroElementAlignments?.[id] ?? 'left';
+  const thJ = (id: string) => hea(id) === 'center' ? 'center' : hea(id) === 'right' ? 'flex-end' : 'flex-start';
+  const thT = (id: string) => hea(id) as 'left' | 'center' | 'right';
 
   /* Filter products */
   const cats = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
@@ -205,11 +205,11 @@ export default function VendorStorePage() {
 
   /* Hero sub-elements (orderable + alignable) */
   const thLogoTitle: ReactElement = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, justifyContent: thJ('logoTitle') }}>
       <div style={{ width: 52, height: 52, background: `${acc}22`, border: `2px solid ${acc}55`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
         {activeCfg.logoImage ? <img src={activeCfg.logoImage} alt={activeCfg.storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : activeCfg.logoEmoji}
       </div>
-      <div style={{ textAlign: hText }}>
+      <div style={{ textAlign: thT('logoTitle') }}>
         {activeCfg.showStoreBadge !== false && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
@@ -221,13 +221,13 @@ export default function VendorStorePage() {
   );
 
   const thDescription: ReactElement = (
-    <p style={{ fontSize: heroDescSz, color: heroDescClr, maxWidth: 560, lineHeight: 1.65, marginBottom: 16, textAlign: hText }}>
+    <p style={{ fontSize: heroDescSz, color: heroDescClr, maxWidth: 560, lineHeight: 1.65, marginBottom: 16, textAlign: thT('description') }}>
       {activeCfg.heroDescription}
     </p>
   );
 
   const thReviews: ReactElement | null = activeCfg.showReviewsStrip !== false ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, justifyContent: thJ('reviews') }}>
       <div style={{ display: 'flex' }}>
         {(activeCfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).map((av, i) => (
           <div key={i} style={{ width: 30, height: 30, borderRadius: '50%', background: `${acc}28`, border: `2px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', marginLeft: i > 0 ? -9 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
@@ -243,7 +243,7 @@ export default function VendorStorePage() {
   ) : null;
 
   const thSearch: ReactElement | null = activeCfg.showHeroSearch !== false ? (
-    <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 24, ...(heroAlign === 'center' ? { margin: '0 auto 24px' } : heroAlign === 'right' ? { marginLeft: 'auto', marginBottom: 24 } : {}) }}>
+    <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 24, justifyContent: thJ('search') }}>
       <input
         type="search"
         placeholder={activeCfg.heroSearchPlaceholder || 'Buscar productos...'}
@@ -259,7 +259,7 @@ export default function VendorStorePage() {
   ) : null;
 
   const thStats: ReactElement | null = (activeCfg.showStats !== false || activeCfg.showWhatsApp !== false) ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', justifyContent: thJ('stats') }}>
       {activeCfg.showStats !== false && (
         <>
           <div>

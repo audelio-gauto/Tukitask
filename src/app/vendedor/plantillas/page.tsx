@@ -55,7 +55,7 @@ export interface StoreTemplateConfig {
   // Hero — imagen de fondo opcional
   heroBgImage?: string;
   // Alineación y orden del hero
-  heroAlignment?: 'left' | 'center' | 'right';
+  heroElementAlignments?: Record<string, 'left' | 'center' | 'right'>;
   heroElementOrder?: string[];
   // SEO
   seoTitle?: string;
@@ -103,7 +103,7 @@ const DEFAULTS: StoreTemplateConfig = {
   logoImage:         '',
   fontFamily:        'Inter',
   heroBgImage:       '',
-  heroAlignment:     'left',
+  heroElementAlignments: {},
   heroElementOrder:  ['logoTitle', 'description', 'reviews', 'search', 'stats'],
   seoTitle:          '',
   seoDescription:    '',
@@ -178,17 +178,18 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
   const font         = cfg.fontFamily ?? 'Inter';
   const bgImg        = cfg.heroBgImage ?? '';
-  const heroAlign   = cfg.heroAlignment ?? 'left';
   const heroElemOrd = cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER;
-  const hJustify    = heroAlign === 'center' ? 'center' : heroAlign === 'right' ? 'flex-end' : 'flex-start';
-  const hText       = heroAlign as 'left' | 'center' | 'right';
+  // Per-element alignment helpers
+  const hea = (id: string) => cfg.heroElementAlignments?.[id] ?? 'left';
+  const hj  = (id: string) => hea(id) === 'center' ? 'center' : hea(id) === 'right' ? 'flex-end' : 'flex-start';
+  const ht  = (id: string) => hea(id) as 'left' | 'center' | 'right';
 
   const hLogoTitle: ReactElement = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: hj('logoTitle') }}>
       <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
         {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
       </div>
-      <div style={{ textAlign: hText }}>
+      <div style={{ textAlign: ht('logoTitle') }}>
         {cfg.showStoreBadge !== false && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
             <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
@@ -200,11 +201,11 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   );
 
   const hDescription: ReactElement = (
-    <div style={{ fontSize: descSz, color: descClr, marginBottom: 4, lineHeight: 1.45, textAlign: hText }}>{cfg.heroDescription}</div>
+    <div style={{ fontSize: descSz, color: descClr, marginBottom: 4, lineHeight: 1.45, textAlign: ht('description') }}>{cfg.heroDescription}</div>
   );
 
   const hReviews: ReactElement | null = cfg.showReviewsStrip !== false ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, justifyContent: hj('reviews') }}>
       <div style={{ display: 'flex' }}>
         {avatars.slice(0, 4).map((av, i) => (
           <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
@@ -218,8 +219,8 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   ) : null;
 
   const hSearch: ReactElement | null = cfg.showHeroSearch !== false ? (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-      <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', gap: 4, marginBottom: 6, justifyContent: hj('search') }}>
+      <div style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden', flex: hea('search') === 'center' ? 'none' : 1, width: hea('search') === 'center' ? 70 : undefined }}>
         <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
       </div>
       <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
@@ -227,7 +228,7 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   ) : null;
 
   const hStats: ReactElement | null = (cfg.showStats !== false || cfg.showWhatsApp !== false) ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: hJustify }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: hj('stats') }}>
       {cfg.showStats !== false && (
         <>
           <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
@@ -658,23 +659,34 @@ export default function PlantillasPage() {
                 maxLength={220}
               />
             </Field>
-            <Field label="Imagen de fondo del hero" hint="URL de imagen superpuesta al gradiente (opcional)">
-              <input className="vnd-input" value={cfg.heroBgImage ?? ''} onChange={e => update('heroBgImage', e.target.value)} placeholder="https://ejemplo.com/fondo.jpg" />
-            </Field>
-            <Field label="Alineación del contenido del hero">
-              <div style={{ display: 'flex', gap: 6 }}>
-                {([['left', '⬅️ Izquierda'], ['center', '↔️ Centro'], ['right', 'Derecha ➡️']] as [string, string][]).map(([a, lbl]) => (
-                  <button key={a} type="button"
-                    onClick={() => update('heroAlignment', a as 'left' | 'center' | 'right')}
-                    style={{ flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 600,
-                      border: `2px solid ${(cfg.heroAlignment ?? 'left') === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-                      background: (cfg.heroAlignment ?? 'left') === a ? 'rgba(245,197,24,0.1)' : 'var(--vnd-bg)',
-                      cursor: 'pointer', color: 'var(--vnd-text)' }}
-                  >{lbl}</button>
-                ))}
+            <Field label="Imagen de fondo del hero" hint="PNG/JPG/WEBP, máx. 1 MB">
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                {cfg.heroBgImage && (
+                  <div style={{ width: 72, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--vnd-border)' }}>
+                    <img src={cfg.heroBgImage} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--vnd-bg-elevated)', border: '1px solid var(--vnd-border)', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--vnd-text)', width: 'fit-content' }}>
+                    🖼️ Subir imagen de fondo
+                    <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 1_000_000) { alert('La imagen debe pesar menos de 1 MB'); return; }
+                      const reader = new FileReader();
+                      reader.onload = ev => update('heroBgImage', ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }} />
+                  </label>
+                  {cfg.heroBgImage && (
+                    <button type="button" onClick={() => update('heroBgImage', '')} style={{ fontSize: '0.73rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                      ✕ Quitar imagen de fondo
+                    </button>
+                  )}
+                </div>
               </div>
             </Field>
-            <Field label="Orden de elementos del hero" hint="Arrastrá para reordenar">
+            <Field label="Orden y alineación de elementos del hero" hint="Arrastrá para reordenar · ⬅ ↔ ➡ para alinear cada elemento">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER).map((id, idx) => (
                   <div key={id} draggable
@@ -696,7 +708,23 @@ export default function PlantillasPage() {
                       opacity: heroElemDragIdx !== null && heroElemDragIdx !== idx ? 0.55 : 1 }}
                   >
                     <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1rem', lineHeight: 1 }}>⠸⠇</span>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text)', flex: 1 }}>{HERO_ELEM_LABELS[id]}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--vnd-text)', flex: 1 }}>{HERO_ELEM_LABELS[id]}</span>
+                    <div style={{ display: 'flex', gap: 2 }} onMouseDown={e => e.stopPropagation()}>
+                      {(['left', 'center', 'right'] as const).map(a => (
+                        <button key={a} type="button"
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={e => {
+                            e.stopPropagation();
+                            update('heroElementAlignments', { ...(cfg.heroElementAlignments ?? {}), [id]: a });
+                          }}
+                          style={{ width: 24, height: 22, borderRadius: 5, cursor: 'pointer', fontSize: '0.65rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: `1.5px solid ${(cfg.heroElementAlignments?.[id] ?? 'left') === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                            background: (cfg.heroElementAlignments?.[id] ?? 'left') === a ? 'rgba(245,197,24,0.2)' : 'transparent',
+                            color: 'var(--vnd-text)' }}
+                        >{a === 'left' ? '⬅' : a === 'center' ? '↔' : '➡'}</button>
+                      ))}
+                    </div>
                     <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 5, padding: '1px 5px' }}>#{idx + 1}</span>
                   </div>
                 ))}
