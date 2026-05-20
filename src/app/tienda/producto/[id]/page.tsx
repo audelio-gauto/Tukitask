@@ -95,6 +95,8 @@ export default function ProductDetailPage() {
           autoAcceptFrom,
           productName: p.name,
           vendorName: p.vendorName,
+          buyerMessage: message,
+          botTone: 'amigable',
         }),
       });
 
@@ -120,11 +122,22 @@ export default function ProductDetailPage() {
     } catch {
       // Fallback local logic to keep UX responsive even if API fails
       if (offerNum >= p.floorPrice) {
-        setDone({ type: 'negotiate', amount: offerNum, botResponse: 'accepted' });
+        setDone({
+          type: 'negotiate',
+          amount: offerNum,
+          botResponse: 'accepted',
+          botMessage: `Perfecto, te confirmo ${gs(offerNum)} por unidad.`,
+        });
       } else {
         const counter = Math.round((p.floorPrice + offerNum) / 2 / 1000) * 1000;
         const counterAmount = Math.max(p.floorPrice, counter);
-        setDone({ type: 'negotiate', amount: offerNum, botResponse: 'countered', counterAmount });
+        setDone({
+          type: 'negotiate',
+          amount: offerNum,
+          botResponse: 'countered',
+          counterAmount,
+          botMessage: `Te puedo mejorar la oferta: ${gs(counterAmount)} por unidad.`,
+        });
       }
     } finally {
       setSubmitting(false);
@@ -223,7 +236,12 @@ export default function ProductDetailPage() {
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                         <button
                           className="tnd-btn-buy"
-                          onClick={() => setDone(prev => prev ? { ...prev, botResponse: 'accepted', amount: prev.counterAmount } : null)}
+                          onClick={() => setDone(prev => prev ? {
+                            ...prev,
+                            botResponse: 'accepted',
+                            amount: prev.counterAmount,
+                            botMessage: '¡Trato cerrado! Precio final confirmado por el TukiBot.',
+                          } : null)}
                         >
                           ✅ Aceptar {gs(done.counterAmount!)}
                         </button>
