@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -353,7 +353,7 @@ export default function VendorStorePage() {
     </div>
   );
 
-  const SECTION_ELS: Record<string, JSX.Element | null> = {
+  const SECTION_ELS: Record<string, ReactElement | null> = {
     hero: heroEl, infoBar: infoBarEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
