@@ -7,6 +7,16 @@ import Link from 'next/link';
 type ProductStatus = 'published' | 'draft';
 type ProductType   = 'physical' | 'digital' | 'service';
 
+/* Tramo de precio por cantidad */
+interface PricingTier {
+  id:             string;
+  minQty:         number;
+  maxQty:         number | null; // null = sin límite
+  listedPrice:    number;
+  floorPrice:     number;        // oculto al comprador
+  autoAcceptFrom: number;        // acepta directo si oferta >=
+}
+
 interface ProductForm {
   name: string;
   sku: string;
@@ -18,7 +28,9 @@ interface ProductForm {
   stock: string;
   image: string;
   status: ProductStatus;
-  negotiable: boolean;
+  negotiable:       boolean;
+  hasTieredPricing: boolean;
+  pricingTiers:     PricingTier[];
 }
 
 const CATEGORIES = [
@@ -52,8 +64,10 @@ const INITIAL: ProductForm = {
   floorPrice:   '',
   stock:        '',
   image:        '📦',
-  status:       'draft',
-  negotiable:   true,
+  status:           'draft',
+  negotiable:       true,
+  hasTieredPricing: false,
+  pricingTiers:     [],
 };
 
 function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -80,12 +94,33 @@ export default function NuevoProductoPage() {
     if (errors[key]) setErrors(prev => ({ ...prev, [key]: undefined }));
   }
 
+  function addTier() {
+    const last = form.pricingTiers[form.pricingTiers.length - 1];
+    const newMin = last ? (last.maxQty !== null ? last.maxQty + 1 : last.minQty + 1) : 1;
+    update('pricingTiers', [...form.pricingTiers, {
+      id:             String(Date.now()),
+      minQty:         newMin,
+      maxQty:         null,
+      listedPrice:    0,
+      floorPrice:     0,
+      autoAcceptFrom: 0,
+    }]);
+  }
+
+  function removeTier(id: string) {
+    update('pricingTiers', form.pricingTiers.filter(t => t.id !== id));
+  }
+
+  function updateTier(id: string, field: keyof Omit<PricingTier, 'id'>, value: number | null) {
+    update('pricingTiers', form.pricingTiers.map(t => t.id === id ? { ...t, [field]: value } : t));
+  }
+
   function validate(): boolean {
     const errs: Partial<Record<keyof ProductForm, string>> = {};
     if (!form.name.trim())             errs.name       = 'El nombre es obligatorio';
     if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
                                        errs.price      = 'Precio inválido';
-    if (form.negotiable) {
+    if (form.negotiable && !form.hasTieredPricing) {
       if (!form.floorPrice || isNaN(Number(form.floorPrice)) || Number(form.floorPrice) <= 0)
                                        errs.floorPrice = 'Precio suelo inválido';
       if (Number(form.floorPrice) >= Number(form.price))
@@ -270,6 +305,148 @@ export default function NuevoProductoPage() {
                     </span>
                   )}
                 </FieldGroup>
+              )}
+            </div>
+          </div>
+
+          {/* ── Precios por cantidad (TukiBot) ──────────── */}
+          <div className="vnd-card">
+            <div className="vnd-card-header">
+              <span className="vnd-card-title"><span className="vnd-card-title-dot" />📦 Precios por cantidad — TukiBot</span>
+            </div>
+            <div className="vnd-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--vnd-bg-elevated)', borderRadius: 10, border: '1px solid var(--vnd-border)' }}>
+                <button
+                  type="button"
+                  onClick={() => update('hasTieredPricing', !form.hasTieredPricing)}
+                  style={{
+                    width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                    background: form.hasTieredPricing ? '#F5C518' : 'var(--vnd-border)',
+                    position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                  }}
+                  role="switch"
+                  aria-checked={form.hasTieredPricing}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: form.hasTieredPricing ? 21 : 3,
+                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s',
+                  }} />
+                </button>
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--vnd-text)' }}>
+                    Precios escalonados por cantidad
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--vnd-text-muted)' }}>
+                    Precio piso y auto-aceptación distintos según cuántas unidades pide el comprador
+                  </div>
+                </div>
+              </div>
+
+              {form.hasTieredPricing && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                  {/* Column headers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '68px 68px 1fr 1fr 1fr 30px', gap: 6, padding: '0 2px' }}>
+                    {['Qty mín', 'Qty máx', 'Precio lista ₲', 'Precio piso ₲ 🔒', 'Auto-aceptar ≥ ₲', ''].map((h, i) => (
+                      <span key={i} style={{ fontSize: '0.62rem', color: 'var(--vnd-text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{h}</span>
+                    ))}
+                  </div>
+
+                  {/* Empty state */}
+                  {form.pricingTiers.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '18px 0', color: 'var(--vnd-text-muted)', fontSize: '0.82rem', background: 'var(--vnd-bg-elevated)', borderRadius: 8, border: '1px dashed var(--vnd-border)' }}>
+                      Sin tramos aún — hacé clic en <strong>+ Agregar tramo</strong>
+                    </div>
+                  )}
+
+                  {/* Tier rows */}
+                  {form.pricingTiers.map((tier, idx) => (
+                    <div key={tier.id} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '68px 68px 1fr 1fr 1fr 30px',
+                      gap: 6,
+                      padding: '8px 10px',
+                      background: 'var(--vnd-bg-elevated)',
+                      borderRadius: 8,
+                      border: '1px solid var(--vnd-border)',
+                      alignItems: 'center',
+                    }}>
+                      <input
+                        className="vnd-input" type="number" min="1"
+                        value={tier.minQty}
+                        onChange={e => updateTier(tier.id, 'minQty', Number(e.target.value))}
+                        style={{ padding: '5px 7px', fontSize: '0.82rem' }}
+                        title={`Tramo ${idx + 1}: cantidad mínima`}
+                      />
+                      <input
+                        className="vnd-input" type="number" min={tier.minQty + 1}
+                        placeholder="∞"
+                        value={tier.maxQty ?? ''}
+                        onChange={e => updateTier(tier.id, 'maxQty', e.target.value ? Number(e.target.value) : null)}
+                        style={{ padding: '5px 7px', fontSize: '0.82rem' }}
+                        title="Dejar vacío = sin límite"
+                      />
+                      <input
+                        className="vnd-input" type="number" min="0"
+                        placeholder="45000"
+                        value={tier.listedPrice || ''}
+                        onChange={e => updateTier(tier.id, 'listedPrice', Number(e.target.value))}
+                        style={{ padding: '5px 7px', fontSize: '0.82rem' }}
+                      />
+                      <input
+                        className="vnd-input" type="number" min="0"
+                        placeholder="30000"
+                        value={tier.floorPrice || ''}
+                        onChange={e => updateTier(tier.id, 'floorPrice', Number(e.target.value))}
+                        style={{ padding: '5px 7px', fontSize: '0.82rem', borderColor: 'rgba(248,113,113,0.5)' }}
+                        title="Mínimo absoluto (oculto al comprador)"
+                      />
+                      <input
+                        className="vnd-input" type="number" min="0"
+                        placeholder="40000"
+                        value={tier.autoAcceptFrom || ''}
+                        onChange={e => updateTier(tier.id, 'autoAcceptFrom', Number(e.target.value))}
+                        style={{ padding: '5px 7px', fontSize: '0.82rem', borderColor: 'rgba(74,222,128,0.5)' }}
+                        title="Auto-aceptar si oferta ≥ este valor"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeTier(tier.id)}
+                        style={{
+                          width: 28, height: 28, borderRadius: 6, border: 'none',
+                          background: 'rgba(248,113,113,0.12)', color: '#f87171',
+                          cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                        title="Eliminar tramo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="vnd-btn vnd-btn-secondary vnd-btn-sm"
+                    onClick={addTier}
+                    style={{ alignSelf: 'flex-start', marginTop: 2 }}
+                  >
+                    + Agregar tramo
+                  </button>
+
+                  {/* Info box */}
+                  <div style={{ padding: '10px 14px', background: 'rgba(245,197,24,0.05)', borderRadius: 8, border: '1px solid rgba(245,197,24,0.18)' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', lineHeight: 1.65, margin: 0 }}>
+                      🔒 <strong style={{ color: 'var(--vnd-text)' }}>Precio piso</strong> es invisible para el comprador — mínimo absoluto que el TukiBot puede aceptar.&nbsp;
+                      Si la oferta ≥ <strong style={{ color: '#4ade80' }}>Auto-aceptar</strong>, el bot acepta al instante.&nbsp;
+                      Si está entre el piso y el auto-aceptar, el bot negocia con IA.&nbsp;
+                      Si es menor al piso, el bot contraoferta automáticamente — <em>nunca rechaza</em>.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
