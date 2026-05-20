@@ -109,19 +109,21 @@ const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'categories', 'masVendidos', '
 /* ═══════════════════════════════════════════════════════════════
    MINI PREVIEW — renders a scaled-down version of Template 1
    ═══════════════════════════════════════════════════════════════ */
-function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
+function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?: 'mobile' | 'desktop' }) {
+  const isDesktop   = mode === 'desktop';
+  const sf          = isDesktop ? 2.0 : 2.5;   // scale factor for fonts
   const acc         = cfg.accentColor;
   const grad        = `linear-gradient(135deg, ${cfg.heroGrad1} 0%, ${cfg.heroGrad2} 100%)`;
   const avatars     = cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻'];
   const reviewsText = cfg.reviewsCount ?? '+127 clientes satisfechos';
   const searchPH    = cfg.heroSearchPlaceholder || 'Buscar productos...';
   const masVTitle   = cfg.masVendidosTitle || '🔥 Más vendidos';
-  const titleSz     = (cfg.heroTitleFontSize ?? 28) / 2.5;
+  const titleSz     = (cfg.heroTitleFontSize ?? 28) / sf;
   const titleClr    = cfg.heroTitleColor ?? '#ffffff';
-  const descSz      = (cfg.heroDescFontSize ?? 14) / 1.85;
+  const descSz      = (cfg.heroDescFontSize ?? 14) / (isDesktop ? 1.5 : 1.85);
   const descClr     = cfg.heroDescColor ?? '#94a3b8';
   const secTitleClr = cfg.sectionTitleColor ?? '#0f172a';
-  const radius      = Math.max(2, (cfg.btnRadius ?? 8) / 1.6);
+  const radius      = Math.max(2, (cfg.btnRadius ?? 8) / (isDesktop ? 1.2 : 1.6));
   const bodyBg      = cfg.bodyBg ?? '#f8fafc';
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
 
@@ -198,7 +200,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
 
   const masVendidosEl = cfg.showMasVendidos !== false ? (
     <div style={{ padding: '6px 10px', background: bodyBg }}>
-      <div style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr, marginBottom: 5 }}>{masVTitle}</div>
+      <div style={{ fontSize: isDesktop ? 10 : 8.5, fontWeight: 800, color: secTitleClr, marginBottom: 5 }}>{masVTitle}</div>
       <div style={{ display: 'flex', gap: 5 }}>
         {[{ e: '📱', rank: '#1', b: '#FFD700', t: '#7a5c00' }, { e: '🎧', rank: '#2', b: '#C0C0C0', t: '#fff' }, { e: '💻', rank: '#3', b: '#CD7F32', t: '#fff' }].map((item, i) => (
           <div key={i} style={{ flex: 1, background: '#fff', border: `1px solid ${acc}44`, borderRadius: radius, overflow: 'hidden', position: 'relative' }}>
@@ -217,11 +219,11 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
   const productsEl = (
     <div style={{ padding: '6px 10px 10px', background: bodyBg }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr }}>Productos</span>
+        <span style={{ fontSize: isDesktop ? 10 : 8.5, fontWeight: 800, color: secTitleClr }}>Productos</span>
         <span style={{ fontSize: 7, color: '#64748b' }}>3 resultados</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-        {['📱', '🎧', '💻'].map((e, i) => (
+      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: isDesktop ? 8 : 6 }}>
+        {(isDesktop ? ['📱', '🎧', '💻', '⌨️'] : ['📱', '🎧', '💻']).map((e, i) => (
           <div key={i} style={{ background: '#fff', borderRadius: radius, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
             <div style={{ height: 34, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
             <div style={{ padding: '4px 5px' }}>
@@ -322,6 +324,7 @@ export default function PlantillasPage() {
   const [catInput, setCatInput] = useState('');
   const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
 
   /* Load from localStorage on mount */
   useEffect(() => {
@@ -772,17 +775,113 @@ export default function PlantillasPage() {
 
         {/* ══ RIGHT: LIVE PREVIEW ═══════════════════════════════ */}
         <div style={{ position: 'sticky', top: 80 }}>
-          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--vnd-text-muted)' }}>Vista previa en tiempo real</span>
             <a href={storeUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: 'var(--vnd-accent)', fontWeight: 600, textDecoration: 'none' }}>
               Abrir tamaño real ↗
             </a>
           </div>
 
-          {/* Preview card */}
-          <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 16, padding: 16, border: '1px solid var(--vnd-border)' }}>
-            <MiniPreview cfg={cfg} />
+          {/* ── Viewport toggle ── */}
+          <div style={{ marginBottom: 12, display: 'flex', gap: 3, background: 'var(--vnd-bg)', borderRadius: 10, padding: 3, border: '1px solid var(--vnd-border)' }}>
+            {(['mobile', 'desktop'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setPreviewMode(m)}
+                style={{
+                  flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer', borderRadius: 8,
+                  fontSize: '0.78rem', fontWeight: 600, transition: 'all 0.15s',
+                  background: previewMode === m ? 'var(--vnd-bg-elevated)' : 'transparent',
+                  color: previewMode === m ? 'var(--vnd-text)' : 'var(--vnd-text-muted)',
+                  boxShadow: previewMode === m ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                }}
+              >
+                {m === 'mobile' ? '📱 Móvil' : '💻 Escritorio'}
+              </button>
+            ))}
           </div>
+
+          {previewMode === 'mobile' ? (
+            /* ── Phone frame ── */
+            <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 16, padding: '16px 16px 12px', border: '1px solid var(--vnd-border)', display: 'flex', justifyContent: 'center' }}>
+              <div style={{
+                width: 242, borderRadius: 34, background: '#18181f',
+                boxShadow: '0 0 0 2px #35354a, 0 0 0 3px #111117, 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+                overflow: 'hidden', position: 'relative',
+              }}>
+                {/* Status bar */}
+                <div style={{ height: 30, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', position: 'relative' }}>
+                  <span style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>9:41</span>
+                  {/* Dynamic island */}
+                  <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 6, width: 72, height: 18, background: '#000', borderRadius: 12 }} />
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {/* Signal */}
+                    {[3, 5, 7, 9].map((h, i) => (
+                      <div key={i} style={{ width: 2.5, height: h, background: 'rgba(255,255,255,0.85)', borderRadius: 1, alignSelf: 'flex-end' }} />
+                    ))}
+                    {/* WiFi */}
+                    <svg width="13" height="9" viewBox="0 0 13 9" style={{ opacity: 0.85 }}>
+                      <path d="M6.5 7a1 1 0 110 2 1 1 0 010-2z" fill="white"/>
+                      <path d="M3.5 5.5C4.4 4.6 5.4 4 6.5 4s2.1.6 3 1.5" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+                      <path d="M1 3C2.8 1.2 4.5.3 6.5.3S10.2 1.2 12 3" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+                    </svg>
+                    {/* Battery */}
+                    <div style={{ width: 17, height: 9, border: '1.2px solid rgba(255,255,255,0.7)', borderRadius: 2.5, position: 'relative', display: 'flex', alignItems: 'center', padding: '1.5px' }}>
+                      <div style={{ width: '78%', height: '100%', background: 'rgba(255,255,255,0.85)', borderRadius: 1.5 }} />
+                      <div style={{ position: 'absolute', right: -3.5, top: '50%', transform: 'translateY(-50%)', width: 2.5, height: 5, background: 'rgba(255,255,255,0.5)', borderRadius: '0 1px 1px 0' }} />
+                    </div>
+                  </div>
+                </div>
+                {/* Screen content */}
+                <div style={{ background: '#fff', overflowY: 'auto', maxHeight: 480, scrollbarWidth: 'none' }}>
+                  <MiniPreview cfg={cfg} mode="mobile" />
+                </div>
+                {/* Home indicator */}
+                <div style={{ height: 22, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 64, height: 4, background: 'rgba(255,255,255,0.22)', borderRadius: 2 }} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ── Browser / desktop frame ── */
+            <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 14, padding: 10, border: '1px solid var(--vnd-border)', overflow: 'hidden' }}>
+              {/* Browser chrome */}
+              <div style={{ background: '#f0f0f2', borderRadius: '10px 10px 0 0', border: '1px solid #d8d8df', borderBottom: 'none', padding: '7px 10px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Top row: traffic lights + controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.15)' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.15)' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)' }} />
+                  </div>
+                  {/* Tab */}
+                  <div style={{ background: '#fff', borderRadius: '5px 5px 0 0', padding: '4px 10px 0', fontSize: 7, color: '#3c4043', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3, border: '1px solid #d8d8df', borderBottom: '1px solid #fff', minWidth: 80 }}>
+                    <span style={{ fontSize: 8 }}>{cfg.logoEmoji}</span>
+                    <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 70, textOverflow: 'ellipsis' }}>{cfg.storeName}</span>
+                    <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: 8, cursor: 'pointer' }}>×</span>
+                  </div>
+                  <div style={{ fontSize: 8, color: '#9aa0a6', cursor: 'pointer', padding: '0 4px' }}>+</div>
+                </div>
+                {/* URL bar row */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0 0 6px' }}>
+                  <div style={{ display: 'flex', gap: 3 }}>
+                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.06)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7 }}>←</div>
+                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.04)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, opacity: 0.4 }}>→</div>
+                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.06)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>↻</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 7.5, color: '#3c4043', border: '1px solid #d8d8df', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: '#188038', fontSize: 8 }}>🔒</span>
+                    <span>tukitask.vercel.app/tienda/<strong>{cfg.storeSlug}</strong></span>
+                  </div>
+                </div>
+              </div>
+              {/* Page content */}
+              <div style={{ border: '1px solid #d8d8df', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden', background: '#fff', maxHeight: 520, overflowY: 'auto', scrollbarWidth: 'none' }}>
+                <MiniPreview cfg={cfg} mode="desktop" />
+              </div>
+            </div>
+          )}
 
           {/* Share section */}
           <div className="vnd-card" style={{ marginTop: 20 }}>
