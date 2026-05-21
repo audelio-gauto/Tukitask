@@ -45,10 +45,6 @@ interface StoreTemplateConfig {
   bodyBg?: string;
   // Logo imagen
   logoImage?: string;
-  // Datos de la tienda
-  storeHours?: string;
-  storeAddress?: string;
-  storeOpen?: boolean;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -143,7 +139,6 @@ export default function VendorStorePage() {
   const accText   = activeCfg.accentText;
   const heroGrad  = `linear-gradient(135deg, ${activeCfg.heroGrad1} 0%, ${activeCfg.heroGrad2} 60%, ${activeCfg.heroGrad1} 100%)`;
   const waUrl     = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
-  const isOpen    = activeCfg.storeOpen !== undefined ? (activeCfg.storeOpen !== false) : (vendor?.open ?? true);
 
   /* Filter products */
   const cats = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
@@ -267,17 +262,17 @@ export default function VendorStorePage() {
         <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-              🕐 <span>{activeCfg.storeHours ?? vendor?.hours}</span>
+              🕐 <span>{vendor.hours}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-              📍 <span>{activeCfg.storeAddress ?? vendor?.address}</span>
+              📍 <span>{vendor.address}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
               ✓ Tienda verificada
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: isOpen ? '#16a34a' : '#ef4444' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: isOpen ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: isOpen ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
-              {isOpen ? 'Abierto ahora' : 'Cerrado'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor.open ? '#16a34a' : '#ef4444' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor.open ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: vendor.open ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
+              {vendor.open ? 'Abierto ahora' : 'Cerrado'}
             </div>
           </div>
         </div>

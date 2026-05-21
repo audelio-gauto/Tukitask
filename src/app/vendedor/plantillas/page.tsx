@@ -46,10 +46,6 @@ export interface StoreTemplateConfig {
   bodyBg?: string;
   // Logo como imagen
   logoImage?: string;
-  // Datos de la tienda
-  storeHours?: string;
-  storeAddress?: string;
-  storeOpen?: boolean;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -86,9 +82,6 @@ const DEFAULTS: StoreTemplateConfig = {
   sectionTitleColor: '#0f172a',
   btnRadius:         8,
   bodyBg:            '#f8fafc',
-  storeHours:        '08:00 – 18:00',
-  storeAddress:      'Asunción, Paraguay',
-  storeOpen:         true,
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -190,12 +183,11 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
 
   const infoBarEl = cfg.showInfoBar !== false ? (
     <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '4px 10px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 6, color: '#64748b' }}>🕐 {cfg.storeHours || '08:00–18:00'}</span>
-      {cfg.storeAddress && <span style={{ fontSize: 6, color: '#64748b' }}>📍 {cfg.storeAddress}</span>}
+      <span style={{ fontSize: 6, color: '#64748b' }}>🕐 08:00–18:00</span>
+      <span style={{ fontSize: 6, color: '#64748b' }}>📍 Asunción</span>
       <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a' }}>✓ Verificada</span>
-      <span style={{ fontSize: 6, fontWeight: 700, color: cfg.storeOpen !== false ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center', gap: 2 }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.storeOpen !== false ? '#16a34a' : '#ef4444', display: 'inline-block' }} />
-        {cfg.storeOpen !== false ? 'Abierto' : 'Cerrado'}
+      <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 2 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Abierto
       </span>
     </div>
   ) : null;
@@ -526,15 +518,6 @@ export default function PlantillasPage() {
             <Field label="WhatsApp">
               <input className="vnd-input" value={cfg.whatsapp} onChange={e => update('whatsapp', e.target.value)} placeholder="0981000000" maxLength={20} />
             </Field>
-            <div className="vnd-form-grid">
-              <Field label="🕐 Horario">
-                <input className="vnd-input" value={cfg.storeHours ?? ''} onChange={e => update('storeHours', e.target.value)} placeholder="08:00 – 18:00" maxLength={30} />
-              </Field>
-              <Field label="📍 Dirección">
-                <input className="vnd-input" value={cfg.storeAddress ?? ''} onChange={e => update('storeAddress', e.target.value)} placeholder="Asunción, Centro" maxLength={60} />
-              </Field>
-            </div>
-            <Toggle enabled={cfg.storeOpen !== false} onToggle={() => update('storeOpen', cfg.storeOpen === false)} label="🟢 Tienda abierta ahora" />
             <Field label="Slug (URL de tu tienda)" hint="Solo letras minúsculas, números y guiones">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--vnd-text-muted)', whiteSpace: 'nowrap' }}>tukitask.vercel.app/tienda/</span>
