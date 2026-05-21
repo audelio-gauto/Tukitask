@@ -343,7 +343,7 @@ export default function PlantillasPage() {
   const [cfg, setCfg]         = useState<StoreTemplateConfig>(DEFAULTS);
   const [saved, setSaved]     = useState(false);
   const [catInput, setCatInput] = useState('');
-  const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
+  const [view, setView]       = useState<'gallery' | 'editor'>('editor');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* Load from localStorage on mount */
@@ -480,10 +480,7 @@ export default function PlantillasPage() {
           >
             ← Plantillas
           </button>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Mi Store</h1>
-          <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
-            Personalizá tu tienda pública en tiempo real
-          </p>
+
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <a href={storeUrl} target="_blank" rel="noreferrer" className="vnd-btn vnd-btn-secondary" style={{ textDecoration: 'none' }}>
