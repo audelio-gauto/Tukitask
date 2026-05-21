@@ -46,6 +46,16 @@ export interface StoreTemplateConfig {
   bodyBg?: string;
   // Logo como imagen
   logoImage?: string;
+  // Robot
+  robotLabel?: string;
+  // Breadcrumb
+  showBreadcrumb?: boolean;
+  // Alineación de secciones
+  sectionAlignment?: Record<string, 'left' | 'center' | 'right'>;
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -82,6 +92,8 @@ const DEFAULTS: StoreTemplateConfig = {
   sectionTitleColor: '#0f172a',
   btnRadius:         8,
   bodyBg:            '#f8fafc',
+  robotLabel:        'Robot Negociador',
+  showBreadcrumb:    true,
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -169,7 +181,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
           <>
             <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
             <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
-            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>🤖</div><div style={{ fontSize: 6.5, color: descClr }}>Robot</div></div>}
+            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>🤖</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.robotLabel ?? 'Robot'}</div></div>}
           </>
         )}
         {cfg.showWhatsApp !== false && (
@@ -262,13 +274,20 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
         <div style={{ width: 22, height: 22, background: '#0b1220', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🛒</div>
       </div>
       {/* ── Breadcrumb ── */}
-      <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
-        <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
-        <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
-        <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
-      </div>
+      {cfg.showBreadcrumb !== false && (
+        <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
+          <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
+          <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
+        </div>
+      )}
       {/* ── Sections in user-defined order ── */}
-      {order.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
+      {order.map(id => {
+        const el = SECTION_ELS[id];
+        if (!el) return null;
+        const align = ((cfg.sectionAlignment ?? {})[id] ?? 'left') as 'left' | 'center' | 'right';
+        return <div key={id} style={{ textAlign: align }}>{el}</div>;
+      })}
     </div>
   );
 }
@@ -361,6 +380,18 @@ export default function PlantillasPage() {
     } catch { /* ignore */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  function moveSection(idx: number, dir: -1 | 1) {
+    const order = [...(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER)];
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= order.length) return;
+    [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
+    update('sectionOrder', order);
+  }
+
+  function setSectionAlign(id: string, align: 'left' | 'center' | 'right') {
+    update('sectionAlignment', { ...(cfg.sectionAlignment ?? {}), [id]: align });
   }
 
   const storeUrl = `/tienda/${cfg.storeSlug}`;
@@ -569,6 +600,11 @@ export default function PlantillasPage() {
               onToggle={() => update('robotEnabled', !cfg.robotEnabled)}
               label="🤖 Robot Negociador en portada"
             />
+            <div style={{ opacity: cfg.robotEnabled ? 1 : 0.45, pointerEvents: cfg.robotEnabled ? 'auto' : 'none' }}>
+              <Field label="Etiqueta del Robot">
+                <input className="vnd-input" value={cfg.robotLabel ?? 'Robot Negociador'} onChange={e => update('robotLabel', e.target.value)} placeholder="Robot Negociador" maxLength={30} />
+              </Field>
+            </div>
             <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
               <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
             </Field>
@@ -576,39 +612,60 @@ export default function PlantillasPage() {
 
           {/* Secciones */}
           <Section title="🧩 Secciones">
-            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>Arrastrá para reordenar · Activá o desactivá con el toggle.</p>
+            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>⢿ Arrastrar · ▲▼ Mover · ◄●► Alinear · Activá o desactivá</p>
 
-            {/* Drag-to-reorder section list */}
+            {/* Sección reorder — drag + ▲▼ + L·C·R */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER).map((id, idx) => (
-                <div
-                  key={id}
-                  draggable
-                  onDragStart={() => setDragIdx(idx)}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={() => {
-                    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); return; }
-                    const newOrder = [...(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER)];
-                    const [moved] = newOrder.splice(dragIdx, 1);
-                    newOrder.splice(idx, 0, moved);
-                    update('sectionOrder', newOrder);
-                    setDragIdx(null);
-                  }}
-                  onDragEnd={() => setDragIdx(null)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-                    borderRadius: 10, cursor: 'grab', userSelect: 'none',
-                    background: dragIdx === idx ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
-                    border: `1px solid ${dragIdx === idx ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-                    transition: 'background 0.15s, border-color 0.15s',
-                    opacity: dragIdx !== null && dragIdx !== idx ? 0.55 : 1,
-                  }}
-                >
-                  <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1.1rem', lineHeight: 1 }}>⠿</span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--vnd-text)', flex: 1 }}>{SECTION_LABELS[id]}</span>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 6, padding: '1px 6px' }}>#{idx + 1}</span>
-                </div>
-              ))}
+              {(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER).map((id, idx) => {
+                const order = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
+                const align = ((cfg.sectionAlignment ?? {})[id] ?? 'left') as 'left' | 'center' | 'right';
+                return (
+                  <div
+                    key={id}
+                    draggable
+                    onDragStart={() => setDragIdx(idx)}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragIdx === null || dragIdx === idx) { setDragIdx(null); return; }
+                      const newOrder = [...(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER)];
+                      const [moved] = newOrder.splice(dragIdx, 1);
+                      newOrder.splice(idx, 0, moved);
+                      update('sectionOrder', newOrder);
+                      setDragIdx(null);
+                    }}
+                    onDragEnd={() => setDragIdx(null)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px',
+                      borderRadius: 10, cursor: 'grab', userSelect: 'none',
+                      background: dragIdx === idx ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
+                      border: `1px solid ${dragIdx === idx ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
+                      transition: 'background 0.15s, border-color 0.15s',
+                      opacity: dragIdx !== null && dragIdx !== idx ? 0.55 : 1,
+                    }}
+                  >
+                    <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>⠿</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text)', flex: 1 }}>{SECTION_LABELS[id]}</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>#{idx + 1}</span>
+                    {/* ▲▼ move buttons */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                      <button type="button" onClick={e => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0}
+                        style={{ width: 20, height: 17, border: '1px solid var(--vnd-border)', borderRadius: 4, background: 'none', cursor: idx === 0 ? 'not-allowed' : 'pointer', color: 'var(--vnd-text)', fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, opacity: idx === 0 ? 0.3 : 1 }}>▲</button>
+                      <button type="button" onClick={e => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === order.length - 1}
+                        style={{ width: 20, height: 17, border: '1px solid var(--vnd-border)', borderRadius: 4, background: 'none', cursor: idx === order.length - 1 ? 'not-allowed' : 'pointer', color: 'var(--vnd-text)', fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, opacity: idx === order.length - 1 ? 0.3 : 1 }}>▼</button>
+                    </div>
+                    {/* L·C·R alignment */}
+                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      {(['left', 'center', 'right'] as const).map(a => (
+                        <button key={a} type="button" onClick={e => { e.stopPropagation(); setSectionAlign(id, a); }}
+                          title={a === 'left' ? 'Izquierda' : a === 'center' ? 'Centro' : 'Derecha'}
+                          style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${align === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`, background: align === a ? 'var(--vnd-accent)' : 'none', color: align === a ? '#0b1220' : 'var(--vnd-text-muted)', cursor: 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                          {a === 'left' ? '◀' : a === 'center' ? '●' : '▶'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div style={{ height: 1, background: 'var(--vnd-border)' }} />
@@ -633,6 +690,7 @@ export default function PlantillasPage() {
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
               </Field>
             </div>
+            <Toggle enabled={cfg.showBreadcrumb !== false} onToggle={() => update('showBreadcrumb', cfg.showBreadcrumb === false)} label="🗺️ Miga de pan (Catálogo › Mi Tienda)" />
           </Section>
 
           {/* Tipografía */}
@@ -775,6 +833,19 @@ export default function PlantillasPage() {
               />
               <button type="button" className="vnd-btn vnd-btn-secondary vnd-btn-sm" onClick={addCategory}>+ Agregar</button>
             </div>
+          </Section>
+
+          {/* SEO */}
+          <Section title="🔍 SEO">
+            <Field label="Meta título" hint="Título en Google (máx 60 caracteres)">
+              <input className="vnd-input" value={cfg.seoTitle ?? ''} onChange={e => update('seoTitle', e.target.value)} placeholder={`${cfg.storeName} – TukiTask`} maxLength={60} />
+            </Field>
+            <Field label="Meta descripción" hint="Descripción en resultados de búsqueda (máx 160 caracteres)">
+              <textarea className="vnd-input" value={cfg.seoDescription ?? ''} onChange={e => update('seoDescription', e.target.value)} rows={3} style={{ resize: 'vertical', fontFamily: 'inherit' }} maxLength={160} />
+            </Field>
+            <Field label="Palabras clave" hint="Separadas por coma">
+              <input className="vnd-input" value={cfg.seoKeywords ?? ''} onChange={e => update('seoKeywords', e.target.value)} placeholder="electrónica, computadoras, Paraguay" maxLength={120} />
+            </Field>
           </Section>
 
         </div>

@@ -45,6 +45,16 @@ interface StoreTemplateConfig {
   bodyBg?: string;
   // Logo imagen
   logoImage?: string;
+  // Robot
+  robotLabel?: string;
+  // Breadcrumb
+  showBreadcrumb?: boolean;
+  // Alineación de secciones
+  sectionAlignment?: Record<string, 'left' | 'center' | 'right'>;
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -151,11 +161,13 @@ export default function VendorStorePage() {
   return (
     <div>
       {/* ── Breadcrumb ── */}
-      <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
-        <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
-        <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
-        <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
-      </div>
+      {activeCfg.showBreadcrumb !== false && (
+        <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
+          <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
+          <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
+          <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
+        </div>
+      )}
 
       {/* ══ HERO ══════════════════════════════════════════════ */}
       <div style={{ background: heroGrad, padding: '48px 24px 40px', position: 'relative', overflow: 'hidden', marginBottom: 0 }}>
@@ -242,7 +254,7 @@ export default function VendorStorePage() {
                 {activeCfg.robotEnabled && (
                   <div>
                     <div style={{ fontSize: '1.4rem' }}>🤖</div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Robot Negociador</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{activeCfg.robotLabel ?? 'Robot Negociador'}</div>
                   </div>
                 )}
               </>
