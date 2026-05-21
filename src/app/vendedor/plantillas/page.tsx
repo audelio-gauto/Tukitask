@@ -686,28 +686,27 @@ export default function PlantillasPage() {
             <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
               <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
             </Field>
-          </Section>
 
-          {/* Sobre la tienda */}
-          <Section title="📖 Sobre la tienda">
-            <Toggle
-              enabled={cfg.showAbout !== false}
-              onToggle={() => update('showAbout', cfg.showAbout !== false ? false : true)}
-              label="Mostrar sección Sobre la tienda"
-            />
-            <div style={{ opacity: cfg.showAbout === false ? 0.45 : 1, pointerEvents: cfg.showAbout === false ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Descripción de tu negocio" hint="Hasta 400 caracteres">
-                <textarea
-                  className="vnd-input"
-                  value={cfg.aboutText ?? ''}
-                  onChange={e => update('aboutText', e.target.value)}
-                  rows={4}
-                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                  maxLength={400}
-                  placeholder="Contá quiénes son, cuánto tiempo llevan en el mercado, qué los hace especiales..."
-                />
-              </Field>
-
+            {/* Sobre la tienda — dentro del hero */}
+            <div style={{ borderTop: '1px solid var(--vnd-border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Toggle
+                enabled={cfg.showAbout !== false}
+                onToggle={() => update('showAbout', cfg.showAbout !== false ? false : true)}
+                label="📖 Sobre la tienda"
+              />
+              <div style={{ opacity: cfg.showAbout === false ? 0.45 : 1, pointerEvents: cfg.showAbout === false ? 'none' : 'auto' }}>
+                <Field label="Descripción de tu negocio" hint="Hasta 400 caracteres">
+                  <textarea
+                    className="vnd-input"
+                    value={cfg.aboutText ?? ''}
+                    onChange={e => update('aboutText', e.target.value)}
+                    rows={4}
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                    maxLength={400}
+                    placeholder="Contá quiénes son, cuánto tiempo llevan en el mercado, qué los hace especiales..."
+                  />
+                </Field>
+              </div>
             </div>
           </Section>
 
