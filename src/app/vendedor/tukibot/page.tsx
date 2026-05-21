@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useSearchParams } from 'next/navigation';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
@@ -74,9 +73,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function TukiBotPage() {
-  const searchParams = useSearchParams();
   const [saved, setSaved] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState<'config' | 'results'>('config');
+  const [activeSubmenu] = useState<'config' | 'results'>('config');
   const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -120,17 +118,6 @@ export default function TukiBotPage() {
       }
     });
   }, []);
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'results') setActiveSubmenu('results');
-    if (tab === 'config') setActiveSubmenu('config');
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!vendorId) return;
-    loadTimeoutStats();
-  }, [vendorId]);
 
   async function loadTimeoutStats() {
     if (!vendorId) return;
@@ -209,55 +196,22 @@ export default function TukiBotPage() {
           <h1 className="vnd-page-heading">🤖 TukiBot</h1>
           <p className="vnd-page-sub">Robot Negociador — responde ofertas automáticamente 24/7</p>
         </div>
-        {activeSubmenu === 'config' ? (
-          <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
-            {saved ? (
-              <>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                ¡Guardado!
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-                Guardar cambios
-              </>
-            )}
-          </button>
-        ) : (
-          <button className="vnd-btn vnd-btn-secondary" onClick={loadTimeoutStats} disabled={loadingStats}>
-            {loadingStats ? 'Actualizando…' : '↻ Actualizar resultados'}
-          </button>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={() => setActiveSubmenu('config')}
-          className="vnd-btn"
-          style={{
-            background: activeSubmenu === 'config' ? '#F5C518' : 'var(--vnd-surface-2)',
-            color: activeSubmenu === 'config' ? '#0b1220' : 'var(--vnd-text-secondary)',
-            border: `1px solid ${activeSubmenu === 'config' ? '#F5C518' : 'var(--vnd-border)'}`,
-          }}
-        >
-          ⚙️ Configuración
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubmenu('results')}
-          className="vnd-btn"
-          style={{
-            background: activeSubmenu === 'results' ? '#F5C518' : 'var(--vnd-surface-2)',
-            color: activeSubmenu === 'results' ? '#0b1220' : 'var(--vnd-text-secondary)',
-            border: `1px solid ${activeSubmenu === 'results' ? '#F5C518' : 'var(--vnd-border)'}`,
-          }}
-        >
-          📊 Resultados Automáticos
+        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+          {saved ? (
+            <>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              ¡Guardado!
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              Guardar cambios
+            </>
+          )}
         </button>
       </div>
 
