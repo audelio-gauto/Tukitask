@@ -63,6 +63,7 @@ interface StoreTemplateConfig {
   aboutText?: string;
   aboutImage?: string;
   showAbout?: boolean;
+  showStoreChip?: boolean;
   // Hero block order & alignment
   heroBlockOrder?: string[];
   heroBlockAlignment?: Record<string, 'left' | 'center' | 'right'>;
@@ -237,9 +238,11 @@ export default function VendorStorePage() {
                       : activeCfg.logoEmoji}
                   </div>
                   <div>
+                    {activeCfg.showStoreChip !== false && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
                     </div>
+                  )}
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', lineHeight: 1.15, whiteSpace: 'pre-line' }}>{activeCfg.heroTagline}</div>
                   </div>
                 </div>

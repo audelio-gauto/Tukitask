@@ -64,6 +64,7 @@ export interface StoreTemplateConfig {
   aboutText?: string;
   aboutImage?: string;
   showAbout?: boolean;
+  showStoreChip?: boolean;
   // Hero block order & alignment
   heroBlockOrder?: string[];
   heroBlockAlignment?: Record<string, 'left' | 'center' | 'right'>;
@@ -86,6 +87,7 @@ const DEFAULTS: StoreTemplateConfig = {
   robotEnabled:     true,
   categories:       ['Todos', 'Electrónica', 'Ropa', 'Hogar', 'Libros'],
   showReviewsStrip: true,
+  showStoreChip:    true,
   showHeroSearch:   true,
   showInfoBar:      true,
   showMasVendidos:  true,
@@ -188,9 +190,11 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
             {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
           </div>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
-              <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
-            </div>
+            {cfg.showStoreChip !== false && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+                <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+              </div>
+            )}
             <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
           </div>
         </div>
@@ -706,6 +710,7 @@ export default function PlantillasPage() {
                 })}
               </div>
             </div>
+            <Toggle enabled={cfg.showStoreChip !== false} onToggle={() => update('showStoreChip', cfg.showStoreChip === false)} label="🛒 Chip \"Mi Tienda\" en portada" />
             <Field label="Título principal" hint="Usá \\n para salto de línea">
               <textarea
                 className="vnd-input"
