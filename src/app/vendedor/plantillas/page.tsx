@@ -436,18 +436,6 @@ export default function PlantillasPage() {
     setTimeout(() => setSaved(false), 2500);
   }
 
-  function moveSection(idx: number, dir: -1 | 1) {
-    const order = [...(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER)];
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= order.length) return;
-    [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
-    update('sectionOrder', order);
-  }
-
-  function setSectionAlign(id: string, align: 'left' | 'center' | 'right') {
-    update('sectionAlignment', { ...(cfg.sectionAlignment ?? {}), [id]: align });
-  }
-
   const storeUrl = `/tienda/${cfg.storeSlug}`;
 
   /* ══ GALLERY VIEW ══════════════════════════════════════════ */
@@ -712,13 +700,9 @@ export default function PlantillasPage() {
 
           {/* Secciones */}
           <Section title="🧩 Secciones">
-            <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-muted)', margin: 0 }}>⢿ Arrastrar · ▲▼ Mover · ◄●► Alinear · Activá o desactivá</p>
-
-            {/* Sección reorder — drag + ▲▼ + L·C·R */}
+            {/* Sección reorder — drag */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {(cfg.sectionOrder ?? DEFAULT_SECTION_ORDER).map((id, idx) => {
-                const order = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
-                const align = ((cfg.sectionAlignment ?? {})[id] ?? 'left') as 'left' | 'center' | 'right';
                 return (
                   <div
                     key={id}
@@ -746,23 +730,6 @@ export default function PlantillasPage() {
                     <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>⠿</span>
                     <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text)', flex: 1 }}>{SECTION_LABELS[id]}</span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>#{idx + 1}</span>
-                    {/* ▲▼ move buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                      <button type="button" onClick={e => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0}
-                        style={{ width: 20, height: 17, border: '1px solid var(--vnd-border)', borderRadius: 4, background: 'none', cursor: idx === 0 ? 'not-allowed' : 'pointer', color: 'var(--vnd-text)', fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, opacity: idx === 0 ? 0.3 : 1 }}>▲</button>
-                      <button type="button" onClick={e => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === order.length - 1}
-                        style={{ width: 20, height: 17, border: '1px solid var(--vnd-border)', borderRadius: 4, background: 'none', cursor: idx === order.length - 1 ? 'not-allowed' : 'pointer', color: 'var(--vnd-text)', fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, opacity: idx === order.length - 1 ? 0.3 : 1 }}>▼</button>
-                    </div>
-                    {/* L·C·R alignment */}
-                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                      {(['left', 'center', 'right'] as const).map(a => (
-                        <button key={a} type="button" onClick={e => { e.stopPropagation(); setSectionAlign(id, a); }}
-                          title={a === 'left' ? 'Izquierda' : a === 'center' ? 'Centro' : 'Derecha'}
-                          style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${align === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`, background: align === a ? 'var(--vnd-accent)' : 'none', color: align === a ? '#0b1220' : 'var(--vnd-text-muted)', cursor: 'pointer', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                          {a === 'left' ? '◀' : a === 'center' ? '●' : '▶'}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 );
               })}
