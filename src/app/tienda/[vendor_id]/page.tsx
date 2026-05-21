@@ -55,6 +55,14 @@ interface StoreTemplateConfig {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  // Cover image for hero
+  heroCoverImage?: string;
+  // Font
+  storeFont?: string;
+  // About section
+  aboutText?: string;
+  aboutImage?: string;
+  showAbout?: boolean;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -82,6 +90,21 @@ const ALL_PRODUCTS = [
 ];
 
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
+
+const FONT_URLS: Record<string, string> = {
+  'Poppins':          'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap',
+  'Montserrat':       'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap',
+  'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap',
+  'Oswald':           'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap',
+  'Lato':             'https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap',
+};
+const FONT_CSS: Record<string, string> = {
+  'Poppins':          "'Poppins', sans-serif",
+  'Montserrat':       "'Montserrat', sans-serif",
+  'Playfair Display': "'Playfair Display', serif",
+  'Oswald':           "'Oswald', sans-serif",
+  'Lato':             "'Lato', sans-serif",
+};
 
 /* ════════════════════════════════════════════════════════════ */
 export default function VendorStorePage() {
@@ -132,6 +155,20 @@ export default function VendorStorePage() {
 
   const activeCfg = cfg ?? defaultCfg;
 
+  useEffect(() => {
+    const fontName = activeCfg?.storeFont;
+    if (!fontName || !FONT_URLS[fontName]) return;
+    const existing = document.getElementById('store-font-link');
+    if (existing) (existing as HTMLLinkElement).href = FONT_URLS[fontName];
+    else {
+      const link = document.createElement('link');
+      link.id = 'store-font-link';
+      link.rel = 'stylesheet';
+      link.href = FONT_URLS[fontName];
+      document.head.appendChild(link);
+    }
+  }, [activeCfg?.storeFont]);
+
   if (!activeCfg) {
     return (
       <div className="tnd-page">
@@ -158,8 +195,9 @@ export default function VendorStorePage() {
     return catMatch && srchMatch;
   });
 
+  const storeFontFamily = activeCfg.storeFont ? (FONT_CSS[activeCfg.storeFont] ?? '') : '';
   return (
-    <div>
+    <div style={storeFontFamily ? { fontFamily: storeFontFamily } : {}}>
       {/* ── Breadcrumb ── */}
       {activeCfg.showBreadcrumb !== false && (
         <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
@@ -170,7 +208,7 @@ export default function VendorStorePage() {
       )}
 
       {/* ══ HERO ══════════════════════════════════════════════ */}
-      <div style={{ background: heroGrad, padding: '48px 24px 40px', position: 'relative', overflow: 'hidden', marginBottom: 0 }}>
+      <div style={{ backgroundImage: activeCfg.heroCoverImage ? `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url(${activeCfg.heroCoverImage})` : heroGrad, backgroundSize: 'cover', backgroundPosition: 'center', padding: '48px 24px 40px', position: 'relative', overflow: 'hidden', marginBottom: 0 }}>
         {/* glow orbs */}
         <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, background: `radial-gradient(circle, ${acc}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -40, left: -40, width: 220, height: 220, background: `radial-gradient(circle, ${acc}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
@@ -285,6 +323,21 @@ export default function VendorStorePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor.open ? '#16a34a' : '#ef4444' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor.open ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: vendor.open ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
               {vendor.open ? 'Abierto ahora' : 'Cerrado'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sobre la tienda ── */}
+      {activeCfg.showAbout !== false && activeCfg.aboutText && (
+        <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '24px' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {activeCfg.aboutImage && (
+              <img src={activeCfg.aboutImage} alt="" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 12, flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--tnd-text-primary)', margin: '0 0 8px' }}>📖 Sobre la tienda</h2>
+              <p style={{ fontSize: '0.9rem', color: 'var(--tnd-text-muted)', lineHeight: 1.65, margin: 0 }}>{activeCfg.aboutText}</p>
             </div>
           </div>
         </div>

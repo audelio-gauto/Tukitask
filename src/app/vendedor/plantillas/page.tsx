@@ -56,6 +56,14 @@ export interface StoreTemplateConfig {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  // Cover image for hero
+  heroCoverImage?: string;
+  // Typography font
+  storeFont?: string;
+  // About section
+  aboutText?: string;
+  aboutImage?: string;
+  showAbout?: boolean;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -84,7 +92,9 @@ const DEFAULTS: StoreTemplateConfig = {
   reviewsAvatars:   ['👩', '👨', '👩🏽', '👨🏻'],
   heroSearchPlaceholder: 'Buscar productos...',
   masVendidosTitle: '🔥 Productos más vendidos',
-  sectionOrder:      ['hero', 'infoBar', 'categories', 'masVendidos', 'products'],
+  sectionOrder:      ['hero', 'infoBar', 'about', 'categories', 'masVendidos', 'products'],
+  storeFont:         '',
+  showAbout:         true,
   heroTitleFontSize: 28,
   heroTitleColor:    '#ffffff',
   heroDescFontSize:  14,
@@ -108,17 +118,27 @@ const PALETTES = [
   { name: 'Rosa Neon',   grad1: '#1a0515', grad2: '#2d0d20', accent: '#f472b6', text: '#1a0515' },
 ];
 
+const FONT_OPTIONS = [
+  { name: 'Sistema',    value: '',                 css: 'system-ui,sans-serif',             url: '' },
+  { name: 'Poppins',    value: 'Poppins',          css: "'Poppins', sans-serif",             url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap' },
+  { name: 'Montserrat', value: 'Montserrat',       css: "'Montserrat', sans-serif",          url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap' },
+  { name: 'Playfair',   value: 'Playfair Display', css: "'Playfair Display', serif",         url: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap' },
+  { name: 'Oswald',     value: 'Oswald',           css: "'Oswald', sans-serif",              url: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap' },
+  { name: 'Lato',       value: 'Lato',             css: "'Lato', sans-serif",                url: 'https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap' },
+];
+
 /* ═══════════════════════════════════════════════════════════════
    SECTION META
    ═══════════════════════════════════════════════════════════════ */
 const SECTION_LABELS: Record<string, string> = {
   hero:        '🎨 Hero / Portada',
   infoBar:     'ℹ️ Barra de info',
+  about:       '📖 Sobre la tienda',
   categories:  '🏷️ Categorías',
   masVendidos: '🔥 Más vendidos',
   products:    '📦 Productos',
 };
-const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
+const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'about', 'categories', 'masVendidos', 'products'];
 
 /* ═══════════════════════════════════════════════════════════════
    MINI PREVIEW — renders a scaled-down version of Template 1
@@ -138,10 +158,11 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
   const radius      = Math.max(2, (cfg.btnRadius ?? 8) / 1.6);
   const bodyBg      = cfg.bodyBg ?? '#f8fafc';
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
+  const fontCss     = FONT_OPTIONS.find(f => f.value === (cfg.storeFont ?? ''))?.css ?? 'system-ui,sans-serif';
 
   /* ── Section elements ── */
   const heroEl = (
-    <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ backgroundImage: cfg.heroCoverImage ? `linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url(${cfg.heroCoverImage})` : grad, backgroundSize: 'cover', backgroundPosition: 'center', padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
@@ -251,13 +272,23 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
     </div>
   );
 
+  const aboutEl = (cfg.showAbout !== false && cfg.aboutText) ? (
+    <div style={{ padding: '8px 10px', background: bodyBg, borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ fontSize: 7.5, fontWeight: 800, color: secTitleClr, marginBottom: 3 }}>📖 Sobre la tienda</div>
+      {cfg.aboutImage && (
+        <img src={cfg.aboutImage} alt="" style={{ width: '100%', height: 32, objectFit: 'cover', borderRadius: 4, marginBottom: 4 }} />
+      )}
+      <div style={{ fontSize: 6.5, color: '#475569', lineHeight: 1.5 }}>{(cfg.aboutText ?? '').slice(0, 120)}{(cfg.aboutText ?? '').length > 120 ? '...' : ''}</div>
+    </div>
+  ) : null;
+
   const SECTION_ELS: Record<string, ReactNode> = {
-    hero: heroEl, infoBar: infoBarEl, categories: catsEl,
+    hero: heroEl, infoBar: infoBarEl, about: aboutEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
 
   return (
-    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
+    <div style={{ fontFamily: fontCss, background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
       {/* ── App Header ── */}
       <div style={{ background: '#F5C518', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0b1220', border: '1.5px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 800, flexShrink: 0 }}>V</div>
@@ -350,9 +381,32 @@ export default function PlantillasPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem('tukimarket_template');
-      if (raw) setCfg(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const order: string[] = parsed.sectionOrder ?? [...DEFAULT_SECTION_ORDER];
+        if (!order.includes('about')) {
+          const idx = order.indexOf('infoBar');
+          order.splice(idx >= 0 ? idx + 1 : 2, 0, 'about');
+          parsed.sectionOrder = order;
+        }
+        setCfg(parsed);
+      }
     } catch { /* ignore */ }
   }, []);
+
+  useEffect(() => {
+    const font = FONT_OPTIONS.find(f => f.value === (cfg.storeFont ?? ''));
+    if (!font?.url) return;
+    const existing = document.getElementById('store-font-link');
+    if (existing) (existing as HTMLLinkElement).href = font.url;
+    else {
+      const link = document.createElement('link');
+      link.id = 'store-font-link';
+      link.rel = 'stylesheet';
+      link.href = font.url;
+      document.head.appendChild(link);
+    }
+  }, [cfg.storeFont]);
 
   function update<K extends keyof StoreTemplateConfig>(key: K, value: StoreTemplateConfig[K]) {
     setCfg(prev => ({ ...prev, [key]: value }));
@@ -582,6 +636,33 @@ export default function PlantillasPage() {
                 maxLength={220}
               />
             </Field>
+            <Field label="Imagen de fondo del hero" hint="Foto de tu local, productos o equipo (máx 1 MB)">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {cfg.heroCoverImage && (
+                  <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', height: 80 }}>
+                    <img src={cfg.heroCoverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button
+                      type="button"
+                      onClick={() => update('heroCoverImage', undefined)}
+                      style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: '0.7rem', cursor: 'pointer', padding: '3px 7px' }}
+                    >× Quitar</button>
+                  </div>
+                )}
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', padding: '10px', background: 'var(--vnd-bg)', border: '2px dashed var(--vnd-border)', borderRadius: 10, fontSize: '0.78rem', fontWeight: 600, color: 'var(--vnd-text-muted)' }}>
+                  🖼️ {cfg.heroCoverImage ? 'Cambiar imagen de fondo' : 'Subir imagen de fondo'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 1024 * 1024) { alert('Máx 1 MB'); return; }
+                      const reader = new FileReader();
+                      reader.onload = ev => { if (ev.target?.result) update('heroCoverImage', ev.target.result as string); };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+              </div>
+            </Field>
             <div className="vnd-form-grid">
               <Field label="Estadística (número)">
                 <input className="vnd-input" value={cfg.statNum} onChange={e => update('statNum', e.target.value)} maxLength={8} />
@@ -605,6 +686,55 @@ export default function PlantillasPage() {
             <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
               <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
             </Field>
+          </Section>
+
+          {/* Sobre la tienda */}
+          <Section title="📖 Sobre la tienda">
+            <Toggle
+              enabled={cfg.showAbout !== false}
+              onToggle={() => update('showAbout', cfg.showAbout !== false ? false : true)}
+              label="Mostrar sección Sobre la tienda"
+            />
+            <div style={{ opacity: cfg.showAbout === false ? 0.45 : 1, pointerEvents: cfg.showAbout === false ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Field label="Descripción de tu negocio" hint="Hasta 400 caracteres">
+                <textarea
+                  className="vnd-input"
+                  value={cfg.aboutText ?? ''}
+                  onChange={e => update('aboutText', e.target.value)}
+                  rows={4}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  maxLength={400}
+                  placeholder="Contá quiénes son, cuánto tiempo llevan en el mercado, qué los hace especiales..."
+                />
+              </Field>
+              <Field label="Imagen del local / equipo" hint="Opcional (máx 1 MB)">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cfg.aboutImage && (
+                    <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', height: 80 }}>
+                      <img src={cfg.aboutImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => update('aboutImage', undefined)}
+                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: '0.7rem', cursor: 'pointer', padding: '3px 7px' }}
+                      >× Quitar</button>
+                    </div>
+                  )}
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', padding: '10px', background: 'var(--vnd-bg)', border: '2px dashed var(--vnd-border)', borderRadius: 10, fontSize: '0.78rem', fontWeight: 600, color: 'var(--vnd-text-muted)' }}>
+                    📸 {cfg.aboutImage ? 'Cambiar imagen' : 'Subir foto del local/equipo'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1024 * 1024) { alert('Máx 1 MB'); return; }
+                        const reader = new FileReader();
+                        reader.onload = ev => { if (ev.target?.result) update('aboutImage', ev.target.result as string); };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
+              </Field>
+            </div>
           </Section>
 
           {/* Secciones */}
@@ -692,6 +822,33 @@ export default function PlantillasPage() {
 
           {/* Tipografía */}
           <Section title="📐 Tipografía">
+            <Field label="Fuente tipográfica">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {FONT_OPTIONS.map(f => {
+                  const selected = (cfg.storeFont ?? '') === f.value;
+                  return (
+                    <button
+                      key={f.value || 'system'}
+                      type="button"
+                      onClick={() => update('storeFont', f.value)}
+                      style={{
+                        padding: '8px 6px',
+                        borderRadius: 8,
+                        border: selected ? '2px solid var(--vnd-accent)' : '1px solid var(--vnd-border)',
+                        background: selected ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
+                        cursor: 'pointer',
+                        fontFamily: f.css,
+                        fontSize: '0.72rem',
+                        fontWeight: selected ? 700 : 400,
+                        color: selected ? 'var(--vnd-accent)' : 'var(--vnd-text)',
+                      }}
+                    >
+                      {f.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
             <Field label="Título de portada" hint={`Tamaño: ${cfg.heroTitleFontSize ?? 28}px`}>
               <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 8, alignItems: 'center' }}>
                 <input
