@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, type ReactElement } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -19,8 +19,6 @@ interface StoreTemplateConfig {
   statNum: string;
   statLabel: string;
   robotEnabled: boolean;
-  robotEmoji?: string;
-  robotLabel?: string;
   categories: string[];
   // Secciones visibles (undefined = visible)
   showReviewsStrip?: boolean;
@@ -29,8 +27,6 @@ interface StoreTemplateConfig {
   showMasVendidos?: boolean;
   showStats?: boolean;
   showWhatsApp?: boolean;
-  showBreadcrumb?: boolean;
-  showStoreBadge?: boolean;
   // Contenido personalizable
   reviewsCount?: string;
   reviewsAvatars?: string[];
@@ -47,18 +43,12 @@ interface StoreTemplateConfig {
   // Botones y fondo
   btnRadius?: number;
   bodyBg?: string;
-  // Logo imagen y branding
+  // Logo imagen
   logoImage?: string;
-  // Fuente tipográfica
-  fontFamily?: string;
-  // Hero background image
-  heroBgImage?: string;
-  // Alineación y orden del hero
-  heroElementAlignments?: Record<string, 'left' | 'center' | 'right'>;
-  heroElementOrder?: string[];
-  // SEO
-  seoTitle?: string;
-  seoDescription?: string;
+  // Datos de la tienda
+  storeHours?: string;
+  storeAddress?: string;
+  storeOpen?: boolean;
 }
 
 /* ── Mock vendor data (fallback) ─────────────────────────── */
@@ -119,42 +109,20 @@ export default function VendorStorePage() {
 
   useEffect(() => {
     try {
-      /* Slug-specific key takes priority; fallback to active template without slug check */
-      const slugRaw = localStorage.getItem(`tukimarket_config_${vendorId}`);
-      if (slugRaw) { setCfg(JSON.parse(slugRaw)); return; }
-      const tplRaw = localStorage.getItem('tukimarket_template');
-      if (tplRaw) { setCfg(JSON.parse(tplRaw)); return; }
+      /* Try saved template first, then slug-specific key */
+      const raw = localStorage.getItem(`tukimarket_config_${vendorId}`)
+               || localStorage.getItem('tukimarket_template');
+      if (raw) {
+        const parsed: StoreTemplateConfig = JSON.parse(raw);
+        if (parsed.storeSlug === vendorId) {
+          setCfg(parsed);
+          return;
+        }
+      }
     } catch { /* ignore */ }
     setCfg(defaultCfg);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
-
-  useEffect(() => {
-    const fontName = cfg?.fontFamily ?? defaultCfg?.fontFamily;
-    if (!fontName || fontName === 'Inter') return;
-    const id = `gfont-${fontName.replace(/ /g, '-')}`;
-    if (document.getElementById(id)) return;
-    const link = document.createElement('link');
-    link.id = id;
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;600;700;900&display=swap`;
-    document.head.appendChild(link);
-  }, [cfg?.fontFamily, defaultCfg?.fontFamily]);
-
-  // SEO — update document title and meta description
-  useEffect(() => {
-    const active = cfg ?? defaultCfg;
-    if (!active) return;
-    document.title = active.seoTitle || `${active.storeName} | TukiMarket`;
-    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta') as HTMLMetaElement;
-      metaDesc.name = 'description';
-      document.head.appendChild(metaDesc);
-    }
-    metaDesc.content = active.seoDescription || active.heroDescription || '';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg]);
 
   const activeCfg = cfg ?? defaultCfg;
 
@@ -171,22 +139,11 @@ export default function VendorStorePage() {
     );
   }
 
-  const acc          = activeCfg.accentColor;
-  const accText      = activeCfg.accentText;
-  const heroGrad     = `linear-gradient(135deg, ${activeCfg.heroGrad1} 0%, ${activeCfg.heroGrad2} 60%, ${activeCfg.heroGrad1} 100%)`;
-  const waUrl        = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
-  const heroTitleSz  = activeCfg.heroTitleFontSize ?? 28;
-  const heroTitleClr = activeCfg.heroTitleColor    ?? '#ffffff';
-  const heroDescSz   = activeCfg.heroDescFontSize  ?? 15;
-  const heroDescClr  = activeCfg.heroDescColor     ?? '#94a3b8';
-  const secTitleClr  = activeCfg.sectionTitleColor ?? '#0f172a';
-  const btnRad       = activeCfg.btnRadius         ?? 13;
-  const bgBody       = activeCfg.bodyBg            ?? '#f8fafc';
-  const sectionOrd   = activeCfg.sectionOrder      ?? ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
-  const heroElemOrd  = activeCfg.heroElementOrder  ?? ['logoTitle', 'description', 'reviews', 'search', 'stats'];
-  const hea = (id: string) => activeCfg.heroElementAlignments?.[id] ?? 'left';
-  const thJ = (id: string) => hea(id) === 'center' ? 'center' : hea(id) === 'right' ? 'flex-end' : 'flex-start';
-  const thT = (id: string) => hea(id) as 'left' | 'center' | 'right';
+  const acc       = activeCfg.accentColor;
+  const accText   = activeCfg.accentText;
+  const heroGrad  = `linear-gradient(135deg, ${activeCfg.heroGrad1} 0%, ${activeCfg.heroGrad2} 60%, ${activeCfg.heroGrad1} 100%)`;
+  const waUrl     = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
+  const isOpen    = activeCfg.storeOpen !== undefined ? (activeCfg.storeOpen !== false) : (vendor?.open ?? true);
 
   /* Filter products */
   const cats = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
@@ -196,243 +153,250 @@ export default function VendorStorePage() {
     return catMatch && srchMatch;
   });
 
-  /* ── Section JSX definitions ── */
-
-  /* Hero sub-elements (orderable + alignable) */
-  const thLogoTitle: ReactElement = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, justifyContent: thJ('logoTitle') }}>
-      <div style={{ width: 52, height: 52, background: `${acc}22`, border: `2px solid ${acc}55`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
-        {activeCfg.logoImage ? <img src={activeCfg.logoImage} alt={activeCfg.storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : activeCfg.logoEmoji}
+  return (
+    <div>
+      {/* ── Breadcrumb ── */}
+      <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
+        <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
+        <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
+        <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
       </div>
-      <div style={{ textAlign: thT('logoTitle') }}>
-        {activeCfg.showStoreBadge !== false && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
+
+      {/* ══ HERO ══════════════════════════════════════════════ */}
+      <div style={{ background: heroGrad, padding: '48px 24px 40px', position: 'relative', overflow: 'hidden', marginBottom: 0 }}>
+        {/* glow orbs */}
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, background: `radial-gradient(circle, ${acc}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -40, left: -40, width: 220, height: 220, background: `radial-gradient(circle, ${acc}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Store identity */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <div style={{ width: 52, height: 52, background: `${acc}22`, border: `2px solid ${acc}55`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
+              {activeCfg.logoImage
+                ? <img src={activeCfg.logoImage} alt={activeCfg.storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : activeCfg.logoEmoji}
+            </div>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 20, padding: '3px 12px', marginBottom: 4 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🛒 {activeCfg.storeName}</span>
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', lineHeight: 1.15, whiteSpace: 'pre-line' }}>{activeCfg.heroTagline}</div>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.58)', maxWidth: 560, lineHeight: 1.65, marginBottom: 20 }}>
+            {activeCfg.heroDescription}
+          </p>
+
+          {/* ⭐ Reviews strip */}
+          {activeCfg.showReviewsStrip !== false && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+              <div style={{ display: 'flex' }}>
+                {(activeCfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).map((av, i) => (
+                  <div key={i} style={{
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: `${acc}28`, border: `2px solid ${acc}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', marginLeft: i > 0 ? -9 : 0,
+                    position: 'relative', zIndex: 4 - i,
+                  }}>{av}</div>
+                ))}
+              </div>
+              <div>
+                <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                  {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: '0.88rem' }}>{s}</span>)}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)' }}>{activeCfg.reviewsCount ?? '+127 clientes satisfechos'}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Search */}
+          {activeCfg.showHeroSearch !== false && (
+            <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 28 }}>
+              <input
+                type="search"
+                placeholder={activeCfg.heroSearchPlaceholder || 'Buscar productos...'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ flex: 1, height: 50, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 13, padding: '0 18px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <button
+                style={{ height: 50, padding: '0 22px', background: acc, color: accText, border: 'none', borderRadius: 13, fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                onClick={() => {}}
+              >
+                Buscar
+              </button>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+            {activeCfg.showStats !== false && (
+              <>
+                <div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>{activeCfg.statNum || products.length}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{activeCfg.statLabel}</div>
+                </div>
+                {vendor && (
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>⭐ {vendor.rating}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Calificación</div>
+                  </div>
+                )}
+                {activeCfg.robotEnabled && (
+                  <div>
+                    <div style={{ fontSize: '1.4rem' }}>🤖</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Robot Negociador</div>
+                  </div>
+                )}
+              </>
+            )}
+            {activeCfg.showWhatsApp !== false && (
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', background: '#25D366', color: '#fff', borderRadius: 10, fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none', marginLeft: 'auto' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.542 5.953L.057 23.887a.5.5 0 0 0 .615.615l5.95-1.48A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.948 0-3.808-.524-5.408-1.449l-.388-.222-4.01.996.999-3.935-.244-.401A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                WhatsApp
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Barra de info de la tienda ── */}
+      {activeCfg.showInfoBar !== false && vendor && (
+        <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
+              🕐 <span>{activeCfg.storeHours ?? vendor?.hours}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
+              📍 <span>{activeCfg.storeAddress ?? vendor?.address}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
+              ✓ Tienda verificada
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: isOpen ? '#16a34a' : '#ef4444' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: isOpen ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: isOpen ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
+              {isOpen ? 'Abierto ahora' : 'Cerrado'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ CONTENT ═══════════════════════════════════════════ */}
+      <div className="tnd-page" style={{ paddingTop: 32 }}>
+
+        {/* ══ MÁS VENDIDOS ══════════════════════════════════ */}
+        {activeCfg.showMasVendidos !== false && products.length >= 2 && (
+          <div style={{ marginBottom: 32 }}>
+            <div className="tnd-section-head" style={{ marginBottom: 16 }}>
+              <h2 className="tnd-section-title">{activeCfg.masVendidosTitle ?? '🔥 Productos más vendidos'}</h2>
+            </div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
+              {products.slice(0, Math.min(4, products.length)).map((p, i) => {
+                const rankStyle = [
+                  { border: '2px solid #FFD700', shadow: '0 4px 20px rgba(255,215,0,0.35)', imgH: 100, crown: '👑' },
+                  { border: '2px solid #C0C0C0', shadow: '0 2px 12px rgba(192,192,192,0.3)', imgH: 86, crown: '🥈' },
+                  { border: '2px solid #CD7F32', shadow: '0 2px 10px rgba(205,127,50,0.3)', imgH: 78, crown: '🥉' },
+                  { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`,              imgH: 72, crown: ''  },
+                ][i] ?? { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`, imgH: 72, crown: '' };
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/tienda/producto/${p.id}`}
+                    style={{
+                      minWidth: i === 0 ? 165 : 145, flex: '0 0 auto', borderRadius: 16,
+                      background: 'var(--tnd-surface)', border: rankStyle.border,
+                      textDecoration: 'none', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column',
+                      boxShadow: rankStyle.shadow,
+                    }}
+                  >
+                    {/* Crown / rank icon */}
+                    {rankStyle.crown && (
+                      <div style={{ position: 'absolute', top: 6, right: 8, fontSize: i === 0 ? '1.2rem' : '1rem', zIndex: 2 }}>{rankStyle.crown}</div>
+                    )}
+                    {/* Rank number badge */}
+                    <div style={{
+                      position: 'absolute', top: 8, left: 8, zIndex: 2,
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#94a3b8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.62rem', fontWeight: 900, color: i === 0 ? '#7a5c00' : '#fff',
+                    }}>#{i + 1}</div>
+                    {/* Image area */}
+                    <div style={{ height: rankStyle.imgH, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '2.8rem' : '2.2rem' }}>
+                      {p.emoji}
+                    </div>
+                    <div style={{ padding: '8px 10px 12px' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 4, lineHeight: 1.3 }}>{p.name}</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: acc }}>{gs(p.price)}</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
-        <div style={{ fontSize: heroTitleSz, fontWeight: 900, color: heroTitleClr, lineHeight: 1.15, whiteSpace: 'pre-line' }}>{activeCfg.heroTagline}</div>
-      </div>
-    </div>
-  );
 
-  const thDescription: ReactElement = (
-    <p style={{ fontSize: heroDescSz, color: heroDescClr, maxWidth: 560, lineHeight: 1.65, marginBottom: 16, textAlign: thT('description') }}>
-      {activeCfg.heroDescription}
-    </p>
-  );
-
-  const thReviews: ReactElement | null = activeCfg.showReviewsStrip !== false ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, justifyContent: thJ('reviews') }}>
-      <div style={{ display: 'flex' }}>
-        {(activeCfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).map((av, i) => (
-          <div key={i} style={{ width: 30, height: 30, borderRadius: '50%', background: `${acc}28`, border: `2px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', marginLeft: i > 0 ? -9 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
-        ))}
-      </div>
-      <div>
-        <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
-          {'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: '0.88rem' }}>{s}</span>)}
-        </div>
-        <div style={{ fontSize: '0.74rem', color: heroDescClr }}>{activeCfg.reviewsCount ?? '+127 clientes satisfechos'}</div>
-      </div>
-    </div>
-  ) : null;
-
-  const thSearch: ReactElement | null = activeCfg.showHeroSearch !== false ? (
-    <div style={{ display: 'flex', gap: 10, maxWidth: 540, marginBottom: 24, justifyContent: thJ('search') }}>
-      <input
-        type="search"
-        placeholder={activeCfg.heroSearchPlaceholder || 'Buscar productos...'}
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ flex: 1, height: 50, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: btnRad, padding: '0 18px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-      />
-      <button
-        style={{ height: 50, padding: '0 22px', background: acc, color: accText, border: 'none', borderRadius: btnRad, fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-        onClick={() => {}}
-      >Buscar</button>
-    </div>
-  ) : null;
-
-  const thStats: ReactElement | null = (activeCfg.showStats !== false || activeCfg.showWhatsApp !== false) ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', justifyContent: thJ('stats') }}>
-      {activeCfg.showStats !== false && (
-        <>
-          <div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>{activeCfg.statNum || products.length}</div>
-            <div style={{ fontSize: '0.72rem', color: heroDescClr }}>{activeCfg.statLabel}</div>
+        {/* Category tabs — sticky */}
+        <div className="tnd-cats-sticky">
+          <div className="tnd-cats">
+            {cats.map(c => (
+              <button
+                key={c}
+                className={`tnd-cat${activeCat === c ? ' active' : ''}`}
+                style={activeCat === c ? { background: acc, color: accText, borderColor: acc } : {}}
+                onClick={() => setActiveCat(c)}
+              >
+                {c}
+              </button>
+            ))}
           </div>
-          {vendor && (
-            <div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>⭐ {vendor.rating}</div>
-              <div style={{ fontSize: '0.72rem', color: heroDescClr }}>Calificación</div>
-            </div>
-          )}
-          {activeCfg.robotEnabled && (
-            <div>
-              <div style={{ fontSize: '1.4rem' }}>{activeCfg.robotEmoji ?? '🤖'}</div>
-              <div style={{ fontSize: '0.72rem', color: heroDescClr }}>{activeCfg.robotLabel ?? 'Robot Negociador'}</div>
-            </div>
-          )}
-        </>
-      )}
-      {activeCfg.showWhatsApp !== false && (
-        <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', background: '#25D366', color: '#fff', borderRadius: btnRad, fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.542 5.953L.057 23.887a.5.5 0 0 0 .615.615l5.95-1.48A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.948 0-3.808-.524-5.408-1.449l-.388-.222-4.01.996.999-3.935-.244-.401A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-          WhatsApp
-        </a>
-      )}
-    </div>
-  ) : null;
-
-  const TIENDA_HERO_ELEMS: Record<string, ReactElement | null> = {
-    logoTitle: thLogoTitle, description: thDescription,
-    reviews: thReviews, search: thSearch, stats: thStats,
-  };
-
-  const heroEl = (
-    <div style={{ background: heroGrad, padding: '48px 24px 40px', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: -80, right: -80, width: 360, height: 360, background: `radial-gradient(circle, ${acc}18 0%, transparent 70%)`, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -40, left: -40, width: 220, height: 220, background: `radial-gradient(circle, ${acc}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
-      {activeCfg.heroBgImage && <img src={activeCfg.heroBgImage} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, pointerEvents: 'none' }} />}
-      <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        {heroElemOrd.map(id => TIENDA_HERO_ELEMS[id] ? <div key={id}>{TIENDA_HERO_ELEMS[id]}</div> : null)}
-      </div>
-    </div>
-  );
-
-  const infoBarEl = activeCfg.showInfoBar !== false ? (
-    <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-          🕐 <span>{vendor?.hours ?? '08:00 – 18:00'}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-          📍 <span>{vendor?.address ?? 'Paraguay'}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
-          ✓ Tienda verificada
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor ? (vendor.open ? '#16a34a' : '#ef4444') : '#16a34a' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor ? (vendor.open ? '#16a34a' : '#ef4444') : '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.25)' }} />
-          {vendor ? (vendor.open ? 'Abierto ahora' : 'Cerrado') : 'Abierto'}
-        </div>
-      </div>
-    </div>
-  ) : null;
 
-  const demoProducts = products.length > 0 ? products : ALL_PRODUCTS.slice(0, 4);
-  const masVendidosEl = activeCfg.showMasVendidos !== false ? (
-    <div className="tnd-page" style={{ paddingBottom: 0, background: bgBody }}>
-      <div className="tnd-section-head" style={{ marginBottom: 16 }}>
-        <h2 className="tnd-section-title" style={{ color: secTitleClr }}>{activeCfg.masVendidosTitle ?? '🔥 Productos más vendidos'}</h2>
-      </div>
-      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
-        {demoProducts.slice(0, Math.min(4, demoProducts.length)).map((p, i) => {
-          const rankStyle = [
-            { border: '2px solid #FFD700', shadow: '0 4px 20px rgba(255,215,0,0.35)', imgH: 100, crown: '👑' },
-            { border: '2px solid #C0C0C0', shadow: '0 2px 12px rgba(192,192,192,0.3)', imgH: 86,  crown: '🥈' },
-            { border: '2px solid #CD7F32', shadow: '0 2px 10px rgba(205,127,50,0.3)',  imgH: 78,  crown: '🥉' },
-            { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`,            imgH: 72,  crown: ''   },
-          ][i] ?? { border: `1.5px solid ${acc}40`, shadow: `0 2px 8px ${acc}14`, imgH: 72, crown: '' };
-          return (
-            <Link
-              key={p.id}
-              href={`/tienda/producto/${p.id}`}
-              style={{ minWidth: i === 0 ? 165 : 145, flex: '0 0 auto', borderRadius: Math.max(8, btnRad), background: 'var(--tnd-surface)', border: rankStyle.border, textDecoration: 'none', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: rankStyle.shadow }}
-            >
-              {rankStyle.crown && (
-                <div style={{ position: 'absolute', top: 6, right: 8, fontSize: i === 0 ? '1.2rem' : '1rem', zIndex: 2 }}>{rankStyle.crown}</div>
-              )}
-              <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 900, color: i === 0 ? '#7a5c00' : '#fff' }}>#{i + 1}</div>
-              <div style={{ height: rankStyle.imgH, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '2.8rem' : '2.2rem' }}>{p.emoji}</div>
-              <div style={{ padding: '8px 10px 12px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 4, lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 900, color: acc }}>{gs(p.price)}</div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  ) : null;
-
-  const catsEl = (
-    <div className="tnd-section-padded" style={{ background: bgBody }}>
-      <div className="tnd-cats-sticky" style={{ background: bgBody }}>
-        <div className="tnd-cats">
-          {cats.map(c => (
-            <button
-              key={c}
-              className={`tnd-cat${activeCat === c ? ' active' : ''}`}
-              style={activeCat === c ? { background: acc, color: accText, borderColor: acc } : {}}
-              onClick={() => setActiveCat(c)}
-            >{c}</button>
-          ))}
+        {/* Products heading */}
+        <div className="tnd-section-head">
+          <h2 className="tnd-section-title">
+            Productos <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 500, fontSize: '0.9rem' }}>({visibleProducts.length} resultado{visibleProducts.length !== 1 ? 's' : ''})</span>
+          </h2>
         </div>
-      </div>
-    </div>
-  );
 
-  const productsEl = (
-    <div className="tnd-page" style={{ paddingTop: 16, background: bgBody }}>
-      <div className="tnd-section-head">
-        <h2 className="tnd-section-title" style={{ color: secTitleClr }}>
-          Productos <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 500, fontSize: '0.9rem' }}>({visibleProducts.length} resultado{visibleProducts.length !== 1 ? 's' : ''})</span>
-        </h2>
-      </div>
-      {visibleProducts.length === 0 ? (
-        <div className="tnd-empty">
-          <div className="tnd-empty-icon">📦</div>
-          <div className="tnd-empty-title">Sin resultados</div>
-          <div className="tnd-empty-sub">Probá con otro filtro o búsqueda.</div>
-        </div>
-      ) : (
-        <div className="tnd-products-grid">
-          {visibleProducts.map(p => (
-            <Link key={p.id} href={`/tienda/producto/${p.id}`} className="tnd-product-card">
-              <div className="tnd-product-img" style={{ background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))` }}>
-                {p.emoji}
-                {p.floorPrice < p.price * 0.92 && (
-                  <span className="tnd-negoable-badge">🤖 Negociable</span>
-                )}
-              </div>
-              <div className="tnd-product-body">
-                <div className="tnd-product-store">{activeCfg.storeName}</div>
-                <div className="tnd-product-name">{p.name}</div>
-                <div className="tnd-product-price">{gs(p.price)}</div>
-                <div className="tnd-product-floor">{p.category}</div>
-                <div style={{ marginBottom: 10 }}>
-                  {p.stock === 0
-                    ? <span className="tnd-chip tnd-chip-out">Sin stock</span>
-                    : p.stock <= 3
-                      ? <span className="tnd-chip tnd-chip-low">⚠️ {p.stock} disponibles</span>
-                      : <span className="tnd-chip tnd-chip-stock">✓ En stock</span>
-                  }
+        {visibleProducts.length === 0 ? (
+          <div className="tnd-empty">
+            <div className="tnd-empty-icon">📦</div>
+            <div className="tnd-empty-title">Sin resultados</div>
+            <div className="tnd-empty-sub">Probá con otro filtro o búsqueda.</div>
+          </div>
+        ) : (
+          <div className="tnd-products-grid">
+            {visibleProducts.map(p => (
+              <Link key={p.id} href={`/tienda/producto/${p.id}`} className="tnd-product-card">
+                <div className="tnd-product-img" style={{ background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))` }}>
+                  {p.emoji}
+                  {p.floorPrice < p.price * 0.92 && (
+                    <span className="tnd-negoable-badge">🤖 Negociable</span>
+                  )}
                 </div>
-                <span className="tnd-product-action" style={{ background: acc, color: accText, borderRadius: btnRad }}>Ver y ofertar</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const SECTION_ELS: Record<string, ReactElement | null> = {
-    hero: heroEl, infoBar: infoBarEl, categories: catsEl,
-    masVendidos: masVendidosEl, products: productsEl,
-  };
-
-  return (
-    <div style={{ fontFamily: activeCfg.fontFamily ? `'${activeCfg.fontFamily}', system-ui, sans-serif` : undefined }}>
-      {activeCfg.showBreadcrumb !== false && (
-        <div style={{ padding: '12px 24px 0', maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 8, fontSize: '0.8rem', alignItems: 'center' }}>
-          <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
-          <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
-          <span style={{ color: 'var(--tnd-text-muted)' }}>{activeCfg.storeName}</span>
-        </div>
-      )}
-      {sectionOrd.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
+                <div className="tnd-product-body">
+                  <div className="tnd-product-store">{activeCfg.storeName}</div>
+                  <div className="tnd-product-name">{p.name}</div>
+                  <div className="tnd-product-price">{gs(p.price)}</div>
+                  <div className="tnd-product-floor">{p.category}</div>
+                  <div style={{ marginBottom: 10 }}>
+                    {p.stock === 0
+                      ? <span className="tnd-chip tnd-chip-out">Sin stock</span>
+                      : p.stock <= 3
+                        ? <span className="tnd-chip tnd-chip-low">⚠️ {p.stock} disponibles</span>
+                        : <span className="tnd-chip tnd-chip-stock">✓ En stock</span>
+                    }
+                  </div>
+                  <span className="tnd-product-action" style={{ background: acc, color: accText }}>Ver y ofertar</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

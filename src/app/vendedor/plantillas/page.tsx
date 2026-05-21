@@ -44,6 +44,12 @@ export interface StoreTemplateConfig {
   // Botones y fondo
   btnRadius?: number;
   bodyBg?: string;
+  // Logo como imagen
+  logoImage?: string;
+  // Datos de la tienda
+  storeHours?: string;
+  storeAddress?: string;
+  storeOpen?: boolean;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -80,6 +86,9 @@ const DEFAULTS: StoreTemplateConfig = {
   sectionTitleColor: '#0f172a',
   btnRadius:         8,
   bodyBg:            '#f8fafc',
+  storeHours:        '08:00 – 18:00',
+  storeAddress:      'Asunción, Paraguay',
+  storeOpen:         true,
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -130,7 +139,9 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
     <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
+        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
+          {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
+        </div>
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
             <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
@@ -179,11 +190,12 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
 
   const infoBarEl = cfg.showInfoBar !== false ? (
     <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '4px 10px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 6, color: '#64748b' }}>🕐 08:00–18:00</span>
-      <span style={{ fontSize: 6, color: '#64748b' }}>📍 Asunción</span>
+      <span style={{ fontSize: 6, color: '#64748b' }}>🕐 {cfg.storeHours || '08:00–18:00'}</span>
+      {cfg.storeAddress && <span style={{ fontSize: 6, color: '#64748b' }}>📍 {cfg.storeAddress}</span>}
       <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a' }}>✓ Verificada</span>
-      <span style={{ fontSize: 6, fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 2 }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Abierto
+      <span style={{ fontSize: 6, fontWeight: 700, color: cfg.storeOpen !== false ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center', gap: 2 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.storeOpen !== false ? '#16a34a' : '#ef4444', display: 'inline-block' }} />
+        {cfg.storeOpen !== false ? 'Abierto' : 'Cerrado'}
       </span>
     </div>
   ) : null;
@@ -235,7 +247,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
     </div>
   );
 
-  const SECTION_ELS: Record<string, JSX.Element | null> = {
+  const SECTION_ELS: Record<string, ReactNode> = {
     hero: heroEl, infoBar: infoBarEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
@@ -368,7 +380,7 @@ export default function PlantillasPage() {
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
-          {/* ── Plantilla 1: Mi Store ── */
+          {/* ── Plantilla 1: Mi Store ── */}
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
             border: '1.5px solid var(--vnd-accent)', boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
@@ -479,14 +491,50 @@ export default function PlantillasPage() {
             <Field label="Nombre de la tienda">
               <input className="vnd-input" value={cfg.storeName} onChange={e => update('storeName', e.target.value)} maxLength={60} />
             </Field>
+            <Field label="Logo de la tienda">
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 12, background: 'var(--vnd-bg)', border: '2px dashed var(--vnd-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {cfg.logoImage
+                    ? <img src={cfg.logoImage} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: '1.8rem' }}>{cfg.logoEmoji || '🏪'}</span>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', padding: '7px 10px', background: 'var(--vnd-bg)', border: '1px solid var(--vnd-border)', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600, color: 'var(--vnd-text)' }}>
+                    📸 Subir imagen
+                    <input type="file" accept="image/*" style={{ display: 'none' }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 512 * 1024) { alert('Máx 512 KB'); return; }
+                        const reader = new FileReader();
+                        reader.onload = ev => { if (ev.target?.result) update('logoImage', ev.target.result as string); };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input className="vnd-input" value={cfg.logoEmoji} onChange={e => update('logoEmoji', e.target.value)} maxLength={4} style={{ width: 50, fontSize: '1.3rem', textAlign: 'center', flexShrink: 0 }} placeholder="🏪" title="Emoji si no hay imagen" />
+                    {cfg.logoImage && (
+                      <button type="button" onClick={() => update('logoImage', undefined)} style={{ flex: 1, padding: '6px', background: 'none', border: '1px solid #ef444430', borderRadius: 8, color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        × Quitar imagen
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Field>
+            <Field label="WhatsApp">
+              <input className="vnd-input" value={cfg.whatsapp} onChange={e => update('whatsapp', e.target.value)} placeholder="0981000000" maxLength={20} />
+            </Field>
             <div className="vnd-form-grid">
-              <Field label="Emoji / Logo">
-                <input className="vnd-input" value={cfg.logoEmoji} onChange={e => update('logoEmoji', e.target.value)} maxLength={4} style={{ fontSize: '1.4rem', textAlign: 'center' }} />
+              <Field label="🕐 Horario">
+                <input className="vnd-input" value={cfg.storeHours ?? ''} onChange={e => update('storeHours', e.target.value)} placeholder="08:00 – 18:00" maxLength={30} />
               </Field>
-              <Field label="WhatsApp">
-                <input className="vnd-input" value={cfg.whatsapp} onChange={e => update('whatsapp', e.target.value)} placeholder="0981000000" maxLength={20} />
+              <Field label="📍 Dirección">
+                <input className="vnd-input" value={cfg.storeAddress ?? ''} onChange={e => update('storeAddress', e.target.value)} placeholder="Asunción, Centro" maxLength={60} />
               </Field>
             </div>
+            <Toggle enabled={cfg.storeOpen !== false} onToggle={() => update('storeOpen', cfg.storeOpen === false)} label="🟢 Tienda abierta ahora" />
             <Field label="Slug (URL de tu tienda)" hint="Solo letras minúsculas, números y guiones">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--vnd-text-muted)', whiteSpace: 'nowrap' }}>tukitask.vercel.app/tienda/</span>
@@ -583,27 +631,25 @@ export default function PlantillasPage() {
             <div style={{ height: 1, background: 'var(--vnd-border)' }} />
 
             <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => update('showReviewsStrip', cfg.showReviewsStrip === false)} label="⭐ Strip de reseñas en portada" />
-            {cfg.showReviewsStrip !== false && (
-              <>
-                <Field label="Avatares de clientes" hint="Emojis separados por coma">
-                  <input className="vnd-input" value={(cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).join(', ')} onChange={e => update('reviewsAvatars', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder="👩, 👨, 👩🏽, 👨🏻" maxLength={40} />
-                </Field>
-                <Field label="Texto de satisfacción">
-                  <input className="vnd-input" value={cfg.reviewsCount ?? ''} onChange={e => update('reviewsCount', e.target.value)} placeholder="+127 clientes satisfechos" maxLength={50} />
-                </Field>
-              </>
-            )}
+            <div style={{ opacity: cfg.showReviewsStrip === false ? 0.45 : 1, pointerEvents: cfg.showReviewsStrip === false ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Field label="Avatares de clientes" hint="Emojis separados por coma">
+                <input className="vnd-input" value={(cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻']).join(', ')} onChange={e => update('reviewsAvatars', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} placeholder="👩, 👨, 👩🏽, 👨🏻" maxLength={40} />
+              </Field>
+              <Field label="Texto de satisfacción">
+                <input className="vnd-input" value={cfg.reviewsCount ?? ''} onChange={e => update('reviewsCount', e.target.value)} placeholder="+127 clientes satisfechos" maxLength={50} />
+              </Field>
+            </div>
 
             <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => update('showHeroSearch', cfg.showHeroSearch === false)} label="🔍 Buscador en portada" />
             <Toggle enabled={cfg.showStats !== false} onToggle={() => update('showStats', cfg.showStats === false)} label="📊 Estadísticas en portada" />
             <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => update('showWhatsApp', cfg.showWhatsApp === false)} label="💬 Botón WhatsApp" />
             <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => update('showInfoBar', cfg.showInfoBar === false)} label="ℹ️ Barra de info (horario y dirección)" />
             <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => update('showMasVendidos', cfg.showMasVendidos === false)} label="🔥 Sección de más vendidos" />
-            {cfg.showMasVendidos !== false && (
+            <div style={{ opacity: cfg.showMasVendidos === false ? 0.45 : 1, pointerEvents: cfg.showMasVendidos === false ? 'none' : 'auto' }}>
               <Field label="Título de más vendidos">
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
               </Field>
-            )}
+            </div>
           </Section>
 
           {/* Tipografía */}
