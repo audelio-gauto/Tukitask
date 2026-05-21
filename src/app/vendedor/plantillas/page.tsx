@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, type ReactNode, type ReactElement } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -20,8 +20,6 @@ export interface StoreTemplateConfig {
   statNum: string;
   statLabel: string;
   robotEnabled: boolean;
-  robotEmoji?: string;
-  robotLabel?: string;
   categories: string[];
   // Secciones visibles (undefined = visible)
   showReviewsStrip?: boolean;
@@ -30,8 +28,6 @@ export interface StoreTemplateConfig {
   showMasVendidos?: boolean;
   showStats?: boolean;
   showWhatsApp?: boolean;
-  showBreadcrumb?: boolean;
-  showStoreBadge?: boolean;
   // Contenido personalizable
   reviewsCount?: string;
   reviewsAvatars?: string[];
@@ -48,18 +44,6 @@ export interface StoreTemplateConfig {
   // Botones y fondo
   btnRadius?: number;
   bodyBg?: string;
-  // Logo imagen y branding
-  logoImage?: string;
-  // Fuente tipográfica
-  fontFamily?: string;
-  // Hero — imagen de fondo opcional
-  heroBgImage?: string;
-  // Alineación y orden del hero
-  heroElementAlignments?: Record<string, 'left' | 'center' | 'right'>;
-  heroElementOrder?: string[];
-  // SEO
-  seoTitle?: string;
-  seoDescription?: string;
 }
 
 const DEFAULTS: StoreTemplateConfig = {
@@ -77,8 +61,6 @@ const DEFAULTS: StoreTemplateConfig = {
   statNum:          '0',
   statLabel:        'Productos',
   robotEnabled:     true,
-  robotEmoji:       '🤖',
-  robotLabel:       'Robot Negociador',
   categories:       ['Todos', 'Electrónica', 'Ropa', 'Hogar', 'Libros'],
   showReviewsStrip: true,
   showHeroSearch:   true,
@@ -86,8 +68,6 @@ const DEFAULTS: StoreTemplateConfig = {
   showMasVendidos:  true,
   showStats:        true,
   showWhatsApp:     true,
-  showBreadcrumb:   true,
-  showStoreBadge:   true,
   reviewsCount:     '+127 clientes satisfechos',
   reviewsAvatars:   ['👩', '👨', '👩🏽', '👨🏻'],
   heroSearchPlaceholder: 'Buscar productos...',
@@ -100,30 +80,7 @@ const DEFAULTS: StoreTemplateConfig = {
   sectionTitleColor: '#0f172a',
   btnRadius:         8,
   bodyBg:            '#f8fafc',
-  logoImage:         '',
-  fontFamily:        'Inter',
-  heroBgImage:       '',
-  heroElementAlignments: {},
-  heroElementOrder:  ['logoTitle', 'description', 'reviews', 'search', 'stats'],
-  seoTitle:          '',
-  seoDescription:    '',
 };
-
-
-
-/* ═══════════════════════════════════════════════════════════════
-   FONTS
-   ═══════════════════════════════════════════════════════════════ */
-const FONTS = [
-  { name: 'Inter',            css: 'Inter' },
-  { name: 'Poppins',          css: 'Poppins' },
-  { name: 'Montserrat',       css: 'Montserrat' },
-  { name: 'Playfair Display', css: 'Playfair Display' },
-  { name: 'Nunito',           css: 'Nunito' },
-  { name: 'Oswald',           css: 'Oswald' },
-  { name: 'Raleway',          css: 'Raleway' },
-  { name: 'Roboto',           css: 'Roboto' },
-];
 
 /* ═══════════════════════════════════════════════════════════════
    PALETTES
@@ -149,114 +106,74 @@ const SECTION_LABELS: Record<string, string> = {
 };
 const DEFAULT_SECTION_ORDER = ['hero', 'infoBar', 'categories', 'masVendidos', 'products'];
 
-const HERO_ELEM_LABELS: Record<string, string> = {
-  logoTitle:   '🏡 Logo + Título',
-  description: '📝 Descripción',
-  reviews:     '⭐ Strip de reseñas',
-  search:      '🔍 Buscador',
-  stats:       '📊 Estadísticas + WhatsApp',
-};
-const DEFAULT_HERO_ELEM_ORDER = ['logoTitle', 'description', 'reviews', 'search', 'stats'];
-
 /* ═══════════════════════════════════════════════════════════════
    MINI PREVIEW — renders a scaled-down version of Template 1
    ═══════════════════════════════════════════════════════════════ */
-function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?: 'mobile' | 'desktop' }) {
-  const isDesktop   = mode === 'desktop';
-  const sf          = isDesktop ? 2.0 : 2.5;   // scale factor for fonts
+function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
   const acc         = cfg.accentColor;
   const grad        = `linear-gradient(135deg, ${cfg.heroGrad1} 0%, ${cfg.heroGrad2} 100%)`;
   const avatars     = cfg.reviewsAvatars ?? ['👩','👨','👩🏽','👨🏻'];
   const reviewsText = cfg.reviewsCount ?? '+127 clientes satisfechos';
   const searchPH    = cfg.heroSearchPlaceholder || 'Buscar productos...';
   const masVTitle   = cfg.masVendidosTitle || '🔥 Más vendidos';
-  const titleSz     = (cfg.heroTitleFontSize ?? 28) / sf;
+  const titleSz     = (cfg.heroTitleFontSize ?? 28) / 2.5;
   const titleClr    = cfg.heroTitleColor ?? '#ffffff';
-  const descSz      = (cfg.heroDescFontSize ?? 14) / (isDesktop ? 1.5 : 1.85);
+  const descSz      = (cfg.heroDescFontSize ?? 14) / 1.85;
   const descClr     = cfg.heroDescColor ?? '#94a3b8';
   const secTitleClr = cfg.sectionTitleColor ?? '#0f172a';
-  const radius      = Math.max(2, (cfg.btnRadius ?? 8) / (isDesktop ? 1.2 : 1.6));
+  const radius      = Math.max(2, (cfg.btnRadius ?? 8) / 1.6);
   const bodyBg      = cfg.bodyBg ?? '#f8fafc';
   const order       = cfg.sectionOrder ?? DEFAULT_SECTION_ORDER;
-  const font         = cfg.fontFamily ?? 'Inter';
-  const bgImg        = cfg.heroBgImage ?? '';
-  const heroElemOrd = cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER;
-  // Per-element alignment helpers
-  const hea = (id: string) => cfg.heroElementAlignments?.[id] ?? 'left';
-  const hj  = (id: string) => hea(id) === 'center' ? 'center' : hea(id) === 'right' ? 'flex-end' : 'flex-start';
-  const ht  = (id: string) => hea(id) as 'left' | 'center' | 'right';
-
-  const hLogoTitle: ReactElement = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, justifyContent: hj('logoTitle') }}>
-      <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, overflow: 'hidden' }}>
-        {cfg.logoImage ? <img src={cfg.logoImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
-      </div>
-      <div style={{ textAlign: ht('logoTitle') }}>
-        {cfg.showStoreBadge !== false && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
-            <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
-          </div>
-        )}
-        <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
-      </div>
-    </div>
-  );
-
-  const hDescription: ReactElement = (
-    <div style={{ fontSize: descSz, color: descClr, marginBottom: 4, lineHeight: 1.45, textAlign: ht('description') }}>{cfg.heroDescription}</div>
-  );
-
-  const hReviews: ReactElement | null = cfg.showReviewsStrip !== false ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, justifyContent: hj('reviews') }}>
-      <div style={{ display: 'flex' }}>
-        {avatars.slice(0, 4).map((av, i) => (
-          <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
-        ))}
-      </div>
-      <div>
-        <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
-        <div style={{ fontSize: 5.5, color: descClr }}>{reviewsText}</div>
-      </div>
-    </div>
-  ) : null;
-
-  const hSearch: ReactElement | null = cfg.showHeroSearch !== false ? (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 6, justifyContent: hj('search') }}>
-      <div style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden', flex: hea('search') === 'center' ? 'none' : 1, width: hea('search') === 'center' ? 70 : undefined }}>
-        <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
-      </div>
-      <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
-    </div>
-  ) : null;
-
-  const hStats: ReactElement | null = (cfg.showStats !== false || cfg.showWhatsApp !== false) ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: hj('stats') }}>
-      {cfg.showStats !== false && (
-        <>
-          <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
-          <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
-          {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>{cfg.robotEmoji ?? '🤖'}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.robotLabel ?? 'Robot'}</div></div>}
-        </>
-      )}
-      {cfg.showWhatsApp !== false && (
-        <div style={{ background: '#25D366', color: '#fff', borderRadius: radius, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span>📱</span> WhatsApp
-        </div>
-      )}
-    </div>
-  ) : null;
-
-  const HERO_ELEMS: Record<string, ReactElement | null> = {
-    logoTitle: hLogoTitle, description: hDescription,
-    reviews: hReviews, search: hSearch, stats: hStats,
-  };
 
   /* ── Section elements ── */
   const heroEl = (
     <div style={{ background: grad, padding: '16px 12px 14px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: `radial-gradient(circle, ${acc}20 0%, transparent 70%)`, borderRadius: '50%' }} />
-      {bgImg && <img src={bgImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18, pointerEvents: 'none' }} />}
-      {heroElemOrd.map(id => HERO_ELEMS[id] ? <div key={id}>{HERO_ELEMS[id]}</div> : null)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <div style={{ width: 28, height: 28, background: `${acc}22`, border: `1.5px solid ${acc}55`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{cfg.logoEmoji}</div>
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: `${acc}18`, border: `1px solid ${acc}40`, borderRadius: 10, padding: '1px 7px', marginBottom: 3 }}>
+            <span style={{ fontSize: 7, fontWeight: 700, color: acc, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛒 {cfg.storeName}</span>
+          </div>
+          <div style={{ fontSize: titleSz, fontWeight: 900, color: titleClr, lineHeight: 1.2, whiteSpace: 'pre-line' }}>{cfg.heroTagline}</div>
+        </div>
+      </div>
+      <div style={{ fontSize: descSz, color: descClr, marginBottom: 7, lineHeight: 1.45 }}>{cfg.heroDescription}</div>
+      {cfg.showReviewsStrip !== false && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <div style={{ display: 'flex' }}>
+            {avatars.slice(0, 4).map((av, i) => (
+              <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: `${acc}28`, border: `1px solid ${acc}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, marginLeft: i > 0 ? -4 : 0, position: 'relative', zIndex: 4 - i }}>{av}</div>
+            ))}
+          </div>
+          <div>
+            <div style={{ display: 'flex', gap: 0.5 }}>{'★★★★★'.split('').map((s, i) => <span key={i} style={{ color: acc, fontSize: 5.5 }}>{s}</span>)}</div>
+            <div style={{ fontSize: 5.5, color: descClr }}>{reviewsText}</div>
+          </div>
+        </div>
+      )}
+      {cfg.showHeroSearch !== false && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: radius, height: 20, display: 'flex', alignItems: 'center', padding: '0 7px', overflow: 'hidden' }}>
+            <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{searchPH}</span>
+          </div>
+          <div style={{ background: acc, color: cfg.accentText, borderRadius: radius, padding: '0 8px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>Buscar</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        {cfg.showStats !== false && (
+          <>
+            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>{cfg.statNum}</div><div style={{ fontSize: 6.5, color: descClr }}>{cfg.statLabel}</div></div>
+            <div><div style={{ fontSize: 11, fontWeight: 900, color: acc }}>⭐ 4.8</div><div style={{ fontSize: 6.5, color: descClr }}>Calificación</div></div>
+            {cfg.robotEnabled && <div><div style={{ fontSize: 11 }}>🤖</div><div style={{ fontSize: 6.5, color: descClr }}>Robot</div></div>}
+          </>
+        )}
+        {cfg.showWhatsApp !== false && (
+          <div style={{ marginLeft: 'auto', background: '#25D366', color: '#fff', borderRadius: radius, padding: '3px 7px', fontSize: 7, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span>📱</span> WhatsApp
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -281,7 +198,7 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
 
   const masVendidosEl = cfg.showMasVendidos !== false ? (
     <div style={{ padding: '6px 10px', background: bodyBg }}>
-      <div style={{ fontSize: isDesktop ? 10 : 8.5, fontWeight: 800, color: secTitleClr, marginBottom: 5 }}>{masVTitle}</div>
+      <div style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr, marginBottom: 5 }}>{masVTitle}</div>
       <div style={{ display: 'flex', gap: 5 }}>
         {[{ e: '📱', rank: '#1', b: '#FFD700', t: '#7a5c00' }, { e: '🎧', rank: '#2', b: '#C0C0C0', t: '#fff' }, { e: '💻', rank: '#3', b: '#CD7F32', t: '#fff' }].map((item, i) => (
           <div key={i} style={{ flex: 1, background: '#fff', border: `1px solid ${acc}44`, borderRadius: radius, overflow: 'hidden', position: 'relative' }}>
@@ -300,11 +217,11 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
   const productsEl = (
     <div style={{ padding: '6px 10px 10px', background: bodyBg }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: isDesktop ? 10 : 8.5, fontWeight: 800, color: secTitleClr }}>Productos</span>
+        <span style={{ fontSize: 8.5, fontWeight: 800, color: secTitleClr }}>Productos</span>
         <span style={{ fontSize: 7, color: '#64748b' }}>3 resultados</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: isDesktop ? 8 : 6 }}>
-        {(isDesktop ? ['📱', '🎧', '💻', '⌨️'] : ['📱', '🎧', '💻']).map((e, i) => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {['📱', '🎧', '💻'].map((e, i) => (
           <div key={i} style={{ background: '#fff', borderRadius: radius, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
             <div style={{ height: 34, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{e}</div>
             <div style={{ padding: '4px 5px' }}>
@@ -318,13 +235,13 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
     </div>
   );
 
-  const SECTION_ELS: Record<string, ReactElement | null> = {
+  const SECTION_ELS: Record<string, ReactNode> = {
     hero: heroEl, infoBar: infoBarEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
 
   return (
-    <div style={{ fontFamily: `'${font}', system-ui, sans-serif`, background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
+    <div style={{ fontFamily: 'system-ui,sans-serif', background: '#f4f6fb', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', pointerEvents: 'none', userSelect: 'none', fontSize: '10px' }}>
       {/* ── App Header ── */}
       <div style={{ background: '#F5C518', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0b1220', border: '1.5px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 800, flexShrink: 0 }}>V</div>
@@ -341,13 +258,11 @@ function MiniPreview({ cfg, mode = 'mobile' }: { cfg: StoreTemplateConfig; mode?
         <div style={{ width: 22, height: 22, background: '#0b1220', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🛒</div>
       </div>
       {/* ── Breadcrumb ── */}
-      {cfg.showBreadcrumb !== false && (
-        <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
-          <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
-          <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
-          <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
-        </div>
-      )}
+      <div style={{ background: '#fff', padding: '4px 10px', display: 'flex', gap: 5, alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+        <span style={{ fontSize: 7, color: '#3b82f6' }}>Catálogo</span>
+        <span style={{ fontSize: 7, color: '#94a3b8' }}>›</span>
+        <span style={{ fontSize: 7, color: '#64748b' }}>{cfg.storeName}</span>
+      </div>
       {/* ── Sections in user-defined order ── */}
       {order.map(id => SECTION_ELS[id] ? <div key={id}>{SECTION_ELS[id]}</div> : null)}
     </div>
@@ -407,17 +322,12 @@ export default function PlantillasPage() {
   const [catInput, setCatInput] = useState('');
   const [view, setView]       = useState<'gallery' | 'editor'>('gallery');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [heroElemDragIdx, setHeroElemDragIdx] = useState<number | null>(null);
-  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
 
   /* Load from localStorage on mount */
   useEffect(() => {
     try {
       const raw = localStorage.getItem('tukimarket_template');
-      if (raw) {
-        const parsed: StoreTemplateConfig = JSON.parse(raw);
-        setCfg(parsed);
-      }
+      if (raw) setCfg(JSON.parse(raw));
     } catch { /* ignore */ }
   }, []);
 
@@ -455,14 +365,33 @@ export default function PlantillasPage() {
   if (view === 'gallery') {
     return (
       <div>
+        {/* ── Page header modernizado ── */}
+        <div style={{
+          marginBottom: 28, borderRadius: 18, overflow: 'hidden', position: 'relative',
+          background: 'linear-gradient(135deg, #F5C518 0%, #f0b000 100%)',
+          padding: '28px 28px 24px',
+        }}>
+          <div style={{ position: 'absolute', top: -32, right: -32, width: 160, height: 160, background: 'rgba(255,255,255,0.13)', borderRadius: '50%', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: -20, right: 90, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '2rem', marginBottom: 10, lineHeight: 1 }}>🏪</div>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0b1220', margin: '0 0 6px', letterSpacing: '-0.01em' }}>Plantillas de Tienda</h1>
+            <p style={{ color: 'rgba(11,18,32,0.6)', fontSize: '0.84rem', margin: '0 0 16px' }}>Elegí y personalizá la apariencia de tu tienda pública</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {['🔥 Más vendidos', '🎨 Personalizable', '🤖 Robot Negociador', '📱 100% Mobile'].map(f => (
+                <span key={f} style={{ background: 'rgba(11,18,32,0.12)', color: '#0b1220', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, padding: '3px 10px' }}>{f}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
-          {/* ── Plantilla 1: Mi Store ── */}
+          {/* ── Plantilla 1: Vitrina Marketplace ── */}
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
-            border: `1.5px solid var(--vnd-accent)`,
-            boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
+            border: '1.5px solid var(--vnd-accent)', boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
           }}>
             {/* Colored top bar */}
             <div style={{ background: 'linear-gradient(90deg, #F5C518 0%, #f0b000 100%)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -470,7 +399,7 @@ export default function PlantillasPage() {
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.35)' }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Activa</span>
               </div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Mi Store</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Vitrina Marketplace</span>
             </div>
 
             {/* Preview thumbnail */}
@@ -490,18 +419,12 @@ export default function PlantillasPage() {
               <button
                 className="vnd-btn vnd-btn-primary"
                 style={{ flex: 1 }}
-                onClick={() => {
-                  try {
-                    const raw = localStorage.getItem('tukimarket_template');
-                    if (raw) { setCfg(JSON.parse(raw)); setView('editor'); return; }
-                  } catch { /* ignore */ }
-                  setCfg(DEFAULTS); setView('editor');
-                }}
+                onClick={() => setView('editor')}
               >
                 ✏️ Personalizar
               </button>
               <a
-                href={`/tienda/${cfg.storeSlug}`}
+                href={storeUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="vnd-btn vnd-btn-secondary"
@@ -511,6 +434,19 @@ export default function PlantillasPage() {
               </a>
             </div>
           </div>
+
+          {/* ── Próximamente ── */}
+          {['Catálogo Minimalista', 'Tienda Premium', 'Boutique'].map(name => (
+            <div key={name} style={{ borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)', border: '1.5px solid var(--vnd-border)', opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ height: 200, background: 'var(--vnd-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--vnd-border)' }}>
+                <span style={{ fontSize: '2.5rem' }}>🔒</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', fontWeight: 600 }}>Próximamente</span>
+              </div>
+              <div style={{ padding: '14px 18px 18px' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--vnd-text)' }}>{name}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -529,9 +465,7 @@ export default function PlantillasPage() {
           >
             ← Plantillas
           </button>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>
-            Mi Store
-          </h1>
+          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Vitrina Marketplace</h1>
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
             Personalizá tu tienda pública en tiempo real
           </p>
@@ -565,39 +499,8 @@ export default function PlantillasPage() {
             <Field label="Nombre de la tienda">
               <input className="vnd-input" value={cfg.storeName} onChange={e => update('storeName', e.target.value)} maxLength={60} />
             </Field>
-            <Field label="Logo de la tienda" hint="Subí una imagen (PNG/JPG, máx. 500 KB) o pegá una URL">
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ width: 64, height: 64, background: `${cfg.accentColor}22`, border: `2px solid ${cfg.accentColor}55`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, overflow: 'hidden' }}>
-                  {cfg.logoImage ? <img src={cfg.logoImage} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cfg.logoEmoji}
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--vnd-bg-elevated)', border: '1px solid var(--vnd-border)', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--vnd-text)', width: 'fit-content' }}>
-                    📁 Subir imagen
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      if (file.size > 500_000) { alert('La imagen debe pesar menos de 500 KB'); return; }
-                      const reader = new FileReader();
-                      reader.onload = ev => update('logoImage', ev.target?.result as string);
-                      reader.readAsDataURL(file);
-                    }} />
-                  </label>
-                  <input
-                    className="vnd-input"
-                    value={cfg.logoImage?.startsWith('data:') ? '' : (cfg.logoImage ?? '')}
-                    placeholder={cfg.logoImage?.startsWith('data:') ? '(imagen subida ✓)' : 'https://ejemplo.com/logo.png'}
-                    onChange={e => update('logoImage', e.target.value)}
-                  />
-                  {cfg.logoImage && (
-                    <button type="button" onClick={() => update('logoImage', '')} style={{ fontSize: '0.73rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
-                      ✕ Quitar imagen (usar emoji)
-                    </button>
-                  )}
-                </div>
-              </div>
-            </Field>
             <div className="vnd-form-grid">
-              <Field label="Emoji (si no hay imagen)">
+              <Field label="Emoji / Logo">
                 <input className="vnd-input" value={cfg.logoEmoji} onChange={e => update('logoEmoji', e.target.value)} maxLength={4} style={{ fontSize: '1.4rem', textAlign: 'center' }} />
               </Field>
               <Field label="WhatsApp">
@@ -640,77 +543,6 @@ export default function PlantillasPage() {
                 maxLength={220}
               />
             </Field>
-            <Field label="Imagen de fondo del hero" hint="PNG/JPG/WEBP, máx. 1 MB">
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                {cfg.heroBgImage && (
-                  <div style={{ width: 72, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--vnd-border)' }}>
-                    <img src={cfg.heroBgImage} alt="bg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                )}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--vnd-bg-elevated)', border: '1px solid var(--vnd-border)', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--vnd-text)', width: 'fit-content' }}>
-                    🖼️ Subir imagen de fondo
-                    <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      if (file.size > 1_000_000) { alert('La imagen debe pesar menos de 1 MB'); return; }
-                      const reader = new FileReader();
-                      reader.onload = ev => update('heroBgImage', ev.target?.result as string);
-                      reader.readAsDataURL(file);
-                    }} />
-                  </label>
-                  {cfg.heroBgImage && (
-                    <button type="button" onClick={() => update('heroBgImage', '')} style={{ fontSize: '0.73rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
-                      ✕ Quitar imagen de fondo
-                    </button>
-                  )}
-                </div>
-              </div>
-            </Field>
-            <Field label="Orden y alineación de elementos del hero" hint="Arrastrá para reordenar · ⬅ ↔ ➡ para alinear cada elemento">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {(cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER).map((id, idx) => (
-                  <div key={id} draggable
-                    onDragStart={() => setHeroElemDragIdx(idx)}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={() => {
-                      if (heroElemDragIdx === null || heroElemDragIdx === idx) { setHeroElemDragIdx(null); return; }
-                      const newOrder = [...(cfg.heroElementOrder ?? DEFAULT_HERO_ELEM_ORDER)];
-                      const [moved] = newOrder.splice(heroElemDragIdx, 1);
-                      newOrder.splice(idx, 0, moved);
-                      update('heroElementOrder', newOrder);
-                      setHeroElemDragIdx(null);
-                    }}
-                    onDragEnd={() => setHeroElemDragIdx(null)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8,
-                      cursor: 'grab', userSelect: 'none',
-                      background: heroElemDragIdx === idx ? 'rgba(245,197,24,0.12)' : 'var(--vnd-bg)',
-                      border: `1px solid ${heroElemDragIdx === idx ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-                      opacity: heroElemDragIdx !== null && heroElemDragIdx !== idx ? 0.55 : 1 }}
-                  >
-                    <span style={{ color: 'var(--vnd-text-muted)', fontSize: '1rem', lineHeight: 1 }}>⠸⠇</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--vnd-text)', flex: 1 }}>{HERO_ELEM_LABELS[id]}</span>
-                    <div style={{ display: 'flex', gap: 2 }} onMouseDown={e => e.stopPropagation()}>
-                      {(['left', 'center', 'right'] as const).map(a => (
-                        <button key={a} type="button"
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={e => {
-                            e.stopPropagation();
-                            update('heroElementAlignments', { ...(cfg.heroElementAlignments ?? {}), [id]: a });
-                          }}
-                          style={{ width: 24, height: 22, borderRadius: 5, cursor: 'pointer', fontSize: '0.65rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: `1.5px solid ${(cfg.heroElementAlignments?.[id] ?? 'left') === a ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-                            background: (cfg.heroElementAlignments?.[id] ?? 'left') === a ? 'rgba(245,197,24,0.2)' : 'transparent',
-                            color: 'var(--vnd-text)' }}
-                        >{a === 'left' ? '⬅' : a === 'center' ? '↔' : '➡'}</button>
-                      ))}
-                    </div>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--vnd-text-muted)', background: 'var(--vnd-bg-elevated)', borderRadius: 5, padding: '1px 5px' }}>#{idx + 1}</span>
-                  </div>
-                ))}
-              </div>
-            </Field>
             <div className="vnd-form-grid">
               <Field label="Estadística (número)">
                 <input className="vnd-input" value={cfg.statNum} onChange={e => update('statNum', e.target.value)} maxLength={8} />
@@ -726,16 +558,6 @@ export default function PlantillasPage() {
               onToggle={() => update('robotEnabled', !cfg.robotEnabled)}
               label="🤖 Robot Negociador en portada"
             />
-            {cfg.robotEnabled && (
-              <div className="vnd-form-grid">
-                <Field label="Emoji del robot">
-                  <input className="vnd-input" value={cfg.robotEmoji ?? '🤖'} onChange={e => update('robotEmoji', e.target.value)} maxLength={4} placeholder="🤖" />
-                </Field>
-                <Field label="Etiqueta del robot">
-                  <input className="vnd-input" value={cfg.robotLabel ?? 'Robot Negociador'} onChange={e => update('robotLabel', e.target.value)} maxLength={30} placeholder="Robot Negociador" />
-                </Field>
-              </div>
-            )}
             <Field label="Buscador — placeholder" hint="Texto que aparece en el campo de búsqueda del hero">
               <input className="vnd-input" value={cfg.heroSearchPlaceholder ?? ''} onChange={e => update('heroSearchPlaceholder', e.target.value)} placeholder="Buscar productos..." maxLength={60} />
             </Field>
@@ -780,7 +602,7 @@ export default function PlantillasPage() {
 
             <div style={{ height: 1, background: 'var(--vnd-border)' }} />
 
-            <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => setCfg(prev => ({ ...prev, showReviewsStrip: prev.showReviewsStrip !== false ? false : true }))} label="⭐ Strip de reseñas en portada" />
+            <Toggle enabled={cfg.showReviewsStrip !== false} onToggle={() => update('showReviewsStrip', cfg.showReviewsStrip === false)} label="⭐ Strip de reseñas en portada" />
             {cfg.showReviewsStrip !== false && (
               <>
                 <Field label="Avatares de clientes" hint="Emojis separados por coma">
@@ -792,13 +614,11 @@ export default function PlantillasPage() {
               </>
             )}
 
-            <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => setCfg(prev => ({ ...prev, showHeroSearch: prev.showHeroSearch !== false ? false : true }))} label="🔍 Buscador en portada" />
-            <Toggle enabled={cfg.showStats !== false} onToggle={() => setCfg(prev => ({ ...prev, showStats: prev.showStats !== false ? false : true }))} label="📊 Estadísticas en portada" />
-            <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => setCfg(prev => ({ ...prev, showWhatsApp: prev.showWhatsApp !== false ? false : true }))} label="💬 Botón WhatsApp" />
-            <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => setCfg(prev => ({ ...prev, showInfoBar: prev.showInfoBar !== false ? false : true }))} label="ℹ️ Barra de info (horario y dirección)" />
-            <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => setCfg(prev => ({ ...prev, showMasVendidos: prev.showMasVendidos !== false ? false : true }))} label="🔥 Sección de más vendidos" />
-            <Toggle enabled={cfg.showBreadcrumb !== false} onToggle={() => setCfg(prev => ({ ...prev, showBreadcrumb: prev.showBreadcrumb !== false ? false : true }))} label="🧭 Migas de pan (Catálogo › Tienda)" />
-            <Toggle enabled={cfg.showStoreBadge !== false} onToggle={() => setCfg(prev => ({ ...prev, showStoreBadge: prev.showStoreBadge !== false ? false : true }))} label="🛒 Chip con nombre en portada" />
+            <Toggle enabled={cfg.showHeroSearch !== false} onToggle={() => update('showHeroSearch', cfg.showHeroSearch === false)} label="🔍 Buscador en portada" />
+            <Toggle enabled={cfg.showStats !== false} onToggle={() => update('showStats', cfg.showStats === false)} label="📊 Estadísticas en portada" />
+            <Toggle enabled={cfg.showWhatsApp !== false} onToggle={() => update('showWhatsApp', cfg.showWhatsApp === false)} label="💬 Botón WhatsApp" />
+            <Toggle enabled={cfg.showInfoBar !== false} onToggle={() => update('showInfoBar', cfg.showInfoBar === false)} label="ℹ️ Barra de info (horario y dirección)" />
+            <Toggle enabled={cfg.showMasVendidos !== false} onToggle={() => update('showMasVendidos', cfg.showMasVendidos === false)} label="🔥 Sección de más vendidos" />
             {cfg.showMasVendidos !== false && (
               <Field label="Título de más vendidos">
                 <input className="vnd-input" value={cfg.masVendidosTitle ?? ''} onChange={e => update('masVendidosTitle', e.target.value)} placeholder="🔥 Productos más vendidos" maxLength={40} />
@@ -808,23 +628,6 @@ export default function PlantillasPage() {
 
           {/* Tipografía */}
           <Section title="📐 Tipografía">
-            <Field label="Fuente de la tienda">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                {FONTS.map(f => (
-                  <button
-                    key={f.name}
-                    type="button"
-                    onClick={() => update('fontFamily', f.css)}
-                    style={{
-                      padding: '7px 4px', borderRadius: 8,
-                      border: `2px solid ${(cfg.fontFamily ?? 'Inter') === f.css ? 'var(--vnd-accent)' : 'var(--vnd-border)'}`,
-                      background: (cfg.fontFamily ?? 'Inter') === f.css ? 'rgba(245,197,24,0.1)' : 'var(--vnd-bg)',
-                      cursor: 'pointer', fontSize: '0.67rem', fontWeight: 600, color: 'var(--vnd-text)',
-                    }}
-                  >{f.name}</button>
-                ))}
-              </div>
-            </Field>
             <Field label="Título de portada" hint={`Tamaño: ${cfg.heroTitleFontSize ?? 28}px`}>
               <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 8, alignItems: 'center' }}>
                 <input
@@ -965,129 +768,21 @@ export default function PlantillasPage() {
             </div>
           </Section>
 
-          {/* SEO */}
-          <Section title="🔍 SEO">
-            <Field label="Meta título" hint="Aparece en Google y pestañas del navegador (máx. 70 car.)">
-              <input className="vnd-input" value={cfg.seoTitle ?? ''} onChange={e => update('seoTitle', e.target.value)} placeholder={`${cfg.storeName} | TukiMarket`} maxLength={70} />
-              <span style={{ fontSize: '0.67rem', color: 'var(--vnd-text-muted)' }}>{(cfg.seoTitle ?? '').length}/70</span>
-            </Field>
-            <Field label="Meta descripción" hint="Descripción en resultados de Google (máx. 160 car.)">
-              <textarea className="vnd-input" value={cfg.seoDescription ?? ''} onChange={e => update('seoDescription', e.target.value)} rows={2} style={{ resize: 'vertical', fontFamily: 'inherit' }} placeholder="Tu tienda en TukiMarket — los mejores productos..." maxLength={160} />
-              <span style={{ fontSize: '0.67rem', color: 'var(--vnd-text-muted)' }}>{(cfg.seoDescription ?? '').length}/160</span>
-            </Field>
-          </Section>
-
         </div>
 
         {/* ══ RIGHT: LIVE PREVIEW ═══════════════════════════════ */}
         <div style={{ position: 'sticky', top: 80 }}>
-          <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--vnd-text-muted)' }}>Vista previa en tiempo real</span>
             <a href={storeUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: 'var(--vnd-accent)', fontWeight: 600, textDecoration: 'none' }}>
               Abrir tamaño real ↗
             </a>
           </div>
 
-          {/* ── Viewport toggle ── */}
-          <div style={{ marginBottom: 12, display: 'flex', gap: 3, background: 'var(--vnd-bg)', borderRadius: 10, padding: 3, border: '1px solid var(--vnd-border)' }}>
-            {(['mobile', 'desktop'] as const).map(m => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setPreviewMode(m)}
-                style={{
-                  flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer', borderRadius: 8,
-                  fontSize: '0.78rem', fontWeight: 600, transition: 'all 0.15s',
-                  background: previewMode === m ? 'var(--vnd-bg-elevated)' : 'transparent',
-                  color: previewMode === m ? 'var(--vnd-text)' : 'var(--vnd-text-muted)',
-                  boxShadow: previewMode === m ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                }}
-              >
-                {m === 'mobile' ? '📱 Móvil' : '💻 Escritorio'}
-              </button>
-            ))}
+          {/* Preview card */}
+          <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 16, padding: 16, border: '1px solid var(--vnd-border)' }}>
+            <MiniPreview cfg={cfg} />
           </div>
-
-          {previewMode === 'mobile' ? (
-            /* ── Phone frame ── */
-            <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 16, padding: '16px 16px 12px', border: '1px solid var(--vnd-border)', display: 'flex', justifyContent: 'center' }}>
-              <div style={{
-                width: 242, borderRadius: 34, background: '#18181f',
-                boxShadow: '0 0 0 2px #35354a, 0 0 0 3px #111117, 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
-                overflow: 'hidden', position: 'relative',
-              }}>
-                {/* Status bar */}
-                <div style={{ height: 30, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', position: 'relative' }}>
-                  <span style={{ fontSize: 7.5, color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}>9:41</span>
-                  {/* Dynamic island */}
-                  <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 6, width: 72, height: 18, background: '#000', borderRadius: 12 }} />
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {/* Signal */}
-                    {[3, 5, 7, 9].map((h, i) => (
-                      <div key={i} style={{ width: 2.5, height: h, background: 'rgba(255,255,255,0.85)', borderRadius: 1, alignSelf: 'flex-end' }} />
-                    ))}
-                    {/* WiFi */}
-                    <svg width="13" height="9" viewBox="0 0 13 9" style={{ opacity: 0.85 }}>
-                      <path d="M6.5 7a1 1 0 110 2 1 1 0 010-2z" fill="white"/>
-                      <path d="M3.5 5.5C4.4 4.6 5.4 4 6.5 4s2.1.6 3 1.5" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
-                      <path d="M1 3C2.8 1.2 4.5.3 6.5.3S10.2 1.2 12 3" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
-                    </svg>
-                    {/* Battery */}
-                    <div style={{ width: 17, height: 9, border: '1.2px solid rgba(255,255,255,0.7)', borderRadius: 2.5, position: 'relative', display: 'flex', alignItems: 'center', padding: '1.5px' }}>
-                      <div style={{ width: '78%', height: '100%', background: 'rgba(255,255,255,0.85)', borderRadius: 1.5 }} />
-                      <div style={{ position: 'absolute', right: -3.5, top: '50%', transform: 'translateY(-50%)', width: 2.5, height: 5, background: 'rgba(255,255,255,0.5)', borderRadius: '0 1px 1px 0' }} />
-                    </div>
-                  </div>
-                </div>
-                {/* Screen content */}
-                <div style={{ background: '#fff', overflowY: 'auto', maxHeight: 480, scrollbarWidth: 'none' }}>
-                  <MiniPreview cfg={cfg} mode="mobile" />
-                </div>
-                {/* Home indicator */}
-                <div style={{ height: 22, background: '#18181f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 64, height: 4, background: 'rgba(255,255,255,0.22)', borderRadius: 2 }} />
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* ── Browser / desktop frame ── */
-            <div style={{ background: 'var(--vnd-bg-elevated)', borderRadius: 14, padding: 10, border: '1px solid var(--vnd-border)', overflow: 'hidden' }}>
-              {/* Browser chrome */}
-              <div style={{ background: '#f0f0f2', borderRadius: '10px 10px 0 0', border: '1px solid #d8d8df', borderBottom: 'none', padding: '7px 10px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {/* Top row: traffic lights + controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57', border: '0.5px solid rgba(0,0,0,0.15)' }} />
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e', border: '0.5px solid rgba(0,0,0,0.15)' }} />
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)' }} />
-                  </div>
-                  {/* Tab */}
-                  <div style={{ background: '#fff', borderRadius: '5px 5px 0 0', padding: '4px 10px 0', fontSize: 7, color: '#3c4043', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3, border: '1px solid #d8d8df', borderBottom: '1px solid #fff', minWidth: 80 }}>
-                    <span style={{ fontSize: 8 }}>{cfg.logoEmoji}</span>
-                    <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 70, textOverflow: 'ellipsis' }}>{cfg.storeName}</span>
-                    <span style={{ marginLeft: 'auto', color: '#9aa0a6', fontSize: 8, cursor: 'pointer' }}>×</span>
-                  </div>
-                  <div style={{ fontSize: 8, color: '#9aa0a6', cursor: 'pointer', padding: '0 4px' }}>+</div>
-                </div>
-                {/* URL bar row */}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '0 0 6px' }}>
-                  <div style={{ display: 'flex', gap: 3 }}>
-                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.06)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7 }}>←</div>
-                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.04)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, opacity: 0.4 }}>→</div>
-                    <div style={{ width: 16, height: 14, background: 'rgba(0,0,0,0.06)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>↻</div>
-                  </div>
-                  <div style={{ flex: 1, background: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 7.5, color: '#3c4043', border: '1px solid #d8d8df', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ color: '#188038', fontSize: 8 }}>🔒</span>
-                    <span>tukitask.vercel.app/tienda/<strong>{cfg.storeSlug}</strong></span>
-                  </div>
-                </div>
-              </div>
-              {/* Page content */}
-              <div style={{ border: '1px solid #d8d8df', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden', background: '#fff', maxHeight: 520, overflowY: 'auto', scrollbarWidth: 'none' }}>
-                <MiniPreview cfg={cfg} mode="desktop" />
-              </div>
-            </div>
-          )}
 
           {/* Share section */}
           <div className="vnd-card" style={{ marginTop: 20 }}>
