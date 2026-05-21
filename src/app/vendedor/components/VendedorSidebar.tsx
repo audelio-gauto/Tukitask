@@ -102,6 +102,9 @@ export default function VendedorSidebar() {
   const pathname = usePathname();
   const [storeName, setStoreName] = useState('Mi Tienda');
   const [initial, setInitial] = useState('T');
+  const principalNavItems = navItems.filter(
+    (item) => item.href !== '/vendedor/analisis' && item.href !== '/vendedor/configuracion'
+  );
   const analisisIcon = navItems.find(i => i.href === '/vendedor/analisis')?.icon;
   const configuracionIcon = navItems.find(i => i.href === '/vendedor/configuracion')?.icon;
 
@@ -117,6 +120,8 @@ export default function VendedorSidebar() {
 
   function isActive(href: string) {
     if (href === '/vendedor') return pathname === '/vendedor';
+    if (href === '/vendedor/tukibot') return pathname === '/vendedor/tukibot';
+    if (href === '/vendedor/tukibot/resultados') return pathname === '/vendedor/tukibot/resultados';
     return pathname.startsWith(href);
   }
 
@@ -147,7 +152,7 @@ export default function VendedorSidebar() {
       <nav className="vnd-nav">
         <span className="vnd-nav-label">Principal</span>
 
-        {navItems.slice(0, 8).map((item) => (
+        {principalNavItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
