@@ -707,33 +707,7 @@ export default function PlantillasPage() {
                   placeholder="Contá quiénes son, cuánto tiempo llevan en el mercado, qué los hace especiales..."
                 />
               </Field>
-              <Field label="Imagen del local / equipo" hint="Opcional (máx 1 MB)">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {cfg.aboutImage && (
-                    <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', height: 80 }}>
-                      <img src={cfg.aboutImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button
-                        type="button"
-                        onClick={() => update('aboutImage', undefined)}
-                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: '0.7rem', cursor: 'pointer', padding: '3px 7px' }}
-                      >× Quitar</button>
-                    </div>
-                  )}
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', padding: '10px', background: 'var(--vnd-bg)', border: '2px dashed var(--vnd-border)', borderRadius: 10, fontSize: '0.78rem', fontWeight: 600, color: 'var(--vnd-text-muted)' }}>
-                    📸 {cfg.aboutImage ? 'Cambiar imagen' : 'Subir foto del local/equipo'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }}
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 1024 * 1024) { alert('Máx 1 MB'); return; }
-                        const reader = new FileReader();
-                        reader.onload = ev => { if (ev.target?.result) update('aboutImage', ev.target.result as string); };
-                        reader.readAsDataURL(file);
-                      }}
-                    />
-                  </label>
-                </div>
-              </Field>
+
             </div>
           </Section>
 
