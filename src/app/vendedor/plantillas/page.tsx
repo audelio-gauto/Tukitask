@@ -235,7 +235,7 @@ function MiniPreview({ cfg }: { cfg: StoreTemplateConfig }) {
     </div>
   );
 
-  const SECTION_ELS: Record<string, ReactNode> = {
+  const SECTION_ELS: Record<string, JSX.Element | null> = {
     hero: heroEl, infoBar: infoBarEl, categories: catsEl,
     masVendidos: masVendidosEl, products: productsEl,
   };
@@ -365,30 +365,10 @@ export default function PlantillasPage() {
   if (view === 'gallery') {
     return (
       <div>
-        {/* ── Page header modernizado ── */}
-        <div style={{
-          marginBottom: 28, borderRadius: 18, overflow: 'hidden', position: 'relative',
-          background: 'linear-gradient(135deg, #F5C518 0%, #f0b000 100%)',
-          padding: '28px 28px 24px',
-        }}>
-          <div style={{ position: 'absolute', top: -32, right: -32, width: 160, height: 160, background: 'rgba(255,255,255,0.13)', borderRadius: '50%', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: -20, right: 90, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%', pointerEvents: 'none' }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: '2rem', marginBottom: 10, lineHeight: 1 }}>🏪</div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0b1220', margin: '0 0 6px', letterSpacing: '-0.01em' }}>Plantillas de Tienda</h1>
-            <p style={{ color: 'rgba(11,18,32,0.6)', fontSize: '0.84rem', margin: '0 0 16px' }}>Elegí y personalizá la apariencia de tu tienda pública</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {['🔥 Más vendidos', '🎨 Personalizable', '🤖 Robot Negociador', '📱 100% Mobile'].map(f => (
-                <span key={f} style={{ background: 'rgba(11,18,32,0.12)', color: '#0b1220', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, padding: '3px 10px' }}>{f}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Template grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
 
-          {/* ── Plantilla 1: Vitrina Marketplace ── */}
+          {/* ── Plantilla 1: Mi Store ── */
           <div style={{
             borderRadius: 18, overflow: 'hidden', background: 'var(--vnd-bg-elevated)',
             border: '1.5px solid var(--vnd-accent)', boxShadow: '0 0 0 4px rgba(245,197,24,0.12)',
@@ -399,7 +379,7 @@ export default function PlantillasPage() {
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 3px rgba(22,163,74,0.35)' }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b1220', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Activa</span>
               </div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Vitrina Marketplace</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(11,18,32,0.65)' }}>Mi Store</span>
             </div>
 
             {/* Preview thumbnail */}
@@ -465,7 +445,7 @@ export default function PlantillasPage() {
           >
             ← Plantillas
           </button>
-          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Vitrina Marketplace</h1>
+          <h1 className="vnd-page-heading" style={{ marginBottom: 2 }}>Mi Store</h1>
           <p style={{ color: 'var(--vnd-text-muted)', fontSize: '0.82rem' }}>
             Personalizá tu tienda pública en tiempo real
           </p>
