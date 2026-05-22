@@ -156,15 +156,24 @@ export async function GET(req: Request) {
     }
 
     const { data, count, error } = await q;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    totalVenta = count ?? 0;
-
-    const enriched = (data || []).map((v: Record<string, unknown>) => ({
-      ...v,
-      _type: 'venta',
-      _driver_active: v.driver_email ? activeDriverEmails.has(String(v.driver_email)) : false,
-    }));
-    results.push(...enriched);
+    // Graceful fallback if table doesn't exist yet (migration pending)
+    if (error) {
+      const msg = String((error as Record<string, unknown>)?.message || error);
+      if (msg.includes('market_orders') || msg.includes('schema cache') || msg.includes('does not exist')) {
+        // Table not yet created — return empty, don't crash
+        totalVenta = 0;
+      } else {
+        return NextResponse.json({ error: msg }, { status: 500 });
+      }
+    } else {
+      totalVenta = count ?? 0;
+      const enriched = (data || []).map((v: Record<string, unknown>) => ({
+        ...v,
+        _type: 'venta',
+        _driver_active: v.driver_email ? activeDriverEmails.has(String(v.driver_email)) : false,
+      }));
+      results.push(...enriched);
+    }
   }
 
   /* ── For "all": sort combined by created_at desc, then paginate ── */
