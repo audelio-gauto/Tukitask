@@ -1,1 +1,20 @@
-ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 5.7min
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/tienda/page.tsx:202:47
+Type error: Cannot find name 'setHeroSearch'. Did you mean 'setSearch'?
+
+  200 |             </span>
+  201 |             <button
+> 202 |               onClick={() => { setSearch(''); setHeroSearch(''); }}
+      |                                               ^
+  203 |               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tnd-accent)', fontSize: '0.78rem', fontWeight: 700 }}
+  204 |             >
+  205 |               Ô£ò Limpiar
+Next.js build worker exited with code: 1 and signal: null

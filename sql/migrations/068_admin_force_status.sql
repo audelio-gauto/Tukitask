@@ -1,7 +1,7 @@
 -- Migration 068: admin_force_status RPC
--- Allows admin to forcefully change the status of an order or tecnico_job,
--- bypassing triggers (e.g. driver_feed sync) that may raise exceptions.
--- This is service-role only — never exposed to regular users.
+-- Allows admin to forcefully change the status of an order or tecnico_job.
+-- SECURITY DEFINER runs as the function owner (postgres) which can bypass
+-- RLS and trigger permission issues that service_role cannot.
 
 CREATE OR REPLACE FUNCTION admin_force_set_order_status(
   p_id        UUID,
@@ -15,18 +15,12 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Disable per-session triggers so driver_feed sync doesn't block the update
-  SET LOCAL session_replication_role = 'replica';
-
   UPDATE orders
   SET
     status       = p_status,
     cancelled_at = COALESCE(p_cancelled_at, cancelled_at),
     completed_at = COALESCE(p_completed_at, completed_at)
   WHERE id = p_id;
-
-  -- Restore triggers
-  SET LOCAL session_replication_role = 'origin';
 END;
 $$;
 
@@ -41,15 +35,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  SET LOCAL session_replication_role = 'replica';
-
   UPDATE tecnico_jobs
   SET
     status       = p_status,
     completed_at = COALESCE(p_completed_at, completed_at)
   WHERE id = p_id;
-
-  SET LOCAL session_replication_role = 'origin';
 END;
 $$;
 
