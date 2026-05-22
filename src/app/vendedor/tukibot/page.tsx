@@ -74,7 +74,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function TukiBotPage() {
   const [saved, setSaved] = useState(false);
-  const [activeSubmenu] = useState<'config' | 'results'>('config');
+  const [activeSubmenu, setActiveSubmenu] = useState<'config' | 'results'>('config');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'results') setActiveSubmenu('results');
+  }, []);
   const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
