@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import SuspendUserModal, { SuspendTarget } from '../components/SuspendUserModal';
+import SuspendUserModal, { SuspendTarget } from '../../components/SuspendUserModal';
 
 interface Vendor {
   id: string;
