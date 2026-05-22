@@ -83,8 +83,15 @@ export default function ResultadosAutomaticosPage() {
         supabase.from('tukibot_negotiations').select('id', { count: 'exact', head: true }).eq('vendor_id', vendorId).eq('status', 'timeout_auto_accept'),
         supabase.from('tukibot_negotiations').select('id', { count: 'exact', head: true }).eq('vendor_id', vendorId).eq('status', 'timeout_pressure'),
       ]);
-      if (rowsResp.error || counterResp.error || acceptResp.error || pressureResp.error) {
-        throw new Error('No se pudieron cargar métricas de timeout.');
+      const firstError = rowsResp.error ?? counterResp.error ?? acceptResp.error ?? pressureResp.error;
+      if (firstError) {
+        // Table may not exist yet (migration pending)
+        if (firstError.code === '42P01' || firstError.message?.includes('does not exist')) {
+          setStats({ total: 0, autoCounter: 0, autoAccept: 0, pressure: 0 });
+          setRecentTimeouts([]);
+          return;
+        }
+        throw new Error(firstError.message || 'No se pudieron cargar métricas de timeout.');
       }
       const autoCounter = counterResp.count ?? 0;
       const autoAccept = acceptResp.count ?? 0;
