@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 /* Inline type — mirrors StoreTemplateConfig from /vendedor/plantillas/page */
 interface StoreTemplateConfig {
@@ -116,11 +117,17 @@ export default function VendorStorePage() {
   const params   = useParams();
   const vendorId = params.vendor_id as string;
   const vendor   = VENDORS[vendorId];
-  const products = ALL_PRODUCTS.filter(p => p.vendorId === vendorId);
+  const mockProds = ALL_PRODUCTS.filter(p => p.vendorId === vendorId);
 
   const [cfg,      setCfg]      = useState<StoreTemplateConfig | null>(null);
   const [activeCat, setActiveCat] = useState('Todos');
   const [search,   setSearch]   = useState('');
+
+  const [dbProducts, setDbProducts] = useState<Array<{
+    id: string; vendor_id: string; vendor_email: string; name: string;
+    category: string; price: number; floor_price: number; stock: number;
+    image: string | null; negotiable: boolean;
+  }>>([]);
 
   /* Build default config from mock vendor data */
   const defaultCfg: StoreTemplateConfig | null = vendor ? {
@@ -135,10 +142,10 @@ export default function VendorStorePage() {
     heroGrad2:       vendor.grad2,
     accentColor:     '#F5C518',
     accentText:      '#0b1220',
-    statNum:         String(vendor.products),
+    statNum:         String(mockProds.length),
     statLabel:       'Productos',
     robotEnabled:    true,
-    categories:      ['Todos', ...Array.from(new Set(products.map(p => p.category)))],
+    categories:      ['Todos', ...Array.from(new Set(mockProds.map(p => p.category)))],
   } : null;
 
   useEffect(() => {
@@ -158,7 +165,41 @@ export default function VendorStorePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
+  /* fetch real published products for this vendor */
+  useEffect(() => {
+    const fetchVendorProducts = async () => {
+      let uid = vendorId;
+      if (vendorId === 'mi-tienda') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        uid = user.id;
+      } else if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(vendorId)) {
+        return; // slug vendor — uses mock data only
+      }
+      const { data } = await supabase.from('products')
+        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
+        .eq('vendor_id', uid)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
+      if (data) setDbProducts(data);
+    };
+    fetchVendorProducts();
+  }, [vendorId]);
+
   const activeCfg = cfg ?? defaultCfg;
+
+  type MergedProduct = {
+    id: string; vendorId: string; name: string; category: string;
+    emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
+  };
+  const dbMapped: MergedProduct[] = dbProducts.map(p => ({
+    id: p.id, vendorId: p.vendor_id, name: p.name, category: p.category,
+    emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+  }));
+  const products: MergedProduct[] = [
+    ...mockProds.map(p => ({ ...p, image: null as null | string })),
+    ...dbMapped,
+  ];
 
   useEffect(() => {
     const fontName = activeCfg?.storeFont;
@@ -193,7 +234,9 @@ export default function VendorStorePage() {
   const waUrl     = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
 
   /* Filter products */
-  const cats = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
+  const baseCats  = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
+  const extraCats = Array.from(new Set(dbMapped.map(p => p.category).filter(c => !baseCats.includes(c))));
+  const cats      = extraCats.length > 0 ? [...baseCats, ...extraCats] : baseCats;
   const visibleProducts = products.filter(p => {
     const catMatch = activeCat === 'Todos' || p.category === activeCat;
     const srchMatch = !search || p.name.toLowerCase().includes(search.toLowerCase());
@@ -398,8 +441,11 @@ export default function VendorStorePage() {
                       fontSize: '0.62rem', fontWeight: 900, color: i === 0 ? '#7a5c00' : '#fff',
                     }}>#{i + 1}</div>
                     {/* Image area */}
-                    <div style={{ height: rankStyle.imgH, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '2.8rem' : '2.2rem' }}>
-                      {p.emoji}
+                    <div style={{ height: rankStyle.imgH, background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '2.8rem' : '2.2rem', position: 'relative', overflow: 'hidden' }}>
+                      {p.image
+                        ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : p.emoji
+                      }
                     </div>
                     <div style={{ padding: '8px 10px 12px' }}>
                       <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginBottom: 4, lineHeight: 1.3 }}>{p.name}</div>
@@ -446,7 +492,10 @@ export default function VendorStorePage() {
             {visibleProducts.map(p => (
               <Link key={p.id} href={`/tienda/producto/${p.id}`} className="tnd-product-card">
                 <div className="tnd-product-img" style={{ background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))` }}>
-                  {p.emoji}
+                  {p.image
+                    ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : p.emoji
+                  }
                   {p.floorPrice < p.price * 0.92 && (
                     <span className="tnd-negoable-badge">🤖 Negociable</span>
                   )}

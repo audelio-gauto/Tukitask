@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from './cart-context';
 import { VENDORS, PRODUCTS, CATEGORIES, gs } from './data';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Component ─────────────────────────────────────────────── */
 function TiendaPageInner() {
@@ -16,6 +17,22 @@ function TiendaPageInner() {
   const [activeCategory, setCategory] = useState('Todos');
   const storesRef    = useRef<HTMLDivElement>(null);
   const featuredRef  = useRef<HTMLDivElement>(null);
+
+  const [dbProducts, setDbProducts] = useState<Array<{
+    id: string; vendor_id: string; vendor_email: string; name: string;
+    category: string; price: number; floor_price: number; stock: number;
+    image: string | null; negotiable: boolean;
+  }>>([]);
+
+  /* fetch real published products */
+  useEffect(() => {
+    supabase.from('products')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => { if (data) setDbProducts(data); });
+  }, []);
 
   /* sync URL → local state */
   useEffect(() => {
@@ -62,13 +79,29 @@ function TiendaPageInner() {
     };
   }, []);
 
-  const handleAddToCart = (p: typeof PRODUCTS[0]) => {
+  interface DisplayProduct {
+    id: string; vendorName: string; name: string; category: string;
+    emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
+  }
+
+  const allProducts: DisplayProduct[] = [
+    ...PRODUCTS.map(p => ({ ...p, image: null as null })),
+    ...dbProducts.map(p => ({
+      id: p.id, vendorName: p.vendor_email, name: p.name, category: p.category,
+      emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+    })),
+  ];
+
+  const dbCategories = dbProducts.map(p => p.category).filter(c => !CATEGORIES.includes(c));
+  const allCategories = [...CATEGORIES, ...Array.from(new Set(dbCategories))];
+
+  const handleAddToCart = (p: DisplayProduct) => {
     addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, vendorName: p.vendorName });
     setAdded(prev => ({ ...prev, [p.id]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [p.id]: false })), 1800);
   };
 
-  const filtered = PRODUCTS.filter(p => {
+  const filtered = allProducts.filter(p => {
     const matchCat    = activeCategory === 'Todos' || p.category === activeCategory;
     const q           = search.toLowerCase();
     const matchSearch = !q || p.name.toLowerCase().includes(q) || p.vendorName.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
@@ -118,14 +151,17 @@ function TiendaPageInner() {
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => featuredRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-featured-carousel" ref={featuredRef}>
-            {PRODUCTS.map(p => (
+            {allProducts.map(p => (
               <div key={p.id} className="tnd-product-card tnd-featured-card">
                 <Link href={`/tienda/producto/${p.id}`} style={{ textDecoration: 'none', display: 'contents' }}>
                   <div
                     className="tnd-product-img"
                     style={{ background: 'linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))' }}
                   >
-                    {p.emoji}
+                    {p.image
+                      ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : p.emoji
+                    }
                     {p.floorPrice < p.price * 0.92 && (
                       <span className="tnd-negoable-badge">🤝 Neg.</span>
                     )}
@@ -160,7 +196,7 @@ function TiendaPageInner() {
 
         {/* Category filter */}
         <div className="tnd-cats">
-          {CATEGORIES.map(c => (
+          {allCategories.map(c => (
             <button
               key={c}
               className={`tnd-cat${activeCategory === c ? ' active' : ''}`}
@@ -200,7 +236,10 @@ function TiendaPageInner() {
                   className="tnd-product-img"
                   style={{ background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))` }}
                 >
-                  {p.emoji}
+                  {p.image
+                    ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : p.emoji
+                  }
                   {p.floorPrice < p.price * 0.92 && (
                     <span className="tnd-negoable-badge">🤝 Negociable</span>
                   )}
