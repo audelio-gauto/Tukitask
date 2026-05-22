@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 
 interface SubItem {
   label: string;
-  href: string;
+  href?: string;
+  isHeader?: boolean;
 }
 
 interface MenuItem {
@@ -102,12 +103,40 @@ const menuItems: MenuItem[] = [
   },
   {
     label: 'Vendedores',
-    href: '/admin/vendors',
+    groupRootPath: '/admin/vendors',
     icon: (
       <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
       </svg>
     ),
+    subItems: [
+      // ── Dashboard ──────────────────────────────────────────
+      { label: 'DASHBOARD', isHeader: true },
+      { label: 'Métricas en tiempo real', href: '/admin/vendors' },
+      // ── Gestión de Vendedores ──────────────────────────────
+      { label: 'GESTIÓN DE VENDEDORES', isHeader: true },
+      { label: 'Lista de Vendedores', href: '/admin/vendors/lista' },
+      { label: 'Verificaciones', href: '/admin/vendors/verificaciones' },
+      { label: 'Bloqueos / Suspensiones', href: '/admin/vendors/bloqueos' },
+      // ── Gestión de Productos ───────────────────────────────
+      { label: 'GESTIÓN DE PRODUCTOS', isHeader: true },
+      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
+      { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
+      { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
+      { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
+      // ── Gestión de Pedidos ─────────────────────────────────
+      { label: 'GESTIÓN DE PEDIDOS', isHeader: true },
+      { label: 'Ver todos los Pedidos', href: '/admin/vendors/pedidos' },
+      { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones' },
+      { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
+      { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
+      // ── Negociaciones ──────────────────────────────────────
+      { label: 'NEGOCIACIONES', isHeader: true },
+      { label: 'Monitorear Ofertas', href: '/admin/vendors/negociaciones' },
+      { label: 'Spam / Fraude', href: '/admin/vendors/negociaciones/fraude' },
+      { label: 'Historial', href: '/admin/vendors/negociaciones/historial' },
+      { label: 'Límites Automáticos', href: '/admin/vendors/negociaciones/limites' },
+    ],
   },
   {
     label: 'Clientes',
@@ -220,7 +249,7 @@ export default function AdminSidebar() {
     menuItems.forEach(item => {
       if (item.groupRootPath && pathname.startsWith(item.groupRootPath)) {
         autoOpen.add(item.label);
-      } else if (item.subItems?.some(sub => pathname === sub.href.split('?')[0] || pathname.startsWith(sub.href.split('?')[0] + '/'))) {
+      } else if (item.subItems?.some(sub => sub.href && (pathname === sub.href.split('?')[0] || pathname.startsWith(sub.href.split('?')[0] + '/')))) {
         autoOpen.add(item.label);
       }
     });
@@ -264,7 +293,7 @@ export default function AdminSidebar() {
           const hasSubItems = !!(item.subItems && item.subItems.length > 0);
           const isOpen = openMenus.has(item.label);
           const isChildActive = (item.groupRootPath && pathname.startsWith(item.groupRootPath))
-            || (item.subItems?.some(sub => pathname === sub.href.split('?')[0] || pathname.startsWith(sub.href.split('?')[0] + '/')) ?? false);
+            || (item.subItems?.some(sub => sub.href && (pathname === sub.href.split('?')[0] || pathname.startsWith(sub.href.split('?')[0] + '/'))) ?? false);
           const isActive = !hasSubItems && !!item.href && (pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/')));
 
           if (hasSubItems) {
@@ -293,12 +322,19 @@ export default function AdminSidebar() {
                 </button>
                 {(isOpen || isChildActive) && !collapsed && (
                   <div className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
-                    {item.subItems!.map(sub => {
-                      const isSubActive = pathname === sub.href || pathname.startsWith(sub.href + '/');
+                    {item.subItems!.map((sub, idx) => {
+                      if (sub.isHeader) {
+                        return (
+                          <p key={`hdr-${idx}`} className="px-3 pt-2 pb-0.5 text-[10px] font-bold tracking-widest text-white/25 uppercase select-none">
+                            {sub.label}
+                          </p>
+                        );
+                      }
+                      const isSubActive = !!sub.href && (pathname === sub.href || pathname.startsWith(sub.href + '/'));
                       return (
                         <Link
                           key={sub.href}
-                          href={sub.href}
+                          href={sub.href!}
                           className={`block px-3 py-1.5 rounded-md text-xs font-medium transition-all
                             ${isSubActive
                               ? 'bg-[#F5C518] text-[#1d2327] font-semibold'
