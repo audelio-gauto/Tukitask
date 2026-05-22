@@ -235,11 +235,41 @@ export default function NuevoProductoPage() {
     update('image', reordered[0]);
   }
 
-  async function handleSave(status: ProductStatus) {
+  async function handleSave(targetStatus: ProductStatus) {
     if (!validate()) return;
     setSaving(true);
-    /* TODO: persist to Supabase products table */
-    await new Promise(r => setTimeout(r, 1000));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    // Vendors cannot publish directly — submitted products go to pending_review
+    const dbStatus = targetStatus === 'published' ? 'pending_review' : targetStatus;
+
+    const row = {
+      vendor_id:     user.id,
+      vendor_email:  user.email ?? '',
+      name:          form.name.trim(),
+      sku:           form.sku.trim() || null,
+      category:      form.category,
+      type:          form.type,
+      description:   form.description.trim() || null,
+      price:         Number(form.price),
+      floor_price:   Number(form.floorPrice) || 0,
+      stock:         Number(form.stock),
+      image:         form.image || null,
+      gallery:       form.gallery,
+      status:        dbStatus,
+      negotiable:    form.negotiable,
+      pricing_tiers: form.hasTieredPricing ? form.pricingTiers : [],
+    };
+
+    const { error } = await supabase.from('products').insert(row);
+    if (error) {
+      setSaving(false);
+      setErrors({ name: error.message });
+      return;
+    }
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => router.push('/vendedor/productos'), 1200);
@@ -662,10 +692,10 @@ export default function NuevoProductoPage() {
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: s === 'published' ? '#4ade80' : '#9aa8ba', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--vnd-text)' }}>
-                      {s === 'published' ? 'Publicado' : 'Borrador'}
+                      {s === 'published' ? 'Enviar para revisión' : 'Borrador'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>
-                      {s === 'published' ? 'Visible en tu tienda pública' : 'Solo tú puedes verlo'}
+                      {s === 'published' ? 'El admin revisará y aprobará tu producto' : 'Solo tú puedes verlo'}
                     </div>
                   </div>
                 </button>
@@ -682,7 +712,7 @@ export default function NuevoProductoPage() {
               disabled={saving || saved}
               style={{ width: '100%' }}
             >
-              {saving ? 'Guardando…' : saved ? '✅ Guardado' : form.status === 'published' ? '🚀 Publicar producto' : '💾 Guardar borrador'}
+              {saving ? 'Guardando…' : saved ? '✅ Guardado' : form.status === 'published' ? '� Enviar para revisión' : '💾 Guardar borrador'}
             </button>
             <Link href="/vendedor/productos" style={{ textAlign: 'center' }}>
               <button type="button" className="vnd-btn vnd-btn-secondary" style={{ width: '100%' }} disabled={saving}>

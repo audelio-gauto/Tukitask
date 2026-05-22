@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Types ───────────────────────────────────────────────── */
-type ProductStatus = 'published' | 'draft' | 'out_of_stock' | 'paused';
+type ProductStatus = 'published' | 'draft' | 'out_of_stock' | 'paused' | 'pending_review' | 'rejected';
 type ProductType   = 'physical' | 'digital' | 'service';
 
 interface Product {
@@ -18,6 +19,7 @@ interface Product {
   type: ProductType;
   views: number;
   createdAt: string;
+  rejection_reason?: string | null;
 }
 
 /* ── Helpers ─────────────────────────────────────────────── */
@@ -26,10 +28,12 @@ function fmtGs(n: number) {
 }
 
 const STATUS_CFG: Record<ProductStatus, { cls: string; label: string; dot: string }> = {
-  published:    { cls: 'vnd-badge-green',  label: 'Publicado',  dot: '#4ade80' },
-  draft:        { cls: 'vnd-badge-gray',   label: 'Borrador',   dot: '#9aa8ba' },
-  out_of_stock: { cls: 'vnd-badge-red',    label: 'Agotado',    dot: '#f87171' },
-  paused:       { cls: 'vnd-badge-amber',  label: 'Pausado',    dot: '#fbbf24' },
+  published:      { cls: 'vnd-badge-green',  label: 'Publicado',    dot: '#4ade80' },
+  draft:          { cls: 'vnd-badge-gray',   label: 'Borrador',     dot: '#9aa8ba' },
+  out_of_stock:   { cls: 'vnd-badge-red',    label: 'Agotado',      dot: '#f87171' },
+  paused:         { cls: 'vnd-badge-amber',  label: 'Pausado',      dot: '#fbbf24' },
+  pending_review: { cls: 'vnd-badge-amber',  label: 'En revisión', dot: '#f59e0b' },
+  rejected:       { cls: 'vnd-badge-red',    label: 'Rechazado',    dot: '#ef4444' },
 };
 
 const TYPE_CFG: Record<ProductType, string> = {
@@ -38,30 +42,55 @@ const TYPE_CFG: Record<ProductType, string> = {
   service:  '🔧 Servicio',
 };
 
-/* Sample mock data — replace with Supabase query */
-const MOCK_PRODUCTS: Product[] = [
-  { id: '1', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=120&q=80', name: 'Auricular JBL Tune 510', sku: 'JBL-510-BLK', status: 'published', stock: 48, price: 180000, floorPrice: 130000, type: 'physical', views: 234, createdAt: '2026-05-10' },
-  { id: '2', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=80', name: 'Cable USB-C 2m Tejido', sku: 'USB-2M-WH', status: 'published', stock: 120, price: 35000, floorPrice: 25000, type: 'physical', views: 89, createdAt: '2026-05-12' },
-  { id: '3', image: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=120&q=80', name: 'Funda Samsung A55', sku: 'FUNDA-A55', status: 'out_of_stock', stock: 0, price: 28000, floorPrice: 18000, type: 'physical', views: 412, createdAt: '2026-05-08' },
-  { id: '4', image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=120&q=80', name: 'Cargador 65W GaN', sku: 'CHG-65W-BLK', status: 'draft', stock: 30, price: 120000, floorPrice: 90000, type: 'physical', views: 0, createdAt: '2026-05-18' },
-  { id: '5', image: 'https://images.unsplash.com/photo-1616400619175-5beda3a17896?w=120&q=80', name: 'Soporte para Auto Magnético', sku: 'SOPORTE-MAG', status: 'paused', stock: 15, price: 45000, floorPrice: 32000, type: 'physical', views: 67, createdAt: '2026-05-14' },
-];
+
 
 type TabKey = 'all' | ProductStatus;
 
 const TABS: { key: TabKey; label: string; filter: (p: Product) => boolean }[] = [
-  { key: 'all',          label: 'Todos',      filter: () => true },
-  { key: 'published',    label: 'Publicados', filter: p => p.status === 'published' },
-  { key: 'draft',        label: 'Borrador',   filter: p => p.status === 'draft' },
-  { key: 'out_of_stock', label: 'Agotados',   filter: p => p.status === 'out_of_stock' },
-  { key: 'paused',       label: 'Pausados',   filter: p => p.status === 'paused' },
+  { key: 'all',            label: 'Todos',         filter: () => true },
+  { key: 'published',      label: 'Publicados',    filter: p => p.status === 'published' },
+  { key: 'pending_review', label: 'En revisión',  filter: p => p.status === 'pending_review' },
+  { key: 'draft',          label: 'Borrador',      filter: p => p.status === 'draft' },
+  { key: 'rejected',       label: 'Rechazados',    filter: p => p.status === 'rejected' },
+  { key: 'out_of_stock',   label: 'Agotados',      filter: p => p.status === 'out_of_stock' },
+  { key: 'paused',         label: 'Pausados',      filter: p => p.status === 'paused' },
 ];
 
 /* ══════════════════════════════════════════════════════════ */
 export default function ProductosPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [search, setSearch]       = useState('');
-  const [products]                = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts]   = useState<Product[]>([]);
+  const [loading, setLoading]     = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data } = await supabase
+        .from('products')
+        .select('id, name, sku, status, stock, price, floor_price, type, image, views, created_at, rejection_reason')
+        .eq('vendor_id', user.id)
+        .order('created_at', { ascending: false });
+      setProducts(
+        (data || []).map((p: Record<string, unknown>) => ({
+          id:               String(p.id),
+          name:             String(p.name),
+          sku:              p.sku ? String(p.sku) : '',
+          status:           p.status as ProductStatus,
+          stock:            Number(p.stock),
+          price:            Number(p.price),
+          floorPrice:       Number(p.floor_price),
+          type:             p.type as Product['type'],
+          image:            p.image ? String(p.image) : undefined,
+          views:            Number(p.views ?? 0),
+          createdAt:        String(p.created_at),
+          rejection_reason: p.rejection_reason ? String(p.rejection_reason) : null,
+        }))
+      );
+      setLoading(false);
+    })();
+  }, []);
 
   const filtered = products
     .filter(TABS.find(t => t.key === activeTab)!.filter)
@@ -128,7 +157,12 @@ export default function ProductosPage() {
 
       {/* Table */}
       <div className="vnd-card">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="vnd-empty">
+            <div style={{ width: 32, height: 32, border: '3px solid var(--vnd-border)', borderTopColor: 'var(--vnd-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+            <p className="vnd-empty-sub">Cargando productos…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="vnd-empty">
             <div className="vnd-empty-icon">📦</div>
             <p className="vnd-empty-title">No hay productos en esta categoría</p>
@@ -173,9 +207,15 @@ export default function ProductosPage() {
                       {/* Name */}
                       <td>
                         <div style={{ fontWeight: 700, color: 'var(--vnd-text-primary)', fontSize: '0.875rem' }}>{p.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>
-                          Piso: {fmtGs(p.floorPrice)}
-                        </div>
+                        {p.status === 'rejected' && p.rejection_reason ? (
+                          <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: 2 }}>
+                            ✕ {p.rejection_reason}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>
+                            Piso: {fmtGs(p.floorPrice)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Status */}
