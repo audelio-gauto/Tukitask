@@ -2,8 +2,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PRODUCTS, VENDORS, CATEGORIES, gs } from '../data';
+import { gs } from '../data';
 import { useCart } from '../cart-context';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Loader ──────────────────────────────────────────────── */
 function Spinner() {
@@ -23,6 +24,14 @@ function BuscarInner() {
   const [cat, setCat] = useState('Todos');
   const [added, setAdded] = useState<Record<string, boolean>>({});
 
+  type DbProduct = {
+    id: string; vendor_id: string; vendor_email: string; name: string;
+    category: string; price: number; floor_price: number; stock: number; image: string | null;
+  };
+  const [dbProducts, setDbProducts] = useState<DbProduct[]>([]);
+  const [storeConfigs, setStoreConfigs] = useState<Map<string, Record<string, unknown>>>(new Map());
+  const [loading, setLoading] = useState(false);
+
   /* Reset category filter when query changes */
   useEffect(() => { setCat('Todos'); }, [q]);
 
@@ -31,40 +40,62 @@ function BuscarInner() {
     if (!q) router.replace('/tienda');
   }, [q, router]);
 
-  const filteredProducts = PRODUCTS.filter(p => {
-    const matchQ = !q ||
-      p.name.toLowerCase().includes(q.toLowerCase()) ||
-      p.vendorName.toLowerCase().includes(q.toLowerCase()) ||
-      p.category.toLowerCase().includes(q.toLowerCase());
-    const matchCat = cat === 'Todos' || p.category === cat;
-    return matchQ && matchCat;
+  /* Fetch real products from Supabase */
+  useEffect(() => {
+    if (!q) return;
+    const run = async () => {
+      setLoading(true);
+      const { data: prods } = await supabase.from('products')
+        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image')
+        .eq('status', 'published')
+        .or(`name.ilike.%${q}%,category.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(60);
+      const results = prods ?? [];
+      setDbProducts(results);
+      // Fetch store configs for display in vendor cards
+      const vendorIds = [...new Set(results.map(p => p.vendor_id))];
+      if (vendorIds.length > 0) {
+        const { data: configs } = await supabase.from('store_configs')
+          .select('vendor_id, config').in('vendor_id', vendorIds);
+        setStoreConfigs(new Map(
+          (configs ?? []).map(c => [c.vendor_id, c.config as Record<string, unknown>])
+        ));
+      }
+      setLoading(false);
+    };
+    run();
+  }, [q]);
+
+  /* Derive unique vendor store cards from product results */
+  const matchedVendors = [...new Map(dbProducts.map(p => [p.vendor_id, p])).values()].map(p => {
+    const cfg = storeConfigs.get(p.vendor_id);
+    return {
+      id: p.vendor_id,
+      name: (cfg?.storeName as string) || p.vendor_email.split('@')[0],
+      emoji: (cfg?.logoEmoji as string) || '🏪',
+      grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
+      category: ((cfg?.categories as string[]))?.[1] || 'General',
+    };
   });
 
-  const matchedVendors = VENDORS.filter(v =>
-    !q ||
-    v.name.toLowerCase().includes(q.toLowerCase()) ||
-    v.category.toLowerCase().includes(q.toLowerCase())
+  const filteredProducts = dbProducts.filter(p =>
+    cat === 'Todos' || p.category === cat
   );
 
   const handleAdd = (productId: string) => {
-    const p = PRODUCTS.find(x => x.id === productId);
+    const p = dbProducts.find(x => x.id === productId);
     if (!p) return;
-    addItem({ id: p.id, name: p.name, price: p.floorPrice, emoji: p.emoji, vendorName: p.vendorName });
+    addItem({ id: p.id, name: p.name, price: p.floor_price, emoji: '📦', vendorName: p.vendor_email });
     setAdded(prev => ({ ...prev, [productId]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [productId]: false })), 1400);
   };
 
-  /* Available categories for filter (based on all results for this q) */
-  const availableCats = ['Todos', ...CATEGORIES.slice(1).filter(c =>
-    PRODUCTS.some(p => p.category === c && (
-      !q ||
-      p.name.toLowerCase().includes(q.toLowerCase()) ||
-      p.vendorName.toLowerCase().includes(q.toLowerCase()) ||
-      p.category.toLowerCase().includes(q.toLowerCase())
-    ))
-  )];
+  /* Available categories from results */
+  const availableCats = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
 
   if (!q) return null;
+  if (loading) return <Spinner />;
 
   return (
     <div className="tnd-buscar-page">
@@ -114,12 +145,7 @@ function BuscarInner() {
                 <div className="tnd-buscar-vendor-info">
                   <span className="tnd-buscar-vendor-name">{v.name}</span>
                   <span className="tnd-buscar-vendor-cat">{v.category}</span>
-                  <span className="tnd-buscar-vendor-rating">★ {v.rating}</span>
                 </div>
-                {v.open
-                  ? <span className="tnd-buscar-vendor-badge tnd-buscar-vendor-badge--open">Abierto</span>
-                  : <span className="tnd-buscar-vendor-badge tnd-buscar-vendor-badge--closed">Cerrado</span>
-                }
               </Link>
             ))}
           </div>
@@ -135,20 +161,23 @@ function BuscarInner() {
           </h2>
           <div className="tnd-buscar-grid">
             {filteredProducts.map(p => {
-              const disc = Math.round((1 - p.floorPrice / p.price) * 100);
+              const disc = p.price > 0 ? Math.round((1 - p.floor_price / p.price) * 100) : 0;
               const isAdded = added[p.id];
               return (
                 <div key={p.id} className="tnd-buscar-product-card">
                   {disc > 0 && <span className="tnd-buscar-product-disc">-{disc}%</span>}
                   <div className="tnd-buscar-product-img">
-                    <span>{p.emoji}</span>
+                    {p.image
+                      ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span>📦</span>
+                    }
                   </div>
                   <div className="tnd-buscar-product-body">
-                    <p className="tnd-buscar-product-vendor">{p.vendorName}</p>
+                    <p className="tnd-buscar-product-vendor">{p.vendor_email}</p>
                     <h3 className="tnd-buscar-product-name">{p.name}</h3>
                     <div className="tnd-buscar-product-prices">
-                      <span className="tnd-buscar-product-price">{gs(p.floorPrice)}</span>
-                      {p.floorPrice < p.price && (
+                      <span className="tnd-buscar-product-price">{gs(p.floor_price)}</span>
+                      {p.floor_price < p.price && (
                         <span className="tnd-buscar-product-orig">{gs(p.price)}</span>
                       )}
                     </div>
@@ -176,16 +205,6 @@ function BuscarInner() {
           <p className="tnd-buscar-empty-sub">
             Revisá la ortografía o intentá con términos más generales.
           </p>
-          <div className="tnd-buscar-empty-suggestions">
-            <p>Categorías populares:</p>
-            <div className="tnd-buscar-cats" style={{ justifyContent: 'center', marginTop: 8 }}>
-              {CATEGORIES.slice(1).map(c => (
-                <Link key={c} href={`/tienda/buscar?q=${encodeURIComponent(c)}`} className="tnd-buscar-cat">
-                  {c}
-                </Link>
-              ))}
-            </div>
-          </div>
           <Link href="/tienda" className="tnd-buscar-back-btn">
             ← Ver todo el catálogo
           </Link>

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from './cart-context';
-import { VENDORS, PRODUCTS, CATEGORIES, gs } from './data';
+import { gs } from './data';
 import { supabase } from '@/lib/supabaseClient';
 
 /* ── Component ─────────────────────────────────────────────── */
@@ -17,6 +17,10 @@ function TiendaPageInner() {
   const [activeCategory, setCategory] = useState('Todos');
   const storesRef    = useRef<HTMLDivElement>(null);
   const featuredRef  = useRef<HTMLDivElement>(null);
+
+  const [realVendors, setRealVendors] = useState<Array<{
+    id: string; name: string; emoji: string; grad: string; category: string; productCount: number;
+  }>>([]);
 
   const [dbProducts, setDbProducts] = useState<Array<{
     id: string; vendor_id: string; vendor_email: string; name: string;
@@ -32,6 +36,41 @@ function TiendaPageInner() {
       .order('created_at', { ascending: false })
       .limit(100)
       .then(({ data }) => { if (data) setDbProducts(data); });
+  }, []);
+
+  /* fetch real vendors with published products */
+  useEffect(() => {
+    const fetchVendors = async () => {
+      const { data: vendorUsers } = await supabase
+        .from('users').select('id, email').eq('role', 'vendedor');
+      if (!vendorUsers?.length) return;
+      const ids = vendorUsers.map(v => v.id);
+      const [{ data: configs }, { data: prods }] = await Promise.all([
+        supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
+        supabase.from('products').select('vendor_id').eq('status', 'published').in('vendor_id', ids),
+      ]);
+      const countMap: Record<string, number> = {};
+      prods?.forEach(p => { countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1; });
+      const cfgMap = new Map(
+        (configs ?? []).map(c => [c.vendor_id, c.config as Record<string, unknown>])
+      );
+      setRealVendors(
+        vendorUsers
+          .filter(v => (countMap[v.id] ?? 0) > 0)
+          .map(v => {
+            const cfg = cfgMap.get(v.id);
+            return {
+              id: v.id,
+              name: (cfg?.storeName as string) || (v.email as string).split('@')[0],
+              emoji: (cfg?.logoEmoji as string) || '🏪',
+              grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
+              category: ((cfg?.categories as string[]))?.[1] || 'General',
+              productCount: countMap[v.id] ?? 0,
+            };
+          })
+      );
+    };
+    fetchVendors();
   }, []);
 
   /* sync URL → local state */
@@ -84,16 +123,12 @@ function TiendaPageInner() {
     emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
   }
 
-  const allProducts: DisplayProduct[] = [
-    ...PRODUCTS.map(p => ({ ...p, image: null as null })),
-    ...dbProducts.map(p => ({
-      id: p.id, vendorName: p.vendor_email, name: p.name, category: p.category,
-      emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
-    })),
-  ];
+  const allProducts: DisplayProduct[] = dbProducts.map(p => ({
+    id: p.id, vendorName: p.vendor_email, name: p.name, category: p.category,
+    emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+  }));
 
-  const dbCategories = dbProducts.map(p => p.category).filter(c => !CATEGORIES.includes(c));
-  const allCategories = [...CATEGORIES, ...Array.from(new Set(dbCategories))];
+  const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
 
   const handleAddToCart = (p: DisplayProduct) => {
     addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, vendorName: p.vendorName });
@@ -119,7 +154,12 @@ function TiendaPageInner() {
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => storesRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-stores-carousel" ref={storesRef}>
-            {VENDORS.map(v => (
+            {realVendors.length === 0 && (
+              <div style={{ padding: '2rem 1rem', color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>
+                No hay tiendas disponibles aún.
+              </div>
+            )}
+            {realVendors.map(v => (
               <Link key={v.id} href={`/tienda/${v.id}`} className="tnd-store-card">
                 <div className="tnd-store-banner" style={{ background: v.grad }}>
                   <div className="tnd-store-logo-wrap">
@@ -130,13 +170,9 @@ function TiendaPageInner() {
                   <div className="tnd-store-name">{v.name}</div>
                   <div className="tnd-store-cat">{v.category}</div>
                   <div className="tnd-store-meta">
-                    <span className="tnd-store-rating">⭐ {v.rating}</span>
-                    <span className="tnd-store-prod">{v.products} productos</span>
+                    <span className="tnd-store-prod">{v.productCount} productos</span>
                   </div>
-                  {v.open
-                    ? <div className="tnd-store-open"><span className="tnd-store-dot" />Abierto ahora</div>
-                    : <div className="tnd-store-open tnd-store-closed">Cerrado</div>
-                  }
+                  <div className="tnd-store-open"><span className="tnd-store-dot" />Activo</div>
                 </div>
               </Link>
             ))}

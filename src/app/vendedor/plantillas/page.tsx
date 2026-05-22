@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -472,6 +473,16 @@ export default function PlantillasPage() {
     try {
       localStorage.setItem('tukimarket_template', JSON.stringify(cfg));
       localStorage.setItem(`tukimarket_config_${cfg.storeSlug}`, JSON.stringify(cfg));
+      // Save to Supabase so visitors can load vendor store branding by UUID
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        const cfgForDb = { ...cfg, storeSlug: user.id };
+        supabase.from('store_configs').upsert({
+          vendor_id: user.id,
+          config: cfgForDb,
+          updated_at: new Date().toISOString(),
+        });
+      });
     } catch { /* ignore */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);

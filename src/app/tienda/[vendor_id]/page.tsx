@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { gs } from '../data';
 
 /* Inline type — mirrors StoreTemplateConfig from /vendedor/plantillas/page */
 interface StoreTemplateConfig {
@@ -70,32 +71,6 @@ interface StoreTemplateConfig {
   heroBlockAlignment?: Record<string, 'left' | 'center' | 'right'>;
 }
 
-/* ── Mock vendor data (fallback) ─────────────────────────── */
-const VENDORS: Record<string, {
-  id: string; name: string; category: string; emoji: string;
-  rating: number; products: number; open: boolean;
-  grad1: string; grad2: string; desc: string; address: string; hours: string; phone: string;
-}> = {
-  techpy:     { id: 'techpy',     name: 'TechPY Store',    category: 'Electrónica', emoji: '💻', rating: 4.8, products: 12, open: true,  grad1: '#1e3a5f', grad2: '#0d2035', desc: 'Los mejores productos electrónicos en Paraguay, con garantía en todo.',              address: 'Asunción, Shopping del Sol',    hours: '08:00 – 18:00', phone: '0981123456' },
-  modaexpress:{ id: 'modaexpress',name: 'Moda Express',    category: 'Ropa',        emoji: '👗', rating: 4.5, products: 38, open: true,  grad1: '#3b1f5e', grad2: '#1e0f35', desc: 'Moda actual a precios accesibles. Nuevas colecciones cada semana.',             address: 'Luque, Av. Mcal. López',        hours: '09:00 – 19:00', phone: '0991234567' },
-  sabores:    { id: 'sabores',    name: 'Sabores del Sur', category: 'Gastronomía', emoji: '🍽️', rating: 4.9, products: 8,  open: false, grad1: '#5e2a0d', grad2: '#351508', desc: 'Comida casera con ingredientes frescos. Pedidos con entrega a domicilio.',        address: 'San Lorenzo, Barrio San Blas',  hours: '11:00 – 21:00', phone: '0972345678' },
-  hogarfeliz: { id: 'hogarfeliz', name: 'Hogar Feliz',     category: 'Hogar',       emoji: '🏠', rating: 4.3, products: 21, open: true,  grad1: '#1a4a2a', grad2: '#0d2515', desc: 'Muebles artesanales de madera maciza y decoración de alta calidad.',             address: 'Fernando de la Mora',           hours: '08:00 – 17:00', phone: '0981456789' },
-  librosmundo:{ id: 'librosmundo',name: 'LibrosMundo',     category: 'Libros',      emoji: '📚', rating: 4.7, products: 55, open: true,  grad1: '#4a1a1a', grad2: '#250d0d', desc: 'La librería más completa de Paraguay. Más de 3000 títulos disponibles.',         address: 'Asunción, Centro',              hours: '08:30 – 18:30', phone: '0961567890' },
-};
-
-const ALL_PRODUCTS = [
-  { id: 'p1', vendorId: 'techpy',      name: 'iPhone 15 128GB',          category: 'Electrónica', emoji: '📱', price: 5000000, floorPrice: 4200000, stock: 3  },
-  { id: 'p2', vendorId: 'techpy',      name: 'Auriculares Bluetooth Pro', category: 'Electrónica', emoji: '🎧', price:  350000, floorPrice:  280000, stock: 15 },
-  { id: 'p3', vendorId: 'techpy',      name: 'Laptop Gaming 16"',         category: 'Electrónica', emoji: '💻', price: 8500000, floorPrice: 7500000, stock: 2  },
-  { id: 'p4', vendorId: 'modaexpress', name: 'Vestido Floral Verano',     category: 'Ropa',        emoji: '👗', price:  180000, floorPrice:  140000, stock: 8  },
-  { id: 'p5', vendorId: 'modaexpress', name: 'Zapatillas Running',        category: 'Ropa',        emoji: '👟', price:  420000, floorPrice:  340000, stock: 5  },
-  { id: 'p6', vendorId: 'sabores',     name: 'Empanadas x12 unidades',    category: 'Gastronomía', emoji: '🥟', price:   60000, floorPrice:   50000, stock: 20 },
-  { id: 'p7', vendorId: 'hogarfeliz',  name: 'Mesa de Madera Maciza',     category: 'Hogar',       emoji: '🪑', price:  800000, floorPrice:  650000, stock: 1  },
-  { id: 'p8', vendorId: 'librosmundo', name: 'Set Paulo Coelho x5',       category: 'Libros',      emoji: '📚', price:  250000, floorPrice:  200000, stock: 10 },
-];
-
-const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
-
 const FONT_URLS: Record<string, string> = {
   'Poppins':          'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap',
   'Montserrat':       'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap',
@@ -116,12 +91,10 @@ const DEFAULT_HERO_BLOCK_ORDER = ['header', 'description', 'reviews', 'search', 
 export default function VendorStorePage() {
   const params   = useParams();
   const vendorId = params.vendor_id as string;
-  const vendor   = VENDORS[vendorId];
-  const mockProds = ALL_PRODUCTS.filter(p => p.vendorId === vendorId);
 
-  const [cfg,      setCfg]      = useState<StoreTemplateConfig | null>(null);
+  const [cfg,       setCfg]       = useState<StoreTemplateConfig | null>(null);
   const [activeCat, setActiveCat] = useState('Todos');
-  const [search,   setSearch]   = useState('');
+  const [search,    setSearch]    = useState('');
 
   const [dbProducts, setDbProducts] = useState<Array<{
     id: string; vendor_id: string; vendor_email: string; name: string;
@@ -129,39 +102,33 @@ export default function VendorStorePage() {
     image: string | null; negotiable: boolean;
   }>>([]);
 
-  /* Build default config from mock vendor data */
-  const defaultCfg: StoreTemplateConfig | null = vendor ? {
-    templateId:      'vitrina',
-    storeSlug:       vendor.id,
-    storeName:       vendor.name,
-    logoEmoji:       vendor.emoji,
-    whatsapp:        vendor.phone,
-    heroTagline:     `${vendor.name}\n${vendor.category} · Paraguay`,
-    heroDescription: vendor.desc,
-    heroGrad1:       vendor.grad1,
-    heroGrad2:       vendor.grad2,
-    accentColor:     '#F5C518',
-    accentText:      '#0b1220',
-    statNum:         String(mockProds.length),
-    statLabel:       'Productos',
-    robotEnabled:    true,
-    categories:      ['Todos', ...Array.from(new Set(mockProds.map(p => p.category)))],
-  } : null;
+  const IS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(vendorId);
+  const DEFAULT_CFG: StoreTemplateConfig = {
+    templateId: 'vitrina', storeSlug: vendorId, storeName: 'Tienda',
+    logoEmoji: '🏪', whatsapp: '', heroTagline: 'Tienda\nTukiMarket',
+    heroDescription: 'Explorá nuestra selección de productos.',
+    heroGrad1: '#1a1a2e', heroGrad2: '#16213e', accentColor: '#F5C518', accentText: '#0b1220',
+    statNum: '', statLabel: 'Productos', robotEnabled: false, categories: ['Todos'],
+  };
 
   useEffect(() => {
-    try {
-      /* Try saved template first, then slug-specific key */
-      const raw = localStorage.getItem(`tukimarket_config_${vendorId}`)
-               || localStorage.getItem('tukimarket_template');
-      if (raw) {
-        const parsed: StoreTemplateConfig = JSON.parse(raw);
-        if (parsed.storeSlug === vendorId) {
-          setCfg(parsed);
-          return;
-        }
+    const loadConfig = async () => {
+      if (vendorId === 'mi-tienda') {
+        try {
+          const raw = localStorage.getItem('tukimarket_template');
+          if (raw) { setCfg(JSON.parse(raw)); return; }
+        } catch { /* ignore */ }
+        setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
+      } else if (IS_UUID) {
+        const { data } = await supabase
+          .from('store_configs').select('config').eq('vendor_id', vendorId).single();
+        if (data?.config) { setCfg(data.config as StoreTemplateConfig); return; }
+        setCfg(DEFAULT_CFG);
+      } else {
+        setCfg(null); // unknown slug — show "not found"
       }
-    } catch { /* ignore */ }
-    setCfg(defaultCfg);
+    };
+    loadConfig();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
@@ -173,8 +140,8 @@ export default function VendorStorePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         uid = user.id;
-      } else if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(vendorId)) {
-        return; // slug vendor — uses mock data only
+      } else if (!IS_UUID) {
+        return; // unknown slug — no products
       }
       const { data } = await supabase.from('products')
         .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
@@ -184,9 +151,9 @@ export default function VendorStorePage() {
       if (data) setDbProducts(data);
     };
     fetchVendorProducts();
-  }, [vendorId]);
+  }, [vendorId, IS_UUID]);
 
-  const activeCfg = cfg ?? defaultCfg;
+  const activeCfg = cfg;
 
   type MergedProduct = {
     id: string; vendorId: string; name: string; category: string;
@@ -196,10 +163,7 @@ export default function VendorStorePage() {
     id: p.id, vendorId: p.vendor_id, name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
   }));
-  const products: MergedProduct[] = [
-    ...mockProds.map(p => ({ ...p, image: null as null | string })),
-    ...dbMapped,
-  ];
+  const products: MergedProduct[] = dbMapped;
 
   useEffect(() => {
     const fontName = activeCfg?.storeFont;
@@ -336,12 +300,6 @@ export default function VendorStorePage() {
                         <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>{activeCfg.statNum || products.length}</div>
                         <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{activeCfg.statLabel}</div>
                       </div>
-                      {vendor && (
-                        <div>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: acc }}>⭐ {vendor.rating}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Calificación</div>
-                        </div>
-                      )}
                       {activeCfg.robotEnabled && (
                         <div>
                           <div style={{ fontSize: '1.4rem' }}>🤖</div>
@@ -365,21 +323,11 @@ export default function VendorStorePage() {
       </div>
 
       {/* ── Barra de info de la tienda ── */}
-      {activeCfg.showInfoBar !== false && vendor && (
+      {activeCfg.showInfoBar !== false && (
         <div style={{ background: 'var(--tnd-surface)', borderBottom: '1px solid var(--tnd-border)', padding: '10px 24px' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-              🕐 <span>{vendor.hours}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-              📍 <span>{vendor.address}</span>
-            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: '#16a34a' }}>
               ✓ Tienda verificada
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: vendor.open ? '#16a34a' : '#ef4444' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: vendor.open ? '#16a34a' : '#ef4444', display: 'inline-block', boxShadow: vendor.open ? '0 0 0 3px rgba(22,163,74,0.25)' : 'none' }} />
-              {vendor.open ? 'Abierto ahora' : 'Cerrado'}
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { NotificationBell } from '@/components/NotificationBell';
 import { initTheme } from '@/lib/useTheme';
 import { CartProvider, useCart, type CartItem } from './cart-context';
-import { PRODUCTS, VENDORS, gs } from './data';
+import { gs } from './data';
 import './tienda.css';
 
 /* ── Autocomplete types ─────────────────────────────────── */
@@ -214,20 +214,14 @@ function TiendaHeader({
     } catch {}
   };
 
-  /* Compute suggestions */
+  /* Compute suggestions — only recent searches (no mock data) */
   const computeSuggestions = useCallback((val: string) => {
     const results: Sugg[] = [];
     if (!val.trim()) {
-      /* Sin texto: mostrar recientes */
-      getRecent().forEach(r => results.push({ type: 'recent', label: r, sub: 'Búsqueda reciente', emoji: '🕐', href: `/tienda/buscar?q=${encodeURIComponent(r)}` }));
-    } else {
-      const q = val.toLowerCase();
-      PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || p.vendorName.toLowerCase().includes(q))
-        .slice(0, 5)
-        .forEach(p => results.push({ type: 'product', label: p.name, sub: p.vendorName, emoji: p.emoji, href: `/tienda/buscar?q=${encodeURIComponent(p.name)}` }));
-      VENDORS.filter(v => v.name.toLowerCase().includes(q) || v.category.toLowerCase().includes(q))
-        .slice(0, 2)
-        .forEach(v => results.push({ type: 'vendor', label: v.name, sub: v.category, emoji: v.emoji, href: `/tienda/${v.id}` }));
+      getRecent().forEach(r => results.push({
+        type: 'recent', label: r, sub: 'Búsqueda reciente', emoji: '🕐',
+        href: `/tienda/buscar?q=${encodeURIComponent(r)}`,
+      }));
     }
     setSuggestions(results);
     setSuggIdx(-1);
@@ -404,8 +398,25 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
     initTheme();
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      if (!session?.user) return; // allow anonymous browsing
       const userEmail = session.user.email || '';
+
+      // Block non-cliente roles from the marketplace
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      const blockedRoles = ['driver', 'tecnico', 'servicio', 'vendedor', 'admin'];
+      if (userData?.role && blockedRoles.includes(userData.role)) {
+        const roleHome: Record<string, string> = {
+          driver: '/driver', tecnico: '/tecnico', servicio: '/servicio',
+          vendedor: '/vendedor', admin: '/admin',
+        };
+        window.location.replace(roleHome[userData.role] ?? '/auth');
+        return;
+      }
+
       setEmail(userEmail);
       /* Cache rápido (mismo patrón que el layout del cliente) */
       try {
