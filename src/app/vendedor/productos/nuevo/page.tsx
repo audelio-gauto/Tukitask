@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
@@ -26,7 +27,8 @@ interface ProductForm {
   price: string;
   floorPrice: string;
   stock: string;
-  image: string;
+  image: string;    // cover (first of gallery)
+  gallery: string[]; // up to 7 images
   status: ProductStatus;
   negotiable:       boolean;
   hasTieredPricing: boolean;
@@ -52,8 +54,6 @@ const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
   { value: 'service',  label: '🔧 Servicio' },
 ];
 
-const EMOJI_SUGGESTIONS = ['📱','💻','👗','👟','🏠','🍔','📚','⚽','🧸','💄','🎮','🔧','💡','🎵','📷'];
-
 const INITIAL: ProductForm = {
   name:         '',
   sku:          '',
@@ -63,7 +63,8 @@ const INITIAL: ProductForm = {
   price:        '',
   floorPrice:   '',
   stock:        '',
-  image:        '📦',
+  image:        '',
+  gallery:      [],
   status:           'draft',
   negotiable:       true,
   hasTieredPricing: false,
@@ -84,11 +85,20 @@ function FieldGroup({ label, hint, children }: { label: string; hint?: string; c
 export default function NuevoProductoPage() {
   const router = useRouter();
   const [form, setForm]         = useState<ProductForm>(INITIAL);
-  const [saving, setSaving]     = useState(false);
-  const [errors, setErrors]     = useState<Partial<Record<keyof ProductForm, string>>>({});
+  const [saving, setSaving]       = useState(false);
+  const [errors, setErrors]       = useState<Partial<Record<keyof ProductForm, string>>>({});
   const [tierError, setTierError] = useState<string | null>(null);
-  const [saved, setSaved]       = useState(false);
-  const [showEmoji, setShowEmoji] = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [userId, setUserId]       = useState<string | null>(null);
+  const fileInputRef              = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
 
   function update<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -182,6 +192,47 @@ export default function NuevoProductoPage() {
     setErrors(errs);
     setTierError(tiersErr);
     return Object.keys(errs).length === 0 && !tiersErr;
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = 7 - form.gallery.length;
+    const toUpload  = files.slice(0, remaining);
+    setUploading(true);
+    setUploadError(null);
+    const newUrls: string[] = [];
+    for (const file of toUpload) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError(`"${file.name}" supera los 5 MB.`);
+        break;
+      }
+      const ext  = file.name.split('.').pop() ?? 'jpg';
+      const path = `${userId ?? 'anon'}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { data, error } = await supabase.storage.from('product-images').upload(path, file, { cacheControl: '3600', upsert: false });
+      if (error) { setUploadError(error.message); break; }
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path);
+      newUrls.push(publicUrl);
+    }
+    if (newUrls.length > 0) {
+      const newGallery = [...form.gallery, ...newUrls];
+      update('gallery', newGallery);
+      update('image', newGallery[0]);
+    }
+    setUploading(false);
+    e.target.value = '';
+  }
+
+  function removeImage(idx: number) {
+    const newGallery = form.gallery.filter((_, i) => i !== idx);
+    update('gallery', newGallery);
+    update('image', newGallery[0] ?? '');
+  }
+
+  function setMainImage(idx: number) {
+    const reordered = [form.gallery[idx], ...form.gallery.filter((_, i) => i !== idx)];
+    update('gallery', reordered);
+    update('image', reordered[0]);
   }
 
   async function handleSave(status: ProductStatus) {
@@ -516,47 +567,76 @@ export default function NuevoProductoPage() {
         {/* ── Right column ────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* Imagen / ícono */}
+          {/* Imágenes del producto */}
           <div className="vnd-card">
             <div className="vnd-card-header">
-              <span className="vnd-card-title"><span className="vnd-card-title-dot" />Imagen / Ícono</span>
+              <span className="vnd-card-title"><span className="vnd-card-title-dot" />Imágenes del producto</span>
             </div>
             <div className="vnd-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Preview */}
-              <div style={{ width: '100%', aspectRatio: '1', background: 'var(--vnd-bg-elevated)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', border: '2px dashed var(--vnd-border)' }}>
-                {form.image}
-              </div>
 
-              <FieldGroup label="URL de imagen o emoji">
-                <input
-                  className="vnd-input"
-                  placeholder="https://... o un emoji 📱"
-                  value={form.image}
-                  onChange={e => update('image', e.target.value)}
-                />
-              </FieldGroup>
-
-              <button
-                type="button"
-                className="vnd-btn vnd-btn-secondary vnd-btn-sm"
-                onClick={() => setShowEmoji(v => !v)}
-                style={{ alignSelf: 'flex-start' }}
-              >
-                {showEmoji ? 'Ocultar' : '😀 Seleccionar emoji'}
-              </button>
-              {showEmoji && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {EMOJI_SUGGESTIONS.map(e => (
-                    <button
-                      key={e}
-                      type="button"
-                      onClick={() => { update('image', e); setShowEmoji(false); }}
-                      style={{ fontSize: '1.5rem', background: 'var(--vnd-bg-elevated)', border: '1px solid var(--vnd-border)', borderRadius: 8, cursor: 'pointer', padding: '4px 8px' }}
+              {/* Gallery grid */}
+              {form.gallery.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {form.gallery.map((url, idx) => (
+                    <div
+                      key={url + idx}
+                      style={{ position: 'relative', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', border: idx === 0 ? '2px solid #F5C518' : '1px solid var(--vnd-border)', cursor: idx !== 0 ? 'pointer' : 'default' }}
+                      title={idx !== 0 ? 'Clic para poner como imagen principal' : 'Imagen principal'}
+                      onClick={() => idx !== 0 && setMainImage(idx)}
                     >
-                      {e}
-                    </button>
+                      <img src={url} alt={`Imagen ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      {idx === 0 && (
+                        <span style={{ position: 'absolute', top: 4, left: 4, background: '#F5C518', color: '#000', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, lineHeight: 1.4 }}>
+                          PRINCIPAL
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); removeImage(idx); }}
+                        style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.65)', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                        title="Eliminar imagen"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                 </div>
+              )}
+
+              {/* Upload zone */}
+              {form.gallery.length < 7 && (
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '20px 16px', borderRadius: 10, border: '2px dashed var(--vnd-border)', cursor: uploading ? 'wait' : 'pointer', background: 'var(--vnd-bg-elevated)' }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                  />
+                  {uploading ? (
+                    <span style={{ color: 'var(--vnd-text-muted)', fontSize: '0.85rem' }}>Subiendo imagen…</span>
+                  ) : (
+                    <>
+                      <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} style={{ color: 'var(--vnd-text-muted)' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--vnd-text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                        Subir imágenes<br />
+                        <span style={{ fontSize: '0.7rem' }}>JPG, PNG, WebP · Máx 5 MB c/u</span>
+                      </span>
+                    </>
+                  )}
+                </label>
+              )}
+
+              <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', margin: 0 }}>
+                {form.gallery.length}/7 imágenes · La primera es la portada · Clic en otra para hacerla principal
+              </p>
+
+              {uploadError && (
+                <span style={{ color: '#f87171', fontSize: '0.78rem' }}>{uploadError}</span>
               )}
             </div>
           </div>

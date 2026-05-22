@@ -40,11 +40,11 @@ const TYPE_CFG: Record<ProductType, string> = {
 
 /* Sample mock data — replace with Supabase query */
 const MOCK_PRODUCTS: Product[] = [
-  { id: '1', name: 'Auricular JBL Tune 510', sku: 'JBL-510-BLK', status: 'published', stock: 48, price: 180000, floorPrice: 130000, type: 'physical', views: 234, createdAt: '2026-05-10' },
-  { id: '2', name: 'Cable USB-C 2m Tejido', sku: 'USB-2M-WH', status: 'published', stock: 120, price: 35000, floorPrice: 25000, type: 'physical', views: 89, createdAt: '2026-05-12' },
-  { id: '3', name: 'Funda Samsung A55', sku: 'FUNDA-A55', status: 'out_of_stock', stock: 0, price: 28000, floorPrice: 18000, type: 'physical', views: 412, createdAt: '2026-05-08' },
-  { id: '4', name: 'Cargador 65W GaN', sku: 'CHG-65W-BLK', status: 'draft', stock: 30, price: 120000, floorPrice: 90000, type: 'physical', views: 0, createdAt: '2026-05-18' },
-  { id: '5', name: 'Soporte para Auto Magnético', sku: 'SOPORTE-MAG', status: 'paused', stock: 15, price: 45000, floorPrice: 32000, type: 'physical', views: 67, createdAt: '2026-05-14' },
+  { id: '1', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=120&q=80', name: 'Auricular JBL Tune 510', sku: 'JBL-510-BLK', status: 'published', stock: 48, price: 180000, floorPrice: 130000, type: 'physical', views: 234, createdAt: '2026-05-10' },
+  { id: '2', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=80', name: 'Cable USB-C 2m Tejido', sku: 'USB-2M-WH', status: 'published', stock: 120, price: 35000, floorPrice: 25000, type: 'physical', views: 89, createdAt: '2026-05-12' },
+  { id: '3', image: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=120&q=80', name: 'Funda Samsung A55', sku: 'FUNDA-A55', status: 'out_of_stock', stock: 0, price: 28000, floorPrice: 18000, type: 'physical', views: 412, createdAt: '2026-05-08' },
+  { id: '4', image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=120&q=80', name: 'Cargador 65W GaN', sku: 'CHG-65W-BLK', status: 'draft', stock: 30, price: 120000, floorPrice: 90000, type: 'physical', views: 0, createdAt: '2026-05-18' },
+  { id: '5', image: 'https://images.unsplash.com/photo-1616400619175-5beda3a17896?w=120&q=80', name: 'Soporte para Auto Magnético', sku: 'SOPORTE-MAG', status: 'paused', stock: 15, price: 45000, floorPrice: 32000, type: 'physical', views: 67, createdAt: '2026-05-14' },
 ];
 
 type TabKey = 'all' | ProductStatus;
