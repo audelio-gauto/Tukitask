@@ -710,7 +710,7 @@ export default function PlantillasPage() {
                 })}
               </div>
             </div>
-            <Toggle enabled={cfg.showStoreChip !== false} onToggle={() => update('showStoreChip', cfg.showStoreChip === false)} label={'🛒 Chip "Mi Tienda" en portada'} />
+            <Toggle enabled={cfg.showStoreChip !== false} onToggle={() => update('showStoreChip', cfg.showStoreChip === false)} label='Chip "Mi Tienda" en portada' />
             <Field label="Título principal" hint="Usá \\n para salto de línea">
               <textarea
                 className="vnd-input"
