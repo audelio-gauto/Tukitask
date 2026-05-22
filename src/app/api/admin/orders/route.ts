@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
-// GET — unified paginated orders + tecnico_jobs for admin
-// ?type=all|orders|tecnico
+// GET — unified paginated orders + tecnico_jobs + market_orders for admin
+// ?type=all|orders|tecnico|venta
 // &status=pending,accepted,...
 // &page=1&limit=50
 // &search=email_or_id
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   if (!admin) return unauthorized();
 
   const { searchParams } = new URL(req.url);
-  const type     = searchParams.get('type') || 'all';          // all | orders | tecnico
+  const type     = searchParams.get('type') || 'all';          // all | orders | tecnico | venta
   const page     = Math.max(1, parseInt(searchParams.get('page') || '1'));
   const limit    = Math.min(100, parseInt(searchParams.get('limit') || '50'));
   const offset   = (page - 1) * limit;
@@ -39,6 +39,7 @@ export async function GET(req: Request) {
   const results: object[] = [];
   let totalOrders = 0;
   let totalTecnico = 0;
+  let totalVenta = 0;
 
   /* ── ORDERS ──────────────────────────────────────────────────── */
   if (type === 'all' || type === 'orders') {
@@ -126,9 +127,49 @@ export async function GET(req: Request) {
     results.push(...enriched);
   }
 
+  /* ── MARKET ORDERS (Ventas) ──────────────────────────────────── */
+  if (type === 'all' || type === 'venta') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = (db as any)
+      .from('market_orders')
+      .select(
+        'id, created_at, updated_at, status, vendor_email, client_email, client_name, ' +
+        'items, total, final_price, address, driver_email, ' +
+        'accepted_at, completed_at, cancelled_at, negotiated, notes',
+        { count: 'exact' }
+      )
+      .order('created_at', { ascending: false });
+
+    if (statuses.length > 0) q = q.in('status', statuses);
+    if (dateFrom) q = q.gte('created_at', dateFrom);
+    if (dateTo)   q = q.lte('created_at', dateTo);
+    if (search) {
+      q = q.or(
+        `client_email.ilike.%${search}%,vendor_email.ilike.%${search}%,address.ilike.%${search}%,id.eq.${isUUID(search) ? search : '00000000-0000-0000-0000-000000000000'}`
+      );
+    }
+
+    if (type === 'venta') {
+      q = q.range(offset, offset + limit - 1);
+    } else {
+      q = q.limit(200);
+    }
+
+    const { data, count, error } = await q;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    totalVenta = count ?? 0;
+
+    const enriched = (data || []).map((v: Record<string, unknown>) => ({
+      ...v,
+      _type: 'venta',
+      _driver_active: v.driver_email ? activeDriverEmails.has(String(v.driver_email)) : false,
+    }));
+    results.push(...enriched);
+  }
+
   /* ── For "all": sort combined by created_at desc, then paginate ── */
   let paginatedResults = results;
-  let total = totalOrders + totalTecnico;
+  let total = totalOrders + totalTecnico + totalVenta;
 
   if (type === 'all') {
     results.sort((a, b) => {
@@ -136,14 +177,16 @@ export async function GET(req: Request) {
       const tb = new Date((b as Record<string, unknown>).created_at as string).getTime();
       return tb - ta;
     });
-    // Usar counts reales de BD, no results.length (que está limitado a 500+500)
-    total = totalOrders + totalTecnico;
+    total = totalOrders + totalTecnico + totalVenta;
     paginatedResults = results.slice(offset, offset + limit);
   } else if (type === 'orders') {
     total = totalOrders;
     paginatedResults = results;
-  } else {
+  } else if (type === 'tecnico') {
     total = totalTecnico;
+    paginatedResults = results;
+  } else {
+    total = totalVenta;
     paginatedResults = results;
   }
 
@@ -176,7 +219,7 @@ async function handlePatch(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
-  let body: { id?: string; type?: 'order' | 'tecnico'; action?: string; status?: string; driver_email?: string };
+  let body: { id?: string; type?: 'order' | 'tecnico' | 'venta'; action?: string; status?: string; driver_email?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
   const { id, type, action } = body;
@@ -185,11 +228,11 @@ async function handlePatch(req: Request) {
   }
 
   const db = sbAdmin();
-  const table = type === 'order' ? 'orders' : 'tecnico_jobs';
+  const table = type === 'order' ? 'orders' : type === 'tecnico' ? 'tecnico_jobs' : 'market_orders';
   const terminalStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned', 'completado', 'rechazado'];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row } = await (db as any).from(table).select('status, accepted_by').eq('id', id).maybeSingle();
+  const { data: row } = await (db as any).from(table).select('status, accepted_by, driver_email').eq('id', id).maybeSingle();
   if (!row) return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
 
   // ── Cancel ────────────────────────────────────────────────────────────────
@@ -198,7 +241,7 @@ async function handlePatch(req: Request) {
       return NextResponse.json({ error: `No se puede cancelar — estado actual: ${row.status}` }, { status: 400 });
     }
     const updates: Record<string, unknown> = { status: 'cancelled' };
-    if (type === 'order') updates.cancelled_at = new Date().toISOString();
+    if (type === 'order' || type === 'venta') updates.cancelled_at = new Date().toISOString();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (db as any).from(table).update(updates).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -232,6 +275,15 @@ async function handlePatch(req: Request) {
         p_cancelled_at: cancelledAt,
         p_completed_at: completedAt,
       });
+      rpcError = error;
+    } else if (type === 'venta') {
+      // market_orders: direct update (no RPC needed)
+      const updates: Record<string, unknown> = { status: newStatus };
+      if (newStatus === 'cancelled') updates.cancelled_at = new Date().toISOString();
+      if (newStatus === 'delivered') updates.completed_at = new Date().toISOString();
+      if (newStatus === 'preparing' && !row.accepted_at) updates.accepted_at = new Date().toISOString();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (db as any).from('market_orders').update(updates).eq('id', id);
       rpcError = error;
     } else {
       const completedAt = newStatus === 'completado' ? new Date().toISOString() : null;
@@ -270,18 +322,20 @@ async function handlePatch(req: Request) {
     const { driver_email } = body;
     if (!driver_email) return NextResponse.json({ error: 'driver_email required' }, { status: 400 });
 
-    // Validate driver exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: driverUser } = await (db as any).from('users').select('email, role').eq('email', driver_email.toLowerCase().trim()).maybeSingle();
-    if (!driverUser) return NextResponse.json({ error: 'Conductor no encontrado' }, { status: 404 });
-    if (!['driver', 'tecnico'].includes(driverUser.role)) {
-      return NextResponse.json({ error: 'El usuario no es driver ni técnico' }, { status: 400 });
+    // Validate driver exists (skip for venta — any driver can be assigned)
+    if (type !== 'venta') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: driverUser } = await (db as any).from('users').select('email, role').eq('email', driver_email.toLowerCase().trim()).maybeSingle();
+      if (!driverUser) return NextResponse.json({ error: 'Conductor no encontrado' }, { status: 404 });
+      if (!['driver', 'tecnico'].includes(driverUser.role)) {
+        return NextResponse.json({ error: 'El usuario no es driver ni técnico' }, { status: 400 });
+      }
     }
 
-    const field = type === 'order' ? 'accepted_by' : 'tecnico_email';
+    const field = type === 'order' ? 'accepted_by' : type === 'venta' ? 'driver_email' : 'tecnico_email';
     const updates: Record<string, unknown> = {
       [field]: driver_email.toLowerCase().trim(),
-      status: 'accepted',
+      status: type === 'venta' ? 'in_transit' : 'accepted',
       accepted_at: new Date().toISOString(),
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

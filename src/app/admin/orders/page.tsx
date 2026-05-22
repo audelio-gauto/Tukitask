@@ -49,7 +49,29 @@ interface TecnicoJob {
   _driver_active: boolean;
 }
 
-type Row = Order | TecnicoJob;
+interface VentaOrder {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  vendor_email: string;
+  client_email: string;
+  client_name: string | null;
+  items: { name: string; qty: number; price: number }[];
+  total: number;
+  final_price: number | null;
+  address: string | null;
+  driver_email: string | null;
+  accepted_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  negotiated: boolean;
+  notes: string | null;
+  _type: 'venta';
+  _driver_active: boolean;
+}
+
+type Row = Order | TecnicoJob | VentaOrder;
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const ORDER_STATUSES: Record<string, { label: string; color: string }> = {
@@ -83,6 +105,15 @@ const TECNICO_STATUSES: Record<string, { label: string; color: string }> = {
   incidente:           { label: 'Incidente',        color: 'bg-red-200 text-red-900' },
 };
 
+const VENTA_STATUSES: Record<string, { label: string; color: string }> = {
+  pending:    { label: 'Pendiente',  color: 'bg-amber-100 text-amber-800' },
+  preparing:  { label: 'Preparando', color: 'bg-blue-100 text-blue-800' },
+  ready:      { label: 'Listo',      color: 'bg-yellow-100 text-yellow-800' },
+  in_transit: { label: 'En camino',  color: 'bg-purple-100 text-purple-800' },
+  delivered:  { label: 'Entregado',  color: 'bg-green-100 text-green-800' },
+  cancelled:  { label: 'Cancelado',  color: 'bg-red-100 text-red-800' },
+};
+
 const VEHICLE_LABELS: Record<string, { label: string; icon: IconName }> = {
   moto:        { label: 'Moto', icon: 'car' },
   auto:        { label: 'Auto', icon: 'car' },
@@ -97,10 +128,12 @@ const TABS: { key: string; label: string; icon: IconName }[] = [
   { key: 'all',     label: 'Todos',     icon: 'clipboard' },
   { key: 'orders',  label: 'Envios',    icon: 'car' },
   { key: 'tecnico', label: 'Servicios', icon: 'tool' },
+  { key: 'venta',   label: 'Venta',     icon: 'shopping-cart' },
 ];
 
 const ALL_ORDER_STATUS_KEYS = Object.keys(ORDER_STATUSES);
 const ALL_TECNICO_STATUS_KEYS = Object.keys(TECNICO_STATUSES);
+const ALL_VENTA_STATUS_KEYS = Object.keys(VENTA_STATUSES);
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtDate(iso: string | null) {
@@ -115,8 +148,8 @@ function fmtPrice(n: number | null) {
   return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(n);
 }
 
-function StatusBadge({ status, type }: { status: string; type: 'order' | 'tecnico' }) {
-  const map = type === 'order' ? ORDER_STATUSES : TECNICO_STATUSES;
+function StatusBadge({ status, type }: { status: string; type: 'order' | 'tecnico' | 'venta' }) {
+  const map = type === 'order' ? ORDER_STATUSES : type === 'tecnico' ? TECNICO_STATUSES : VENTA_STATUSES;
   const cfg = map[status] ?? { label: status, color: 'bg-gray-100 text-gray-600' };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.color}`}>
@@ -125,7 +158,13 @@ function StatusBadge({ status, type }: { status: string; type: 'order' | 'tecnic
   );
 }
 
-function TypeBadge({ type }: { type: 'order' | 'tecnico' }) {
+function TypeBadge({ type }: { type: 'order' | 'tecnico' | 'venta' }) {
+  if (type === 'venta') return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <Icon name="shopping-cart" size={12} />
+      Venta
+    </span>
+  );
   return type === 'order'
     ? (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -151,9 +190,9 @@ function ActiveDot({ active }: { active: boolean }) {
 function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
   row: Row | null;
   onClose: () => void;
-  onCancel: (id: string, type: 'order' | 'tecnico') => void;
-  onSetStatus: (id: string, type: 'order' | 'tecnico', status: string) => void;
-  onReassign: (id: string, type: 'order' | 'tecnico', driverEmail: string) => void;
+  onCancel: (id: string, type: 'order' | 'tecnico' | 'venta') => void;
+  onSetStatus: (id: string, type: 'order' | 'tecnico' | 'venta', status: string) => void;
+  onReassign: (id: string, type: 'order' | 'tecnico' | 'venta', driverEmail: string) => void;
 }) {
   const [newStatus, setNewStatus] = React.useState('');
   const [reassignEmail, setReassignEmail] = React.useState('');
@@ -176,13 +215,15 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
 
   if (!row) return null;
   const isOrder = row._type === 'order';
+  const isVenta = row._type === 'venta';
   const o = row as Order;
   const j = row as TecnicoJob;
+  const v = row as VentaOrder;
 
   const terminalStatuses = ['delivered', 'commission_charged', 'client_confirmed', 'cancelled', 'failed', 'returned', 'completado', 'rechazado'];
   const canCancel = !terminalStatuses.includes(row.status);
-  const statusOptions = isOrder ? ALL_ORDER_STATUS_KEYS : ALL_TECNICO_STATUS_KEYS;
-  const statusMap = isOrder ? ORDER_STATUSES : TECNICO_STATUSES;
+  const statusOptions = isOrder ? ALL_ORDER_STATUS_KEYS : isVenta ? ALL_VENTA_STATUS_KEYS : ALL_TECNICO_STATUS_KEYS;
+  const statusMap = isOrder ? ORDER_STATUSES : isVenta ? VENTA_STATUSES : TECNICO_STATUSES;
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
@@ -225,17 +266,32 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
         {/* Info grid */}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <InfoField label="Cliente" value={row.client_email} />
-          {isOrder ? (
+          {isVenta ? (
+            <>
+              <InfoField label="Vendedor" value={v.vendor_email} />
+              <InfoField label="Nombre cliente" value={v.client_name ?? '—'} />
+              <InfoField label="Conductor" value={v.driver_email ?? '—'} extra={v.driver_email ? <ActiveDot active={v._driver_active} /> : undefined} />
+              <InfoField label="Total" value={fmtPrice(v.total)} />
+              <InfoField label="Precio final" value={fmtPrice(v.final_price ?? v.total)} highlight />
+              {v.negotiated && (
+                <div className="col-span-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                    Precio negociado
+                  </span>
+                </div>
+              )}
+            </>
+          ) : isOrder ? (
             <>
               <InfoField label="Driver" value={o.accepted_by} extra={<ActiveDot active={o._driver_active} />} />
               <InfoField
                 label="Vehiculo"
                 value={(() => {
-                  const v = VEHICLE_LABELS[o.vehicle_type];
-                  return v ? (
+                  const vl = VEHICLE_LABELS[o.vehicle_type];
+                  return vl ? (
                     <span className="inline-flex items-center gap-1">
-                      <Icon name={v.icon} size={12} />
-                      {v.label}
+                      <Icon name={vl.icon} size={12} />
+                      {vl.label}
                     </span>
                   ) : (o.vehicle_type || '—');
                 })()}
@@ -254,7 +310,43 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
           )}
         </div>
 
+        {/* Venta items list */}
+        {isVenta && v.items && v.items.length > 0 && (
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2 inline-flex items-center gap-1">
+              <Icon name="shopping-cart" size={10} />
+              Productos ({v.items.length})
+            </p>
+            <div className="space-y-1.5">
+              {v.items.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-700">{item.qty}× {item.name}</span>
+                  <span className="font-semibold text-gray-800">{fmtPrice(item.price * item.qty)}</span>
+                </div>
+              ))}
+              <div className="border-t border-gray-200 pt-1.5 flex justify-between text-sm font-bold">
+                <span className="text-gray-600">Total</span>
+                <span className="text-green-700">{fmtPrice(v.final_price ?? v.total)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Addresses */}
+        {isVenta && v.address && (
+          <AddrField
+            label={<span className="inline-flex items-center gap-1"><Icon name="map-pin" size={12} />Dirección entrega</span>}
+            value={v.address}
+          />
+        )}
+        {isVenta && v.notes && (
+          <AddrField
+            label={<span className="inline-flex items-center gap-1"><Icon name="clipboard" size={12} />Notas</span>}
+            value={v.notes}
+          />
+        )}
+
+        {/* Addresses for orders/tecnico */}
         {isOrder && (
           <div className="space-y-2">
             <AddrField
@@ -320,7 +412,7 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
             )}
           </div>
         )}
-        {!isOrder && j.address && (
+        {!isOrder && !isVenta && j.address && (
           <AddrField
             label={(
               <span className="inline-flex items-center gap-1">
@@ -331,7 +423,7 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
             value={j.address}
           />
         )}
-        {!isOrder && j.description && (
+        {!isOrder && !isVenta && j.description && (
           <AddrField
             label={(
               <span className="inline-flex items-center gap-1">
@@ -410,7 +502,7 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
           {/* Reassign driver */}
           <div>
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-              Reasignar {isOrder ? 'conductor' : 'técnico'}
+              Reasignar {isOrder ? 'conductor' : isVenta ? 'conductor' : 'técnico'}
             </p>
             <div className="flex gap-2">
               <input
@@ -480,7 +572,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState('');
 
   // Filters
-  const [tab, setTab] = useState<'all' | 'orders' | 'tecnico'>('all');
+  const [tab, setTab] = useState<'all' | 'orders' | 'tecnico' | 'venta'>('all');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -550,14 +642,14 @@ export default function AdminOrdersPage() {
     setPage(1);
   };
 
-  const handleTabChange = (t: 'all' | 'orders' | 'tecnico') => {
+  const handleTabChange = (t: 'all' | 'orders' | 'tecnico' | 'venta') => {
     setTab(t);
     setSelectedStatuses([]);
     setPage(1);
   };
 
-  const handleCancel = async (id: string, type: 'order' | 'tecnico') => {
-    if (!confirm(`¿Cancelar este ${type === 'order' ? 'envío' : 'servicio'} permanentemente?`)) return;
+  const handleCancel = async (id: string, type: 'order' | 'tecnico' | 'venta') => {
+    if (!confirm(`¿Cancelar este ${type === 'order' ? 'envío' : type === 'venta' ? 'pedido de venta' : 'servicio'} permanentemente?`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin/orders', {
@@ -583,7 +675,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleSetStatus = async (id: string, type: 'order' | 'tecnico', status: string) => {
+  const handleSetStatus = async (id: string, type: 'order' | 'tecnico' | 'venta', status: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin/orders', {
@@ -606,7 +698,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleReassign = async (id: string, type: 'order' | 'tecnico', driverEmail: string) => {
+  const handleReassign = async (id: string, type: 'order' | 'tecnico' | 'venta', driverEmail: string) => {
     if (!confirm(`¿Reasignar este pedido a ${driverEmail}?`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -616,9 +708,9 @@ export default function AdminOrdersPage() {
         body: JSON.stringify({ id, type, action: 'reassign', driver_email: driverEmail }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error'); }
-      const field = type === 'order' ? 'accepted_by' : 'tecnico_email';
-      setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: driverEmail, status: 'accepted' } : r));
-      setSelected(prev => prev && prev.id === id ? { ...prev, [field]: driverEmail, status: 'accepted' } : prev);
+      const field = type === 'order' ? 'accepted_by' : type === 'venta' ? 'driver_email' : 'tecnico_email';
+      setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: driverEmail, status: type === 'venta' ? 'in_transit' : 'accepted' } : r));
+      setSelected(prev => prev && prev.id === id ? { ...prev, [field]: driverEmail, status: type === 'venta' ? 'in_transit' : 'accepted' } : prev);
       setToast({ msg: `Reasignado a ${driverEmail}`, ok: true });
       setTimeout(() => setToast(null), 3000);
     } catch (err: unknown) {
@@ -628,8 +720,8 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const statusKeys = tab === 'tecnico' ? ALL_TECNICO_STATUS_KEYS : ALL_ORDER_STATUS_KEYS;
-  const statusMap  = tab === 'tecnico' ? TECNICO_STATUSES : ORDER_STATUSES;
+  const statusKeys = tab === 'tecnico' ? ALL_TECNICO_STATUS_KEYS : tab === 'venta' ? ALL_VENTA_STATUS_KEYS : ALL_ORDER_STATUS_KEYS;
+  const statusMap  = tab === 'tecnico' ? TECNICO_STATUSES : tab === 'venta' ? VENTA_STATUSES : ORDER_STATUSES;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -701,7 +793,7 @@ export default function AdminOrdersPage() {
         {TABS.map(t => (
           <button
             key={t.key}
-            onClick={() => handleTabChange(t.key as 'all' | 'orders' | 'tecnico')}
+            onClick={() => handleTabChange(t.key as 'all' | 'orders' | 'tecnico' | 'venta')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               tab === t.key
                 ? 'bg-white text-gray-900 shadow-sm'
@@ -890,18 +982,26 @@ export default function AdminOrdersPage() {
 // ── Row component ──────────────────────────────────────────────────────────────
 function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: () => void }) {
   const isOrder = row._type === 'order';
+  const isVenta = row._type === 'venta';
   const o = row as Order;
   const j = row as TecnicoJob;
+  const v = row as VentaOrder;
 
   const driverLabel = isOrder
     ? (o.accepted_by ? o.accepted_by.split('@')[0] : '—')
-    : (j.tecnico_email ? j.tecnico_email.split('@')[0] : '—');
+    : isVenta
+      ? (v.driver_email ? v.driver_email.split('@')[0] : '—')
+      : (j.tecnico_email ? j.tecnico_email.split('@')[0] : '—');
 
   const destination = isOrder
     ? o.delivery_address
-    : (j.service_type ?? j.address ?? '—');
+    : isVenta
+      ? (v.address ?? '—')
+      : (j.service_type ?? j.address ?? '—');
 
-  const price = isOrder ? o.offer : j.agreed_price;
+  const price = isOrder ? o.offer : isVenta ? (v.final_price ?? v.total) : j.agreed_price;
+
+  const driverActive = isOrder ? !!o.accepted_by : isVenta ? !!v.driver_email : !!j.tecnico_email;
 
   return (
     <div
@@ -917,21 +1017,23 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
       {/* Client */}
       <div className="flex flex-col justify-center overflow-hidden pr-3">
         <p className="text-sm text-gray-800 font-medium truncate">{row.client_email}</p>
-        {isOrder
-          ? (
-            <p className="text-xs text-gray-400 truncate">
-              {o.vehicle_type ? (() => {
-                const v = VEHICLE_LABELS[o.vehicle_type];
-                return v ? (
-                  <span className="inline-flex items-center gap-1">
-                    <Icon name={v.icon} size={12} />
-                    {v.label}
-                  </span>
-                ) : o.vehicle_type;
-              })() : ''}
-            </p>
-          )
-          : <p className="text-xs text-gray-400 truncate">{j.client_name ?? ''}</p>
+        {isVenta
+          ? <p className="text-xs text-gray-400 truncate">{v.vendor_email.split('@')[0]}</p>
+          : isOrder
+            ? (
+              <p className="text-xs text-gray-400 truncate">
+                {o.vehicle_type ? (() => {
+                  const vl = VEHICLE_LABELS[o.vehicle_type];
+                  return vl ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name={vl.icon} size={12} />
+                      {vl.label}
+                    </span>
+                  ) : o.vehicle_type;
+                })() : ''}
+              </p>
+            )
+            : <p className="text-xs text-gray-400 truncate">{j.client_name ?? ''}</p>
         }
       </div>
 
@@ -944,6 +1046,9 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
             {o.stop_count ?? o.order_stops?.length ?? '?'} paradas
           </span>
         )}
+        {isVenta && v.items && v.items.length > 0 && (
+          <span className="text-[10px] text-emerald-600 font-medium">{v.items.length} producto{v.items.length !== 1 ? 's' : ''}</span>
+        )}
       </div>
 
       {/* Price */}
@@ -954,7 +1059,7 @@ function OrderRow({ row, index, onClick }: { row: Row; index: number; onClick: (
       {/* Driver */}
       <div className="flex flex-col justify-center overflow-hidden pr-3">
         <p className="text-xs text-gray-700 font-medium truncate">{driverLabel}</p>
-        {(isOrder ? !!o.accepted_by : !!j.tecnico_email) && (
+        {driverActive && (
           <ActiveDot active={row._driver_active} />
         )}
       </div>
