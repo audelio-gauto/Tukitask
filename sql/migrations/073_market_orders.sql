@@ -43,10 +43,12 @@ CREATE TRIGGER trg_market_orders_updated_at
 ALTER TABLE market_orders ENABLE ROW LEVEL SECURITY;
 
 -- Service-role (sbAdmin) bypasses RLS — these policies cover client-side SDK calls
+DROP POLICY IF EXISTS "market_orders vendor select" ON market_orders;
 CREATE POLICY "market_orders vendor select"
   ON market_orders FOR SELECT TO authenticated
   USING (vendor_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
 
+DROP POLICY IF EXISTS "market_orders client select" ON market_orders;
 CREATE POLICY "market_orders client select"
   ON market_orders FOR SELECT TO authenticated
   USING (client_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
