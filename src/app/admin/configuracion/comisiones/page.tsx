@@ -26,13 +26,11 @@ export default function ConfigComisionesPage() {
   const defaultRules: CommissionRule[] = [
     { id: 'default-1', name: 'Comision fija por venta', type: 'fixed', value: 5000, applies_to: 'vendor', is_active: true },
     { id: 'default-2', name: 'Comision porcentual vendedor', type: 'percentage', value: 10, applies_to: 'vendor', is_active: true },
-    { id: 'default-3', name: 'Comision conductor por entrega', type: 'percentage', value: 15, applies_to: 'driver', is_active: true },
-    { id: 'default-4', name: 'Comision tecnico por servicio', type: 'percentage', value: 12, applies_to: 'service', is_active: false },
   ];
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('commission_rules').select('*').order('created_at');
+      const { data } = await supabase.from('commission_rules').select('*').eq('applies_to', 'vendor').order('created_at');
       if (data && data.length > 0) {
         setRules(data as CommissionRule[]);
       } else {
@@ -66,7 +64,7 @@ export default function ConfigComisionesPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">Porcentajes de Comision</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Configuracion de comisiones fijas y porcentuales por categoria.</p>
+        <p className="text-gray-500 text-sm mt-0.5">Comisiones fijas y porcentuales aplicadas a vendedores.</p>
       </div>
 
       {/* Type legend */}
