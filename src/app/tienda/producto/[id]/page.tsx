@@ -1,7 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import { gs } from '../../data';
 
 /* ── Deal strength meter (floor price never revealed to user) ── */
 function getDealStrength(offer: number, price: number, floor: number) {
@@ -88,36 +90,54 @@ function getStoredBotTimeout(vendorId: string): { minutes: number; action: Timeo
   };
 }
 
-/* ── Mock data ──────────────────────────────────────────────── */
-const PRODUCTS: Record<string, {
-  id: string; vendorId: string; vendorName: string; name: string;
-  category: string; emoji: string; price: number; floorPrice: number;
-  stock: number; desc: string;
-}> = {
-  p1: { id: 'p1', vendorId: 'techpy',      vendorName: 'TechPY Store',    name: 'iPhone 15 128GB',          category: 'Electrónica', emoji: '📱', price: 5000000, floorPrice: 4200000, stock: 3,  desc: 'iPhone 15 128GB en color negro. Garantía de 12 meses. Libre de fábrica, acepta cualquier operadora. Incluye cargador original y caja sellada.' },
-  p2: { id: 'p2', vendorId: 'techpy',      vendorName: 'TechPY Store',    name: 'Auriculares Bluetooth Pro', category: 'Electrónica', emoji: '🎧', price:  350000, floorPrice:  280000, stock: 15, desc: 'Auriculares inalámbricos con cancelación de ruido activa. Batería de 30 horas. Compatible con todos los dispositivos Bluetooth 5.0.' },
-  p3: { id: 'p3', vendorId: 'techpy',      vendorName: 'TechPY Store',    name: 'Laptop Gaming 16"',         category: 'Electrónica', emoji: '💻', price: 8500000, floorPrice: 7500000, stock: 2,  desc: 'Laptop gaming con Intel Core i7, 16GB RAM, RTX 4060, pantalla 16" 144Hz. Perfecta para gaming y trabajo exigente.' },
-  p4: { id: 'p4', vendorId: 'modaexpress', vendorName: 'Moda Express',    name: 'Vestido Floral Verano',     category: 'Ropa',        emoji: '👗', price:  180000, floorPrice:  140000, stock: 8,  desc: 'Vestido liviano con estampado floral. Material 100% algodón, tallas S, M, L, XL disponibles. Colores vibrantes para el verano paraguayo.' },
-  p5: { id: 'p5', vendorId: 'modaexpress', vendorName: 'Moda Express',    name: 'Zapatillas Running',        category: 'Ropa',        emoji: '👟', price:  420000, floorPrice:  340000, stock: 5,  desc: 'Zapatillas deportivas para running urbano y trail. Suela antideslizante, amortiguación premium. Tallas 37-44.' },
-  p6: { id: 'p6', vendorId: 'sabores',     vendorName: 'Sabores del Sur', name: 'Empanadas x12 unidades',    category: 'Gastronomía', emoji: '🥟', price:   60000, floorPrice:   50000, stock: 20, desc: 'Empanadas caseras de carne, pollo o humita. Preparadas el mismo día con ingredientes frescos. Incluye salsa de ajíes de regalo.' },
-  p7: { id: 'p7', vendorId: 'hogarfeliz',  vendorName: 'Hogar Feliz',     name: 'Mesa de Madera Maciza',     category: 'Hogar',       emoji: '🪑', price:  800000, floorPrice:  650000, stock: 1,  desc: 'Mesa de comedor de madera maciza cedro. 6 personas, 140x80cm. Acabado natural con aceite de lino. Fabricación artesanal local.' },
-  p8: { id: 'p8', vendorId: 'librosmundo', vendorName: 'LibrosMundo',     name: 'Set Paulo Coelho x5',       category: 'Libros',      emoji: '📚', price:  250000, floorPrice:  200000, stock: 10, desc: 'Colección de 5 libros de Paulo Coelho: El Alquimista, Veronika Decide Morir, El Zahir, Once Minutos y El Peregrino. Tapa dura, edición especial.' },
+type Product = {
+  id: string;
+  vendor_id: string;
+  vendor_email: string;
+  name: string;
+  category: string;
+  price: number;
+  floor_price: number;
+  stock: number;
+  image: string | null;
+  description: string | null;
+  negotiable: boolean;
 };
-
-const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
   const id     = params.id as string;
-  const p      = PRODUCTS[id];
 
+  const [p,           setP]           = useState<Product | null | undefined>(undefined); // undefined=loading
   const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
   const [offerAmount, setOfferAmount] = useState('');
   const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction } | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, description, negotiable')
+      .eq('id', id)
+      .eq('status', 'published')
+      .single()
+      .then(({ data }) => setP(data ?? null));
+  }, [id]);
+
+  // Loading
+  if (p === undefined) {
+    return (
+      <div className="tnd-page">
+        <div className="tnd-not-found">
+          <div style={{ fontSize: '2rem', marginBottom: 16 }}>⏳</div>
+          <p style={{ color: 'var(--tnd-text-muted)' }}>Cargando producto...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!p) {
     return (
@@ -132,12 +152,13 @@ export default function ProductDetailPage() {
     );
   }
 
-  const isNegotiable = p.floorPrice < p.price * 0.92;
+  const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
   const offerNum     = parseInt(offerAmount, 10) || 0;
-  const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floorPrice) : null;
+  const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
 
   async function handleBuy() {
+    if (!p) return;
     setMode('buy');
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 1200));
@@ -147,25 +168,25 @@ export default function ProductDetailPage() {
 
   async function handleOffer(e: React.FormEvent) {
     e.preventDefault();
-    if (!offerNum || offerNum <= 0) return;
+    if (!p || !offerNum || offerNum <= 0) return;
     setSubmitting(true);
     try {
-      const autoAcceptFrom = Math.round((p.floorPrice + p.price) / 2 / 1000) * 1000;
-      const botTone = getStoredBotTone(p.vendorId);
-      const timeoutCfg = getStoredBotTimeout(p.vendorId);
+      const autoAcceptFrom = Math.round((p.floor_price + p.price) / 2 / 1000) * 1000;
+      const botTone = getStoredBotTone(p.vendor_id);
+      const timeoutCfg = getStoredBotTimeout(p.vendor_id);
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vendorId: p.vendorId,
+          vendorId: p.vendor_id,
           productId: p.id,
           buyerOffer: offerNum,
           quantity,
           listedPrice: p.price,
-          floorPrice: p.floorPrice,
+          floorPrice: p.floor_price,
           autoAcceptFrom,
           productName: p.name,
-          vendorName: p.vendorName,
+          vendorName: p.vendor_email,
           buyerMessage: message,
           botTone,
           botTimeoutMinutes: timeoutCfg.minutes,
@@ -196,7 +217,7 @@ export default function ProductDetailPage() {
       }
     } catch {
       // Fallback local logic to keep UX responsive even if API fails
-      if (offerNum >= p.floorPrice) {
+      if (offerNum >= p.floor_price) {
         setDone({
           type: 'negotiate',
           amount: offerNum,
@@ -204,8 +225,8 @@ export default function ProductDetailPage() {
           botMessage: `Perfecto, te confirmo ${gs(offerNum)} por unidad.`,
         });
       } else {
-        const counter = Math.round((p.floorPrice + offerNum) / 2 / 1000) * 1000;
-        const counterAmount = Math.max(p.floorPrice, counter);
+        const counter = Math.round((p.floor_price + offerNum) / 2 / 1000) * 1000;
+        const counterAmount = Math.max(p.floor_price, counter);
         setDone({
           type: 'negotiate',
           amount: offerNum,
@@ -230,7 +251,7 @@ export default function ProductDetailPage() {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 24, fontSize: '0.82rem' }}>
         <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
         <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
-        <Link href={`/tienda/${p.vendorId}`} className="tnd-back-link">{p.vendorName}</Link>
+        <Link href={`/tienda/${p.vendor_id}`} className="tnd-back-link">{p.vendor_email.split('@')[0]}</Link>
         <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
         <span style={{ color: 'var(--tnd-text-muted)' }}>{p.name}</span>
       </div>
@@ -239,7 +260,10 @@ export default function ProductDetailPage() {
         {/* ── Left: image ──────────────────────────────────── */}
         <div>
           <div className="tnd-detail-image">
-            <span role="img" aria-label={p.name}>{p.emoji}</span>
+            {p.image
+              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 16 }} />
+              : <span role="img" aria-label={p.name}>📦</span>
+            }
             {isNegotiable && (
               <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
             )}
@@ -255,11 +279,11 @@ export default function ProductDetailPage() {
         {/* ── Right: info + actions ─────────────────────── */}
         <div>
           <div className="tnd-detail-vendor-link">
-            <Link href={`/tienda/${p.vendorId}`}>{p.vendorName}</Link>
+            <Link href={`/tienda/${p.vendor_id}`}>{p.vendor_email.split('@')[0]}</Link>
           </div>
           <h1 className="tnd-detail-name">{p.name}</h1>
           <div className="tnd-detail-price">{gs(p.price)}</div>
-          <p className="tnd-detail-desc">{p.desc}</p>
+          <p className="tnd-detail-desc">{p.description}</p>
 
           <div className="tnd-divider" />
 
@@ -272,7 +296,7 @@ export default function ProductDetailPage() {
                   <div className="tnd-offer-success-title">¡Compra confirmada!</div>
                   <p className="tnd-offer-success-sub">
                     Tu pedido de <strong>{quantity} × {p.name}</strong> fue procesado.<br />
-                    Recibirás confirmación de <strong>{p.vendorName}</strong> pronto.
+                    Recibirás confirmación de <strong>{p.vendor_email.split('@')[0]}</strong> pronto.
                   </p>
                 </>
               ) : (
@@ -289,7 +313,7 @@ export default function ProductDetailPage() {
                         </p>
                       )}
                       <p className="tnd-offer-success-sub">
-                        El TukiBot de <strong>{p.vendorName}</strong> aceptó <strong>{gs(done.amount!)}</strong> × {quantity} und.<br />
+                        El TukiBot de <strong>{p.vendor_email.split('@')[0]}</strong> aceptó <strong>{gs(done.amount!)}</strong> × {quantity} und.<br />
                         Procedé al pago para confirmar tu compra.
                       </p>
                       <button className="tnd-btn-buy" style={{ marginTop: 12 }}>💳 Proceder al pago</button>
@@ -336,7 +360,7 @@ export default function ProductDetailPage() {
                     </>
                   ) : (
                     <p className="tnd-offer-success-sub">
-                      Tu oferta de <strong>{gs(done.amount!)}</strong> está siendo evaluada por el TukiBot de <strong>{p.vendorName}</strong>.
+                      Tu oferta de <strong>{gs(done.amount!)}</strong> está siendo evaluada por el TukiBot de <strong>{p.vendor_email.split('@')[0]}</strong>.
                     </p>
                   )}
                 </>
