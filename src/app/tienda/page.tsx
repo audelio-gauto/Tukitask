@@ -22,6 +22,9 @@ function TiendaPageInner() {
     id: string; name: string; emoji: string; grad: string; category: string; productCount: number;
   }>>([]);
 
+  // vendor_id → display name (storeName or email prefix)
+  const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
+
   const [dbProducts, setDbProducts] = useState<Array<{
     id: string; vendor_id: string; vendor_email: string; name: string;
     category: string; price: number; floor_price: number; stock: number;
@@ -62,12 +65,20 @@ function TiendaPageInner() {
         .from('store_configs').select('vendor_id, config').in('vendor_id', ids);
       if (configs) cfgMap = new Map(configs.map(c => [c.vendor_id, c.config as Record<string, unknown>]));
 
+      // Build display-name map for use in product cards too
+      const nameMap: Record<string, string> = {};
+      ids.forEach(id => {
+        const cfg = cfgMap.get(id);
+        nameMap[id] = (cfg?.storeName as string) || emailMap[id].split('@')[0];
+      });
+      setVendorNames(nameMap);
+
       setRealVendors(
         ids.map(id => {
           const cfg = cfgMap.get(id);
           return {
             id,
-            name: emailMap[id],   // show vendor email instead of store name
+            name: nameMap[id],
             emoji: (cfg?.logoEmoji as string) || '🏪',
             grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
             category: ((cfg?.categories as string[]))?.[1] || 'General',
@@ -130,7 +141,7 @@ function TiendaPageInner() {
   }
 
   const allProducts: DisplayProduct[] = dbProducts.map(p => ({
-    id: p.id, vendorName: p.vendor_email, name: p.name, category: p.category,
+    id: p.id, vendorName: vendorNames[p.vendor_id] || p.vendor_email.split('@')[0], name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
   }));
 
