@@ -419,21 +419,35 @@ export default function PlantillasPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [heroDragIdx, setHeroDragIdx] = useState<number | null>(null);
 
-  /* Load from localStorage on mount */
+  /* Load config — Supabase first (persists cross-device), localStorage as fallback */
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('tukimarket_template');
-      if (raw) {
-        const parsed = JSON.parse(raw);
+    const load = async () => {
+      const applyOrder = (parsed: StoreTemplateConfig) => {
         const order: string[] = parsed.sectionOrder ?? [...DEFAULT_SECTION_ORDER];
         if (!order.includes('about')) {
           const idx = order.indexOf('infoBar');
           order.splice(idx >= 0 ? idx + 1 : 2, 0, 'about');
           parsed.sectionOrder = order;
         }
-        setCfg(parsed);
+        return parsed;
+      };
+      // 1. Try Supabase (source of truth)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('store_configs').select('config').eq('vendor_id', user.id).single();
+        if (data?.config) {
+          setCfg(applyOrder(data.config as StoreTemplateConfig));
+          return;
+        }
       }
-    } catch { /* ignore */ }
+      // 2. Fallback to localStorage
+      try {
+        const raw = localStorage.getItem('tukimarket_template');
+        if (raw) { setCfg(applyOrder(JSON.parse(raw))); }
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   useEffect(() => {
@@ -627,13 +641,19 @@ export default function PlantillasPage() {
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', padding: '7px 10px', background: 'var(--vnd-bg)', border: '1px solid var(--vnd-border)', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600, color: 'var(--vnd-text)' }}>
                     📸 Subir imagen
                     <input type="file" accept="image/*" style={{ display: 'none' }}
-                      onChange={e => {
+                      onChange={async e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (file.size > 512 * 1024) { alert('Máx 512 KB'); return; }
-                        const reader = new FileReader();
-                        reader.onload = ev => { if (ev.target?.result) update('logoImage', ev.target.result as string); };
-                        reader.readAsDataURL(file);
+                        if (file.size > 2 * 1024 * 1024) { alert('Máx 2 MB'); return; }
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (!user) { alert('Iniciá sesión primero'); return; }
+                        const ext = file.name.split('.').pop() || 'jpg';
+                        const path = `logos/${user.id}/logo.${ext}`;
+                        const { data, error } = await supabase.storage
+                          .from('product-images').upload(path, file, { cacheControl: '3600', upsert: true });
+                        if (error || !data) { alert('Error al subir: ' + (error?.message ?? 'desconocido')); return; }
+                        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(data.path);
+                        update('logoImage', publicUrl);
                       }}
                     />
                   </label>
