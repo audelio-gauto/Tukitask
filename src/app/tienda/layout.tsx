@@ -96,6 +96,7 @@ function TiendaMenuDrawer({
 /* ── Cart Drawer ─────────────────────────────────────────── */
 function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, removeItem, updateQty, total, clear } = useCart();
+  const router = useRouter();
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
