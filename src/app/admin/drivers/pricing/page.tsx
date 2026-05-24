@@ -108,13 +108,6 @@ export default function PricingConfigPage() {
       setPeakStart2(getSettingValue('peak_hour_start_2') ?? 17)
       setPeakEnd2(getSettingValue('peak_hour_end_2') ?? 19)
 
-      // ensure appSettings mapbox/google keys local state
-      const getApp = (k: string) => {
-        const a = (data.app_settings || []).find((x: any) => x.key === k)
-        return a ? String(a.value || '') : ''
-      }
-      setMapboxKey(getApp('mapbox_api_key'))
-      setGoogleKey(getApp('google_maps_api_key'))
     } catch (err) {
       console.error('fetchData error:', err);
       setError(String(err));
@@ -156,25 +149,6 @@ export default function PricingConfigPage() {
       setOrPush('peak_hour_start_2',       peakStart2)
       setOrPush('peak_hour_end_2',         peakEnd2)
 
-      // ensure app_settings contains api keys
-      const mergedApp = [...appSettings]
-      const setApp = (key: string, value: string) => {
-        const idx = mergedApp.findIndex(s => s.key === key)
-        if (idx >= 0) mergedApp[idx] = { ...mergedApp[idx], value }
-        else mergedApp.push({ id: key, key, value, label: key, description: '' })
-      }
-      setApp('mapbox_api_key', mapboxKey)
-      setApp('google_maps_api_key', googleKey)
-      // If key field is blank, remove it from the payload so the existing DB value is preserved
-      if (!mapboxKey) {
-        const idx = mergedApp.findIndex(s => s.key === 'mapbox_api_key')
-        if (idx >= 0) mergedApp.splice(idx, 1)
-      }
-      if (!googleKey) {
-        const idx = mergedApp.findIndex(s => s.key === 'google_maps_api_key')
-        if (idx >= 0) mergedApp.splice(idx, 1)
-      }
-
       const { data: { session: saveSession } } = await supabase.auth.getSession();
       const saveToken = saveSession?.access_token || '';
       const res = await fetch('/api/admin/pricing', {
@@ -184,7 +158,7 @@ export default function PricingConfigPage() {
           package_multipliers: multipliers,
           vehicle_pricing: vehicles,
           pricing_settings: mergedSettings,
-          app_settings: mergedApp,
+          app_settings: [],  // API keys managed via /admin/apikeys
         }),
       });
       const data = await res.json();
@@ -225,8 +199,6 @@ export default function PricingConfigPage() {
   const [globalBase, setGlobalBase] = useState<number | null>(null)
   const [globalPerKm, setGlobalPerKm] = useState<number | null>(null)
   const [minShipping, setMinShipping] = useState<number | null>(null)
-  const [mapboxKey, setMapboxKey] = useState<string>('')
-  const [googleKey, setGoogleKey] = useState<string>('')
   // surge pricing state
   const [surgePeakMult, setSurgePeakMult] = useState<number>(1.25)
   const [surgeDemandMult, setSurgeDemandMult] = useState<number>(1.40)
@@ -311,58 +283,8 @@ export default function PricingConfigPage() {
         </div>
       )}
 
-      {/* Pricing Settings (min price) */}
+      {/* Pricing Settings */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Mapas y APIs</h3>
-          {/* Map provider select */}
-          {(() => {
-            const provider = settings.find(s => s.key === 'map_provider');
-            if (provider) {
-              return (
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Proveedor de Mapas</label>
-                  <select
-                    value={String(provider.value)}
-                    onChange={e => updateSetting(provider.id, e.target.value)}
-                    className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  >
-                    <option value="1">Mapbox</option>
-                    <option value="2">Google Maps</option>
-                  </select>
-                  <p className="text-xs text-gray-400 mt-1">Elige qué proveedor usar para mapas y autocompletado.</p>
-                </div>
-              );
-            }
-            return null;
-          })()}
-
-
-          {/* Map API keys inputs - password type to avoid key exposure in devtools/screenshots */}
-          <div className="mb-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Mapbox API Key</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={mapboxKey}
-              onChange={e => setMapboxKey(e.target.value)}
-              placeholder={appSettings.some((s: any) => s.key === 'mapbox_api_key' && s.value) ? '••••••••••••••• (configurada)' : 'Pegar nueva key...'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-1">Dejá en blanco para mantener la key existente</p>
-          </div>
-          <div className="mb-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Google Maps API Key</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={googleKey}
-              onChange={e => setGoogleKey(e.target.value)}
-              placeholder={appSettings.some((s: any) => s.key === 'google_maps_api_key' && s.value) ? '••••••••••••••• (configurada)' : 'Pegar nueva key...'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-1">Dejá en blanco para mantener la key existente</p>
-          </div>
-
           {/* Generic settings list */}
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
