@@ -124,7 +124,12 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
             <div className="tnd-cart-items">
               {items.map((item: CartItem) => (
                 <div key={item.id} className="tnd-cart-item">
-                  <div className="tnd-cart-item-emoji">{item.emoji}</div>
+                  <div className="tnd-cart-item-emoji" style={{ overflow: 'hidden' }}>
+                    {item.image
+                      ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                      : item.emoji
+                    }
+                  </div>
                   <div className="tnd-cart-item-info">
                     <div className="tnd-cart-item-name">{item.name}</div>
                     <div className="tnd-cart-item-vendor">{item.vendorName}</div>

@@ -6,6 +6,7 @@ export interface CartItem {
   name:       string;
   price:      number;
   emoji:      string;
+  image?:     string | null;
   vendorName: string;
   qty:        number;
 }

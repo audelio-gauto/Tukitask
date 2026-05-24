@@ -137,7 +137,7 @@ function TiendaPageInner() {
   const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
 
   const handleAddToCart = (p: DisplayProduct) => {
-    addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, vendorName: p.vendorName });
+    addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, image: p.image, vendorName: p.vendorName });
     setAdded(prev => ({ ...prev, [p.id]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [p.id]: false })), 1800);
   };

@@ -113,6 +113,27 @@ export async function POST(req: Request) {
 
     if (error) return serverError(error);
     createdOrders.push(data.id);
+
+    // Decrement stock for each product in this vendor's order
+    for (const item of vendorItems) {
+      const { data: prod } = await db
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .single();
+      const newStock = Math.max(0, (prod?.stock ?? 0) - item.qty);
+      await db.from('products').update({ stock: newStock }).eq('id', item.productId);
+    }
+
+    // Notify vendor
+    const itemSummary = vendorItems.map(i => `${i.name} ×${i.qty}`).join(', ');
+    await db.from('notifications').insert({
+      user_email: vendorEmail,
+      type:       'new_market_order',
+      title:      '🛒 Nuevo pedido recibido',
+      body:       `${billing.name} ordenó: ${itemSummary} — Total: ${total.toLocaleString('es-PY')} Gs`,
+      data:       { order_id: data.id, client_email: billing.email },
+    });
   }
 
   return NextResponse.json({ success: true, orderIds: createdOrders });
