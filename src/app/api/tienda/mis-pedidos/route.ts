@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'email required' }, { status: 400 });
   }
 
-  const { data, error } = await sbAdmin
+  const { data, error } = await sbAdmin()
     .from('market_orders')
     .select('id, status, vendor_email, client_name, items, total, created_at, delivery')
     .eq('client_email', email)
