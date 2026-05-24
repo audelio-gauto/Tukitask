@@ -441,10 +441,21 @@ export default function PlantillasPage() {
           return;
         }
       }
-      // 2. Fallback to localStorage
+      // 2. Fallback to localStorage — auto-sync to Supabase so client store page gets real data
       try {
         const raw = localStorage.getItem('tukimarket_template');
-        if (raw) { setCfg(applyOrder(JSON.parse(raw))); }
+        if (raw) {
+          const parsed = applyOrder(JSON.parse(raw));
+          setCfg(parsed);
+          if (user) {
+            const cfgForDb = { ...parsed, storeSlug: user.id };
+            supabase.from('store_configs').upsert({
+              vendor_id: user.id,
+              config: cfgForDb,
+              updated_at: new Date().toISOString(),
+            });
+          }
+        }
       } catch { /* ignore */ }
     };
     load();
@@ -483,21 +494,25 @@ export default function PlantillasPage() {
     setCfg(prev => ({ ...prev, categories: prev.categories.filter(c => c !== cat) }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     try {
       localStorage.setItem('tukimarket_template', JSON.stringify(cfg));
       localStorage.setItem(`tukimarket_config_${cfg.storeSlug}`, JSON.stringify(cfg));
       // Save to Supabase so visitors can load vendor store branding by UUID
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
         const cfgForDb = { ...cfg, storeSlug: user.id };
-        supabase.from('store_configs').upsert({
+        const { error } = await supabase.from('store_configs').upsert({
           vendor_id: user.id,
           config: cfgForDb,
           updated_at: new Date().toISOString(),
         });
-      });
-    } catch { /* ignore */ }
+        if (error) { alert('Error al guardar en la nube: ' + error.message); return; }
+      }
+    } catch (e) {
+      alert('Error al guardar: ' + (e as Error).message);
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
