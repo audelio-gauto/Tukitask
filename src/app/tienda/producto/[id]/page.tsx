@@ -251,13 +251,16 @@ export default function ProductDetailPage() {
   return (
     <div className="tnd-page">
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 24, fontSize: '0.82rem' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, fontSize: '0.82rem' }}>
         <Link href="/tienda" className="tnd-back-link">Catálogo</Link>
         <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
         <Link href={`/tienda/${p.vendor_id}`} className="tnd-back-link">{p.vendor_email.split('@')[0]}</Link>
         <span style={{ color: 'var(--tnd-text-muted)' }}>›</span>
-        <span style={{ color: 'var(--tnd-text-muted)' }}>{p.name}</span>
+        <span style={{ color: 'var(--tnd-text-muted)' }}>{p.category}</span>
       </div>
+
+      {/* Title — above the grid, full width */}
+      <h1 className="tnd-detail-name" style={{ marginBottom: 20 }}>{p.name}</h1>
 
       <div className="tnd-detail-grid">
         {/* ── Left: gallery ────────────────────────────────── */}
@@ -322,7 +325,6 @@ export default function ProductDetailPage() {
           <div className="tnd-detail-vendor-link">
             <Link href={`/tienda/${p.vendor_id}`}>{p.vendor_email.split('@')[0]}</Link>
           </div>
-          <h1 className="tnd-detail-name">{p.name}</h1>
           <div className="tnd-detail-price">{gs(p.price)}</div>
           <p className="tnd-detail-desc">{p.description}</p>
 
