@@ -648,7 +648,7 @@ export default function PlantillasPage() {
                         const { data: { user } } = await supabase.auth.getUser();
                         if (!user) { alert('Iniciá sesión primero'); return; }
                         const ext = file.name.split('.').pop() || 'jpg';
-                        const path = `logos/${user.id}/logo.${ext}`;
+                        const path = `${user.id}/store-logo.${ext}`;
                         const { data, error } = await supabase.storage
                           .from('product-images').upload(path, file, { cacheControl: '3600', upsert: true });
                         if (error || !data) { alert('Error al subir: ' + (error?.message ?? 'desconocido')); return; }
