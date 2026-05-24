@@ -1064,6 +1064,113 @@
 .tnd-empty-sub   { font-size: 0.82rem; color: var(--tnd-text-muted); }
 .tnd-not-found   { text-align: center; padding: 80px 20px; }
 
+/* ══════════════════════════════════════════════════════════════
+   CHECKOUT PAGE
+   ══════════════════════════════════════════════════════════════ */
+.tnd-checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .tnd-checkout-grid {
+    grid-template-columns: 1fr;
+  }
+  .tnd-checkout-summary-card { order: -1; }
+}
+
+.tnd-checkout-card {
+  background: var(--tnd-surface);
+  border: 1px solid var(--tnd-border);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: var(--tnd-shadow-card);
+}
+
+.tnd-checkout-section-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--tnd-text-primary);
+  margin: 0 0 16px;
+}
+
+.tnd-checkout-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 560px) {
+  .tnd-checkout-2col { grid-template-columns: 1fr; }
+}
+
+.tnd-checkout-field { display: flex; flex-direction: column; gap: 5px; }
+
+.tnd-checkout-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--tnd-text-secondary);
+}
+.tnd-checkout-req { color: var(--tnd-danger); font-weight: 700; }
+
+.tnd-checkout-input {
+  width: 100%;
+  height: 42px;
+  background: var(--tnd-input-bg);
+  border: 1.5px solid var(--tnd-input-border);
+  border-radius: 10px;
+  padding: 0 13px;
+  font-size: 0.9rem;
+  color: var(--tnd-text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.tnd-checkout-input:focus { border-color: var(--tnd-accent); }
+[data-theme="dark"] .tnd-checkout-input { background: #1e293b; color: #e5e7eb; }
+
+.tnd-checkout-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tnd-text-secondary);
+  cursor: pointer;
+}
+.tnd-checkout-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tnd-accent);
+  cursor: pointer;
+}
+
+.tnd-checkout-geo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 13px;
+  background: var(--tnd-surface-2);
+  border: 1.5px solid var(--tnd-border);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tnd-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tnd-checkout-geo-btn:hover:not(:disabled) {
+  background: var(--tnd-accent);
+  border-color: var(--tnd-accent);
+  color: var(--tnd-accent-text);
+}
+.tnd-checkout-geo-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
 @keyframes tnd-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { gs } from '../../data';
 
@@ -108,7 +108,8 @@ type Product = {
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
-  const id     = params.id as string;
+  const router  = useRouter();
+  const id      = params.id as string;
 
   const [p,           setP]           = useState<Product | null | undefined>(undefined); // undefined=loading
   const [galleryIdx,  setGalleryIdx]  = useState(0);
@@ -160,13 +161,16 @@ export default function ProductDetailPage() {
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
 
-  async function handleBuy() {
+  function handleBuy() {
     if (!p) return;
-    setMode('buy');
-    setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSubmitting(false);
-    setDone({ type: 'buy' });
+    const url = new URLSearchParams({
+      product: p.id,
+      qty:     String(quantity),
+      name:    p.name,
+      vendor:  p.vendor_email,
+      vid:     p.vendor_id,
+    });
+    router.push(`/tienda/checkout?${url.toString()}`);
   }
 
   async function handleOffer(e: React.FormEvent) {
@@ -435,9 +439,8 @@ export default function ProductDetailPage() {
                 <button
                   className="tnd-btn-buy"
                   onClick={handleBuy}
-                  disabled={submitting}
                 >
-                  {submitting && mode === 'buy' ? '⏳ Procesando...' : '🛒 Comprar ahora'}
+                  🛒 Comprar ahora
                 </button>
 
                 {isNegotiable && (
