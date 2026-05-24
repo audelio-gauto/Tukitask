@@ -1096,6 +1096,83 @@
   position: relative;
 }
 
+/* ── Marketplace gallery (main image + arrows + thumbs) ─── */
+.tnd-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tnd-gallery-main {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 420px;
+  border-radius: 16px;
+  border: 1px solid var(--tnd-border);
+  background: var(--tnd-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--tnd-shadow-card);
+}
+.tnd-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tnd-border);
+  background: var(--tnd-surface);
+  color: var(--tnd-text-primary);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.14);
+  line-height: 1;
+  transition: background 0.15s, box-shadow 0.15s;
+  padding: 0;
+}
+.tnd-gallery-arrow:hover {
+  background: var(--tnd-surface-2);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.tnd-gallery-arrow-prev { left: 10px; }
+.tnd-gallery-arrow-next { right: 10px; }
+.tnd-gallery-thumbs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.tnd-gallery-thumbs::-webkit-scrollbar { display: none; }
+.tnd-gallery-thumb {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  border: 2px solid var(--tnd-border);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--tnd-surface);
+  padding: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tnd-gallery-thumb:hover {
+  border-color: var(--tnd-accent);
+  box-shadow: 0 2px 8px var(--tnd-accent-glow);
+}
+.tnd-gallery-thumb-active {
+  border-color: var(--tnd-accent) !important;
+  box-shadow: 0 2px 10px var(--tnd-accent-glow);
+}
+
 /* Vendor link above product title */
 .tnd-detail-vendor-link { font-size: 0.8rem; font-weight: 700; color: var(--tnd-accent); margin-bottom: 6px; }
 .tnd-detail-vendor-link a { color: var(--tnd-accent); text-decoration: none; }

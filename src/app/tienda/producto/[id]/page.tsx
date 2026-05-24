@@ -100,6 +100,7 @@ type Product = {
   floor_price: number;
   stock: number;
   image: string | null;
+  gallery: string[] | null;
   description: string | null;
   negotiable: boolean;
 };
@@ -110,6 +111,7 @@ export default function ProductDetailPage() {
   const id     = params.id as string;
 
   const [p,           setP]           = useState<Product | null | undefined>(undefined); // undefined=loading
+  const [galleryIdx,  setGalleryIdx]  = useState(0);
   const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
   const [offerAmount, setOfferAmount] = useState('');
@@ -120,11 +122,11 @@ export default function ProductDetailPage() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, description, negotiable')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, description, negotiable')
       .eq('id', id)
       .eq('status', 'published')
       .single()
-      .then(({ data }) => setP(data ?? null));
+      .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
   }, [id]);
 
   // Loading
@@ -153,6 +155,7 @@ export default function ProductDetailPage() {
   }
 
   const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
+  const allImages    = (p.gallery && p.gallery.length > 0) ? p.gallery : (p.image ? [p.image] : []);
   const offerNum     = parseInt(offerAmount, 10) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
@@ -257,19 +260,57 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="tnd-detail-grid">
-        {/* ── Left: image ──────────────────────────────────── */}
+        {/* ── Left: gallery ────────────────────────────────── */}
         <div>
-          <div className="tnd-detail-image">
-            {p.image
-              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 16 }} />
-              : <span role="img" aria-label={p.name}>📦</span>
-            }
-            {isNegotiable && (
-              <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
+          <div className="tnd-gallery">
+            {/* Main image */}
+            <div className="tnd-gallery-main">
+              {allImages.length > 0
+                ? <img
+                    src={allImages[galleryIdx] ?? allImages[0]}
+                    alt={p.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 12 }}
+                  />
+                : <span role="img" aria-label={p.name} style={{ fontSize: '5rem' }}>📦</span>
+              }
+              {isNegotiable && (
+                <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
+              )}
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    className="tnd-gallery-arrow tnd-gallery-arrow-prev"
+                    onClick={() => setGalleryIdx(i => (i - 1 + allImages.length) % allImages.length)}
+                    aria-label="Imagen anterior"
+                  >‹</button>
+                  <button
+                    className="tnd-gallery-arrow tnd-gallery-arrow-next"
+                    onClick={() => setGalleryIdx(i => (i + 1) % allImages.length)}
+                    aria-label="Imagen siguiente"
+                  >›</button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail strip */}
+            {allImages.length > 1 && (
+              <div className="tnd-gallery-thumbs">
+                {allImages.map((url, idx) => (
+                  <button
+                    key={url + String(idx)}
+                    className={`tnd-gallery-thumb${galleryIdx === idx ? ' tnd-gallery-thumb-active' : ''}`}
+                    onClick={() => setGalleryIdx(idx)}
+                    aria-label={`Ver imagen ${idx + 1}`}
+                  >
+                    <img src={url} alt={`Vista ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
+
           <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-            <span className="tnd-chip tnd-chip-stock">🏷️ {p.category}</span>
+            <span className="tnd-chip tnd-chip-cat">🏷️ {p.category}</span>
             <span className={`tnd-chip ${p.stock === 0 ? 'tnd-chip-out' : p.stock <= 3 ? 'tnd-chip-low' : 'tnd-chip-stock'}`}>
               {p.stock === 0 ? 'Sin stock' : p.stock <= 3 ? `⚠️ Últimas ${p.stock} unidades` : `✓ ${p.stock} en stock`}
             </span>
