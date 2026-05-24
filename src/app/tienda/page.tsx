@@ -139,19 +139,21 @@ function TiendaPageInner() {
   }, []);
 
   interface DisplayProduct {
-    id: string; vendorName: string; name: string; category: string;
+    id: string; vendorName: string; vendorId: string; vendorEmail: string; name: string; category: string;
     emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
   }
 
   const allProducts: DisplayProduct[] = dbProducts.map(p => ({
-    id: p.id, vendorName: vendorNames[p.vendor_id] || p.vendor_email.split('@')[0], name: p.name, category: p.category,
+    id: p.id, vendorName: vendorNames[p.vendor_id] || p.vendor_email.split('@')[0],
+    vendorId: p.vendor_id, vendorEmail: p.vendor_email,
+    name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
   }));
 
   const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
 
   const handleAddToCart = (p: DisplayProduct) => {
-    addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, image: p.image, vendorName: p.vendorName });
+    addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, image: p.image, vendorName: p.vendorName, vendorId: p.vendorId, vendorEmail: p.vendorEmail });
     setAdded(prev => ({ ...prev, [p.id]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [p.id]: false })), 1800);
   };

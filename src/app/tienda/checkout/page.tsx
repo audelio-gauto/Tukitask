@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
+import { useCart } from '../cart-context';
 import { gs } from '../data';
 import type { CheckoutItem } from '@/app/api/tienda/checkout/route';
 
@@ -47,6 +48,7 @@ function CheckoutInner() {
   const vendorEmail  = params.get('vendor');
   const vendorId     = params.get('vid') ?? '';
 
+  const { items: cartItems, clear: clearCart } = useCart();
   const [items,       setItems]       = useState<CheckoutItem[]>([]);
   const [loadingProd, setLoadingProd] = useState(!!productId);
   const [billing,     setBilling]     = useState<BillingForm>({
@@ -63,7 +65,22 @@ function CheckoutInner() {
 
   /* ── Load product from URL param ── */
   useEffect(() => {
-    if (!productId) { setLoadingProd(false); return; }
+    if (!productId) {
+      // No URL product — load from cart
+      if (cartItems.length > 0) {
+        setItems(cartItems.map(c => ({
+          productId:   c.id,
+          name:        c.name,
+          price:       c.price,
+          qty:         c.qty,
+          vendorEmail: c.vendorEmail ?? '',
+          vendorId:    c.vendorId   ?? '',
+          image:       c.image ?? null,
+        })));
+      }
+      setLoadingProd(false);
+      return;
+    }
     supabase
       .from('products')
       .select('id, vendor_id, vendor_email, name, price, image')
@@ -151,6 +168,7 @@ function CheckoutInner() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error ?? 'Error al procesar el pedido');
+      clearCart();
       setOrderIds(data.orderIds);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado. Intentá de nuevo.');

@@ -2,13 +2,15 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 export interface CartItem {
-  id:         string;
-  name:       string;
-  price:      number;
-  emoji:      string;
-  image?:     string | null;
-  vendorName: string;
-  qty:        number;
+  id:          string;
+  name:        string;
+  price:       number;
+  emoji:       string;
+  image?:      string | null;
+  vendorName:  string;
+  vendorId?:   string;
+  vendorEmail?: string;
+  qty:         number;
 }
 
 interface CartCtx {

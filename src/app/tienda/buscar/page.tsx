@@ -86,7 +86,7 @@ function BuscarInner() {
   const handleAdd = (productId: string) => {
     const p = dbProducts.find(x => x.id === productId);
     if (!p) return;
-    addItem({ id: p.id, name: p.name, price: p.floor_price, emoji: '📦', image: p.image, vendorName: p.vendor_email });
+    addItem({ id: p.id, name: p.name, price: p.floor_price, emoji: '📦', image: p.image, vendorName: p.vendor_email, vendorId: p.vendor_id, vendorEmail: p.vendor_email });
     setAdded(prev => ({ ...prev, [productId]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [productId]: false })), 1400);
   };
