@@ -8,6 +8,11 @@ export default function ApiKeysPage() {
   const [pricingSettings, setPricingSettings] = useState<Array<{ id: string; key: string; value: number; label: string; description: string }>>([]);
   const [mapboxKey, setMapboxKey] = useState<string>('');
   const [googleKey, setGoogleKey] = useState<string>('');
+  // AI settings
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai'>('gemini');
+  const [aiModel, setAiModel] = useState<string>('gemini-2.5-flash');
+  const [geminiKey, setGeminiKey] = useState<string>('');
+  const [openaiKey, setOpenaiKey] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +41,11 @@ export default function ApiKeysPage() {
       };
       setMapboxKey(getApp('mapbox_api_key'));
       setGoogleKey(getApp('google_maps_api_key'));
+      const providerVal = getApp('ai_provider');
+      if (providerVal === 'openai' || providerVal === 'gemini') setAiProvider(providerVal);
+      const modelVal = getApp('ai_model');
+      if (modelVal) setAiModel(modelVal);
+      // Don't pre-fill secret keys — keep inputs blank, show placeholder if configured
     } catch (err) {
       setError(String(err));
     } finally {
@@ -57,13 +67,14 @@ export default function ApiKeysPage() {
         else mergedApp.push({ id: key, key, value, label: key, description: '' });
       };
 
-      // Only update keys if the user typed something — blank = preserve existing DB value
-      if (mapboxKey) {
-        setApp('mapbox_api_key', mapboxKey);
-      }
-      if (googleKey) {
-        setApp('google_maps_api_key', googleKey);
-      }
+      // Only update secret keys if the user typed something — blank = preserve existing DB value
+      if (mapboxKey) setApp('mapbox_api_key', mapboxKey);
+      if (googleKey) setApp('google_maps_api_key', googleKey);
+      if (geminiKey) setApp('gemini_api_key', geminiKey);
+      if (openaiKey) setApp('openai_api_key', openaiKey);
+      // Always persist provider + model selection
+      setApp('ai_provider', aiProvider);
+      setApp('ai_model', aiModel);
 
       // Build pricing_settings payload (only map_provider if it exists)
       const mergedPricing = pricingSettings.filter(s => s.key === 'map_provider');
@@ -86,9 +97,11 @@ export default function ApiKeysPage() {
       } else {
         setSuccess('API Keys guardadas correctamente');
         setTimeout(() => setSuccess(''), 3000);
-        // Clear local key inputs after save (values are now persisted)
+        // Clear secret key inputs after save (values are now persisted)
         setMapboxKey('');
         setGoogleKey('');
+        setGeminiKey('');
+        setOpenaiKey('');
         await fetchData();
       }
     } catch (err) {
@@ -113,7 +126,7 @@ export default function ApiKeysPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Los API Keys</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Gestiona las claves de acceso para los servicios de mapas externos.
+          Gestiona las claves de acceso para mapas externos e IA de contenido.
         </p>
       </div>
 
@@ -210,6 +223,150 @@ export default function ApiKeysPage() {
             <span className={`w-2 h-2 rounded-full ${appSettings.some(s => s.key === 'google_maps_api_key' && s.value) ? 'bg-green-400' : 'bg-gray-300'}`} />
             <span className="text-xs text-gray-500">
               Google Maps: {appSettings.some(s => s.key === 'google_maps_api_key' && s.value) ? 'configurada' : 'no configurada'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── IA para Contenido ─────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h3 className="text-base font-semibold text-gray-800 mb-1">IA para Contenido</h3>
+        <p className="text-xs text-gray-400 mb-5">
+          Usada por el TukiBot para generar descripciones de productos, responder consultas y humanizar el tono del negocio.
+        </p>
+
+        {/* Motor */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-0.5">Motor</label>
+          <p className="text-xs text-gray-400 mb-2">Seleccione qué proveedor de IA utilizar para generar contenido.</p>
+          <select
+            value={aiProvider}
+            onChange={e => setAiProvider(e.target.value as 'gemini' | 'openai')}
+            className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="gemini">Géminis</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </div>
+
+        {/* Gemini key (shown when gemini selected) */}
+        {aiProvider === 'gemini' && (
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <label className="block text-sm font-semibold text-gray-700">Clave API de Géminis</label>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-500 hover:underline"
+              >
+                Cuenta Géminis ↗
+              </a>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">Puedes obtener tus claves API en tu Cuenta Géminis.</p>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={geminiKey}
+              onChange={e => setGeminiKey(e.target.value)}
+              placeholder={
+                appSettings.some(s => s.key === 'gemini_api_key' && s.value)
+                  ? '••••••••••••••• (configurada)'
+                  : 'Pegar clave API de Gemini...'
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {appSettings.some(s => s.key === 'gemini_api_key' && s.value)
+                ? 'Ya hay una key guardada. Pegá aquí para reemplazarla, o dejá en blanco para mantenerla.'
+                : 'Dejá en blanco para mantener la key existente.'}
+            </p>
+          </div>
+        )}
+
+        {/* OpenAI key (shown when openai selected) */}
+        {aiProvider === 'openai' && (
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <label className="block text-sm font-semibold text-gray-700">Clave API de OpenAI</label>
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-500 hover:underline"
+              >
+                Cuenta OpenAI ↗
+              </a>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">Puedes obtener tus claves API en tu Cuenta OpenAI.</p>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={openaiKey}
+              onChange={e => setOpenaiKey(e.target.value)}
+              placeholder={
+                appSettings.some(s => s.key === 'openai_api_key' && s.value)
+                  ? '••••••••••••••• (configurada)'
+                  : 'Pegar clave API de OpenAI...'
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {appSettings.some(s => s.key === 'openai_api_key' && s.value)
+                ? 'Ya hay una key guardada. Pegá aquí para reemplazarla, o dejá en blanco para mantenerla.'
+                : 'Dejá en blanco para mantener la key existente.'}
+            </p>
+          </div>
+        )}
+
+        {/* Modelo */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-0.5">Modelo</label>
+          <p className="text-xs text-gray-400 mb-2">
+            Los modelos más avanzados ofrecen una mayor calidad de salida, pero pueden costar más por generación.
+          </p>
+          {aiProvider === 'gemini' ? (
+            <select
+              value={aiModel}
+              onChange={e => setAiModel(e.target.value)}
+              className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="gemini-2.5-flash">Géminis 2.5 Flash</option>
+              <option value="gemini-2.5-pro">Géminis 2.5 Pro</option>
+              <option value="gemini-1.5-flash">Géminis 1.5 Flash</option>
+              <option value="gemini-1.5-pro">Géminis 1.5 Pro</option>
+            </select>
+          ) : (
+            <select
+              value={aiModel}
+              onChange={e => setAiModel(e.target.value)}
+              className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="gpt-4o-mini">GPT-4o mini</option>
+              <option value="gpt-4o">GPT-4o</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            </select>
+          )}
+        </div>
+
+        {/* AI status indicators */}
+        <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${appSettings.some(s => s.key === 'gemini_api_key' && s.value) ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-500">
+              Gemini: {appSettings.some(s => s.key === 'gemini_api_key' && s.value) ? 'configurada' : 'no configurada'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${appSettings.some(s => s.key === 'openai_api_key' && s.value) ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-500">
+              OpenAI: {appSettings.some(s => s.key === 'openai_api_key' && s.value) ? 'configurada' : 'no configurada'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-400" />
+            <span className="text-xs text-gray-500">
+              Motor activo: {aiProvider === 'gemini' ? 'Géminis' : 'OpenAI'} · {aiModel}
             </span>
           </div>
         </div>
