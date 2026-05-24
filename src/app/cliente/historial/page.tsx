@@ -48,6 +48,17 @@ interface Job {
   completed_at: string | null;
 }
 
+interface MarketOrder {
+  id: string;
+  status: string;
+  vendor_email: string;
+  client_name: string | null;
+  items: Array<{ productId: string; name: string; price: number; qty: number; image?: string | null }>;
+  total: number;
+  created_at: string;
+  delivery: { ciudad?: string; barrio?: string; nombre?: string } | null;
+}
+
 const SERVICE_LABELS: Record<string, string> = {
   limpieza: 'Limpieza', niera: 'Niera', cocina: 'Cocina',
   eventos: 'Eventos', cuidado_mascotas: 'Mascotas', cuidado_adultos: 'Adultos',
@@ -85,6 +96,8 @@ export default function ClienteHistorialPage() {
   const { email } = useClientContext();
   const [orders, setOrders] = useState<Order[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [marketOrders, setMarketOrders] = useState<MarketOrder[]>([]);
+  const [doneTab, setDoneTab] = useState<'movilidad' | 'servicios' | 'pedidos'>('movilidad');
   const [loading, setLoading] = useState(true);
   const [ratingModal, setRatingModal] = useState<{ jobId: string; tecnicoName: string | null; tecnicoPhoto: string | null } | null>(null);
   const [driverRatingModal, setDriverRatingModal] = useState<{ orderId: string; driverName: string | null; driverPhoto: string | null } | null>(null);
@@ -105,15 +118,18 @@ export default function ClienteHistorialPage() {
   const loadHistory = useCallback(async () => {
     if (!email) return;
     try {
-      const [ordersRes, histJobsRes, activeJobsRes] = await Promise.all([
+      const [ordersRes, histJobsRes, activeJobsRes, mktOrdersRes] = await Promise.all([
         authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
         authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_history=true`),
         authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&client_active=true`),
+        authFetch(`/api/tienda/mis-pedidos?email=${encodeURIComponent(email)}`),
       ]);
       const ordersData = await ordersRes.json();
       const histJobsData = await histJobsRes.json();
       const activeJobsData = await activeJobsRes.json();
+      const mktData = await mktOrdersRes.json();
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setMarketOrders(Array.isArray(mktData) ? mktData : []);
       const merged = [
         ...(Array.isArray(activeJobsData) ? activeJobsData : []),
         ...(Array.isArray(histJobsData) ? histJobsData : []),
@@ -246,14 +262,24 @@ export default function ClienteHistorialPage() {
     ...jobs.filter(j => activeStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.created_at })),
     ...orders.filter(o => activeStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.created_at })),
   ].sort(sortByDate);
+  const doneMovilidad: UnifiedItem[] = orders
+    .filter(o => doneStatuses.includes(o.status))
+    .map(o => ({ kind: 'order' as const, data: o, date: o.completed_at ?? o.created_at }))
+    .sort(sortByDate);
+  const doneServicios: UnifiedItem[] = jobs
+    .filter(j => doneStatuses.includes(j.status))
+    .map(j => ({ kind: 'job' as const, data: j, date: j.completed_at ?? j.created_at }))
+    .sort(sortByDate);
   const doneItems: UnifiedItem[] = [
-    ...jobs.filter(j => doneStatuses.includes(j.status)).map(j => ({ kind: 'job' as const,   data: j, date: j.completed_at ?? j.created_at })),
-    ...orders.filter(o => doneStatuses.includes(o.status)).map(o => ({ kind: 'order' as const, data: o, date: o.completed_at ?? o.created_at })),
+    ...doneServicios,
+    ...doneMovilidad,
   ].sort(sortByDate);
+  const activeDoneList = doneTab === 'movilidad' ? doneMovilidad : doneTab === 'servicios' ? doneServicios : [];
   const paginatedActive = activeItems.slice(0, activePage * ITEMS_PER_PAGE);
-  const paginatedDone = doneItems.slice(0, donePage * ITEMS_PER_PAGE);
+  const paginatedDone = activeDoneList.slice(0, donePage * ITEMS_PER_PAGE);
+  const paginatedMarketOrders = marketOrders.slice(0, donePage * ITEMS_PER_PAGE);
 
-  const total = doneItems.length;
+  const total = activeItems.length + doneItems.length + marketOrders.length;
 
   return (
     <div style={{
@@ -301,10 +327,86 @@ export default function ClienteHistorialPage() {
           </div>
         ) : (
           <>
-            {doneItems.length > 0 && (
+            {(doneItems.length > 0 || marketOrders.length > 0) && (
               <div>
-                <p style={{ margin: '0 0 10px 2px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 2 }}>Completados</p>
+                {/* 3-chip selector */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  {(['movilidad', 'servicios', 'pedidos'] as const).map(tab => {
+                    const labels = { movilidad: 'Movilidad', servicios: 'Servicios', pedidos: 'Pedidos' };
+                    const active = doneTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => { setDoneTab(tab); setDonePage(1); }}
+                        style={{
+                          flex: 1, padding: '6px 4px', borderRadius: 20, border: active ? '1.5px solid #F5C518' : '1px solid rgba(245,197,24,0.25)',
+                          background: active ? 'rgba(245,197,24,0.18)' : 'var(--ghost-btn)',
+                          color: active ? '#F5C518' : 'var(--text-muted)', fontWeight: active ? 800 : 500,
+                          fontSize: '0.72rem', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {labels[tab]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Pedidos tab — market orders */}
+                {doneTab === 'pedidos' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {marketOrders.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                        Sin pedidos aún
+                      </div>
+                    ) : paginatedMarketOrders.map(mo => {
+                      const moStatus: Record<string, { label: string; color: string }> = {
+                        pending: { label: 'Pendiente', color: '#F5C518' },
+                        confirmed: { label: 'Confirmado', color: '#60a5fa' },
+                        shipped: { label: 'Enviado', color: '#a78bfa' },
+                        delivered: { label: 'Entregado', color: '#4ade80' },
+                        cancelled: { label: 'Cancelado', color: '#f87171' },
+                      };
+                      const badge = moStatus[mo.status] ?? { label: mo.status, color: 'var(--text-muted)' };
+                      return (
+                        <div key={mo.id} className="tuki-card">
+                          <div className="tuki-card-body">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                              <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>#{mo.id.slice(0, 8).toUpperCase()}</span>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: badge.color, background: `${badge.color}22`, padding: '2px 8px', borderRadius: 20 }}>{badge.label}</span>
+                            </div>
+                            {Array.isArray(mo.items) && mo.items.length > 0 && (
+                              <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: 4 }}>
+                                {mo.items.map((it, i) => (
+                                  <span key={i}>{it.name} ×{it.qty}{i < mo.items.length - 1 ? ', ' : ''}</span>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{fmtDate(mo.created_at)}</span>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#F5C518' }}>{fmtGs(mo.total)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {marketOrders.length > paginatedMarketOrders.length && (
+                      <button onClick={() => setDonePage(p => p + 1)} className="tuki-btn tuki-btn-warning tuki-btn-block" style={{ fontSize: '0.98rem', marginTop: 10 }}>
+                        Cargar más pedidos
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Movilidad / Servicios tabs — existing rendering */}
+                {doneTab !== 'pedidos' && (
+                <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {activeDoneList.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      Sin {doneTab === 'movilidad' ? 'envíos' : 'servicios'} completados aún
+                    </div>
+                  )}
                   {paginatedDone.map(item => {
                     const statusTone = getStatusTone(item.data.status);
                     return item.kind === 'job' ? (
@@ -600,14 +702,16 @@ export default function ClienteHistorialPage() {
                   );
                   })}
                 </div>
-                {doneItems.length > paginatedDone.length && (
+                {activeDoneList.length > paginatedDone.length && (
                   <button
                     onClick={() => setDonePage(p => p + 1)}
                     className="tuki-btn tuki-btn-warning tuki-btn-block"
                     style={{ fontSize: '0.98rem', marginTop: 10 }}
                   >
-                    Cargar más completados
+                    Cargar más
                   </button>
+                )}
+                </>
                 )}
               </div>
             )}
