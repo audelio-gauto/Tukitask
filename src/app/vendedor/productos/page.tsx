@@ -278,12 +278,12 @@ export default function ProductosPage() {
                       {/* Actions */}
                       <td style={{ paddingRight: 18 }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                          <button className="vnd-action-btn" title="Editar">
+                          <Link href={`/vendedor/productos/${p.id}`} className="vnd-action-btn" title="Editar" style={{ textDecoration: 'none' }}>
                             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                             Editar
-                          </button>
+                          </Link>
                           <button className="vnd-action-btn" title="Ver más opciones"
                             style={{ padding: '5px 8px' }}>
                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
