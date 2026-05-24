@@ -411,7 +411,7 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
         .from('users')
         .select('role')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
       const blockedRoles = ['driver', 'tecnico', 'servicio', 'vendedor', 'admin'];
       if (userData?.role && blockedRoles.includes(userData.role)) {
         const roleHome: Record<string, string> = {

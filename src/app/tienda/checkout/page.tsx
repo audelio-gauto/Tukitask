@@ -135,9 +135,18 @@ function CheckoutInner() {
     setError(null);
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Debés iniciar sesión para realizar un pedido.');
+        setSubmitting(false);
+        return;
+      }
       const res = await fetch('/api/tienda/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ items, billing, delivery, notes }),
       });
       const data = await res.json();
