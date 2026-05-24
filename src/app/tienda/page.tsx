@@ -20,7 +20,8 @@ function TiendaPageInner() {
 
   const [realVendors, setRealVendors] = useState<Array<{
     id: string; name: string; emoji: string; grad: string; category: string; productCount: number;
-  }>>([]);
+    logoImage?: string; coverImage?: string;
+  }>>([]); 
 
   // vendor_id → display name (storeName or email prefix)
   const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
@@ -83,6 +84,8 @@ function TiendaPageInner() {
             grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
             category: ((cfg?.categories as string[]))?.[1] || 'General',
             productCount: countMap[id] ?? 0,
+            logoImage: (cfg?.logoImage as string) || undefined,
+            coverImage: (cfg?.heroCoverImage as string) || undefined,
           };
         })
       );
@@ -178,9 +181,13 @@ function TiendaPageInner() {
             )}
             {realVendors.map(v => (
               <Link key={v.id} href={`/tienda/${v.id}`} className="tnd-store-card">
-                <div className="tnd-store-banner" style={{ background: v.grad }}>
+                <div className="tnd-store-banner" style={v.coverImage ? { backgroundImage: `url(${v.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: v.grad }}>
                   <div className="tnd-store-logo-wrap">
-                    <div className="tnd-store-logo">{v.emoji}</div>
+                    <div className="tnd-store-logo">
+                      {v.logoImage
+                        ? <img src={v.logoImage} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+                        : v.emoji}
+                    </div>
                   </div>
                 </div>
                 <div className="tnd-store-body">
