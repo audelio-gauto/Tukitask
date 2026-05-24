@@ -15,6 +15,8 @@ export default function ApiKeysPage() {
   const [openaiKey, setOpenaiKey] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -112,6 +114,30 @@ export default function ApiKeysPage() {
   };
 
   const mapProvider = pricingSettings.find(s => s.key === 'map_provider');
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const res = await fetch('/api/admin/test-aikey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ provider: aiProvider }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTestResult({ ok: true, msg: `✅ Conexión exitosa. Modelo: ${data.model}. Respuesta: “${data.reply}”` });
+      } else {
+        setTestResult({ ok: false, msg: `❌ ${data.error || 'Error desconocido'}` });
+      }
+    } catch (err) {
+      setTestResult({ ok: false, msg: `❌ ${String(err)}` });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -370,9 +396,36 @@ export default function ApiKeysPage() {
             </span>
           </div>
         </div>
+
+        {/* Test result banner */}
+        {testResult && (
+          <div className={`mt-4 p-3 rounded-lg text-sm ${
+            testResult.ok
+              ? 'bg-green-50 border border-green-200 text-green-700'
+              : 'bg-red-50 border border-red-200 text-red-700'
+          }`}>
+            {testResult.msg}
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={handleTest}
+          disabled={testing || saving}
+          className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
+        >
+          {testing ? (
+            <><div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> Probando...</>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Probar conexión {aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'}
+            </>
+          )}
+        </button>
         <button
           onClick={handleSave}
           disabled={saving}

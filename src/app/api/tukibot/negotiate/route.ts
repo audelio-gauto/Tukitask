@@ -82,9 +82,10 @@ async function generateGeminiMessage(args: {
   finalAmount: number;
   listedPrice: number;
   buyerMessage?: string;
+  apiKey: string;
+  model: string;
 }) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey) return null;
+  const { apiKey, model } = args;
 
   const saved = Math.max(0, args.listedPrice - args.finalAmount);
   const toneGuide: Record<BotTone, string> = {
@@ -116,7 +117,7 @@ async function generateGeminiMessage(args: {
   ].filter(Boolean).join('\n');
 
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,6 +160,24 @@ export async function POST(req: Request) {
     const botTone = normalizeTone(body?.botTone);
     const botTimeoutMinutes = normalizeTimeoutMinutes(body?.botTimeoutMinutes);
     const botTimeoutAction = normalizeTimeoutAction(body?.botTimeoutAction);
+
+    // Resolve Gemini API key: env var takes priority, fallback to app_settings in DB
+    let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+    let geminiModel = 'gemini-1.5-flash';
+    if (!geminiApiKey) {
+      try {
+        const { data: appRows } = await sb
+          .from('app_settings')
+          .select('key, value')
+          .in('key', ['gemini_api_key', 'ai_model']);
+        if (appRows) {
+          const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
+          const modelRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_model');
+          if (keyRow?.value) geminiApiKey = keyRow.value;
+          if (modelRow?.value) geminiModel = modelRow.value;
+        }
+      } catch { /* silent fallback */ }
+    }
 
     if (!buyerOffer || !listedPrice || !floorPrice) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
@@ -211,7 +230,7 @@ export async function POST(req: Request) {
       };
     }
 
-    const aiMessage = await generateGeminiMessage({
+    const aiMessage = geminiApiKey ? await generateGeminiMessage({
       status,
       tone: botTone,
       vendorName,
@@ -220,7 +239,9 @@ export async function POST(req: Request) {
       finalAmount,
       listedPrice,
       buyerMessage,
-    });
+      apiKey: geminiApiKey,
+      model: geminiModel,
+    }) : null;
     if (aiMessage) payload.message = aiMessage;
 
     if (payload.status === 'countered' && payload.counterAmount && payload.timeoutAt) {
