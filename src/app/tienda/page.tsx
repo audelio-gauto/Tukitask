@@ -41,33 +41,39 @@ function TiendaPageInner() {
   /* fetch real vendors with published products */
   useEffect(() => {
     const fetchVendors = async () => {
-      const { data: vendorUsers } = await supabase
-        .from('users').select('id, email').eq('role', 'vendedor');
-      if (!vendorUsers?.length) return;
-      const ids = vendorUsers.map(v => v.id);
-      const [{ data: configs }, { data: prods }] = await Promise.all([
-        supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
-        supabase.from('products').select('vendor_id').eq('status', 'published').in('vendor_id', ids),
-      ]);
+      // Derive vendors directly from published products — no dependency on users.role
+      const { data: prods } = await supabase
+        .from('products')
+        .select('vendor_id, vendor_email')
+        .eq('status', 'published');
+      if (!prods?.length) return;
+
       const countMap: Record<string, number> = {};
-      prods?.forEach(p => { countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1; });
-      const cfgMap = new Map(
-        (configs ?? []).map(c => [c.vendor_id, c.config as Record<string, unknown>])
-      );
+      const emailMap: Record<string, string> = {};
+      prods.forEach(p => {
+        countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1;
+        emailMap[p.vendor_id] = p.vendor_email;
+      });
+      const ids = Object.keys(countMap);
+
+      // Enrich with store_configs if table exists (graceful fallback)
+      let cfgMap = new Map<string, Record<string, unknown>>();
+      const { data: configs } = await supabase
+        .from('store_configs').select('vendor_id, config').in('vendor_id', ids);
+      if (configs) cfgMap = new Map(configs.map(c => [c.vendor_id, c.config as Record<string, unknown>]));
+
       setRealVendors(
-        vendorUsers
-          .filter(v => (countMap[v.id] ?? 0) > 0)
-          .map(v => {
-            const cfg = cfgMap.get(v.id);
-            return {
-              id: v.id,
-              name: (cfg?.storeName as string) || (v.email as string).split('@')[0],
-              emoji: (cfg?.logoEmoji as string) || '🏪',
-              grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
-              category: ((cfg?.categories as string[]))?.[1] || 'General',
-              productCount: countMap[v.id] ?? 0,
-            };
-          })
+        ids.map(id => {
+          const cfg = cfgMap.get(id);
+          return {
+            id,
+            name: emailMap[id],   // show vendor email instead of store name
+            emoji: (cfg?.logoEmoji as string) || '🏪',
+            grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
+            category: ((cfg?.categories as string[]))?.[1] || 'General',
+            productCount: countMap[id] ?? 0,
+          };
+        })
       );
     };
     fetchVendors();
