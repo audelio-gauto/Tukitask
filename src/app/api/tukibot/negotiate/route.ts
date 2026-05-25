@@ -64,16 +64,25 @@ function fallbackMessage(args: {
   listedPrice: number;
   quantity: number;
 }) {
-  const saved = Math.max(0, args.listedPrice - args.amount);
-  const qtyNote = args.quantity > 1 ? ` (${args.quantity} und.)` : '';
+  const savedPerUnit = Math.max(0, args.listedPrice - args.amount);
+  const isMultiple   = args.quantity > 1;
+  const totalSaved   = savedPerUnit * args.quantity;
+  const totalAmount  = args.amount * args.quantity;
+
+  const priceStr = isMultiple
+    ? `${gs(totalAmount)} (${args.quantity} und. × ${gs(args.amount)} c/u)`
+    : gs(args.amount);
+  const savedStr = isMultiple ? gs(totalSaved) : gs(savedPerUnit);
+  const hasSaving = savedPerUnit > 0;
+
   if (args.status === 'accepted') {
-    return saved > 0
-      ? `¡Trato hecho! Te confirmamos ${gs(args.amount)}${qtyNote} por ${args.productName} — ahorrás ${gs(saved)} frente al precio publicado. ¡Procedé con el pago para asegurar tu pedido!`
-      : `¡Aceptado! ${gs(args.amount)}${qtyNote} por ${args.productName}. Confirmá el pago para asegurar tu pedido.`;
+    return hasSaving
+      ? `¡Trato hecho! Te confirmamos ${priceStr} por ${args.productName} — ahorrás ${savedStr} frente al precio publicado. ¡Procedé con el pago para asegurar tu pedido!`
+      : `¡Aceptado! ${priceStr} por ${args.productName}. Confirmá el pago para asegurar tu pedido.`;
   }
-  return saved > 0
-    ? `Nuestra mejor propuesta es ${gs(args.amount)}${qtyNote} por ${args.productName}, así ya te llevás un ahorro real de ${gs(saved)}. ¿Cerramos?`
-    : `Te ofrecemos ${gs(args.amount)}${qtyNote} por ${args.productName} — es nuestro mejor precio. ¿Lo confirmamos?`;
+  return hasSaving
+    ? `Nuestra mejor propuesta es ${priceStr} por ${args.productName}, así ya te llevás un ahorro real de ${savedStr}. ¿Cerramos?`
+    : `Te ofrecemos ${priceStr} por ${args.productName} — es nuestro mejor precio. ¿Lo confirmamos?`;
 }
 
 async function generateGeminiMessage(args: {
