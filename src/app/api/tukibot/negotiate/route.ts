@@ -38,13 +38,9 @@ type NegotiateRequest = {
   quantity?: number;
   listedPrice: number;
   floorPrice: number;
-  autoAcceptFrom?: number;
   productName?: string;
   vendorName?: string;
   buyerMessage?: string;
-  botTone?: BotTone;
-  botTimeoutMinutes?: number;
-  botTimeoutAction?: TimeoutAction;
 };
 
 type NegotiateResponse = {
@@ -151,15 +147,32 @@ export async function POST(req: Request) {
     const listedPrice = Number(body?.listedPrice || 0);
     const floorPrice = Number(body?.floorPrice || 0);
     const quantity = Math.max(1, Number(body?.quantity || 1));
-    const autoAcceptFrom = Number(body?.autoAcceptFrom || floorPrice);
     const vendorId = body?.vendorId?.trim() || 'default-vendor';
     const productId = body?.productId?.trim() || null;
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
     const buyerMessage = body?.buyerMessage?.trim();
-    const botTone = normalizeTone(body?.botTone);
-    const botTimeoutMinutes = normalizeTimeoutMinutes(body?.botTimeoutMinutes);
-    const botTimeoutAction = normalizeTimeoutAction(body?.botTimeoutAction);
+
+    // Fetch vendor bot config from DB — never trust client-sent tone/timeout values
+    let botTone = normalizeTone(undefined);
+    let botTimeoutMinutes = normalizeTimeoutMinutes(undefined);
+    let botTimeoutAction = normalizeTimeoutAction(undefined);
+    let autoAcceptFromVendor: number | null = null;
+    try {
+      const { data: vendorCfg } = await sb
+        .from('vendor_bot_config')
+        .select('bot_tone, timeout_minutes, timeout_action, auto_accept_above, bot_enabled')
+        .eq('vendor_id', vendorId)
+        .maybeSingle();
+      if (vendorCfg) {
+        botTone           = normalizeTone(vendorCfg.bot_tone);
+        botTimeoutMinutes = normalizeTimeoutMinutes(vendorCfg.timeout_minutes);
+        botTimeoutAction  = normalizeTimeoutAction(vendorCfg.timeout_action);
+        if (vendorCfg.auto_accept_above && vendorCfg.auto_accept_above > 0) {
+          autoAcceptFromVendor = vendorCfg.auto_accept_above;
+        }
+      }
+    } catch { /* use defaults */ }
 
     // Resolve Gemini API key: env var takes priority, fallback to app_settings in DB
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
@@ -186,6 +199,11 @@ export async function POST(req: Request) {
     if (floorPrice > listedPrice) {
       return NextResponse.json({ error: 'Configuración de precios inválida' }, { status: 400 });
     }
+
+    // autoAcceptFrom: prefer vendor DB config (% of listed price), fallback to midpoint
+    const autoAcceptFrom = autoAcceptFromVendor
+      ? Math.round(listedPrice * autoAcceptFromVendor / 100)
+      : floorPrice;
 
     const normalizedAutoAccept = Math.min(listedPrice, Math.max(floorPrice, autoAcceptFrom));
 

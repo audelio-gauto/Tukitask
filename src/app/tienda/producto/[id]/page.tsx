@@ -22,45 +22,7 @@ function getDealStrength(offer: number, price: number, floor: number) {
 }
 
 type Mode = 'idle' | 'buy' | 'negotiate';
-type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
-
-const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
-
-function getVendorBotConfigKey(vendorId: string) {
-  return `tukibot:config:${vendorId}`;
-}
-
-function getStoredBotConfig(vendorId: string): { botTone: BotTone; botTimeoutMinutes: number; botTimeoutAction: TimeoutAction } {
-  try {
-    const rawScoped = localStorage.getItem(getVendorBotConfigKey(vendorId));
-    const rawLegacy = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
-    const raw = rawScoped || rawLegacy;
-    if (!raw) {
-      return { botTone: 'amigable', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter' };
-    }
-    const parsed = JSON.parse(raw) as {
-      botTone?: BotTone;
-      botTimeoutMinutes?: number;
-      botTimeoutAction?: TimeoutAction;
-    };
-    const botTone: BotTone =
-      parsed.botTone === 'informal' || parsed.botTone === 'formal' || parsed.botTone === 'agresivo' || parsed.botTone === 'amigable'
-        ? parsed.botTone
-        : 'amigable';
-    const botTimeoutMinutes = [1, 5, 10, 15, 30, 60].includes(Number(parsed.botTimeoutMinutes))
-      ? Number(parsed.botTimeoutMinutes)
-      : 15;
-    const botTimeoutAction: TimeoutAction =
-      parsed.botTimeoutAction === 'auto_counter' || parsed.botTimeoutAction === 'auto_accept' || parsed.botTimeoutAction === 'pressure_client'
-        ? parsed.botTimeoutAction
-        : 'auto_counter';
-    return { botTone, botTimeoutMinutes, botTimeoutAction };
-  } catch {
-    // Ignore parse/storage errors
-  }
-  return { botTone: 'amigable', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter' };
-}
 
 function getTimeoutActionLabel(action?: TimeoutAction) {
   if (action === 'auto_accept') return 'Auto-aceptar';
@@ -76,18 +38,6 @@ function formatTimeoutAt(timeoutAt?: string) {
   } catch {
     return null;
   }
-}
-
-function getStoredBotTone(vendorId: string): BotTone {
-  return getStoredBotConfig(vendorId).botTone;
-}
-
-function getStoredBotTimeout(vendorId: string): { minutes: number; action: TimeoutAction } {
-  const cfg = getStoredBotConfig(vendorId);
-  return {
-    minutes: cfg.botTimeoutMinutes,
-    action: cfg.botTimeoutAction,
-  };
 }
 
 type Product = {
@@ -178,9 +128,6 @@ export default function ProductDetailPage() {
     if (!p || !offerNum || offerNum <= 0) return;
     setSubmitting(true);
     try {
-      const autoAcceptFrom = Math.round((p.floor_price + p.price) / 2 / 1000) * 1000;
-      const botTone = getStoredBotTone(p.vendor_id);
-      const timeoutCfg = getStoredBotTimeout(p.vendor_id);
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,13 +138,9 @@ export default function ProductDetailPage() {
           quantity,
           listedPrice: p.price,
           floorPrice: p.floor_price,
-          autoAcceptFrom,
           productName: p.name,
           vendorName: p.vendor_email,
           buyerMessage: message,
-          botTone,
-          botTimeoutMinutes: timeoutCfg.minutes,
-          botTimeoutAction: timeoutCfg.action,
         }),
       });
 

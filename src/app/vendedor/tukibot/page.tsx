@@ -6,12 +6,6 @@ type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
 
-const BOT_CONFIG_STORAGE_KEY = 'tukibot:config:default';
-
-function getVendorBotConfigKey(vendorId: string) {
-  return `tukibot:config:${vendorId}`;
-}
-
 interface BotConfig {
   botEnabled:         boolean;
   botTone:            Tone;
@@ -45,9 +39,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function TukiBotPage() {
-  const [saved, setSaved] = useState(false);
-  const [storageKey, setStorageKey] = useState(BOT_CONFIG_STORAGE_KEY);
-  const [vendorId, setVendorId] = useState<string | null>(null);
+  const [saved, setSaved]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [cfg, setCfg] = useState<BotConfig>({
     botEnabled:         true,
     botTone:            'informal',
@@ -59,25 +53,18 @@ export default function TukiBotPage() {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      const vendorId = user?.id || user?.user_metadata?.store_slug || user?.email || 'default';
-      setVendorId(String(vendorId));
-      const key = getVendorBotConfigKey(String(vendorId));
-      setStorageKey(key);
-
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { setLoading(false); return; }
       try {
-        const rawScoped = localStorage.getItem(key);
-        const rawLegacy = localStorage.getItem(BOT_CONFIG_STORAGE_KEY);
-        const raw = rawScoped || rawLegacy;
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as Partial<BotConfig>;
-        setCfg(prev => ({
-          ...prev,
-          ...parsed,
-        }));
-      } catch {
-        // Ignore malformed data and keep defaults
-      }
+        const res = await fetch('/api/vendedor/tukibot-config', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.ok) {
+          const { config } = await res.json();
+          setCfg(prev => ({ ...prev, ...config }));
+        }
+      } catch { /* keep defaults */ }
+      setLoading(false);
     });
   }, []);
 
@@ -85,16 +72,29 @@ export default function TukiBotPage() {
     setCfg(prev => ({ ...prev, [key]: value }));
   }
 
-  function handleSave() {
+  async function handleSave() {
+    setSaving(true);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(cfg));
-      // Backward compatibility while existing buyers still read legacy key
-      localStorage.setItem(BOT_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
-    } catch {
-      // Non-blocking in restricted environments
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/vendedor/tukibot-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(cfg),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
+    } catch { /* silent */ }
+    setSaving(false);
+  }
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--vnd-text-muted)' }}>Cargando configuración…</div>;
   }
 
   return (
@@ -104,7 +104,7 @@ export default function TukiBotPage() {
           <h1 className="vnd-page-heading">🤖 TukiBot</h1>
           <p className="vnd-page-sub">Robot Negociador — responde ofertas automáticamente 24/7</p>
         </div>
-        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
+        <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>
           {saved ? (
             <>
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -112,7 +112,7 @@ export default function TukiBotPage() {
               </svg>
               ¡Guardado!
             </>
-          ) : (
+          ) : saving ? 'Guardando…' : (
             <>
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -284,8 +284,8 @@ export default function TukiBotPage() {
         <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90 })}>
           Restaurar valores
         </button>
-        <button className="vnd-btn vnd-btn-primary" onClick={handleSave}>
-          {saved ? '✓ ¡Guardado!' : 'Guardar cambios'}
+        <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>
+          {saved ? '✓ ¡Guardado!' : saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
     </div>
