@@ -299,7 +299,7 @@ export default function ProductDetailPage() {
               ) : (
                 <>
                   <div className="tnd-offer-success-icon">🤖</div>
-                  <div className="tnd-offer-success-title">¡Oferta enviada al TukiBot!</div>
+                  <div className="tnd-offer-success-title">¡TukiBot logró este acuerdo para vos!</div>
                   {done.botResponse === 'accepted' ? (
                     <>
                       <div className="tnd-offer-success-icon" style={{ fontSize: '2rem', marginTop: 4 }}>✅</div>
