@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
 
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
@@ -146,7 +147,7 @@ async function generateGeminiMessage(args: {
       body: JSON.stringify({
         generationConfig: {
           temperature: 0.85,
-          maxOutputTokens: 280,
+          maxOutputTokens: 500,
         },
         contents: [
           {
