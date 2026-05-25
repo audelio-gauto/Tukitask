@@ -6,11 +6,14 @@ type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 
 interface BotConfig {
-  botEnabled:         boolean;
-  botTone:            Tone;
-  botTimeoutMinutes:  number;
-  botTimeoutAction:   TimeoutAction;
-  autoAcceptAbove:    number;
+  botEnabled:           boolean;
+  botTone:              Tone;
+  botTimeoutMinutes:    number;
+  botTimeoutAction:     TimeoutAction;
+  autoAcceptAbove:      number;
+  msgAutoCounter:       string;
+  msgAutoAccept:        string;
+  msgPressureClient:    string;
 }
 
 
@@ -40,11 +43,14 @@ export default function TukiBotPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cfg, setCfg] = useState<BotConfig>({
-    botEnabled:         true,
-    botTone:            'informal',
-    botTimeoutMinutes:  15,
-    botTimeoutAction:   'auto_counter',
-    autoAcceptAbove:    90,
+    botEnabled:           true,
+    botTone:              'informal',
+    botTimeoutMinutes:    15,
+    botTimeoutAction:     'auto_counter',
+    autoAcceptAbove:      90,
+    msgAutoCounter:       'el precio sube de vuelta',
+    msgAutoAccept:        'el precio vuelve al normal',
+    msgPressureClient:    'el precio sube de vuelta',
   });
 
   useEffect(() => {
@@ -242,6 +248,32 @@ export default function TukiBotPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Mensajes personalizados por acción */}
+              <p style={{ fontWeight: 700, color: 'var(--vnd-text-secondary)', fontSize: '0.82rem', margin: '18px 0 8px' }}>
+                💬 Mensaje que ve el comprador si no responde a tiempo
+              </p>
+              <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-secondary)', marginBottom: 10, opacity: 0.7 }}>
+                El comprador verá: &ldquo;⏱ Válido hasta las HH:MM. Si no aprovechás ahora: <em>tu mensaje aquí</em>.&rdquo;
+              </p>
+              {[
+                { key: 'msgAutoCounter' as const,    label: '🔁 Al contraofertar automáticamente' },
+                { key: 'msgAutoAccept' as const,     label: '✅ Al aceptar la oferta'             },
+                { key: 'msgPressureClient' as const, label: '📢 Al presionar al cliente'          },
+              ].map(({ key, label }) => (
+                <div key={key} style={{ marginBottom: 10 }}>
+                  <label style={{ fontSize: '0.78rem', color: 'var(--vnd-text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
+                  <input
+                    className="vnd-input"
+                    type="text"
+                    maxLength={80}
+                    value={cfg[key]}
+                    onChange={e => update(key, e.target.value)}
+                    placeholder="ej: el precio sube de vuelta"
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
+              ))}
             </div>
 
           </>
@@ -250,7 +282,7 @@ export default function TukiBotPage() {
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90 })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90, msgAutoCounter: 'el precio sube de vuelta', msgAutoAccept: 'el precio vuelve al normal', msgPressureClient: 'el precio sube de vuelta' })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>

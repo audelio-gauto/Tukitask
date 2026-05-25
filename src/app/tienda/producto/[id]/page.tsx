@@ -25,9 +25,9 @@ type Mode = 'idle' | 'buy' | 'negotiate';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 
 function getTimeoutActionLabel(action?: TimeoutAction) {
-  if (action === 'auto_accept') return 'Auto-aceptar';
-  if (action === 'pressure_client') return 'Presionar cliente';
-  return 'Auto-contraoferta';
+  if (action === 'auto_accept') return 'el precio vuelve al normal';
+  if (action === 'pressure_client') return 'el precio sube de vuelta';
+  return 'el precio sube de vuelta'; // auto_counter
 }
 
 function formatTimeoutAt(timeoutAt?: string) {
@@ -68,7 +68,7 @@ export default function ProductDetailPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [analyzing,   setAnalyzing]   = useState(false);
-  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction } | null>(null);
+  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
     supabase
@@ -166,6 +166,7 @@ export default function ProductDetailPage() {
           botMessage: data.message,
           timeoutAt: data.timeoutAt,
           timeoutAction: data.timeoutAction,
+          timeoutMessage: data.timeoutMessage,
         });
       }
     } catch {
@@ -336,7 +337,7 @@ export default function ProductDetailPage() {
                       </div>
                       {(done.timeoutAt || done.timeoutAction) && (
                         <p style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted)', marginTop: 4 }}>
-                          ⏱ {done.timeoutAt ? `Válido hasta las ${formatTimeoutAt(done.timeoutAt)}.` : 'Oferta con tiempo límite.'}{done.timeoutAction ? ` Sin respuesta: ${getTimeoutActionLabel(done.timeoutAction)}.` : ''}
+                          ⏱ {done.timeoutAt ? `Válido hasta las ${formatTimeoutAt(done.timeoutAt)}.` : 'Oferta con tiempo límite.'}{(done.timeoutMessage || done.timeoutAction) ? ` Si no aprovechás ahora: ${done.timeoutMessage ?? getTimeoutActionLabel(done.timeoutAction)}.` : ''}
                         </p>
                       )}
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>

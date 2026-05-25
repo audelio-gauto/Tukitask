@@ -51,6 +51,7 @@ type NegotiateResponse = {
   message: string;
   timeoutAt?: string;
   timeoutAction?: TimeoutAction;
+  timeoutMessage?: string;
 };
 
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
@@ -258,10 +259,13 @@ export async function POST(req: Request) {
     let botTimeoutMinutes = normalizeTimeoutMinutes(undefined);
     let botTimeoutAction = normalizeTimeoutAction(undefined);
     let autoAcceptFromVendor: number | null = null;
+    let msgAutoCounter    = 'el precio sube de vuelta';
+    let msgAutoAccept     = 'el precio vuelve al normal';
+    let msgPressureClient = 'el precio sube de vuelta';
     try {
       const { data: vendorCfg } = await sb
         .from('vendor_bot_config')
-        .select('bot_tone, timeout_minutes, timeout_action, auto_accept_above, bot_enabled')
+        .select('bot_tone, timeout_minutes, timeout_action, auto_accept_above, bot_enabled, msg_auto_counter, msg_auto_accept, msg_pressure_client')
         .eq('vendor_id', vendorId)
         .maybeSingle();
       if (vendorCfg) {
@@ -271,8 +275,16 @@ export async function POST(req: Request) {
         if (vendorCfg.auto_accept_above && vendorCfg.auto_accept_above > 0) {
           autoAcceptFromVendor = vendorCfg.auto_accept_above;
         }
+        if (vendorCfg.msg_auto_counter)    msgAutoCounter    = vendorCfg.msg_auto_counter;
+        if (vendorCfg.msg_auto_accept)     msgAutoAccept     = vendorCfg.msg_auto_accept;
+        if (vendorCfg.msg_pressure_client) msgPressureClient = vendorCfg.msg_pressure_client;
       }
     } catch { /* use defaults */ }
+
+    const timeoutMessage =
+      botTimeoutAction === 'auto_accept'     ? msgAutoAccept :
+      botTimeoutAction === 'pressure_client' ? msgPressureClient :
+      msgAutoCounter;
 
     // Resolve Gemini API key: env var takes priority, fallback to app_settings in DB
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
@@ -339,6 +351,7 @@ export async function POST(req: Request) {
         totalAmount: finalAmount * quantity,
         timeoutAt,
         timeoutAction: botTimeoutAction,
+        timeoutMessage,
         message: fallbackMessage({
           status,
           vendorName,

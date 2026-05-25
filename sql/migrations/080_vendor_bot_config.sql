@@ -13,12 +13,16 @@ create table if not exists vendor_bot_config (
                    check (timeout_action in ('auto_counter','auto_accept','pressure_client')),
   auto_accept_above int     not null default 90
                    check (auto_accept_above between 50 and 100),
+  msg_auto_counter    text not null default 'el precio sube de vuelta',
+  msg_auto_accept     text not null default 'el precio vuelve al normal',
+  msg_pressure_client text not null default 'el precio sube de vuelta',
   updated_at       timestamptz not null default now()
 );
 
 alter table vendor_bot_config enable row level security;
 
 -- Vendors can read and write their own config
+drop policy if exists "vendor_bot_config_own" on vendor_bot_config;
 create policy "vendor_bot_config_own"
   on vendor_bot_config for all
   using  (vendor_id = auth.uid()::text)
