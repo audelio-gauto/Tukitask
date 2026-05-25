@@ -302,10 +302,9 @@ export default function ProductDetailPage() {
                           {done.botMessage}
                         </p>
                       )}
-                      <p className="tnd-offer-success-sub">
-                        El TukiBot de <strong>{p.vendor_email.split('@')[0]}</strong> aceptó <strong>{gs(done.amount!)}</strong> × {quantity} und.<br />
-                        Procedé al pago para confirmar tu compra.
-                      </p>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4ade80', margin: '8px 0' }}>
+                        {gs(done.amount!)} × {quantity} und.
+                      </div>
                       <button className="tnd-btn-buy" style={{ marginTop: 12 }}>💳 Proceder al pago</button>
                     </>
                   ) : done.botResponse === 'countered' ? (
@@ -315,26 +314,22 @@ export default function ProductDetailPage() {
                           {done.botMessage}
                         </p>
                       )}
-                      {(done.timeoutAt || done.timeoutAction) && (
-                        <p className="tnd-offer-success-sub" style={{ marginTop: 6 }}>
-                          {done.timeoutAt ? `⏱ Vigente hasta ${formatTimeoutAt(done.timeoutAt)}.` : '⏱ Oferta con tiempo límite.'} {done.timeoutAction ? `Si no respondés aplica: ${getTimeoutActionLabel(done.timeoutAction)}.` : ''}
-                        </p>
-                      )}
-                      <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
-                        Tu oferta de <strong>{gs(done.amount!)}</strong> fue baja.<br />
-                        El Robot propone:
-                      </p>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', margin: '10px 0' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', margin: '12px 0 4px' }}>
                         {gs(done.counterAmount!)}
                       </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                      {(done.timeoutAt || done.timeoutAction) && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted)', marginTop: 4 }}>
+                          ⏱ {done.timeoutAt ? `Válido hasta las ${formatTimeoutAt(done.timeoutAt)}.` : 'Oferta con tiempo límite.'}{done.timeoutAction ? ` Sin respuesta: ${getTimeoutActionLabel(done.timeoutAction)}.` : ''}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
                         <button
                           className="tnd-btn-buy"
                           onClick={() => setDone(prev => prev ? {
                             ...prev,
                             botResponse: 'accepted',
                             amount: prev.counterAmount,
-                            botMessage: '¡Trato cerrado! Precio final confirmado por el TukiBot.',
+                            botMessage: `¡Trato cerrado! ${gs(prev.counterAmount!)} confirmado. Procedé al pago para asegurar tu pedido.`,
                           } : null)}
                         >
                           ✅ Aceptar {gs(done.counterAmount!)}
