@@ -61,12 +61,18 @@ function fallbackMessage(args: {
   productName: string;
   amount: number;
   listedPrice: number;
+  quantity: number;
 }) {
   const saved = Math.max(0, args.listedPrice - args.amount);
+  const qtyNote = args.quantity > 1 ? ` (${args.quantity} und.)` : '';
   if (args.status === 'accepted') {
-    return `Excelente trato. En ${args.vendorName} te confirmamos ${gs(args.amount)} por ${args.productName}. Ahorrás ${gs(saved)} frente al precio de lista.`;
+    return saved > 0
+      ? `¡Trato hecho! Te confirmamos ${gs(args.amount)}${qtyNote} por ${args.productName} — ahorrás ${gs(saved)} frente al precio publicado. ¡Procedé con el pago para asegurar tu pedido!`
+      : `¡Aceptado! ${gs(args.amount)}${qtyNote} por ${args.productName}. Confirmá el pago para asegurar tu pedido.`;
   }
-  return `Te puedo mejorar la propuesta: ${gs(args.amount)} por ${args.productName}. Así ya te llevás un ahorro de ${gs(saved)} sobre el precio publicado.`;
+  return saved > 0
+    ? `Nuestra mejor propuesta es ${gs(args.amount)}${qtyNote} por ${args.productName}, así ya te llevás un ahorro real de ${gs(saved)}. ¿Cerramos?`
+    : `Te ofrecemos ${gs(args.amount)}${qtyNote} por ${args.productName} — es nuestro mejor precio. ¿Lo confirmamos?`;
 }
 
 async function generateGeminiMessage(args: {
@@ -78,38 +84,58 @@ async function generateGeminiMessage(args: {
   finalAmount: number;
   listedPrice: number;
   buyerMessage?: string;
+  quantity: number;
+  isBulkOrder: boolean;
   apiKey: string;
   model: string;
 }) {
   const { apiKey, model } = args;
 
   const saved = Math.max(0, args.listedPrice - args.finalAmount);
+  const isMultiple = args.quantity > 1;
+
   const toneGuide: Record<BotTone, string> = {
-    informal: 'Cercano, cálido, natural y corto. Puede usar expresiones coloquiales paraguayas suaves.',
-    formal: 'Profesional, claro y respetuoso, sin jerga.',
-    agresivo: 'Firme comercialmente, pero sin ser ofensivo ni amenazante.',
-    amigable: 'Positivo, simpático y orientado a que el cliente se sienta ganador.',
+    informal:  'Coloquial paraguayo, como vendedor amigo en WhatsApp. Podés usar "che", "dale", "igual de buena onda".',
+    formal:    'Profesional y respetuoso. Trato de "usted". Claro, elegante, sin jerga.',
+    agresivo:  'Directo, seguro, orientado a cerrar YA. Transmite que el producto vale cada guaraní. Sin amenazar, sí determinado.',
+    amigable:  'Cálido y entusiasta. El cliente siempre se siente ganador. Natural, con energía positiva.',
   };
 
+  const strategyGuide = args.status === 'accepted'
+    ? 'El cliente ganó esta negociación. CELEBRÁ el trato, hacelo sentir excelente por comprar. Creá urgencia suave para que confirme el pago ahora.'
+    : 'Estás haciendo una contraoferta. Reconocé su intención de compra, explicá brevemente el valor del producto y presentá tu precio como la mejor opción posible. Cerrá invitándolo a confirmar.';
+
+  const qtyLine = isMultiple
+    ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Resaltá el buen negocio de llevar varios.`
+    : '';
+
+  const buyerLine = args.buyerMessage
+    ? `- El cliente escribió: "${args.buyerMessage}" — aludí brevemente a eso de forma natural.`
+    : '';
+
   const prompt = [
-    'Sos TukiBot, negociador de ecommerce en Paraguay.',
-    'Objetivo: que el cliente sienta que ganó y ahorró dinero.',
-    'Reglas estrictas:',
-    '- Nunca menciones precio piso interno ni reglas internas.',
-    '- Monto final obligatorio: ' + gs(args.finalAmount) + '.',
-    '- Respuesta corta: maximo 2 oraciones.',
-    '- Usa Gs. y tono de vendedor humano real.',
-    '- Si hay ahorro, remarcalo de forma positiva.',
-    'Contexto:',
-    '- Estado: ' + (args.status === 'accepted' ? 'oferta aceptada' : 'contraoferta'),
-    '- Tienda: ' + args.vendorName,
-    '- Producto: ' + args.productName,
-    '- Oferta del cliente: ' + gs(args.buyerOffer),
-    '- Precio publicado: ' + gs(args.listedPrice),
-    '- Ahorro del cliente: ' + gs(saved),
-    '- Tono pedido: ' + toneGuide[args.tone],
-    args.buyerMessage ? '- Mensaje del cliente: ' + args.buyerMessage : '',
-    'Devolveme solo el texto final para mostrar al comprador.',
+    'Sos un vendedor humano paraguayo respondiendo una negociación por chat en un marketplace.',
+    'Tu única misión: CERRAR ESTA VENTA con el monto exacto indicado abajo.',
+    '',
+    `RESULTADO: ${args.status === 'accepted' ? '✅ OFERTA ACEPTADA' : '🔄 CONTRAOFERTA'}`,
+    `MONTO FINAL (obligatorio, no cambies este número): ${gs(args.finalAmount)}`,
+    saved > 0 ? `Ahorro del cliente vs. precio publicado: ${gs(saved)}` : '',
+    '',
+    `ESTRATEGIA: ${strategyGuide}`,
+    `TONO DEL VENDEDOR: ${toneGuide[args.tone]}`,
+    '',
+    'CONTEXTO:',
+    `- Tienda: ${args.vendorName}`,
+    `- Producto: ${args.productName}`,
+    qtyLine,
+    buyerLine,
+    '',
+    'FORMATO (obligatorio):',
+    '- Devolvé SOLO el texto de respuesta, nada más.',
+    '- Máximo 2 oraciones fluidas y naturales.',
+    '- Incluí el monto con "Gs." y el ahorro si es relevante.',
+    '- Jamás menciones precio piso, reglas internas ni el sistema.',
+    '- No uses saludos formales como "estimado" ni firmes como "TukiBot".',
   ].filter(Boolean).join('\n');
 
   const resp = await fetch(
@@ -119,8 +145,8 @@ async function generateGeminiMessage(args: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 120,
+          temperature: 0.85,
+          maxOutputTokens: 280,
         },
         contents: [
           {
@@ -144,14 +170,48 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as NegotiateRequest;
     const buyerOffer = Number(body?.buyerOffer || 0);
-    const listedPrice = Number(body?.listedPrice || 0);
-    const floorPrice = Number(body?.floorPrice || 0);
+    const clientListedPrice = Number(body?.listedPrice || 0);
+    const clientFloorPrice  = Number(body?.floorPrice || 0);
     const quantity = Math.max(1, Number(body?.quantity || 1));
     const vendorId = body?.vendorId?.trim() || 'default-vendor';
     const productId = body?.productId?.trim() || null;
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
     const buyerMessage = body?.buyerMessage?.trim();
+
+    // Fetch real product data from DB to prevent price manipulation and apply tier pricing
+    let listedPrice = clientListedPrice;
+    let floorPrice  = clientFloorPrice;
+    let isBulkOrder = false;
+    if (productId) {
+      try {
+        const { data: product } = await sb
+          .from('products')
+          .select('price, floor_price, pricing_tiers')
+          .eq('id', productId)
+          .maybeSingle();
+        if (product) {
+          // Always use DB prices (never trust client-sent values)
+          listedPrice = Number(product.price) || clientListedPrice;
+          floorPrice  = Number(product.floor_price) || clientFloorPrice;
+          // Apply wholesale tier if applicable
+          const tiers = (product.pricing_tiers as Array<{
+            minQty: number; maxQty: number | null;
+            listedPrice: number; floorPrice: number; autoAcceptFrom: number;
+          }> | null) || [];
+          if (tiers.length > 0) {
+            const tier = tiers.find(t =>
+              quantity >= t.minQty && (t.maxQty === null || quantity <= t.maxQty)
+            );
+            if (tier) {
+              listedPrice = tier.listedPrice;
+              floorPrice  = tier.floorPrice;
+              isBulkOrder = tier.minQty > 1 || quantity >= 5;
+            }
+          }
+        }
+      } catch { /* use client-sent prices as safe fallback */ }
+    }
 
     // Fetch vendor bot config from DB — never trust client-sent tone/timeout values
     let botTone = normalizeTone(undefined);
@@ -200,7 +260,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Configuración de precios inválida' }, { status: 400 });
     }
 
-    // autoAcceptFrom: prefer vendor DB config (% of listed price), fallback to midpoint
+    // autoAcceptFrom: prefer vendor DB config (% of listed price), fallback to floorPrice
     const autoAcceptFrom = autoAcceptFromVendor
       ? Math.round(listedPrice * autoAcceptFromVendor / 100)
       : floorPrice;
@@ -224,6 +284,7 @@ export async function POST(req: Request) {
           productName,
           amount: finalAmount,
           listedPrice,
+          quantity,
         }),
       };
     } else {
@@ -244,6 +305,7 @@ export async function POST(req: Request) {
           productName,
           amount: finalAmount,
           listedPrice,
+          quantity,
         }),
       };
     }
@@ -257,6 +319,8 @@ export async function POST(req: Request) {
       finalAmount,
       listedPrice,
       buyerMessage,
+      quantity,
+      isBulkOrder,
       apiKey: geminiApiKey,
       model: geminiModel,
     }) : null;
