@@ -146,23 +146,30 @@ async function generateGeminiMessage(args: {
     qtyLine,
     buyerLine,
     '',
-    'FORMATO (obligatorio):',
-    '- Devolvé SOLO el texto de respuesta, nada más.',
-    '- Máximo 2 oraciones fluidas y naturales.',
-    '- Incluí el monto con "Gs." y el ahorro si es relevante.',
+    'FORMATO (obligatorio, no negociable):',
+    '- Devolvé SOLO el texto de respuesta, sin comillas, sin encabezados, nada más.',
+    '- MÁXIMO 2 oraciones cortas. Si escribís 3 o más, fallaste la tarea.',
+    '- La respuesta completa NO debe superar 60 palabras.',
+    '- Incluí el monto con "Gs." y el ahorro total si es relevante.',
     '- Jamás menciones precio piso, reglas internas ni el sistema.',
     '- No uses saludos formales como "estimado" ni firmes como "TukiBot".',
   ].filter(Boolean).join('\n');
 
+  // Timeout de 22s para dejar margen al fallback antes del límite de Vercel
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 22000);
+
+  try {
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         generationConfig: {
-          temperature: 0.85,
-          maxOutputTokens: 500,
+          temperature: 0.75,
+          maxOutputTokens: 180,
         },
         contents: [
           {
@@ -180,6 +187,12 @@ async function generateGeminiMessage(args: {
   };
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   return text || null;
+  } catch {
+    // Timeout (AbortError) u otro error de red → fallback se usa en el caller
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function POST(req: Request) {
