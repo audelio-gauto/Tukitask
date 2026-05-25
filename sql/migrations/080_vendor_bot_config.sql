@@ -13,9 +13,9 @@ create table if not exists vendor_bot_config (
                    check (timeout_action in ('auto_counter','auto_accept','pressure_client')),
   auto_accept_above int     not null default 90
                    check (auto_accept_above between 50 and 100),
-  msg_auto_counter    text not null default 'el precio sube de vuelta',
-  msg_auto_accept     text not null default 'el precio vuelve al normal',
-  msg_pressure_client text not null default 'el precio sube de vuelta',
+  msg_auto_counter    text not null default '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
+  msg_auto_accept     text not null default 'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
+  msg_pressure_client text not null default '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.',
   updated_at       timestamptz not null default now()
 );
 

@@ -23,9 +23,9 @@ const DEFAULTS: BotConfig = {
   botTimeoutMinutes:   15,
   botTimeoutAction:    'auto_counter',
   autoAcceptAbove:     90,
-  msgAutoCounter:      'el precio sube de vuelta',
-  msgAutoAccept:       'el precio vuelve al normal',
-  msgPressureClient:   'el precio sube de vuelta',
+  msgAutoCounter:      '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
+  msgAutoAccept:       'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
+  msgPressureClient:   '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.',
 };
 
 function rowToConfig(row: Record<string, unknown>): BotConfig {

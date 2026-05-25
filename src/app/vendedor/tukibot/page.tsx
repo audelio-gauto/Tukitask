@@ -48,9 +48,9 @@ export default function TukiBotPage() {
     botTimeoutMinutes:    15,
     botTimeoutAction:     'auto_counter',
     autoAcceptAbove:      90,
-    msgAutoCounter:       'el precio sube de vuelta',
-    msgAutoAccept:        'el precio vuelve al normal',
-    msgPressureClient:    'el precio sube de vuelta',
+    msgAutoCounter:       '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
+    msgAutoAccept:        'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
+    msgPressureClient:    '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.',
   });
 
   useEffect(() => {
@@ -254,23 +254,27 @@ export default function TukiBotPage() {
                 💬 Mensaje que ve el comprador si no responde a tiempo
               </p>
               <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-secondary)', marginBottom: 10, opacity: 0.7 }}>
-                El comprador verá: &ldquo;⏱ Válido hasta las HH:MM. Si no aprovechás ahora: <em>tu mensaje aquí</em>.&rdquo;
+                Usá <strong style={{ color: '#F5C518' }}>{'{hora}'}</strong> donde querés que aparezca la hora límite. Ej: &ldquo;Oferta hasta las <strong>{'{hora}'}</strong>.&rdquo;
               </p>
               {[
                 { key: 'msgAutoCounter' as const,    label: '🔁 Al contraofertar automáticamente' },
                 { key: 'msgAutoAccept' as const,     label: '✅ Al aceptar la oferta'             },
                 { key: 'msgPressureClient' as const, label: '📢 Al presionar al cliente'          },
               ].map(({ key, label }) => (
-                <div key={key} style={{ marginBottom: 10 }}>
+                <div key={key} style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: '0.78rem', color: 'var(--vnd-text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
-                  <input
-                    className="vnd-input"
-                    type="text"
-                    maxLength={80}
+                  <textarea
+                    maxLength={160}
                     value={cfg[key]}
                     onChange={e => update(key, e.target.value)}
-                    placeholder="ej: el precio sube de vuelta"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
+                    rows={2}
+                    style={{
+                      width: '100%', fontSize: '0.82rem', resize: 'vertical',
+                      background: 'var(--vnd-input-bg, rgba(255,255,255,0.05))',
+                      border: '1px solid var(--vnd-border)',
+                      borderRadius: 8, padding: '8px 10px',
+                      color: 'var(--vnd-text)', outline: 'none', boxSizing: 'border-box',
+                    }}
                   />
                 </div>
               ))}
@@ -282,7 +286,7 @@ export default function TukiBotPage() {
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90, msgAutoCounter: 'el precio sube de vuelta', msgAutoAccept: 'el precio vuelve al normal', msgPressureClient: 'el precio sube de vuelta' })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90, msgAutoCounter: '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.', msgAutoAccept: 'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.', msgPressureClient: '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.' })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>

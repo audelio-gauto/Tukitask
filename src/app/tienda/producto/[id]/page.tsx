@@ -335,9 +335,9 @@ export default function ProductDetailPage() {
                       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', margin: '12px 0 4px' }}>
                         {gs(done.counterAmount!)}
                       </div>
-                      {(done.timeoutAt || done.timeoutAction) && (
+                      {done.timeoutMessage && (
                         <p style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted)', marginTop: 4 }}>
-                          ⏱ {done.timeoutAt ? `Válido hasta las ${formatTimeoutAt(done.timeoutAt)}.` : 'Oferta con tiempo límite.'}{(done.timeoutMessage || done.timeoutAction) ? ` Si no aprovechás ahora: ${done.timeoutMessage ?? getTimeoutActionLabel(done.timeoutAction)}.` : ''}
+                          {done.timeoutMessage.replace('{hora}', formatTimeoutAt(done.timeoutAt) ?? '')}
                         </p>
                       )}
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
