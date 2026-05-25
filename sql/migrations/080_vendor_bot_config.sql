@@ -11,10 +11,6 @@ create table if not exists vendor_bot_config (
                    check (timeout_minutes in (1,5,10,15,30,60)),
   timeout_action   text     not null default 'auto_counter'
                    check (timeout_action in ('auto_counter','auto_accept','pressure_client')),
-  counter_formula  text     not null default 'midpoint'
-                   check (counter_formula in ('midpoint','percentage','fixed')),
-  counter_percent  int      not null default 10
-                   check (counter_percent between 1 and 100),
   auto_accept_above int     not null default 90
                    check (auto_accept_above between 50 and 100),
   updated_at       timestamptz not null default now()

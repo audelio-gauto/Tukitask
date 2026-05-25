@@ -4,15 +4,12 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
-type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
 
 interface BotConfig {
   botEnabled:         boolean;
   botTone:            Tone;
   botTimeoutMinutes:  number;
   botTimeoutAction:   TimeoutAction;
-  botCounterFormula:  CounterFormula;
-  botCounterPercent:  number;
   autoAcceptAbove:    number;
 }
 
@@ -47,8 +44,6 @@ export default function TukiBotPage() {
     botTone:            'informal',
     botTimeoutMinutes:  15,
     botTimeoutAction:   'auto_counter',
-    botCounterFormula:  'midpoint',
-    botCounterPercent:  10,
     autoAcceptAbove:    90,
   });
 
@@ -249,39 +244,13 @@ export default function TukiBotPage() {
               </div>
             </div>
 
-            {/* Counter formula */}
-            {cfg.botTimeoutAction === 'auto_counter' && (
-              <div style={{ padding: 16, background: 'rgba(245,197,24,0.04)', borderRadius: 12, border: '1px solid rgba(245,197,24,0.15)' }}>
-                <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 12, fontSize: '0.875rem' }}>
-                  🧮 Fórmula de contraoferta automática
-                </p>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {[
-                    { key: 'midpoint',   label: 'Punto medio', desc: '(Publicado + Oferta) ÷ 2' },
-                    { key: 'percentage', label: 'Porcentaje',  desc: `Bajar ${cfg.botCounterPercent}% del publicado` },
-                    { key: 'fixed',      label: 'Precio fijo', desc: 'Precio mínimo configurado' },
-                  ].map(f => (
-                    <button key={f.key} onClick={() => update('botCounterFormula', f.key as CounterFormula)}
-                      style={{
-                        padding: '10px 16px', borderRadius: 10, border: '1px solid', flex: 1, textAlign: 'left',
-                        borderColor: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-border)',
-                        background: cfg.botCounterFormula === f.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
-                        cursor: 'pointer', transition: 'all 0.15s',
-                      }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.82rem', color: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>{f.label}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--vnd-text-muted)', marginTop: 3 }}>{f.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
       </Section>
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', botCounterFormula: 'midpoint', botCounterPercent: 10, autoAcceptAbove: 90 })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90 })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>
