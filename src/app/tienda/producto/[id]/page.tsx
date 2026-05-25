@@ -302,9 +302,20 @@ export default function ProductDetailPage() {
                           {done.botMessage}
                         </p>
                       )}
-                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4ade80', margin: '8px 0' }}>
-                        {gs(done.amount!)} × {quantity} und.
-                      </div>
+                      {quantity > 1 ? (
+                        <div style={{ margin: '8px 0' }}>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--tnd-text-muted)' }}>
+                            {quantity} und. × {gs(done.amount!)} c/u
+                          </div>
+                          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4ade80' }}>
+                            Total: {gs(done.amount! * quantity)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4ade80', margin: '8px 0' }}>
+                          {gs(done.amount!)}
+                        </div>
+                      )}
                       <button className="tnd-btn-buy" style={{ marginTop: 12 }}>💳 Proceder al pago</button>
                     </>
                   ) : done.botResponse === 'countered' ? (
@@ -329,7 +340,9 @@ export default function ProductDetailPage() {
                             ...prev,
                             botResponse: 'accepted',
                             amount: prev.counterAmount,
-                            botMessage: `¡Trato cerrado! ${gs(prev.counterAmount!)} confirmado. Procedé al pago para asegurar tu pedido.`,
+                            botMessage: quantity > 1
+                              ? `¡Trato cerrado! ${quantity} und. × ${gs(prev.counterAmount!)} c/u = ${gs(prev.counterAmount! * quantity)} en total. ¡Procedé al pago para asegurar tu pedido!`
+                              : `¡Trato cerrado! ${gs(prev.counterAmount!)} confirmado. ¡Procedé al pago para asegurar tu pedido!`,
                           } : null)}
                         >
                           ✅ Aceptar {gs(done.counterAmount!)}
