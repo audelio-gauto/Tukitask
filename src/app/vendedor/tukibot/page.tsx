@@ -261,7 +261,7 @@ export default function TukiBotPage() {
                 { key: 'msgAutoAccept' as const,     label: '✅ Al aceptar la oferta'             },
                 { key: 'msgPressureClient' as const, label: '📢 Al presionar al cliente'          },
               ].map(({ key, label }) => (
-                <div key={key} style={{ marginBottom: 12 }}>
+                <div key={key} style={{ marginBottom: 14 }}>
                   <label style={{ fontSize: '0.78rem', color: 'var(--vnd-text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
                   <textarea
                     maxLength={160}
@@ -276,6 +276,11 @@ export default function TukiBotPage() {
                       color: 'var(--vnd-text)', outline: 'none', boxSizing: 'border-box',
                     }}
                   />
+                  {cfg[key] && (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4, fontStyle: 'italic', opacity: 0.75 }}>
+                      👁 Vista del comprador: &ldquo;{cfg[key].replace('{hora}', '05:30 p. m.')}&rdquo;
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
