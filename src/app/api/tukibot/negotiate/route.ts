@@ -41,7 +41,6 @@ type NegotiateRequest = {
   floorPrice: number;
   productName?: string;
   vendorName?: string;
-  buyerMessage?: string;
 };
 
 type NegotiateResponse = {
@@ -121,9 +120,8 @@ async function generateGeminiMessage(args: {
     ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Mencioná el total (${gs(totalAmount)}) y el ahorro total (${gs(totalSaved)}) para resaltar el buen negocio de llevar varios.`
     : '';
 
-  const buyerLine = args.buyerMessage
-    ? `- El cliente escribió: "${args.buyerMessage}" — aludí brevemente a eso de forma natural.`
-    : '';
+  const buyerLine = '';
+  // (campo mensaje eliminado — no se envía desde el cliente)
 
   const prompt = [
     'Sos un vendedor humano paraguayo respondiendo una negociación por chat en un marketplace.',
@@ -195,7 +193,6 @@ export async function POST(req: Request) {
     const productId = body?.productId?.trim() || null;
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
-    const buyerMessage = body?.buyerMessage?.trim();
 
     // Fetch real product data from DB to prevent price manipulation and apply tier pricing
     let listedPrice = clientListedPrice;
@@ -336,7 +333,6 @@ export async function POST(req: Request) {
       buyerOffer,
       finalAmount,
       listedPrice,
-      buyerMessage,
       quantity,
       isBulkOrder,
       apiKey: geminiApiKey,
@@ -361,7 +357,6 @@ export async function POST(req: Request) {
             vendorName,
             quantity,
             botTone,
-            buyerMessage,
           },
         });
       } catch {

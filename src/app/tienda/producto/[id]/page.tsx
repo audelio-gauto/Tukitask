@@ -66,7 +66,6 @@ export default function ProductDetailPage() {
   const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
   const [offerAmount, setOfferAmount] = useState('');
-  const [message,     setMessage]     = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction } | null>(null);
 
@@ -140,7 +139,6 @@ export default function ProductDetailPage() {
           floorPrice: p.floor_price,
           productName: p.name,
           vendorName: p.vendor_email,
-          buyerMessage: message,
         }),
       });
 
@@ -192,7 +190,7 @@ export default function ProductDetailPage() {
 
   function reset() {
     setDone(null); setMode('idle');
-    setOfferAmount(''); setQuantity(1); setMessage('');
+    setOfferAmount(''); setQuantity(1);
   }
 
   return (
@@ -457,21 +455,6 @@ export default function ProductDetailPage() {
                         </div>
                       </div>
                     )}
-
-                    <div className="tnd-offer-field">
-                      <label htmlFor="msg" className="tnd-offer-label">
-                        Mensaje <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>(opcional)</span>
-                      </label>
-                      <textarea
-                        id="msg"
-                        className="tnd-offer-input tnd-offer-textarea"
-                        placeholder="Ej: ¿Hacés envío a San Lorenzo? ¿Tiene garantía?"
-                        rows={2}
-                        value={message}
-                        onChange={e => setMessage(e.target.value)}
-                        maxLength={280}
-                      />
-                    </div>
 
                     {offerNum > 0 && (
                       <div className="tnd-offer-summary">
