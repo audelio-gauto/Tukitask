@@ -95,6 +95,7 @@ async function generateGeminiMessage(args: {
   buyerMessage?: string;
   quantity: number;
   isBulkOrder: boolean;
+  stock?: number;
   apiKey: string;
   model: string;
 }) {
@@ -113,11 +114,19 @@ async function generateGeminiMessage(args: {
   };
 
   const strategyGuide = args.status === 'accepted'
-    ? 'El cliente ganó esta negociación. CELEBRÁ el trato, hacelo sentir excelente por comprar. Creá urgencia suave para que confirme el pago ahora.'
-    : 'Estás haciendo una contraoferta. Reconocé su intención de compra, explicá brevemente el valor del producto y presentá tu precio como la mejor opción posible. Cerrá invitándolo a confirmar.';
+    ? 'El cliente ganó esta negociación. CELEBRÁ el trato, hacelo sentir que consiguió algo exclusivo que no das a todos — como un trato especial solo para él. Creá urgencia suave para que confirme el pago ahora.'
+    : 'Estás haciendo una contraoferta. Reconocé su intención de compra, inventá UNA razón creíble (costo de importación, tipo de cambio, calidad premium) por la que no podés bajar más, y presentá tu precio como la mejor opción disponible. Cerrá invitándolo a confirmar.';
 
   const qtyLine = isMultiple
     ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Mencioná el total (${gs(totalAmount)}) y el ahorro total (${gs(totalSaved)}) para resaltar el buen negocio de llevar varios.`
+    : '';
+
+  const stockLine = args.stock !== undefined
+    ? args.stock <= 3
+      ? `- Stock: Quedan solo ${args.stock} unidades — mencioná la escasez de forma natural para crear urgencia real.`
+      : args.stock <= 10
+        ? `- Stock: Pocas unidades disponibles — podés insinuar suavemente que se agota pronto.`
+        : ''
     : '';
 
   const buyerLine = '';
@@ -144,6 +153,7 @@ async function generateGeminiMessage(args: {
     `- Tienda: ${args.vendorName}`,
     `- Producto: ${args.productName}`,
     qtyLine,
+    stockLine,
     buyerLine,
     '',
     'FORMATO (obligatorio, no negociable):',
@@ -211,17 +221,19 @@ export async function POST(req: Request) {
     let listedPrice = clientListedPrice;
     let floorPrice  = clientFloorPrice;
     let isBulkOrder = false;
+    let productStock: number | undefined = undefined;
     if (productId) {
       try {
         const { data: product } = await sb
           .from('products')
-          .select('price, floor_price, pricing_tiers')
+          .select('price, floor_price, stock, pricing_tiers')
           .eq('id', productId)
           .maybeSingle();
         if (product) {
           // Always use DB prices (never trust client-sent values)
-          listedPrice = Number(product.price) || clientListedPrice;
-          floorPrice  = Number(product.floor_price) || clientFloorPrice;
+          listedPrice   = Number(product.price) || clientListedPrice;
+          floorPrice    = Number(product.floor_price) || clientFloorPrice;
+          productStock  = typeof product.stock === 'number' ? product.stock : undefined;
           // Apply wholesale tier if applicable
           const tiers = (product.pricing_tiers as Array<{
             minQty: number; maxQty: number | null;
@@ -348,6 +360,7 @@ export async function POST(req: Request) {
       listedPrice,
       quantity,
       isBulkOrder,
+      stock: productStock,
       apiKey: geminiApiKey,
       model: geminiModel,
     }) : null;

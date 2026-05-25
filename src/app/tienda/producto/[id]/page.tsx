@@ -67,6 +67,7 @@ export default function ProductDetailPage() {
   const [quantity,    setQuantity]    = useState(1);
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting,  setSubmitting]  = useState(false);
+  const [analyzing,   setAnalyzing]   = useState(false);
   const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction } | null>(null);
 
   useEffect(() => {
@@ -110,6 +111,8 @@ export default function ProductDetailPage() {
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
 
+  const humanDelay = () => new Promise<void>(r => setTimeout(r, 1200 + Math.random() * 1800));
+
   function handleBuy() {
     if (!p) return;
     const url = new URLSearchParams({
@@ -145,6 +148,8 @@ export default function ProductDetailPage() {
       if (!res.ok) throw new Error('Negociación fallida');
 
       const data = await res.json();
+      setAnalyzing(true);
+      await humanDelay();
       if (data.status === 'accepted') {
         setDone({
           type: 'negotiate',
@@ -165,6 +170,8 @@ export default function ProductDetailPage() {
       }
     } catch {
       // Fallback local logic to keep UX responsive even if API fails
+      setAnalyzing(true);
+      await humanDelay();
       if (offerNum >= p.floor_price) {
         setDone({
           type: 'negotiate',
@@ -184,6 +191,7 @@ export default function ProductDetailPage() {
         });
       }
     } finally {
+      setAnalyzing(false);
       setSubmitting(false);
     }
   }
@@ -468,7 +476,7 @@ export default function ProductDetailPage() {
                       className="tnd-offer-submit"
                       disabled={submitting || offerNum <= 0}
                     >
-                      {submitting ? '⏳ Enviando...' : '🤖 Enviar oferta al TukiBot'}
+                      {analyzing ? '💬 Analizando tu oferta...' : submitting ? '⏳ Enviando...' : '🤖 Enviar oferta al TukiBot'}
                     </button>
                   </form>
                 </div>
