@@ -92,8 +92,10 @@ async function generateGeminiMessage(args: {
 }) {
   const { apiKey, model } = args;
 
-  const saved = Math.max(0, args.listedPrice - args.finalAmount);
-  const isMultiple = args.quantity > 1;
+  const savedPerUnit = Math.max(0, args.listedPrice - args.finalAmount);
+  const totalSaved   = savedPerUnit * args.quantity;
+  const totalAmount  = args.finalAmount * args.quantity;
+  const isMultiple   = args.quantity > 1;
 
   const toneGuide: Record<BotTone, string> = {
     informal:  'Coloquial paraguayo, como vendedor amigo en WhatsApp. Podés usar "che", "dale", "igual de buena onda".',
@@ -107,7 +109,7 @@ async function generateGeminiMessage(args: {
     : 'Estás haciendo una contraoferta. Reconocé su intención de compra, explicá brevemente el valor del producto y presentá tu precio como la mejor opción posible. Cerrá invitándolo a confirmar.';
 
   const qtyLine = isMultiple
-    ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Resaltá el buen negocio de llevar varios.`
+    ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Mencioná el total (${gs(totalAmount)}) y el ahorro total (${gs(totalSaved)}) para resaltar el buen negocio de llevar varios.`
     : '';
 
   const buyerLine = args.buyerMessage
@@ -119,8 +121,14 @@ async function generateGeminiMessage(args: {
     'Tu única misión: CERRAR ESTA VENTA con el monto exacto indicado abajo.',
     '',
     `RESULTADO: ${args.status === 'accepted' ? '✅ OFERTA ACEPTADA' : '🔄 CONTRAOFERTA'}`,
-    `MONTO FINAL (obligatorio, no cambies este número): ${gs(args.finalAmount)}`,
-    saved > 0 ? `Ahorro del cliente vs. precio publicado: ${gs(saved)}` : '',
+    isMultiple
+      ? `MONTO FINAL TOTAL (obligatorio): ${gs(totalAmount)} (${args.quantity} und. × ${gs(args.finalAmount)} c/u)`
+      : `MONTO FINAL (obligatorio, no cambies este número): ${gs(args.finalAmount)}`,
+    totalSaved > 0
+      ? isMultiple
+        ? `Ahorro total del cliente: ${gs(totalSaved)} (${gs(savedPerUnit)} por unidad × ${args.quantity} und.)`
+        : `Ahorro del cliente vs. precio publicado: ${gs(savedPerUnit)}`
+      : '',
     '',
     `ESTRATEGIA: ${strategyGuide}`,
     `TONO DEL VENDEDOR: ${toneGuide[args.tone]}`,
