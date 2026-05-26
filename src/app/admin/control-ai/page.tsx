@@ -370,12 +370,23 @@ export default function ControlAiPage() {
 
       const data = await res.json();
       if (!data.ok) {
-        throw new Error(data.error || 'La prueba de conexión falló');
+        if (data.code === 'quota_exceeded') {
+          const retryLabel = data.retryAfterSeconds ? ` Reintento sugerido en ${data.retryAfterSeconds}s.` : '';
+          const recommendation = data.recommendation ? ` ${data.recommendation}` : '';
+          setTestMsg(`Cuota/límite temporal alcanzado.${retryLabel}${recommendation}`);
+        } else {
+          setTestMsg(data.error || 'La prueba de conexión falló.');
+        }
+        return;
       }
 
       setTestMsg(`Conexión exitosa (${data.model}).`);
     } catch (err) {
-      setTestMsg(`Error: ${String(err)}`);
+      if (err instanceof Error) {
+        setTestMsg(err.message);
+      } else {
+        setTestMsg('No se pudo completar la prueba de conexión.');
+      }
     } finally {
       setTesting(false);
     }

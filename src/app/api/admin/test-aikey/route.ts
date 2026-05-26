@@ -4,6 +4,41 @@ import { getAuthAdmin, unauthorized } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
+function parseProviderError(provider: 'gemini' | 'openai', status: number, msg: string) {
+  const lower = msg.toLowerCase();
+  const isQuota =
+    status === 429 ||
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit') ||
+    lower.includes('resource_exhausted');
+
+  if (!isQuota) {
+    return {
+      ok: false,
+      code: 'provider_error',
+      provider,
+      error: `${provider === 'gemini' ? 'Gemini' : 'OpenAI'} respondió con error: ${msg}`,
+    };
+  }
+
+  const retryMatch = msg.match(/retry\s+in\s+([0-9]+(?:\.[0-9]+)?)s/i);
+  const retryAfterSeconds = retryMatch ? Math.ceil(Number(retryMatch[1])) : null;
+
+  const recommendation = provider === 'gemini'
+    ? 'Superaste la cuota/rate-limit de Gemini. Probá esperar el tiempo sugerido, cambiar temporalmente a OpenAI o usar un modelo con más disponibilidad.'
+    : 'Superaste la cuota/rate-limit de OpenAI. Probá esperar el tiempo sugerido o revisar límites/billing del proveedor.';
+
+  return {
+    ok: false,
+    code: 'quota_exceeded',
+    provider,
+    retryAfterSeconds,
+    recommendation,
+    error: `${provider === 'gemini' ? 'Gemini' : 'OpenAI'} alcanzó su cuota/límite temporal.`,
+    details: msg,
+  };
+}
+
 export async function POST(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
@@ -41,7 +76,7 @@ export async function POST(req: Request) {
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({}));
         const msg = (errBody as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
-        return NextResponse.json({ ok: false, error: `Gemini respondió con error: ${msg}` });
+        return NextResponse.json(parseProviderError('gemini', resp.status, msg));
       }
       const data = await resp.json() as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -68,7 +103,7 @@ export async function POST(req: Request) {
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({}));
         const msg = (errBody as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
-        return NextResponse.json({ ok: false, error: `OpenAI respondió con error: ${msg}` });
+        return NextResponse.json(parseProviderError('openai', resp.status, msg));
       }
       const data = await resp.json() as {
         choices?: Array<{ message?: { content?: string } }>;
