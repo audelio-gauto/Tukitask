@@ -305,6 +305,7 @@ export async function POST(req: Request) {
     // Fetch real product data from DB to prevent price manipulation and apply tier pricing
     let listedPrice = clientListedPrice;
     let floorPrice  = clientFloorPrice;
+    let baseListedPrice = clientListedPrice; // Track original price for savings display (never use tier price for ahorro)
     let isBulkOrder = false;
     let productStock: number | undefined = undefined;
     if (productId) {
@@ -317,9 +318,10 @@ export async function POST(req: Request) {
         if (product) {
           // Always use DB prices (never trust client-sent values)
           listedPrice   = Number(product.price) || clientListedPrice;
+          baseListedPrice = listedPrice; // Save base price before any tier adjustments
           floorPrice    = Number(product.floor_price) || clientFloorPrice;
           productStock  = typeof product.stock === 'number' ? product.stock : undefined;
-          // Apply wholesale tier if applicable
+          // Apply wholesale tier if applicable (only to negotiation logic, not display savings)
           const tiers = (product.pricing_tiers as Array<{
             minQty: number; maxQty: number | null;
             listedPrice: number; floorPrice: number; autoAcceptFrom: number;
@@ -454,7 +456,7 @@ export async function POST(req: Request) {
           vendorName,
           productName,
           amount: finalAmount,
-          listedPrice,
+          listedPrice: baseListedPrice,
           quantity,
         }),
       };
@@ -476,7 +478,7 @@ export async function POST(req: Request) {
           vendorName,
           productName,
           amount: finalAmount,
-          listedPrice,
+          listedPrice: baseListedPrice,
           quantity,
         }),
       };
@@ -489,7 +491,7 @@ export async function POST(req: Request) {
       productName,
       buyerOffer,
       finalAmount,
-      listedPrice,
+      listedPrice: baseListedPrice,
       quantity,
       isBulkOrder,
       stock: productStock,
