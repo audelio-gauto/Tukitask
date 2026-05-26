@@ -125,6 +125,20 @@ export default function ProductDetailPage() {
     router.push(`/tienda/checkout?${url.toString()}`);
   }
 
+  function handleProceedToPayment() {
+    if (!p || !done || done.type !== 'negotiate') return;
+    const negotiatedUnitPrice = done.amount && done.amount > 0 ? done.amount : p.price;
+    const url = new URLSearchParams({
+      product: p.id,
+      qty: String(quantity),
+      name: p.name,
+      vendor: p.vendor_email,
+      vid: p.vendor_id,
+      price: String(negotiatedUnitPrice),
+    });
+    router.push(`/tienda/checkout?${url.toString()}`);
+  }
+
   async function handleOffer(e: React.FormEvent) {
     e.preventDefault();
     if (!p || !offerNum || offerNum <= 0) return;
@@ -328,7 +342,9 @@ export default function ProductDetailPage() {
                           {gs(done.amount!)}
                         </div>
                       )}
-                      <button className="tnd-btn-buy" style={{ marginTop: 12 }}>💳 Proceder al pago</button>
+                      <button className="tnd-btn-buy" style={{ marginTop: 12 }} onClick={handleProceedToPayment}>
+                        💳 Proceder al pago
+                      </button>
                     </>
                   ) : done.botResponse === 'countered' ? (
                     <>
