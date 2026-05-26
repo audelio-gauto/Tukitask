@@ -5,12 +5,14 @@ export const dynamic = 'force-dynamic';
 
 type BotTone       = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
+type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
 interface BotConfig {
   botEnabled:          boolean;
   botTone:             BotTone;
   botTimeoutMinutes:   number;
   botTimeoutAction:    TimeoutAction;
+  negotiationProfile:  NegotiationProfile;
   autoAcceptAbove:     number;
   msgAutoCounter:      string;
   msgAutoAccept:       string;
@@ -22,11 +24,19 @@ const DEFAULTS: BotConfig = {
   botTone:             'amigable',
   botTimeoutMinutes:   15,
   botTimeoutAction:    'auto_counter',
+  negotiationProfile:  'balanced',
   autoAcceptAbove:     90,
   msgAutoCounter:      '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
   msgAutoAccept:       'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
   msgPressureClient:   '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.',
 };
+
+function normalizeProfile(input: unknown): NegotiationProfile {
+  if (input === 'balanced' || input === 'high_close' || input === 'high_margin') {
+    return input;
+  }
+  return 'balanced';
+}
 
 function rowToConfig(row: Record<string, unknown>): BotConfig {
   return {
@@ -34,6 +44,7 @@ function rowToConfig(row: Record<string, unknown>): BotConfig {
     botTone:             (row.bot_tone as BotTone)             ?? DEFAULTS.botTone,
     botTimeoutMinutes:   Number(row.timeout_minutes)           ?? DEFAULTS.botTimeoutMinutes,
     botTimeoutAction:    (row.timeout_action as TimeoutAction) ?? DEFAULTS.botTimeoutAction,
+    negotiationProfile:  normalizeProfile(row.negotiation_profile),
     autoAcceptAbove:     Number(row.auto_accept_above)         ?? DEFAULTS.autoAcceptAbove,
     msgAutoCounter:      (row.msg_auto_counter    as string)   ?? DEFAULTS.msgAutoCounter,
     msgAutoAccept:       (row.msg_auto_accept     as string)   ?? DEFAULTS.msgAutoAccept,
@@ -68,6 +79,7 @@ export async function PUT(req: Request) {
     bot_tone:            body.botTone             ?? DEFAULTS.botTone,
     timeout_minutes:     body.botTimeoutMinutes   ?? DEFAULTS.botTimeoutMinutes,
     timeout_action:      body.botTimeoutAction    ?? DEFAULTS.botTimeoutAction,
+    negotiation_profile: normalizeProfile(body.negotiationProfile),
     auto_accept_above:   body.autoAcceptAbove      ?? DEFAULTS.autoAcceptAbove,
     msg_auto_counter:    body.msgAutoCounter       ?? DEFAULTS.msgAutoCounter,
     msg_auto_accept:     body.msgAutoAccept        ?? DEFAULTS.msgAutoAccept,

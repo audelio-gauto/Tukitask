@@ -4,12 +4,14 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
+type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
 interface BotConfig {
   botEnabled:           boolean;
   botTone:              Tone;
   botTimeoutMinutes:    number;
   botTimeoutAction:     TimeoutAction;
+  negotiationProfile:   NegotiationProfile;
   autoAcceptAbove:      number;
   msgAutoCounter:       string;
   msgAutoAccept:        string;
@@ -22,6 +24,32 @@ const TONES: { key: Tone; label: string; emoji: string; desc: string }[] = [
   { key: 'formal',    label: 'Formal',    emoji: '👔', desc: '"Estimado, le ofrecemos..."' },
   { key: 'agresivo',  label: 'Agresivo',  emoji: '🔥', desc: '"¡Última oportunidad!"'     },
   { key: 'amigable',  label: 'Amigable',  emoji: '😊', desc: '"Hola! Gracias por..."'     },
+];
+
+const NEGOTIATION_PROFILES: {
+  key: NegotiationProfile;
+  label: string;
+  emoji: string;
+  desc: string;
+}[] = [
+  {
+    key: 'high_close',
+    label: 'Cierre alto',
+    emoji: '🚀',
+    desc: 'Más flexible para cerrar rápido, con menor margen promedio.',
+  },
+  {
+    key: 'balanced',
+    label: 'Balanceado',
+    emoji: '⚖️',
+    desc: 'Equilibrio entre cierre de ventas y protección de margen.',
+  },
+  {
+    key: 'high_margin',
+    label: 'Margen alto',
+    emoji: '🛡️',
+    desc: 'Más estricto para proteger precio y evitar lowballing.',
+  },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -47,6 +75,7 @@ export default function TukiBotPage() {
     botTone:              'informal',
     botTimeoutMinutes:    15,
     botTimeoutAction:     'auto_counter',
+    negotiationProfile:   'balanced',
     autoAcceptAbove:      90,
     msgAutoCounter:       '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
     msgAutoAccept:        'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
@@ -176,6 +205,32 @@ export default function TukiBotPage() {
             {/* Price thresholds */}
             <div className="vnd-form-grid" style={{ marginBottom: 22 }}>
               <div className="vnd-field">
+                <label className="vnd-label" style={{ marginBottom: 8, display: 'block' }}>
+                  Perfil de negociación
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8, marginBottom: 12 }}>
+                  {NEGOTIATION_PROFILES.map(p => (
+                    <button key={p.key} onClick={() => update('negotiationProfile', p.key)}
+                      style={{
+                        padding: '10px 10px', borderRadius: 10, border: '1px solid',
+                        borderColor: cfg.negotiationProfile === p.key ? '#F5C518' : 'var(--vnd-border)',
+                        background: cfg.negotiationProfile === p.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
+                        cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: '0.8rem', color: cfg.negotiationProfile === p.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>
+                        <span>{p.emoji}</span>
+                        <span>{p.label}</span>
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--vnd-text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+                        {p.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginBottom: 10 }}>
+                  El perfil se aplica solo dentro de los límites globales definidos por Admin.
+                </p>
+
                 <label className="vnd-label">
                   ✅ Auto-aceptar si ofrecen ≥ (% del precio publicado)
                 </label>
@@ -286,7 +341,7 @@ export default function TukiBotPage() {
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', autoAcceptAbove: 90, msgAutoCounter: '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.', msgAutoAccept: 'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.', msgPressureClient: '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.' })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', negotiationProfile: 'balanced', autoAcceptAbove: 90, msgAutoCounter: '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.', msgAutoAccept: 'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.', msgPressureClient: '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.' })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>

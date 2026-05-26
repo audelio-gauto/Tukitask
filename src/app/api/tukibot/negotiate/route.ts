@@ -7,6 +7,7 @@ export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
 
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
+type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -31,6 +32,13 @@ function normalizeTimeoutMinutes(input: unknown): number {
   const n = Number(input);
   if ([1, 5, 10, 15, 30, 60].includes(n)) return n;
   return 15;
+}
+
+function normalizeNegotiationProfile(input: unknown): NegotiationProfile {
+  if (input === 'balanced' || input === 'high_close' || input === 'high_margin') {
+    return input;
+  }
+  return 'balanced';
 }
 
 type NegotiateRequest = {
@@ -358,6 +366,7 @@ export async function POST(req: Request) {
     let botTone = normalizeTone(undefined);
     let botTimeoutMinutes = normalizeTimeoutMinutes(undefined);
     let botTimeoutAction = normalizeTimeoutAction(undefined);
+    let negotiationProfile: NegotiationProfile = 'balanced';
     let autoAcceptFromVendor: number | null = null;
     let msgAutoCounter    = 'el precio sube de vuelta';
     let msgAutoAccept     = 'el precio vuelve al normal';
@@ -365,13 +374,14 @@ export async function POST(req: Request) {
     try {
       const { data: vendorCfg } = await sb
         .from('vendor_bot_config')
-        .select('bot_tone, timeout_minutes, timeout_action, auto_accept_above, bot_enabled, msg_auto_counter, msg_auto_accept, msg_pressure_client')
+        .select('bot_tone, timeout_minutes, timeout_action, negotiation_profile, auto_accept_above, bot_enabled, msg_auto_counter, msg_auto_accept, msg_pressure_client')
         .eq('vendor_id', vendorId)
         .maybeSingle();
       if (vendorCfg) {
         botTone           = normalizeTone(vendorCfg.bot_tone);
         botTimeoutMinutes = normalizeTimeoutMinutes(vendorCfg.timeout_minutes);
         botTimeoutAction  = normalizeTimeoutAction(vendorCfg.timeout_action);
+        negotiationProfile = normalizeNegotiationProfile(vendorCfg.negotiation_profile);
         if (vendorCfg.auto_accept_above && vendorCfg.auto_accept_above > 0) {
           autoAcceptFromVendor = vendorCfg.auto_accept_above;
         }
@@ -534,6 +544,63 @@ export async function POST(req: Request) {
     const counterJitterMinSteps = Math.round(clamp(getLimitNumber('counter_jitter_min_steps'), -5, 0));
     const counterJitterMaxSteps = Math.round(clamp(getLimitNumber('counter_jitter_max_steps'), 0, 8));
 
+    // Vendor profile shifts strategy while keeping global admin limits as guardrails.
+    const profileTuning =
+      negotiationProfile === 'high_close'
+        ? {
+            counterBandShiftPct: -8,
+            lowballThresholdShiftPct: +8,
+            hardeningRepeatShiftPct: -1,
+            hardeningSeverityShiftPct: -2,
+            roundDiscountShiftPct: +6,
+            probingGuardTriggerShiftPct: -8,
+            probingGuardSpanShiftPct: -6,
+            offerInfluenceShiftPct: +6,
+            jitterMinShiftSteps: -1,
+            jitterMaxShiftSteps: +1,
+          }
+        : negotiationProfile === 'high_margin'
+          ? {
+              counterBandShiftPct: +8,
+              lowballThresholdShiftPct: -8,
+              hardeningRepeatShiftPct: +2,
+              hardeningSeverityShiftPct: +3,
+              roundDiscountShiftPct: -6,
+              probingGuardTriggerShiftPct: +10,
+              probingGuardSpanShiftPct: +8,
+              offerInfluenceShiftPct: -6,
+              jitterMinShiftSteps: 0,
+              jitterMaxShiftSteps: 0,
+            }
+          : {
+              counterBandShiftPct: 0,
+              lowballThresholdShiftPct: 0,
+              hardeningRepeatShiftPct: 0,
+              hardeningSeverityShiftPct: 0,
+              roundDiscountShiftPct: 0,
+              probingGuardTriggerShiftPct: 0,
+              probingGuardSpanShiftPct: 0,
+              offerInfluenceShiftPct: 0,
+              jitterMinShiftSteps: 0,
+              jitterMaxShiftSteps: 0,
+            };
+
+    const tunedCounterBandMinPct = clamp(counterBandMinPct + profileTuning.counterBandShiftPct, 40, 90);
+    const tunedCounterBandMaxPct = clamp(counterBandMaxPct + profileTuning.counterBandShiftPct, tunedCounterBandMinPct, 95);
+    const tunedLowballThresholdPct = clamp(lowballThresholdPct + profileTuning.lowballThresholdShiftPct, 20, 95);
+    const tunedLowballHardeningPerRepeat = clamp(lowballHardeningPerRepeat + (profileTuning.hardeningRepeatShiftPct / 100), 0, 0.2);
+    const tunedLowballHardeningSeverity = clamp(lowballHardeningSeverity + (profileTuning.hardeningSeverityShiftPct / 100), 0, 0.25);
+    const tunedRound1MaxDiscountPct = clamp(round1MaxDiscountPct + (profileTuning.roundDiscountShiftPct / 100), 0.01, 0.6);
+    const tunedRound2MaxDiscountPct = clamp(round2MaxDiscountPct + (profileTuning.roundDiscountShiftPct / 100), 0.01, 0.7);
+    const tunedRound3MaxDiscountPct = clamp(round3MaxDiscountPct + (profileTuning.roundDiscountShiftPct / 100), 0.01, 0.8);
+    const tunedRoundNMaxDiscountPct = clamp(roundNMaxDiscountPct + (profileTuning.roundDiscountShiftPct / 100), 0.01, 0.9);
+    const tunedProbingGuardTriggerFloorPct = clamp(probingGuardTriggerFloorPct + (profileTuning.probingGuardTriggerShiftPct / 100), 0.3, 1.2);
+    const tunedProbingGuardSpanPct = clamp(probingGuardSpanPct + (profileTuning.probingGuardSpanShiftPct / 100), 0.05, 0.6);
+    const tunedOfferInfluenceLow = clamp(offerInfluenceLow + (profileTuning.offerInfluenceShiftPct / 100), 0.05, 0.6);
+    const tunedOfferInfluenceNormal = clamp(offerInfluenceNormal + (profileTuning.offerInfluenceShiftPct / 100), 0.05, 0.8);
+    const tunedCounterJitterMinSteps = Math.round(clamp(counterJitterMinSteps + profileTuning.jitterMinShiftSteps, -5, 0));
+    const tunedCounterJitterMaxSteps = Math.round(clamp(counterJitterMaxSteps + profileTuning.jitterMaxShiftSteps, 0, 8));
+
     if (buyerOffer >= normalizedAutoAccept) {
       status = 'accepted';
       finalAmount = buyerOffer;
@@ -563,7 +630,7 @@ export async function POST(req: Request) {
         offerRatio <= 0.70 ? 0.30 : 0;
 
       const repeatedLowballCount = (negotiationHistory || []).filter(
-        (h) => h.buyerOffer > 0 && h.buyerOffer <= listedPrice * (lowballThresholdPct / 100),
+        (h) => h.buyerOffer > 0 && h.buyerOffer <= listedPrice * (tunedLowballThresholdPct / 100),
       ).length;
 
       const roundHardening =
@@ -572,38 +639,38 @@ export async function POST(req: Request) {
         roundNumber === 3 ? 0.015 : 0;
 
       const hardening = clamp(
-        (repeatedLowballCount * lowballHardeningPerRepeat) + (lowballSeverity * lowballHardeningSeverity) + roundHardening,
+        (repeatedLowballCount * tunedLowballHardeningPerRepeat) + (lowballSeverity * tunedLowballHardeningSeverity) + roundHardening,
         0,
         0.16,
       );
 
       // Random target band: by default this is closer to listedPrice than floorPrice.
-      const kMin = clamp((counterBandMinPct / 100) + hardening, 0.55, 0.92);
-      const kMax = clamp((counterBandMaxPct / 100) + hardening, kMin, 0.95);
+      const kMin = clamp((tunedCounterBandMinPct / 100) + hardening, 0.55, 0.92);
+      const kMax = clamp((tunedCounterBandMaxPct / 100) + hardening, kMin, 0.95);
       const k = kMin + (Math.random() * (kMax - kMin));
       const bandAnchor = floorPrice + (span * k);
 
       // Buyer offer influences counter, but cannot drag it aggressively toward floor.
-      const offerInfluence = offerRatio < (lowballThresholdPct / 100) ? offerInfluenceLow : offerInfluenceNormal;
+      const offerInfluence = offerRatio < (tunedLowballThresholdPct / 100) ? tunedOfferInfluenceLow : tunedOfferInfluenceNormal;
       const offerAnchor = listedPrice - ((listedPrice - buyerOffer) * offerInfluence);
 
       // Round-based concession cap to avoid revealing floor too early.
       const maxDiscountPctByRound =
-        roundNumber === 1 ? round1MaxDiscountPct :
-        roundNumber === 2 ? round2MaxDiscountPct :
-        roundNumber === 3 ? round3MaxDiscountPct : roundNMaxDiscountPct;
+        roundNumber === 1 ? tunedRound1MaxDiscountPct :
+        roundNumber === 2 ? tunedRound2MaxDiscountPct :
+        roundNumber === 3 ? tunedRound3MaxDiscountPct : tunedRoundNMaxDiscountPct;
       const roundFloor = listedPrice * (1 - maxDiscountPctByRound);
 
-      const probingGuard = buyerOffer <= floorPrice * probingGuardTriggerFloorPct
-        ? listedPrice - (span * probingGuardSpanPct)
+      const probingGuard = buyerOffer <= floorPrice * tunedProbingGuardTriggerFloorPct
+        ? listedPrice - (span * tunedProbingGuardSpanPct)
         : floorPrice;
 
       let counterAmount = Math.max(bandAnchor, offerAnchor, roundFloor, probingGuard, floorPrice);
 
       // Small controlled jitter prevents exact reverse-engineering by buyers.
-      const jitterRange = Math.max(0, counterJitterMaxSteps - counterJitterMinSteps + 1);
+      const jitterRange = Math.max(0, tunedCounterJitterMaxSteps - tunedCounterJitterMinSteps + 1);
       const jitterSteps = jitterRange > 0
-        ? Math.floor(Math.random() * jitterRange) + counterJitterMinSteps
+        ? Math.floor(Math.random() * jitterRange) + tunedCounterJitterMinSteps
         : 0;
       const jitter = counterJitterStepGs > 0 ? (jitterSteps * counterJitterStepGs) : 0;
       counterAmount = roundToNearestThousand(counterAmount) + jitter;
@@ -670,6 +737,7 @@ export async function POST(req: Request) {
             vendorName,
             quantity,
             botTone,
+            negotiationProfile,
           },
         });
       } catch {
