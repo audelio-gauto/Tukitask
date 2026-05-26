@@ -107,6 +107,88 @@ async function generateGeminiMessage(args: {
   apiKey: string;
   model: string;
 }) {
+  type GeminiFinishReason =
+    | 'FINISH_REASON_UNSPECIFIED'
+    | 'STOP'
+    | 'MAX_TOKENS'
+    | 'SAFETY'
+    | 'RECITATION'
+    | 'OTHER';
+
+  type GeminiResponse = {
+    promptFeedback?: {
+      blockReason?: string;
+    };
+    candidates?: Array<{
+      finishReason?: GeminiFinishReason;
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
+    }>;
+  };
+
+  function cleanModelText(text: string) {
+    return text
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/^"+|"+$/g, '')
+      .trim();
+  }
+
+  function isCompleteSalesMessage(text: string) {
+    const normalized = cleanModelText(text);
+    if (!normalized) return false;
+    if (normalized.length < 28) return false;
+    if (normalized.split(/\s+/).length < 6) return false;
+    if (!/Gs\.?\s?/i.test(normalized)) return false;
+    if (!/[.!?…]$/.test(normalized)) return false;
+    return true;
+  }
+
+  async function callGemini(promptText: string, temperature: number, maxOutputTokens: number) {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          generationConfig: {
+            temperature,
+            maxOutputTokens,
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: promptText }],
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!resp.ok) return null;
+
+    const data = (await resp.json()) as GeminiResponse;
+    if (data?.promptFeedback?.blockReason) return null;
+
+    const candidate = data?.candidates?.[0];
+    if (!candidate) return null;
+
+    // Reject responses that ended for truncation/safety reasons.
+    if (candidate.finishReason && candidate.finishReason !== 'STOP' && candidate.finishReason !== 'FINISH_REASON_UNSPECIFIED') {
+      return null;
+    }
+
+    const raw = (candidate.content?.parts ?? [])
+      .map((part) => part.text?.trim() || '')
+      .filter(Boolean)
+      .join(' ');
+
+    const text = cleanModelText(raw);
+    return isCompleteSalesMessage(text) ? text : null;
+  }
+
   const { apiKey, model } = args;
 
   const savedPerUnit = Math.max(0, args.listedPrice - args.finalAmount);
@@ -190,33 +272,15 @@ async function generateGeminiMessage(args: {
   const timeoutId = setTimeout(() => controller.abort(), 22000);
 
   try {
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        generationConfig: {
-          temperature: 0.75,
-          maxOutputTokens: 180,
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
-    },
-  );
+    const primary = await callGemini(prompt, 0.7, 260);
+    if (primary) return primary;
 
-  if (!resp.ok) return null;
-  const data = await resp.json() as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  return text || null;
+    // Retry once with lower creativity and explicit hard ending instruction.
+    const retryPrompt = `${prompt}\n- Terminá SIEMPRE con punto final y mensaje completo (nunca dejes frases cortadas).`;
+    const retry = await callGemini(retryPrompt, 0.45, 320);
+    if (retry) return retry;
+
+    return null;
   } catch {
     // Timeout (AbortError) u otro error de red → fallback se usa en el caller
     return null;
