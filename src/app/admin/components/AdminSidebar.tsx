@@ -257,6 +257,16 @@ const menuItems: MenuItem[] = [
     ),
   },
   {
+    label: 'Control AI',
+    href: '/admin/control-ai',
+    icon: (
+      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3a3.75 3.75 0 00-3.75 3.75v1.5A3.75 3.75 0 002.25 12v.75A3.75 3.75 0 006 16.5h1.5A3.75 3.75 0 0011.25 20.25h1.5A3.75 3.75 0 0016.5 16.5H18a3.75 3.75 0 003.75-3.75V12A3.75 3.75 0 0018 8.25v-1.5A3.75 3.75 0 0014.25 3h-4.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6M12 9v6" />
+      </svg>
+    ),
+  },
+  {
     label: 'Configuracion',
     groupRootPath: '/admin/configuracion',
     icon: (
