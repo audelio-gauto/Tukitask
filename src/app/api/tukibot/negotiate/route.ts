@@ -55,7 +55,21 @@ type NegotiateResponse = {
   timeoutMessage?: string;
 };
 
+type LimitRow = {
+  id: string;
+  value: number | string;
+  is_active: boolean;
+};
+
 const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function roundToNearestThousand(n: number) {
+  return Math.round(n / 1000) * 1000;
+}
 
 function fallbackMessage(args: {
   status: 'accepted' | 'countered';
@@ -444,6 +458,82 @@ export async function POST(req: Request) {
       }
     }
 
+    const limitIds = [
+      'counter_band_min_pct',
+      'counter_band_max_pct',
+      'lowball_threshold_pct',
+      'lowball_hardening_per_repeat_pct',
+      'lowball_hardening_severity_pct',
+      'round1_max_discount_pct',
+      'round2_max_discount_pct',
+      'round3_max_discount_pct',
+      'roundN_max_discount_pct',
+      'probing_guard_trigger_floor_pct',
+      'probing_guard_span_pct',
+      'offer_influence_low_pct',
+      'offer_influence_normal_pct',
+      'counter_jitter_step_gs',
+      'counter_jitter_min_steps',
+      'counter_jitter_max_steps',
+    ];
+
+    const limitDefaults = {
+      counter_band_min_pct: 58,
+      counter_band_max_pct: 78,
+      lowball_threshold_pct: 60,
+      lowball_hardening_per_repeat_pct: 3,
+      lowball_hardening_severity_pct: 6,
+      round1_max_discount_pct: 12,
+      round2_max_discount_pct: 18,
+      round3_max_discount_pct: 24,
+      roundN_max_discount_pct: 30,
+      probing_guard_trigger_floor_pct: 75,
+      probing_guard_span_pct: 25,
+      offer_influence_low_pct: 22,
+      offer_influence_normal_pct: 34,
+      counter_jitter_step_gs: 1000,
+      counter_jitter_min_steps: -1,
+      counter_jitter_max_steps: 2,
+    } as const;
+
+    let limitRows: LimitRow[] = [];
+    try {
+      const { data } = await sb
+        .from('negotiation_limits')
+        .select('id, value, is_active')
+        .in('id', limitIds);
+      if (data?.length) {
+        limitRows = data as LimitRow[];
+      }
+    } catch {
+      // Non-blocking: keep safe defaults if limits table lookup fails.
+    }
+
+    const limitMap = new Map(limitRows.map((r) => [r.id, r]));
+    const getLimitNumber = (id: keyof typeof limitDefaults) => {
+      const row = limitMap.get(id);
+      if (!row || !row.is_active) return limitDefaults[id];
+      const n = Number(row.value);
+      return Number.isFinite(n) ? n : limitDefaults[id];
+    };
+
+    const counterBandMinPct = clamp(getLimitNumber('counter_band_min_pct'), 40, 90);
+    const counterBandMaxPct = clamp(getLimitNumber('counter_band_max_pct'), counterBandMinPct, 95);
+    const lowballThresholdPct = clamp(getLimitNumber('lowball_threshold_pct'), 20, 95);
+    const lowballHardeningPerRepeat = clamp(getLimitNumber('lowball_hardening_per_repeat_pct') / 100, 0, 0.2);
+    const lowballHardeningSeverity = clamp(getLimitNumber('lowball_hardening_severity_pct') / 100, 0, 0.25);
+    const round1MaxDiscountPct = clamp(getLimitNumber('round1_max_discount_pct') / 100, 0.01, 0.6);
+    const round2MaxDiscountPct = clamp(getLimitNumber('round2_max_discount_pct') / 100, 0.01, 0.7);
+    const round3MaxDiscountPct = clamp(getLimitNumber('round3_max_discount_pct') / 100, 0.01, 0.8);
+    const roundNMaxDiscountPct = clamp(getLimitNumber('roundN_max_discount_pct') / 100, 0.01, 0.9);
+    const probingGuardTriggerFloorPct = clamp(getLimitNumber('probing_guard_trigger_floor_pct') / 100, 0.3, 1.2);
+    const probingGuardSpanPct = clamp(getLimitNumber('probing_guard_span_pct') / 100, 0.05, 0.6);
+    const offerInfluenceLow = clamp(getLimitNumber('offer_influence_low_pct') / 100, 0.05, 0.6);
+    const offerInfluenceNormal = clamp(getLimitNumber('offer_influence_normal_pct') / 100, 0.05, 0.8);
+    const counterJitterStepGs = Math.max(0, Math.round(getLimitNumber('counter_jitter_step_gs')));
+    const counterJitterMinSteps = Math.round(clamp(getLimitNumber('counter_jitter_min_steps'), -5, 0));
+    const counterJitterMaxSteps = Math.round(clamp(getLimitNumber('counter_jitter_max_steps'), 0, 8));
+
     if (buyerOffer >= normalizedAutoAccept) {
       status = 'accepted';
       finalAmount = buyerOffer;
@@ -462,8 +552,68 @@ export async function POST(req: Request) {
       };
     } else {
       status = 'countered';
-      const midpoint = Math.round((buyerOffer + floorPrice) / 2 / 1000) * 1000;
-      const counterAmount = Math.max(floorPrice, midpoint);
+      const span = Math.max(0, listedPrice - floorPrice);
+      const roundNumber = (negotiationHistory?.length || 0) + 1;
+
+      // Detect strategic lowballing and make the bot less predictable/less permissive.
+      const offerRatio = buyerOffer / listedPrice;
+      const lowballSeverity =
+        offerRatio <= 0.40 ? 1.0 :
+        offerRatio <= 0.55 ? 0.65 :
+        offerRatio <= 0.70 ? 0.30 : 0;
+
+      const repeatedLowballCount = (negotiationHistory || []).filter(
+        (h) => h.buyerOffer > 0 && h.buyerOffer <= listedPrice * (lowballThresholdPct / 100),
+      ).length;
+
+      const roundHardening =
+        roundNumber === 1 ? 0.05 :
+        roundNumber === 2 ? 0.03 :
+        roundNumber === 3 ? 0.015 : 0;
+
+      const hardening = clamp(
+        (repeatedLowballCount * lowballHardeningPerRepeat) + (lowballSeverity * lowballHardeningSeverity) + roundHardening,
+        0,
+        0.16,
+      );
+
+      // Random target band: by default this is closer to listedPrice than floorPrice.
+      const kMin = clamp((counterBandMinPct / 100) + hardening, 0.55, 0.92);
+      const kMax = clamp((counterBandMaxPct / 100) + hardening, kMin, 0.95);
+      const k = kMin + (Math.random() * (kMax - kMin));
+      const bandAnchor = floorPrice + (span * k);
+
+      // Buyer offer influences counter, but cannot drag it aggressively toward floor.
+      const offerInfluence = offerRatio < (lowballThresholdPct / 100) ? offerInfluenceLow : offerInfluenceNormal;
+      const offerAnchor = listedPrice - ((listedPrice - buyerOffer) * offerInfluence);
+
+      // Round-based concession cap to avoid revealing floor too early.
+      const maxDiscountPctByRound =
+        roundNumber === 1 ? round1MaxDiscountPct :
+        roundNumber === 2 ? round2MaxDiscountPct :
+        roundNumber === 3 ? round3MaxDiscountPct : roundNMaxDiscountPct;
+      const roundFloor = listedPrice * (1 - maxDiscountPctByRound);
+
+      const probingGuard = buyerOffer <= floorPrice * probingGuardTriggerFloorPct
+        ? listedPrice - (span * probingGuardSpanPct)
+        : floorPrice;
+
+      let counterAmount = Math.max(bandAnchor, offerAnchor, roundFloor, probingGuard, floorPrice);
+
+      // Small controlled jitter prevents exact reverse-engineering by buyers.
+      const jitterRange = Math.max(0, counterJitterMaxSteps - counterJitterMinSteps + 1);
+      const jitterSteps = jitterRange > 0
+        ? Math.floor(Math.random() * jitterRange) + counterJitterMinSteps
+        : 0;
+      const jitter = counterJitterStepGs > 0 ? (jitterSteps * counterJitterStepGs) : 0;
+      counterAmount = roundToNearestThousand(counterAmount) + jitter;
+
+      counterAmount = clamp(counterAmount, floorPrice, listedPrice);
+
+      if (counterAmount <= buyerOffer) {
+        counterAmount = clamp(roundToNearestThousand(buyerOffer + 1000), floorPrice, listedPrice);
+      }
+
       finalAmount = counterAmount;
       const timeoutAt = new Date(Date.now() + botTimeoutMinutes * 60 * 1000).toISOString();
       payload = {
