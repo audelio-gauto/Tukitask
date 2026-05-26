@@ -396,23 +396,26 @@ export async function POST(req: Request) {
       botTimeoutAction === 'pressure_client' ? msgPressureClient :
       msgAutoCounter;
 
-    // Resolve Gemini API key: env var takes priority, fallback to app_settings in DB
+    // Resolve AI runtime settings from app_settings (with env fallback for secret key)
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
     let geminiModel = 'gemini-1.5-flash';
-    if (!geminiApiKey) {
-      try {
-        const { data: appRows } = await sb
-          .from('app_settings')
-          .select('key, value')
-          .in('key', ['gemini_api_key', 'ai_model']);
-        if (appRows) {
-          const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
-          const modelRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_model');
-          if (keyRow?.value) geminiApiKey = keyRow.value;
-          if (modelRow?.value) geminiModel = modelRow.value;
+    let aiNegotiationEnabled = true;
+    try {
+      const { data: appRows } = await sb
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['gemini_api_key', 'ai_model', 'ai_negotiation_enabled']);
+      if (appRows) {
+        const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
+        const modelRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_model');
+        const enabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_negotiation_enabled');
+        if (!geminiApiKey && keyRow?.value) geminiApiKey = keyRow.value;
+        if (modelRow?.value) geminiModel = modelRow.value;
+        if (enabledRow?.value) {
+          aiNegotiationEnabled = enabledRow.value === 'true';
         }
-      } catch { /* silent fallback */ }
-    }
+      }
+    } catch { /* silent fallback */ }
 
     if (!buyerOffer || !listedPrice || !floorPrice) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
@@ -701,7 +704,7 @@ export async function POST(req: Request) {
       };
     }
 
-    const aiMessage = geminiApiKey ? await generateGeminiMessage({
+    const aiMessage = (aiNegotiationEnabled && geminiApiKey) ? await generateGeminiMessage({
       status,
       tone: botTone,
       vendorName,
