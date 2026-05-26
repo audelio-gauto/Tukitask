@@ -313,6 +313,7 @@ async function generateGeminiMessage(args: {
 
 export async function POST(req: Request) {
   try {
+    const requestStartedAt = Date.now();
     const buyer = await getAuthUser(req);
     const body = (await req.json()) as NegotiateRequest;
     const buyerOffer = Number(body?.buyerOffer || 0);
@@ -399,20 +400,35 @@ export async function POST(req: Request) {
     // Resolve AI runtime settings from app_settings (with env fallback for secret key)
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
     let geminiModel = 'gemini-1.5-flash';
+    let aiProvider: 'gemini' | 'openai' = 'gemini';
     let aiNegotiationEnabled = true;
+    let aiGeminiEnabled = true;
+    let aiOpenAiEnabled = true;
     try {
       const { data: appRows } = await sb
         .from('app_settings')
         .select('key, value')
-        .in('key', ['gemini_api_key', 'ai_model', 'ai_negotiation_enabled']);
+        .in('key', ['gemini_api_key', 'ai_model', 'ai_provider', 'ai_negotiation_enabled', 'ai_gemini_enabled', 'ai_openai_enabled']);
       if (appRows) {
         const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
         const modelRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_model');
+        const providerRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_provider');
         const enabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_negotiation_enabled');
+        const geminiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_gemini_enabled');
+        const openAiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_openai_enabled');
         if (!geminiApiKey && keyRow?.value) geminiApiKey = keyRow.value;
         if (modelRow?.value) geminiModel = modelRow.value;
+        if (providerRow?.value === 'openai' || providerRow?.value === 'gemini') {
+          aiProvider = providerRow.value;
+        }
         if (enabledRow?.value) {
           aiNegotiationEnabled = enabledRow.value === 'true';
+        }
+        if (geminiEnabledRow?.value) {
+          aiGeminiEnabled = geminiEnabledRow.value === 'true';
+        }
+        if (openAiEnabledRow?.value) {
+          aiOpenAiEnabled = openAiEnabledRow.value === 'true';
         }
       }
     } catch { /* silent fallback */ }
@@ -704,21 +720,53 @@ export async function POST(req: Request) {
       };
     }
 
-    const aiMessage = (aiNegotiationEnabled && geminiApiKey) ? await generateGeminiMessage({
-      status,
-      tone: botTone,
-      vendorName,
-      productName,
-      buyerOffer,
-      finalAmount,
-      listedPrice: baseListedPrice,
-      quantity,
-      isBulkOrder,
-      stock: productStock,
-      negotiationHistory,
-      apiKey: geminiApiKey,
-      model: geminiModel,
-    }) : null;
+    const providerEnabled =
+      aiProvider === 'gemini' ? aiGeminiEnabled :
+      aiProvider === 'openai' ? aiOpenAiEnabled : false;
+
+    let aiUsed = false;
+    let aiSuccess = false;
+    let aiLatencyMs: number | null = null;
+    let fallbackReason: string | null = null;
+
+    if (!aiNegotiationEnabled) {
+      fallbackReason = 'global_disabled';
+    } else if (!providerEnabled) {
+      fallbackReason = 'provider_disabled';
+    }
+
+    let aiMessage: string | null = null;
+    if (fallbackReason === null) {
+      if (aiProvider === 'gemini') {
+        if (!geminiApiKey) {
+          fallbackReason = 'missing_api_key';
+        } else {
+          aiUsed = true;
+          const aiStartedAt = Date.now();
+          aiMessage = await generateGeminiMessage({
+            status,
+            tone: botTone,
+            vendorName,
+            productName,
+            buyerOffer,
+            finalAmount,
+            listedPrice: baseListedPrice,
+            quantity,
+            isBulkOrder,
+            stock: productStock,
+            negotiationHistory,
+            apiKey: geminiApiKey,
+            model: geminiModel,
+          });
+          aiLatencyMs = Date.now() - aiStartedAt;
+          aiSuccess = Boolean(aiMessage);
+          if (!aiSuccess) fallbackReason = 'generation_failed';
+        }
+      } else {
+        fallbackReason = 'provider_not_implemented';
+      }
+    }
+
     if (aiMessage) payload.message = aiMessage;
 
     if (payload.status === 'countered' && payload.counterAmount && payload.timeoutAt) {
@@ -746,6 +794,35 @@ export async function POST(req: Request) {
       } catch {
         // Best effort queue write.
       }
+    }
+
+    try {
+      await sb.from('ai_negotiation_events').insert({
+        vendor_id: vendorId,
+        buyer_id: buyer?.id ?? null,
+        product_id: productId,
+        provider: aiProvider,
+        model: aiProvider === 'gemini' ? geminiModel : null,
+        ai_enabled: aiNegotiationEnabled,
+        ai_used: aiUsed,
+        ai_success: aiSuccess,
+        fallback_reason: fallbackReason,
+        latency_ms: aiLatencyMs,
+        status,
+        quantity,
+        listed_price: listedPrice,
+        floor_price: floorPrice,
+        buyer_offer: buyerOffer,
+        final_amount: finalAmount,
+        negotiation_profile: negotiationProfile,
+        meta: {
+          timeoutAction: botTimeoutAction,
+          timeoutMinutes: botTimeoutMinutes,
+          requestDurationMs: Date.now() - requestStartedAt,
+        },
+      });
+    } catch {
+      // Telemetry should never block negotiation response.
     }
 
     return NextResponse.json(payload, {
