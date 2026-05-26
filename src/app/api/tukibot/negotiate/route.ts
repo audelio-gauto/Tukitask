@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthUser } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
@@ -97,6 +98,12 @@ async function generateGeminiMessage(args: {
   quantity: number;
   isBulkOrder: boolean;
   stock?: number;
+  negotiationHistory?: Array<{
+    buyerOffer: number;
+    counterAmount: number | null;
+    status: string;
+    createdAt: string;
+  }>;
   apiKey: string;
   model: string;
 }) {
@@ -133,6 +140,17 @@ async function generateGeminiMessage(args: {
   const buyerLine = '';
   // (campo mensaje eliminado — no se envía desde el cliente)
 
+  const history = args.negotiationHistory ?? [];
+  const historyLine = history.length
+    ? [
+        'HISTORIAL RECIENTE DE ESTA MISMA NEGOCIACION (mismo comprador + producto):',
+        ...history.map((h, idx) =>
+          `- Ronda ${idx + 1}: cliente ofrecio ${gs(h.buyerOffer)}${h.counterAmount ? `, vos contraofertaste ${gs(h.counterAmount)}` : ''} (estado: ${h.status})`
+        ),
+        '- Tenelo en cuenta para no repetirte y sostener una postura coherente entre rondas.',
+      ].join('\n')
+    : '';
+
   const prompt = [
     'Sos un vendedor humano paraguayo respondiendo una negociación por chat en un marketplace.',
     'Tu única misión: CERRAR ESTA VENTA con el monto exacto indicado abajo.',
@@ -155,6 +173,7 @@ async function generateGeminiMessage(args: {
     `- Producto: ${args.productName}`,
     qtyLine,
     stockLine,
+    historyLine,
     buyerLine,
     '',
     'FORMATO (obligatorio, no negociable):',
@@ -208,6 +227,7 @@ async function generateGeminiMessage(args: {
 
 export async function POST(req: Request) {
   try {
+    const buyer = await getAuthUser(req);
     const body = (await req.json()) as NegotiateRequest;
     const buyerOffer = Number(body?.buyerOffer || 0);
     const clientListedPrice = Number(body?.listedPrice || 0);
@@ -323,6 +343,41 @@ export async function POST(req: Request) {
     let status: 'accepted' | 'countered';
     let finalAmount: number;
 
+    // Memory window recommendation: 14 days balances context relevance and token usage.
+    const memoryWindowDays = 14;
+    const memorySince = new Date(Date.now() - memoryWindowDays * 24 * 60 * 60 * 1000).toISOString();
+    let negotiationHistory: Array<{
+      buyerOffer: number;
+      counterAmount: number | null;
+      status: string;
+      createdAt: string;
+    }> = [];
+
+    if (buyer?.id && productId) {
+      try {
+        const { data: rounds } = await sb
+          .from('tukibot_negotiations')
+          .select('buyer_offer, counter_amount, status, created_at')
+          .eq('vendor_id', vendorId)
+          .eq('product_id', productId)
+          .eq('buyer_id', buyer.id)
+          .gte('created_at', memorySince)
+          .order('created_at', { ascending: true })
+          .limit(3);
+
+        if (rounds?.length) {
+          negotiationHistory = rounds.map((r) => ({
+            buyerOffer: Number(r.buyer_offer) || 0,
+            counterAmount: r.counter_amount ? Number(r.counter_amount) : null,
+            status: String(r.status || ''),
+            createdAt: String(r.created_at || ''),
+          }));
+        }
+      } catch {
+        // Non-blocking: if memory lookup fails, negotiation should still proceed.
+      }
+    }
+
     if (buyerOffer >= normalizedAutoAccept) {
       status = 'accepted';
       finalAmount = buyerOffer;
@@ -374,6 +429,7 @@ export async function POST(req: Request) {
       quantity,
       isBulkOrder,
       stock: productStock,
+      negotiationHistory,
       apiKey: geminiApiKey,
       model: geminiModel,
     }) : null;
@@ -383,6 +439,8 @@ export async function POST(req: Request) {
       try {
         await sb.from('tukibot_negotiations').insert({
           vendor_id: vendorId,
+          buyer_id: buyer?.id ?? null,
+          buyer_email: buyer?.email ?? null,
           product_id: productId,
           product_name: productName,
           listed_price: listedPrice,

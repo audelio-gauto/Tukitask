@@ -130,9 +130,14 @@ export default function ProductDetailPage() {
     if (!p || !offerNum || offerNum <= 0) return;
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
       const res = await fetch('/api/tukibot/negotiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           vendorId: p.vendor_id,
           productId: p.id,
