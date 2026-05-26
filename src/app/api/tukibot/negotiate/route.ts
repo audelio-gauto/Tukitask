@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthUser } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
@@ -315,6 +316,9 @@ export async function POST(req: Request) {
   try {
     const requestStartedAt = Date.now();
     const buyer = await getAuthUser(req);
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')?.trim()
+      || 'unknown';
     const body = (await req.json()) as NegotiateRequest;
     const buyerOffer = Number(body?.buyerOffer || 0);
     const clientListedPrice = Number(body?.listedPrice || 0);
@@ -729,8 +733,22 @@ export async function POST(req: Request) {
     let aiLatencyMs: number | null = null;
     let fallbackReason: string | null = null;
 
+    // Protect provider quotas from anonymous/bot traffic and bursts.
+    const aiLimiterKey = buyer?.id
+      ? `rl:tukibot:ai:user:${buyer.id}`
+      : `rl:tukibot:ai:ip:${ip}`;
+    const aiLimiterAllowed = await allowRequest(
+      aiLimiterKey,
+      buyer?.id ? 40 : 8,
+      60,
+    );
+
     if (!aiNegotiationEnabled) {
       fallbackReason = 'global_disabled';
+    } else if (!buyer?.id) {
+      fallbackReason = 'unauthenticated';
+    } else if (!aiLimiterAllowed) {
+      fallbackReason = 'rate_limited';
     } else if (!providerEnabled) {
       fallbackReason = 'provider_disabled';
     }
