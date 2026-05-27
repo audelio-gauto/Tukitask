@@ -39,3 +39,7 @@ create policy "admin_all_tukibot_messages"
 
 -- La route de negociación (service role) puede leer sin RLS
 -- El service_role key bypasea RLS automáticamente en Supabase.
+
+-- GRANT explícito requerido desde oct 2026 para que PostgREST exponga la tabla.
+grant select, insert, update, delete on tukibot_messages to authenticated;
+grant select on tukibot_messages to anon;
