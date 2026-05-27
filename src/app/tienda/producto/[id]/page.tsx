@@ -59,6 +59,29 @@ type Product = {
   negotiable: boolean;
 };
 
+const NEGOTIATION_SCENES = [
+  {
+    emoji: '😏',
+    title: 'Dame 3 segundos... le estoy convenciendo',
+    subtitle: 'TukiBot ya puso tu oferta sobre la mesa y está buscando el sí.',
+  },
+  {
+    emoji: '🫣',
+    title: 'El vendedor respiró hondo... creo que acepta',
+    subtitle: 'Estamos empujando el precio sin romper el trato.',
+  },
+  {
+    emoji: '😬',
+    title: 'UFFF casi rechaza',
+    subtitle: 'Tranquilo: TukiBot sigue peleando cada guaraní por vos.',
+  },
+  {
+    emoji: '💸',
+    title: 'TukiBot salvó tu bolsillo otra vez',
+    subtitle: 'Si esto cierra, esta captura vale oro.',
+  },
+] as const;
+
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
@@ -72,6 +95,7 @@ export default function ProductDetailPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting,  setSubmitting]  = useState(false);
   const [analyzing,   setAnalyzing]   = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
   const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
@@ -83,6 +107,20 @@ export default function ProductDetailPage() {
       .single()
       .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
   }, [id]);
+
+  useEffect(() => {
+    if (!analyzing) {
+      setAnalysisStep(0);
+      return;
+    }
+
+    setAnalysisStep(0);
+    const intervalId = window.setInterval(() => {
+      setAnalysisStep((prev) => (prev + 1) % NEGOTIATION_SCENES.length);
+    }, 850);
+
+    return () => window.clearInterval(intervalId);
+  }, [analyzing]);
 
   // Loading
   if (p === undefined) {
@@ -114,6 +152,15 @@ export default function ProductDetailPage() {
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
+  const analysisScene = NEGOTIATION_SCENES[analysisStep % NEGOTIATION_SCENES.length];
+  const analysisProgress = Math.min(96, 26 + (analysisStep * 22));
+  const estimatedSavings = offerNum > 0 ? Math.max(0, (p.price - offerNum) * quantity) : 0;
+  const vendorAlias = p.vendor_email.split('@')[0];
+  const resultUnitAmount = done?.botResponse === 'countered'
+    ? (done.counterAmount ?? done.amount ?? p.price)
+    : (done?.amount ?? p.price);
+  const resultTotalAmount = resultUnitAmount * quantity;
+  const resultSavings = Math.max(0, (p.price - resultUnitAmount) * quantity);
 
   const humanDelay = () => new Promise<void>(r => setTimeout(r, 1200 + Math.random() * 1800));
 
@@ -222,7 +269,7 @@ export default function ProductDetailPage() {
 
   function reset() {
     setDone(null); setMode('idle');
-    setOfferAmount(''); setQuantity(1);
+    setOfferAmount(''); setQuantity(1); setAnalysisStep(0);
   }
 
   return (
@@ -316,56 +363,94 @@ export default function ProductDetailPage() {
                   <div className="tnd-offer-success-title">¡Compra confirmada!</div>
                   <p className="tnd-offer-success-sub">
                     Tu pedido de <strong>{quantity} × {p.name}</strong> fue procesado.<br />
-                    Recibirás confirmación de <strong>{p.vendor_email.split('@')[0]}</strong> pronto.
+                    Recibirás confirmación de <strong>{vendorAlias}</strong> pronto.
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="tnd-offer-success-icon">🤖</div>
-                  <div className="tnd-offer-success-title">¡TukiBot logró este acuerdo para vos!</div>
                   {done.botResponse === 'accepted' ? (
-                    <>
-                      <div className="tnd-offer-success-icon" style={{ fontSize: '2rem', marginTop: 4 }}>✅</div>
-                      <div className="tnd-offer-success-title" style={{ color: '#4ade80' }}>¡Oferta aceptada!</div>
+                    <div className="tnd-offer-success-card tnd-offer-success-card-accepted">
+                      <div className="tnd-offer-success-topline">
+                        <span className="tnd-offer-success-badge">CAPTURA ESTE MOMENTO</span>
+                        <span className="tnd-offer-success-stamp">TukiBot cerró el trato</span>
+                      </div>
+                      <div className="tnd-offer-success-hero">✅</div>
+                      <div className="tnd-offer-success-title" style={{ color: '#4ade80' }}>TukiBot salvó tu bolsillo</div>
+                      <p className="tnd-offer-success-tagline">
+                        {vendorAlias} aceptó tu oferta para <strong>{p.name}</strong>. Si querías una historia para subir, acá está.
+                      </p>
+
+                      <div className="tnd-offer-success-pricegrid">
+                        <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-muted">
+                          <span className="tnd-offer-success-pricebox-label">Precio publicado</span>
+                          <strong>{gs(p.price * quantity)}</strong>
+                          <small>{quantity} × {gs(p.price)}</small>
+                        </div>
+                        <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-highlight">
+                          <span className="tnd-offer-success-pricebox-label">Precio logrado</span>
+                          <strong>{gs(resultTotalAmount)}</strong>
+                          <small>{quantity} × {gs(resultUnitAmount)}</small>
+                        </div>
+                      </div>
+
+                      {resultSavings > 0 && (
+                        <div className="tnd-offer-success-saving">Ahorro conseguido: {gs(resultSavings)}</div>
+                      )}
+
                       {done.botMessage && (
                         <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
                           {done.botMessage}
                         </p>
                       )}
-                      {quantity > 1 ? (
-                        <div style={{ margin: '8px 0' }}>
-                          <div style={{ fontSize: '0.9rem', color: 'var(--tnd-text-muted)' }}>
-                            {quantity} und. × {gs(done.amount!)} c/u
-                          </div>
-                          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#4ade80' }}>
-                            Total: {gs(done.amount! * quantity)}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4ade80', margin: '8px 0' }}>
-                          {gs(done.amount!)}
-                        </div>
-                      )}
+                      <div className="tnd-offer-success-footnote">
+                        Negociado en vivo por TukiBot para {vendorAlias}.
+                      </div>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--tnd-text-muted)', margin: '6px 0 0' }}>
+                        Revisá el pedido y confirmá para reservarlo.
+                      </p>
                       <button className="tnd-btn-buy" style={{ marginTop: 12 }} onClick={handleProceedToPayment}>
                         💳 Proceder al pago
                       </button>
-                    </>
+                    </div>
                   ) : done.botResponse === 'countered' ? (
-                    <>
+                    <div className="tnd-offer-success-card tnd-offer-success-card-countered">
+                      <div className="tnd-offer-success-topline">
+                        <span className="tnd-offer-success-badge">SIGUE VIVO</span>
+                        <span className="tnd-offer-success-stamp">Casi cayó, pero volvió con oferta</span>
+                      </div>
+                      <div className="tnd-offer-success-hero">😮</div>
+                      <div className="tnd-offer-success-title" style={{ color: '#F5C518' }}>No soltó del todo, pero te traje esto</div>
+                      <p className="tnd-offer-success-tagline">
+                        El vendedor no aceptó tu número exacto, pero TukiBot rescató una contraoferta fuerte para <strong>{p.name}</strong>.
+                      </p>
+
+                      <div className="tnd-offer-success-pricegrid">
+                        <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-muted">
+                          <span className="tnd-offer-success-pricebox-label">Tu oferta</span>
+                          <strong>{gs((done.amount ?? offerNum) * quantity)}</strong>
+                          <small>{quantity} × {gs(done.amount ?? offerNum)}</small>
+                        </div>
+                        <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-highlight tnd-offer-success-pricebox-counter">
+                          <span className="tnd-offer-success-pricebox-label">Contraoferta final</span>
+                          <strong>{gs(resultTotalAmount)}</strong>
+                          <small>{quantity} × {gs(resultUnitAmount)}</small>
+                        </div>
+                      </div>
+
                       {done.botMessage && (
                         <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
                           {done.botMessage}
                         </p>
                       )}
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#F5C518', margin: '12px 0 4px' }}>
-                        {gs(done.counterAmount!)}
-                      </div>
                       {done.timeoutMessage && (
                         <p style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted)', marginTop: 4 }}>
                           {done.timeoutMessage.replace('{hora}', formatTimeoutAt(done.timeoutAt) ?? '')}
                         </p>
                       )}
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+                      <div className="tnd-offer-success-footnote">
+                        UFFF, casi rechaza. TukiBot la sostuvo y dejó una chance real de cierre.
+                      </div>
+                      <div className="tnd-offer-success-actions">
                         <button
                           className="tnd-btn-buy"
                           onClick={() => setDone(prev => prev ? {
@@ -373,24 +458,23 @@ export default function ProductDetailPage() {
                             botResponse: 'accepted',
                             amount: prev.counterAmount,
                             botMessage: quantity > 1
-                              ? `¡Trato cerrado! ${quantity} und. × ${gs(prev.counterAmount!)} c/u = ${gs(prev.counterAmount! * quantity)} en total. ¡Procedé al pago para asegurar tu pedido!`
-                              : `¡Trato cerrado! ${gs(prev.counterAmount!)} confirmado. ¡Procedé al pago para asegurar tu pedido!`,
+                              ? `Tu oferta fue aceptada. ${quantity} und. × ${gs(prev.counterAmount!)} c/u = ${gs(prev.counterAmount! * quantity)} en total.`
+                              : `Tu oferta fue aceptada. ${gs(prev.counterAmount!)} confirmado.`,
                           } : null)}
                         >
                           ✅ Aceptar {gs(done.counterAmount!)}
                         </button>
                         <button
-                          className="tnd-offer-submit"
-                          style={{ background: 'transparent', border: '1px solid var(--tnd-border)', color: 'var(--tnd-text-secondary)' }}
+                          className="tnd-offer-secondary"
                           onClick={reset}
                         >
                           Volver y reofertar
                         </button>
                       </div>
-                    </>
+                    </div>
                   ) : (
                     <p className="tnd-offer-success-sub">
-                      Tu oferta de <strong>{gs(done.amount!)}</strong> está siendo evaluada por el TukiBot de <strong>{p.vendor_email.split('@')[0]}</strong>.
+                      Tu oferta de <strong>{gs(done.amount!)}</strong> está siendo evaluada por el TukiBot de <strong>{vendorAlias}</strong>.
                     </p>
                   )}
                 </>
@@ -453,65 +537,115 @@ export default function ProductDetailPage() {
                     </div>
                   </div>
 
-                  <form onSubmit={handleOffer} className="tnd-offer-form" style={{ marginTop: 0 }}>
-                    <div className="tnd-offer-field">
-                      <label htmlFor="offerAmt" className="tnd-offer-label">
-                        Tu oferta <span style={{ color: 'var(--tnd-text-muted)', fontWeight: 400 }}>— precio por unidad</span>
-                      </label>
-                      <input
-                        id="offerAmt"
-                        type="text"
-                        inputMode="numeric"
-                        className="tnd-offer-input"
-                        placeholder={`Hasta ${gs(p.price)}`}
-                        value={offerAmount}
-                        onChange={e => {
-                          const digits = e.target.value.replace(/\D/g, '');
-                          if (!digits) {
-                            setOfferAmount('');
-                            return;
-                          }
-                          const clamped = Math.min(Number(digits), p.price);
-                          setOfferAmount(formatOfferGs(clamped));
-                        }}
-                        required
-                        autoFocus
-                      />
-                    </div>
+                  {analyzing ? (
+                    <div className="tnd-negotiation-live" aria-live="polite">
+                      <div className="tnd-negotiation-live-header">
+                        <span className="tnd-negotiation-live-badge">NEGOCIACION EN VIVO</span>
+                        <span className="tnd-negotiation-live-pulse">•</span>
+                      </div>
 
-                    {/* Deal meter */}
-                    {dealStrength && (
-                      <div className="tnd-deal-meter">
-                        <div className="tnd-deal-meter-track">
-                          <div
-                            className="tnd-deal-meter-fill"
-                            style={{ width: `${Math.min(100, dealStrength.pct)}%`, background: dealStrength.color }}
-                          />
+                      <div className="tnd-negotiation-live-stage">
+                        <div className="tnd-negotiation-live-bot">🤖</div>
+                        <div className="tnd-negotiation-live-bubble">
+                          <div className="tnd-negotiation-live-emoji">{analysisScene.emoji}</div>
+                          <div className="tnd-negotiation-live-title">{analysisScene.title}</div>
+                          <p className="tnd-negotiation-live-subtitle">{analysisScene.subtitle}</p>
                         </div>
-                        <div className="tnd-deal-meter-labels">
-                          <span className="tnd-deal-meter-status" style={{ color: dealStrength.color }}>
-                            {dealStrength.label}
+                      </div>
+
+                      <div className="tnd-negotiation-live-meter">
+                        <div className="tnd-negotiation-live-meter-top">
+                          <span>Convenciendo al vendedor</span>
+                          <span>{analysisProgress}%</span>
+                        </div>
+                        <div className="tnd-negotiation-live-track">
+                          <div className="tnd-negotiation-live-fill" style={{ width: `${analysisProgress}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="tnd-negotiation-live-chips">
+                        <span className="tnd-negotiation-live-chip">Tu oferta: {gs(offerNum)} c/u</span>
+                        <span className="tnd-negotiation-live-chip">Cantidad: {quantity} und.</span>
+                        {estimatedSavings > 0 && (
+                          <span className="tnd-negotiation-live-chip tnd-negotiation-live-chip-accent">
+                            Ahorro potencial: {gs(estimatedSavings)}
                           </span>
-                          <span className="tnd-deal-meter-sub">{dealStrength.sub}</span>
+                        )}
+                      </div>
+
+                      <div className="tnd-negotiation-live-footer">
+                        <span className="tnd-negotiation-live-footnote">Modo captura: si sale bien, esta historia merece screenshot.</span>
+                        <div className="tnd-negotiation-live-dots" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
                         </div>
                       </div>
-                    )}
-
-                    {offerNum > 0 && (
-                      <div className="tnd-offer-summary">
-                        Total estimado: <strong>{gs(offerNum * quantity)}</strong>
-                        &nbsp;({quantity} × {gs(offerNum)})
+                    </div>
+                  ) : (
+                    <form onSubmit={handleOffer} className="tnd-offer-form" style={{ marginTop: 0 }}>
+                      <div className="tnd-offer-field">
+                        <label htmlFor="offerAmt" className="tnd-offer-label">
+                          Tu oferta por unidad
+                        </label>
+                        <input
+                          id="offerAmt"
+                          type="text"
+                          inputMode="numeric"
+                          className="tnd-offer-input"
+                          placeholder={`Hasta ${gs(p.price)}`}
+                          value={offerAmount}
+                          onChange={e => {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            if (!digits) {
+                              setOfferAmount('');
+                              return;
+                            }
+                            const clamped = Math.min(Number(digits), p.price);
+                            setOfferAmount(formatOfferGs(clamped));
+                          }}
+                          required
+                          autoFocus
+                        />
+                        <p style={{ margin: '6px 0 0', fontSize: '0.74rem', color: 'var(--tnd-text-muted)' }}>
+                          Escribí solo números. Ejemplo: 25000
+                        </p>
                       </div>
-                    )}
 
-                    <button
-                      type="submit"
-                      className="tnd-offer-submit"
-                      disabled={submitting || offerNum <= 0}
-                    >
-                      {analyzing ? '💬 Analizando tu oferta...' : submitting ? '⏳ Enviando...' : '🤖 Enviar oferta al TukiBot'}
-                    </button>
-                  </form>
+                      {/* Deal meter */}
+                      {dealStrength && (
+                        <div className="tnd-deal-meter">
+                          <div className="tnd-deal-meter-track">
+                            <div
+                              className="tnd-deal-meter-fill"
+                              style={{ width: `${Math.min(100, dealStrength.pct)}%`, background: dealStrength.color }}
+                            />
+                          </div>
+                          <div className="tnd-deal-meter-labels">
+                            <span className="tnd-deal-meter-status" style={{ color: dealStrength.color }}>
+                              {dealStrength.label}
+                            </span>
+                            <span className="tnd-deal-meter-sub">{dealStrength.sub}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {offerNum > 0 && (
+                        <div className="tnd-offer-summary">
+                          Total estimado: <strong>{gs(offerNum * quantity)}</strong>
+                          &nbsp;({quantity} × {gs(offerNum)})
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="tnd-offer-submit"
+                        disabled={submitting || offerNum <= 0}
+                      >
+                        {submitting ? '⏳ Enviando...' : '🤝 Enviar oferta'}
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
             </>
