@@ -5,30 +5,55 @@ import { allowRequest } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
-function parseProviderError(provider: 'gemini' | 'openai' | 'openrouter', status: number, msg: string) {
+function parseProviderError(
+  provider: 'gemini' | 'openai' | 'openrouter',
+  status: number,
+  msg: string,
+  errorCode?: string,
+  errorType?: string,
+) {
   const lower = msg.toLowerCase();
+
+  // OpenRouter: no credits purchased
   const isOpenRouterCredits = provider === 'openrouter' && (
     lower.includes('insufficient credits') ||
     lower.includes('never purchased credits') ||
-    lower.includes('purchase more') ||
-    lower.includes('credits') && lower.includes('openrouter')
+    lower.includes('purchase more')
   );
-  const isQuota =
-    status === 429 ||
-    lower.includes('quota exceeded') ||
-    lower.includes('rate limit') ||
-    lower.includes('resource_exhausted');
-
   if (isOpenRouterCredits) {
     return {
       ok: false,
       code: 'openrouter_credits_required',
       provider,
       error: 'OpenRouter no tiene créditos disponibles en esta cuenta u organización.',
-      recommendation: 'Entrá a OpenRouter, cargá créditos en la cuenta correcta y volvé a probar la conexión.',
+      recommendation: 'Entrá a openrouter.ai/settings/credits, cargá créditos y volvé a probar.',
       details: msg,
     };
   }
+
+  // OpenAI: free-tier quota exhausted (insufficient_quota)
+  const isOpenAiBilling =
+    provider === 'openai' &&
+    (errorCode === 'insufficient_quota' ||
+      errorType === 'insufficient_quota' ||
+      lower.includes('exceeded your current quota') ||
+      lower.includes('insufficient_quota'));
+  if (isOpenAiBilling) {
+    return {
+      ok: false,
+      code: 'openai_billing_required',
+      provider,
+      error: 'La clave de OpenAI no tiene créditos disponibles.',
+      recommendation: 'OpenAI ya no incluye créditos gratuitos. Activá un plan de pago en platform.openai.com/settings/billing para poder usar esta clave.',
+      details: msg,
+    };
+  }
+
+  const isQuota =
+    status === 429 ||
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit') ||
+    lower.includes('resource_exhausted');
 
   if (!isQuota) {
     return {
@@ -43,10 +68,10 @@ function parseProviderError(provider: 'gemini' | 'openai' | 'openrouter', status
   const retryAfterSeconds = retryMatch ? Math.ceil(Number(retryMatch[1])) : null;
 
   const recommendation = provider === 'gemini'
-    ? 'Superaste la cuota/rate-limit de Gemini. Probá esperar el tiempo sugerido, cambiar temporalmente a OpenAI o usar un modelo con más disponibilidad.'
+    ? 'Superaste la cuota/rate-limit de Gemini. Probá esperar unos minutos o cambiá a otro proveedor.'
     : provider === 'openai'
-      ? 'Superaste la cuota/rate-limit de OpenAI. Probá esperar el tiempo sugerido o revisar límites/billing del proveedor.'
-      : 'Superaste la cuota/rate-limit de OpenRouter. Probá esperar el tiempo sugerido o cambiar a otro modelo/proveedor temporalmente.';
+      ? 'Superaste el rate-limit de OpenAI. Esperá unos segundos y volvé a probar.'
+      : 'Superaste la cuota/rate-limit de OpenRouter. Probá esperar o cambiá de modelo.';
 
   return {
     ok: false,
@@ -54,7 +79,7 @@ function parseProviderError(provider: 'gemini' | 'openai' | 'openrouter', status
     provider,
     retryAfterSeconds,
     recommendation,
-    error: `${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'OpenRouter'} alcanzó su cuota/límite temporal.`,
+    error: `${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'OpenRouter'} alcanzó su límite de tasa temporal.`,
     details: msg,
   };
 }
@@ -131,9 +156,11 @@ export async function POST(req: Request) {
         }),
       });
       if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        const msg = (errBody as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
-        return NextResponse.json(parseProviderError('openai', resp.status, msg));
+        const errBody = await resp.json().catch(() => ({})) as { error?: { message?: string; code?: string; type?: string } };
+        const msg = errBody?.error?.message || `HTTP ${resp.status}`;
+        const code = errBody?.error?.code;
+        const type = errBody?.error?.type;
+        return NextResponse.json(parseProviderError('openai', resp.status, msg, code, type));
       }
       const data = await resp.json() as {
         choices?: Array<{ message?: { content?: string } }>;

@@ -153,7 +153,9 @@ export default function ApiKeysPage() {
       if (data.ok) {
         setTestResult({ ok: true, msg: `✅ Conexión exitosa. Modelo: ${data.model}. Respuesta: “${data.reply}”` });
       } else {
-        setTestResult({ ok: false, msg: `❌ ${data.error || 'Error desconocido'}` });
+        const parts = [`❌ ${data.error || 'Error desconocido'}`];
+        if (data.recommendation) parts.push(`\n💡 ${data.recommendation}`);
+        setTestResult({ ok: false, msg: parts.join('') });
       }
     } catch (err) {
       setTestResult({ ok: false, msg: `❌ ${String(err)}` });
@@ -349,6 +351,12 @@ export default function ApiKeysPage() {
               </a>
             </div>
             <p className="text-xs text-gray-400 mb-2">Puedes obtener tus claves API en tu Cuenta OpenAI.</p>
+            <div className="mb-2 rounded-md border border-amber-100 bg-amber-50 p-2 text-xs text-amber-800">
+              <span className="font-semibold">⚠️ OpenAI ya no tiene tier gratuito.</span>{' '}
+              Las claves nuevas requieren billing activo en{' '}
+              <a href="https://platform.openai.com/settings/billing" target="_blank" rel="noopener noreferrer" className="underline">platform.openai.com/settings/billing</a>.
+              Sin saldo la prueba fallará con error de cuota.
+            </div>
             <input
               type="password"
               autoComplete="new-password"
