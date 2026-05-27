@@ -26,19 +26,6 @@ function normalizeTone(input: unknown): BotTone {
   return 'amigable';
 }
 
-function normalizeTimeoutAction(input: unknown): TimeoutAction {
-  if (input === 'auto_counter' || input === 'auto_accept' || input === 'pressure_client') {
-    return input;
-  }
-  return 'auto_counter';
-}
-
-function normalizeTimeoutMinutes(input: unknown): number {
-  const n = Number(input);
-  if ([1, 5, 10, 15, 30, 60].includes(n)) return n;
-  return 15;
-}
-
 function normalizeNegotiationProfile(input: unknown): NegotiationProfile {
   if (input === 'balanced' || input === 'high_close' || input === 'high_margin') {
     return input;
@@ -471,37 +458,25 @@ export async function POST(req: Request) {
 
     // Fetch vendor bot config from DB — never trust client-sent tone/timeout values
     let botTone = normalizeTone(undefined);
-    let botTimeoutMinutes = normalizeTimeoutMinutes(undefined);
-    let botTimeoutAction = normalizeTimeoutAction(undefined);
+    const botTimeoutMinutes = 15;
+    const botTimeoutAction: TimeoutAction = 'auto_counter';
     let negotiationProfile: NegotiationProfile = 'balanced';
     let autoAcceptFromVendor: number | null = null;
-    let msgAutoCounter    = 'el precio sube de vuelta';
-    let msgAutoAccept     = 'el precio vuelve al normal';
-    let msgPressureClient = 'el precio sube de vuelta';
+    const timeoutMessage = 'el precio sube de vuelta';
     try {
       const { data: vendorCfg } = await sb
         .from('vendor_bot_config')
-        .select('bot_tone, timeout_minutes, timeout_action, negotiation_profile, auto_accept_above, bot_enabled, msg_auto_counter, msg_auto_accept, msg_pressure_client')
+        .select('bot_tone, negotiation_profile, auto_accept_above, bot_enabled')
         .eq('vendor_id', vendorId)
         .maybeSingle();
       if (vendorCfg) {
         botTone           = normalizeTone(vendorCfg.bot_tone);
-        botTimeoutMinutes = normalizeTimeoutMinutes(vendorCfg.timeout_minutes);
-        botTimeoutAction  = normalizeTimeoutAction(vendorCfg.timeout_action);
         negotiationProfile = normalizeNegotiationProfile(vendorCfg.negotiation_profile);
         if (vendorCfg.auto_accept_above && vendorCfg.auto_accept_above > 0) {
           autoAcceptFromVendor = vendorCfg.auto_accept_above;
         }
-        if (vendorCfg.msg_auto_counter)    msgAutoCounter    = vendorCfg.msg_auto_counter;
-        if (vendorCfg.msg_auto_accept)     msgAutoAccept     = vendorCfg.msg_auto_accept;
-        if (vendorCfg.msg_pressure_client) msgPressureClient = vendorCfg.msg_pressure_client;
       }
     } catch { /* use defaults */ }
-
-    const timeoutMessage =
-      botTimeoutAction === 'auto_accept'     ? msgAutoAccept :
-      botTimeoutAction === 'pressure_client' ? msgPressureClient :
-      msgAutoCounter;
 
     // Resolve AI runtime settings from app_settings (with env fallback for secret key)
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';

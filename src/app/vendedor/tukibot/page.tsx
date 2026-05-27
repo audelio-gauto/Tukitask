@@ -3,19 +3,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 type Tone          = 'informal' | 'formal' | 'agresivo' | 'amigable';
-type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
 interface BotConfig {
   botEnabled:           boolean;
   botTone:              Tone;
-  botTimeoutMinutes:    number;
-  botTimeoutAction:     TimeoutAction;
   negotiationProfile:   NegotiationProfile;
   autoAcceptAbove:      number;
-  msgAutoCounter:       string;
-  msgAutoAccept:        string;
-  msgPressureClient:    string;
 }
 
 
@@ -73,13 +67,8 @@ export default function TukiBotPage() {
   const [cfg, setCfg] = useState<BotConfig>({
     botEnabled:           true,
     botTone:              'informal',
-    botTimeoutMinutes:    15,
-    botTimeoutAction:     'auto_counter',
     negotiationProfile:   'balanced',
     autoAcceptAbove:      90,
-    msgAutoCounter:       '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.',
-    msgAutoAccept:        'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.',
-    msgPressureClient:    '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.',
   });
 
   useEffect(() => {
@@ -259,89 +248,13 @@ export default function TukiBotPage() {
                 </div>
               </div>
             </div>
-
-            {/* Timeout config */}
-            <div style={{ padding: 18, background: 'var(--vnd-surface-2)', borderRadius: 12, border: '1px solid var(--vnd-border)', marginBottom: 22 }}>
-              <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 14, fontSize: '0.875rem' }}>
-                ⏱ Si no respondés en…
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-                {[1, 5, 10, 15, 30, 60].map(min => (
-                  <button key={min} onClick={() => update('botTimeoutMinutes', min)}
-                    style={{
-                      padding: '7px 16px', borderRadius: 8, border: '1px solid',
-                      borderColor: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-border)',
-                      background: cfg.botTimeoutMinutes === min ? 'rgba(245,197,24,0.12)' : 'transparent',
-                      color: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-text-muted)',
-                      fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
-                    }}
-                  >
-                    {min} min
-                  </button>
-                ))}
-              </div>
-              <p style={{ fontWeight: 700, color: 'var(--vnd-text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
-                El robot debe…
-              </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {[
-                  { key: 'auto_counter',    label: '🔁 Contraofertar automáticamente' },
-                  { key: 'auto_accept',     label: '✅ Aceptar la oferta'             },
-                  { key: 'pressure_client', label: '📢 Presionar al cliente'          },
-                ].map(opt => (
-                  <button key={opt.key}
-                    onClick={() => update('botTimeoutAction', opt.key as TimeoutAction)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 8, border: '1px solid',
-                      borderColor: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-border)',
-                      background: cfg.botTimeoutAction === opt.key ? 'rgba(245,197,24,0.12)' : 'transparent',
-                      color: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-text-secondary)',
-                      fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Mensajes personalizados por acción */}
-              <p style={{ fontWeight: 700, color: 'var(--vnd-text-secondary)', fontSize: '0.82rem', margin: '18px 0 8px' }}>
-                💬 Mensaje que ve el comprador si no responde a tiempo
-              </p>
-              <p style={{ fontSize: '0.76rem', color: 'var(--vnd-text-secondary)', marginBottom: 10, opacity: 0.7 }}>
-                Usá <strong style={{ color: '#F5C518' }}>{'{hora}'}</strong> donde querés que aparezca la hora límite. Ej: &ldquo;Oferta hasta las <strong>{'{hora}'}</strong>.&rdquo;
-              </p>
-              {[
-                { key: 'msgAutoCounter' as const,    label: '🔁 Al contraofertar automáticamente' },
-                { key: 'msgAutoAccept' as const,     label: '✅ Al aceptar la oferta'             },
-                { key: 'msgPressureClient' as const, label: '📢 Al presionar al cliente'          },
-              ].map(({ key, label }) => (
-                <div key={key} style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: '0.78rem', color: 'var(--vnd-text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
-                  <textarea
-                    maxLength={160}
-                    value={cfg[key]}
-                    onChange={e => update(key, e.target.value)}
-                    rows={2}
-                    style={{
-                      width: '100%', fontSize: '0.82rem', resize: 'vertical',
-                      background: 'var(--vnd-input-bg, rgba(255,255,255,0.05))',
-                      border: '1px solid var(--vnd-border)',
-                      borderRadius: 8, padding: '8px 10px',
-                      color: 'var(--vnd-text)', outline: 'none', boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-
           </>
         )}
       </Section>
 
       {/* Save bottom */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
-        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', botTimeoutMinutes: 15, botTimeoutAction: 'auto_counter', negotiationProfile: 'balanced', autoAcceptAbove: 90, msgAutoCounter: '🔥 Oferta exclusiva hasta las {hora}. Aprovechá este precio especial antes de que vuelva a subir.', msgAutoAccept: 'Tu oferta fue aprobada por tiempo limitado hasta las {hora}. Confirmá ahora y asegurá este precio antes de que regrese al valor normal.', msgPressureClient: '⚡ Última oportunidad hasta las {hora}. Aprovechá el descuento antes de que el precio vuelva a aumentar.' })}>
+        <button className="vnd-btn vnd-btn-secondary" onClick={() => setCfg({ botEnabled: true, botTone: 'informal', negotiationProfile: 'balanced', autoAcceptAbove: 90 })}>
           Restaurar valores
         </button>
         <button className="vnd-btn vnd-btn-primary" onClick={handleSave} disabled={saving}>

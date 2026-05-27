@@ -1,10 +1,6 @@
 'use client';
 import { useState } from 'react';
 
-type Tone = 'informal' | 'formal' | 'agresivo' | 'amigable';
-type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
-type CounterFormula = 'midpoint' | 'percentage' | 'fixed';
-
 interface StoreConfig {
   storeName: string;
   storeDescription: string;
@@ -16,27 +12,12 @@ interface StoreConfig {
   openFrom: string;
   openTo: string;
   openDays: string[];
-  botEnabled: boolean;
-  botTone: Tone;
-  botTimeoutMinutes: number;
-  botTimeoutAction: TimeoutAction;
-  botCounterFormula: CounterFormula;
-  botCounterPercent: number;
-  autoAcceptAbove: number;
-  autoRejectBelow: number;
   freeDeliveryAbove: number;
   commissionToDriver: boolean;
 }
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const DAYS_FULL = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-
-const TONES: { key: Tone; label: string; emoji: string; desc: string }[] = [
-  { key: 'informal',  label: 'Informal',  emoji: '😎', desc: '"Che, te lo dejo en $18..."' },
-  { key: 'formal',    label: 'Formal',    emoji: '👔', desc: '"Estimado, le ofrecemos..."' },
-  { key: 'agresivo',  label: 'Agresivo',  emoji: '🔥', desc: '"¡Última oportunidad!"'     },
-  { key: 'amigable',  label: 'Amigable',  emoji: '😊', desc: '"Hola! Gracias por..."'     },
-];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -66,14 +47,6 @@ export default function ConfiguracionPage() {
     openFrom:            '08:00',
     openTo:              '20:00',
     openDays:            ['lunes','martes','miercoles','jueves','viernes'],
-    botEnabled:          true,
-    botTone:             'informal',
-    botTimeoutMinutes:   15,
-    botTimeoutAction:    'auto_counter',
-    botCounterFormula:   'midpoint',
-    botCounterPercent:   10,
-    autoAcceptAbove:     90,
-    autoRejectBelow:     60,
     freeDeliveryAbove:   0,
     commissionToDriver:  true,
   });
@@ -253,169 +226,6 @@ export default function ConfiguracionPage() {
           </a>
         </div>
       </Section>
-      {/* ── PLACEHOLDER — old TukiBot section removed ──────── */}
-      {false && <Section title="🤖 Robot Negociador (TukiBot) — REMOVED">
-        {/* Enable toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: cfg.botEnabled ? 'rgba(245,197,24,0.06)' : 'var(--vnd-surface-2)', borderRadius: 12, border: `1px solid ${cfg.botEnabled ? 'rgba(245,197,24,0.20)' : 'var(--vnd-border)'}`, marginBottom: 22, transition: 'all 0.2s' }}>
-          <div>
-            <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', fontSize: '0.9rem' }}>
-              {cfg.botEnabled ? '🟢 Robot activo' : '⚫ Robot inactivo'}
-            </p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginTop: 2 }}>
-              {cfg.botEnabled ? 'TukiBot responde automáticamente mientras dormís' : 'Activá el robot para negociar 24/7'}
-            </p>
-          </div>
-          <button
-            onClick={() => update('botEnabled', !cfg.botEnabled)}
-            style={{
-              width: 48, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer',
-              background: cfg.botEnabled ? '#F5C518' : 'var(--vnd-border)',
-              position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-            }}
-          >
-            <span style={{
-              position: 'absolute', top: 3, left: cfg.botEnabled ? 26 : 3,
-              width: 20, height: 20, borderRadius: '50%', background: cfg.botEnabled ? '#0b1220' : 'var(--vnd-text-muted)',
-              transition: 'left 0.2s', display: 'block',
-            }} />
-          </button>
-        </div>
-
-        {cfg.botEnabled && (
-          <>
-            {/* Tone picker */}
-            <div style={{ marginBottom: 22 }}>
-              <p className="vnd-label" style={{ marginBottom: 10 }}>Personalidad del robot</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                {TONES.map(t => (
-                  <button key={t.key} onClick={() => update('botTone', t.key)}
-                    style={{
-                      padding: '12px 10px', borderRadius: 12, border: '1px solid',
-                      borderColor: cfg.botTone === t.key ? '#F5C518' : 'var(--vnd-border)',
-                      background: cfg.botTone === t.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
-                      cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
-                    }}>
-                    <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{t.emoji}</div>
-                    <div style={{ fontWeight: 800, fontSize: '0.8rem', color: cfg.botTone === t.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>{t.label}</div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--vnd-text-muted)', marginTop: 3 }}>{t.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price thresholds */}
-            <div className="vnd-form-grid" style={{ marginBottom: 22 }}>
-              <div className="vnd-field">
-                <label className="vnd-label">
-                  ✅ Auto-aceptar si ofrecen ≥ (% del precio publicado)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="range" min={50} max={100} value={cfg.autoAcceptAbove}
-                    onChange={e => update('autoAcceptAbove', +e.target.value)}
-                    style={{ flex: 1, accentColor: '#4ade80' }}
-                  />
-                  <span style={{ fontWeight: 800, color: '#4ade80', fontSize: '1rem', width: 40, textAlign: 'right' }}>
-                    {cfg.autoAcceptAbove}%
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
-                  Si publiqués a ₲100.000 → acepta desde ₲{(100000 * cfg.autoAcceptAbove / 100).toLocaleString('es-PY')}
-                </p>
-              </div>
-
-              <div className="vnd-field">
-                <label className="vnd-label">
-                  ❌ Auto-rechazar si ofrecen &lt; (% del precio publicado)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="range" min={0} max={80} value={cfg.autoRejectBelow}
-                    onChange={e => update('autoRejectBelow', +e.target.value)}
-                    style={{ flex: 1, accentColor: '#f87171' }}
-                  />
-                  <span style={{ fontWeight: 800, color: '#f87171', fontSize: '1rem', width: 40, textAlign: 'right' }}>
-                    {cfg.autoRejectBelow}%
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
-                  Si publiqués a ₲100.000 → rechaza menos de ₲{(100000 * cfg.autoRejectBelow / 100).toLocaleString('es-PY')}
-                </p>
-              </div>
-            </div>
-
-            {/* Timeout config */}
-            <div style={{ padding: 18, background: 'var(--vnd-surface-2)', borderRadius: 12, border: '1px solid var(--vnd-border)', marginBottom: 22 }}>
-              <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 14, fontSize: '0.875rem' }}>
-                ⏱ Si no respondés en…
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-                {[5,10,15,30,60].map(min => (
-                  <button key={min} onClick={() => update('botTimeoutMinutes', min)}
-                    style={{
-                      padding: '7px 16px', borderRadius: 8, border: '1px solid',
-                      borderColor: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-border)',
-                      background: cfg.botTimeoutMinutes === min ? 'rgba(245,197,24,0.12)' : 'transparent',
-                      color: cfg.botTimeoutMinutes === min ? '#F5C518' : 'var(--vnd-text-muted)',
-                      fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
-                    }}
-                  >
-                    {min} min
-                  </button>
-                ))}
-              </div>
-              <p style={{ fontWeight: 700, color: 'var(--vnd-text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
-                El robot debe…
-              </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {[
-                  { key: 'auto_counter',    label: '🔁 Contraofertar automáticamente' },
-                  { key: 'auto_accept',     label: '✅ Aceptar la oferta'             },
-                  { key: 'pressure_client', label: '📢 Presionar al cliente'          },
-                ].map(opt => (
-                  <button key={opt.key}
-                    onClick={() => update('botTimeoutAction', opt.key as TimeoutAction)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 8, border: '1px solid',
-                      borderColor: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-border)',
-                      background: cfg.botTimeoutAction === opt.key ? 'rgba(245,197,24,0.12)' : 'transparent',
-                      color: cfg.botTimeoutAction === opt.key ? '#F5C518' : 'var(--vnd-text-secondary)',
-                      fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.15s',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Counter formula */}
-            {cfg.botTimeoutAction === 'auto_counter' && (
-              <div style={{ padding: 16, background: 'rgba(245,197,24,0.04)', borderRadius: 12, border: '1px solid rgba(245,197,24,0.15)' }}>
-                <p style={{ fontWeight: 800, color: 'var(--vnd-text-primary)', marginBottom: 12, fontSize: '0.875rem' }}>
-                  🧮 Fórmula de contraoferta automática
-                </p>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {[
-                    { key: 'midpoint',   label: 'Punto medio', desc: '(Publicado + Oferta) ÷ 2' },
-                    { key: 'percentage', label: 'Porcentaje',  desc: `Bajar ${cfg.botCounterPercent}% del publicado` },
-                    { key: 'fixed',      label: 'Precio fijo', desc: 'Precio mínimo configurado' },
-                  ].map(f => (
-                    <button key={f.key} onClick={() => update('botCounterFormula', f.key as CounterFormula)}
-                      style={{
-                        padding: '10px 16px', borderRadius: 10, border: '1px solid', flex: 1, textAlign: 'left',
-                        borderColor: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-border)',
-                        background: cfg.botCounterFormula === f.key ? 'rgba(245,197,24,0.10)' : 'var(--vnd-surface-2)',
-                        cursor: 'pointer', transition: 'all 0.15s',
-                      }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.82rem', color: cfg.botCounterFormula === f.key ? '#F5C518' : 'var(--vnd-text-primary)' }}>{f.label}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--vnd-text-muted)', marginTop: 3 }}>{f.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </Section>}
 
       {/* ── Delivery config ───────────────────────────────── */}
       <Section title="🚗 Configuración de Delivery">
