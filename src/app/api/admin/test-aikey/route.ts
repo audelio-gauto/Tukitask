@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { getAuthAdmin, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
-function parseProviderError(provider: 'gemini' | 'openai', status: number, msg: string) {
+function parseProviderError(provider: 'gemini' | 'openai' | 'openrouter', status: number, msg: string) {
   const lower = msg.toLowerCase();
   const isQuota =
     status === 429 ||
@@ -17,7 +18,7 @@ function parseProviderError(provider: 'gemini' | 'openai', status: number, msg: 
       ok: false,
       code: 'provider_error',
       provider,
-      error: `${provider === 'gemini' ? 'Gemini' : 'OpenAI'} respondió con error: ${msg}`,
+      error: `${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'OpenRouter'} respondió con error: ${msg}`,
     };
   }
 
@@ -26,7 +27,9 @@ function parseProviderError(provider: 'gemini' | 'openai', status: number, msg: 
 
   const recommendation = provider === 'gemini'
     ? 'Superaste la cuota/rate-limit de Gemini. Probá esperar el tiempo sugerido, cambiar temporalmente a OpenAI o usar un modelo con más disponibilidad.'
-    : 'Superaste la cuota/rate-limit de OpenAI. Probá esperar el tiempo sugerido o revisar límites/billing del proveedor.';
+    : provider === 'openai'
+      ? 'Superaste la cuota/rate-limit de OpenAI. Probá esperar el tiempo sugerido o revisar límites/billing del proveedor.'
+      : 'Superaste la cuota/rate-limit de OpenRouter. Probá esperar el tiempo sugerido o cambiar a otro modelo/proveedor temporalmente.';
 
   return {
     ok: false,
@@ -34,7 +37,7 @@ function parseProviderError(provider: 'gemini' | 'openai', status: number, msg: 
     provider,
     retryAfterSeconds,
     recommendation,
-    error: `${provider === 'gemini' ? 'Gemini' : 'OpenAI'} alcanzó su cuota/límite temporal.`,
+    error: `${provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'OpenRouter'} alcanzó su cuota/límite temporal.`,
     details: msg,
   };
 }
@@ -47,11 +50,21 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const provider: string = body?.provider || 'gemini';
 
+    const testLimiterKey = `rl:admin:test-aikey:${admin.id}:${provider}`;
+    const testAllowed = await allowRequest(testLimiterKey, 1, 15);
+    if (!testAllowed) {
+      return NextResponse.json({
+        ok: false,
+        code: 'test_cooldown',
+        error: 'Esperá 15 segundos antes de volver a probar la conexión.',
+      });
+    }
+
     // Read keys and model from app_settings
     const { data: appRows } = await supabaseServer
       .from('app_settings')
       .select('key, value')
-      .in('key', ['gemini_api_key', 'openai_api_key', 'ai_model']);
+      .in('key', ['gemini_api_key', 'openai_api_key', 'openrouter_api_key', 'ai_model', 'openrouter_model']);
 
     const getVal = (k: string) =>
       (appRows || []).find((r: { key: string; value: string }) => r.key === k)?.value || '';
@@ -104,6 +117,33 @@ export async function POST(req: Request) {
         const errBody = await resp.json().catch(() => ({}));
         const msg = (errBody as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
         return NextResponse.json(parseProviderError('openai', resp.status, msg));
+      }
+      const data = await resp.json() as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = data?.choices?.[0]?.message?.content?.trim() || '(sin respuesta)';
+      return NextResponse.json({ ok: true, model, reply: text });
+    }
+
+    if (provider === 'openrouter') {
+      const apiKey = process.env.OPENROUTER_API_KEY || getVal('openrouter_api_key');
+      if (!apiKey) {
+        return NextResponse.json({ ok: false, error: 'No hay API Key de OpenRouter configurada.' });
+      }
+      const model = getVal('openrouter_model') || getVal('ai_model') || 'deepseek/deepseek-chat';
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          max_tokens: 20,
+          messages: [{ role: 'user', content: 'Respondé solo con la palabra: OK' }],
+        }),
+      });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        const msg = (errBody as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
+        return NextResponse.json(parseProviderError('openrouter', resp.status, msg));
       }
       const data = await resp.json() as {
         choices?: Array<{ message?: { content?: string } }>;

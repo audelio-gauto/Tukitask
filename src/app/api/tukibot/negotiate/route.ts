@@ -6,6 +6,10 @@ import { allowRequest } from '@/lib/rateLimit';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
 
+const AI_LIMIT_AUTH_PER_MIN = 6;
+const AI_LIMIT_ANON_PER_MIN = 4;
+const AI_LIMIT_GLOBAL_PER_MIN = 90;
+
 type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
@@ -315,6 +319,97 @@ async function generateGeminiMessage(args: {
   }
 }
 
+async function generateOpenRouterMessage(args: {
+  status: 'accepted' | 'countered';
+  tone: BotTone;
+  productName: string;
+  listedPrice: number;
+  finalAmount: number;
+  quantity: number;
+  stock?: number;
+  apiKey: string;
+  model: string;
+}) {
+  function cleanModelText(text: string) {
+    return text
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/^"+|"+$/g, '')
+      .trim();
+  }
+
+  function isCompleteSalesMessage(text: string) {
+    const normalized = cleanModelText(text);
+    if (!normalized) return false;
+    if (normalized.length < 28) return false;
+    if (normalized.split(/\s+/).length < 6) return false;
+    if (!/Gs\.?\s?/i.test(normalized)) return false;
+    if (!/[.!?…]$/.test(normalized)) return false;
+    return true;
+  }
+
+  const savedPerUnit = Math.max(0, args.listedPrice - args.finalAmount);
+  const totalSaved = savedPerUnit * args.quantity;
+  const totalAmount = args.finalAmount * args.quantity;
+  const isMultiple = args.quantity > 1;
+  const stockUrgency = args.stock !== undefined && args.stock <= 5
+    ? ` Solo quedan ${args.stock}.`
+    : '';
+  const toneHint: Record<BotTone, string> = {
+    informal: 'coloquial paraguayo',
+    formal: 'formal',
+    agresivo: 'directo y seguro',
+    amigable: 'calido y entusiasta',
+  };
+  const amountLine = isMultiple
+    ? `${gs(totalAmount)} (${args.quantity}x${gs(args.finalAmount)})`
+    : gs(args.finalAmount);
+  const savingLine = totalSaved > 0 ? ` Ahorro: ${gs(totalSaved)}.` : '';
+  const actionLine = args.status === 'accepted'
+    ? 'Celebra el trato e invita a pagar ahora.'
+    : 'Justifica brevemente por que no bajas mas e invita a confirmar.';
+
+  const prompt = [
+    `Actuas como vendedor paraguayo con tono ${toneHint[args.tone]}.`,
+    `Escribe maximo 2 oraciones y 50 palabras. Solo texto sin comillas.`,
+    `Producto: ${args.productName}. Monto: ${amountLine}.${savingLine}${stockUrgency}`,
+    actionLine,
+    `Incluye "Gs." en el monto y termina con puntuacion final.`,
+  ].join(' ');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${args.apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: args.model,
+        max_tokens: 90,
+        temperature: 0.7,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!resp.ok) return null;
+
+    const data = await resp.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const raw = data?.choices?.[0]?.message?.content?.trim() || '';
+    const text = cleanModelText(raw);
+    return isCompleteSalesMessage(text) ? text : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const requestStartedAt = Date.now();
@@ -408,7 +503,9 @@ export async function POST(req: Request) {
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
       // OPTIMIZACIÓN 5: gemini-2.0-flash-lite — más económico, suficiente para 2 oraciones
       let geminiModel = 'gemini-2.0-flash-lite';
-    let aiProvider: 'gemini' | 'openai' = 'gemini';
+    let openRouterApiKey = process.env.OPENROUTER_API_KEY || '';
+    let openRouterModel = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat';
+    let aiProvider: 'gemini' | 'openai' | 'openrouter' = 'gemini';
     let aiNegotiationEnabled = true;
     let aiGeminiEnabled = true;
     let aiOpenAiEnabled = true;
@@ -416,17 +513,21 @@ export async function POST(req: Request) {
       const { data: appRows } = await sb
         .from('app_settings')
         .select('key, value')
-        .in('key', ['gemini_api_key', 'ai_model', 'ai_provider', 'ai_negotiation_enabled', 'ai_gemini_enabled', 'ai_openai_enabled']);
+        .in('key', ['gemini_api_key', 'openrouter_api_key', 'openrouter_model', 'ai_model', 'ai_provider', 'ai_negotiation_enabled', 'ai_gemini_enabled', 'ai_openai_enabled']);
       if (appRows) {
         const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
+        const openRouterKeyRow = appRows.find((r: { key: string; value: string }) => r.key === 'openrouter_api_key');
+        const openRouterModelRow = appRows.find((r: { key: string; value: string }) => r.key === 'openrouter_model');
         const modelRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_model');
         const providerRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_provider');
         const enabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_negotiation_enabled');
         const geminiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_gemini_enabled');
         const openAiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_openai_enabled');
         if (!geminiApiKey && keyRow?.value) geminiApiKey = keyRow.value;
+        if (!openRouterApiKey && openRouterKeyRow?.value) openRouterApiKey = openRouterKeyRow.value;
+        if (openRouterModelRow?.value) openRouterModel = openRouterModelRow.value;
         if (modelRow?.value) geminiModel = modelRow.value;
-        if (providerRow?.value === 'openai' || providerRow?.value === 'gemini') {
+        if (providerRow?.value === 'openai' || providerRow?.value === 'gemini' || providerRow?.value === 'openrouter') {
           aiProvider = providerRow.value;
         }
         if (enabledRow?.value) {
@@ -730,12 +831,15 @@ export async function POST(req: Request) {
 
     const providerEnabled =
       aiProvider === 'gemini' ? aiGeminiEnabled :
-      aiProvider === 'openai' ? aiOpenAiEnabled : false;
+      aiProvider === 'openai' ? aiOpenAiEnabled :
+      aiProvider === 'openrouter' ? true : false;
 
     let aiUsed = false;
     let aiSuccess = false;
     let aiLatencyMs: number | null = null;
     let fallbackReason: string | null = null;
+    let aiResolvedProvider: 'gemini' | 'openrouter' | 'openai' = aiProvider;
+    let aiResolvedModel: string | null = aiProvider === 'gemini' ? geminiModel : aiProvider === 'openrouter' ? openRouterModel : null;
 
     // Protect provider quotas from anonymous/bot traffic and bursts.
     const aiLimiterKey = buyer?.id
@@ -743,7 +847,13 @@ export async function POST(req: Request) {
       : `rl:tukibot:ai:ip:${ip}`;
     const aiLimiterAllowed = await allowRequest(
       aiLimiterKey,
-      buyer?.id ? 40 : 8,
+      buyer?.id ? AI_LIMIT_AUTH_PER_MIN : AI_LIMIT_ANON_PER_MIN,
+      60,
+    );
+    const aiGlobalLimiterKey = `rl:tukibot:ai:global:${aiProvider}`;
+    const aiGlobalLimiterAllowed = await allowRequest(
+      aiGlobalLimiterKey,
+      AI_LIMIT_GLOBAL_PER_MIN,
       60,
     );
 
@@ -751,7 +861,7 @@ export async function POST(req: Request) {
       fallbackReason = 'global_disabled';
     } else if (!buyer?.id) {
       fallbackReason = 'unauthenticated';
-    } else if (!aiLimiterAllowed) {
+    } else if (!aiLimiterAllowed || !aiGlobalLimiterAllowed) {
       fallbackReason = 'rate_limited';
     } else if (!providerEnabled) {
       fallbackReason = 'provider_disabled';
@@ -779,6 +889,50 @@ export async function POST(req: Request) {
             negotiationHistory,
             apiKey: geminiApiKey,
             model: geminiModel,
+          });
+          aiLatencyMs = Date.now() - aiStartedAt;
+          aiSuccess = Boolean(aiMessage);
+          if (!aiSuccess && openRouterApiKey) {
+            const openRouterAllowed = await allowRequest('rl:tukibot:ai:global:openrouter', AI_LIMIT_GLOBAL_PER_MIN, 60);
+            if (openRouterAllowed) {
+              aiResolvedProvider = 'openrouter';
+              aiResolvedModel = openRouterModel;
+              const fallbackStartedAt = Date.now();
+              aiMessage = await generateOpenRouterMessage({
+                status,
+                tone: botTone,
+                productName,
+                listedPrice: baseListedPrice,
+                finalAmount,
+                quantity,
+                stock: productStock,
+                apiKey: openRouterApiKey,
+                model: openRouterModel,
+              });
+              aiLatencyMs = (aiLatencyMs || 0) + (Date.now() - fallbackStartedAt);
+              aiSuccess = Boolean(aiMessage);
+            }
+          }
+          if (!aiSuccess) fallbackReason = 'generation_failed';
+        }
+      } else if (aiProvider === 'openrouter') {
+        if (!openRouterApiKey) {
+          fallbackReason = 'missing_api_key';
+        } else {
+          aiUsed = true;
+          aiResolvedProvider = 'openrouter';
+          aiResolvedModel = openRouterModel;
+          const aiStartedAt = Date.now();
+          aiMessage = await generateOpenRouterMessage({
+            status,
+            tone: botTone,
+            productName,
+            listedPrice: baseListedPrice,
+            finalAmount,
+            quantity,
+            stock: productStock,
+            apiKey: openRouterApiKey,
+            model: openRouterModel,
           });
           aiLatencyMs = Date.now() - aiStartedAt;
           aiSuccess = Boolean(aiMessage);
@@ -823,8 +977,8 @@ export async function POST(req: Request) {
         vendor_id: vendorId,
         buyer_id: buyer?.id ?? null,
         product_id: productId,
-        provider: aiProvider,
-        model: aiProvider === 'gemini' ? geminiModel : null,
+        provider: aiResolvedProvider,
+        model: aiResolvedModel,
         ai_enabled: aiNegotiationEnabled,
         ai_used: aiUsed,
         ai_success: aiSuccess,

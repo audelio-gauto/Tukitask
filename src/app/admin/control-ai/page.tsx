@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 type TabKey = 'observability' | 'operational' | 'tukibot';
-type AiProvider = 'gemini' | 'openai';
+type AiProvider = 'gemini' | 'openai' | 'openrouter';
 type MsgTipo = 'accepted_single' | 'accepted_multi' | 'countered_single' | 'countered_multi';
 
 interface TukiMessage {
@@ -38,7 +38,7 @@ interface ObservabilityStats {
 interface AiEvent {
   id: string;
   created_at: string;
-  provider: 'gemini' | 'openai' | 'none';
+  provider: 'gemini' | 'openai' | 'openrouter' | 'none';
   model: string | null;
   ai_used: boolean;
   ai_success: boolean;
@@ -107,6 +107,10 @@ export default function ControlAiPage() {
     () => appSettings.some((s) => s.key === 'openai_api_key' && Boolean(s.value)),
     [appSettings],
   );
+  const hasOpenRouterKey = useMemo(
+    () => appSettings.some((s) => s.key === 'openrouter_api_key' && Boolean(s.value)),
+    [appSettings],
+  );
 
   const recentIncidents = useMemo(
     () => events24h
@@ -116,9 +120,9 @@ export default function ControlAiPage() {
   );
 
   const providerCounts = useMemo(() => {
-    const counters = { gemini: 0, openai: 0, none: 0 };
+    const counters = { gemini: 0, openai: 0, openrouter: 0, none: 0 };
     events24h.forEach((e) => {
-      if (e.provider === 'gemini' || e.provider === 'openai' || e.provider === 'none') counters[e.provider] += 1;
+      if (e.provider === 'gemini' || e.provider === 'openai' || e.provider === 'openrouter' || e.provider === 'none') counters[e.provider] += 1;
     });
     return counters;
   }, [events24h]);
@@ -196,10 +200,10 @@ export default function ControlAiPage() {
       };
 
       const provider = getApp('ai_provider');
-      if (provider === 'gemini' || provider === 'openai') {
+      if (provider === 'gemini' || provider === 'openai' || provider === 'openrouter') {
         setAiProvider(provider);
       }
-      const model = getApp('ai_model');
+      const model = provider === 'openrouter' ? (getApp('openrouter_model') || getApp('ai_model')) : getApp('ai_model');
       if (model) setAiModel(model);
 
       const enabledRaw = getApp('ai_negotiation_enabled');
@@ -495,7 +499,7 @@ export default function ControlAiPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Control AI</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Centro de operación y monitoreo para negociaciones del TukiBot con Gemini/OpenAI.
+          Centro de operación y monitoreo para negociaciones del TukiBot con Gemini/OpenAI/OpenRouter.
         </p>
       </div>
 
@@ -581,10 +585,11 @@ export default function ControlAiPage() {
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-base font-semibold text-gray-800 mb-3">Estado del motor</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <InfoRow label="Proveedor activo" value={aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'} />
+              <InfoRow label="Proveedor activo" value={aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter'} />
               <InfoRow label="Modelo activo" value={aiModel || 'No definido'} />
               <InfoRow label="Gemini API Key" value={hasGeminiKey ? 'Configurada' : 'No configurada'} />
               <InfoRow label="OpenAI API Key" value={hasOpenAiKey ? 'Configurada' : 'No configurada'} />
+              <InfoRow label="OpenRouter API Key" value={hasOpenRouterKey ? 'Configurada' : 'No configurada'} />
               <InfoRow label="Negociación AI" value={aiNegotiationEnabled ? 'Habilitada' : 'Deshabilitada'} />
               <InfoRow label="Gemini habilitado" value={aiGeminiEnabled ? 'Sí' : 'No'} />
               <InfoRow label="OpenAI habilitado" value={aiOpenAiEnabled ? 'Sí' : 'No'} />
@@ -593,6 +598,7 @@ export default function ControlAiPage() {
               <InfoRow label="Fallos últimos 15m" value={String(stats.failures15m)} />
               <InfoRow label="Eventos Gemini 24h" value={String(providerCounts.gemini)} />
               <InfoRow label="Eventos OpenAI 24h" value={String(providerCounts.openai)} />
+              <InfoRow label="Eventos OpenRouter 24h" value={String(providerCounts.openrouter)} />
             </div>
 
             <div className="mt-4 flex items-center gap-3">
@@ -790,6 +796,7 @@ export default function ControlAiPage() {
                 >
                   <option value="gemini">Gemini</option>
                   <option value="openai">OpenAI</option>
+                  <option value="openrouter">OpenRouter</option>
                 </select>
               </div>
 
@@ -805,7 +812,7 @@ export default function ControlAiPage() {
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                     <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash (preview)</option>
                   </select>
-                ) : (
+                ) : aiProvider === 'openai' ? (
                   <select
                     value={aiModel}
                     onChange={(e) => setAiModel(e.target.value)}
@@ -814,6 +821,16 @@ export default function ControlAiPage() {
                     <option value="gpt-4o-mini">GPT-4o mini</option>
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                  </select>
+                ) : (
+                  <select
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                    className="w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="deepseek/deepseek-chat">DeepSeek Chat (barato)</option>
+                    <option value="qwen/qwen3-14b">Qwen 3 14B</option>
+                    <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
                   </select>
                 )}
               </div>

@@ -3,16 +3,21 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
+const GEMINI_MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash-preview-05-20'];
+const OPENAI_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+const OPENROUTER_MODELS = ['deepseek/deepseek-chat', 'qwen/qwen3-14b', 'meta-llama/llama-3.1-8b-instruct'];
+
 export default function ApiKeysPage() {
   const [appSettings, setAppSettings] = useState<Array<{ id: string; key: string; value: string; label?: string; description?: string }>>([]);
   const [pricingSettings, setPricingSettings] = useState<Array<{ id: string; key: string; value: number; label: string; description: string }>>([]);
   const [mapboxKey, setMapboxKey] = useState<string>('');
   const [googleKey, setGoogleKey] = useState<string>('');
   // AI settings
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai'>('gemini');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'openrouter'>('gemini');
   const [aiModel, setAiModel] = useState<string>('gemini-2.5-flash');
   const [geminiKey, setGeminiKey] = useState<string>('');
   const [openaiKey, setOpenaiKey] = useState<string>('');
+  const [openrouterKey, setOpenrouterKey] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -44,8 +49,8 @@ export default function ApiKeysPage() {
       setMapboxKey(getApp('mapbox_api_key'));
       setGoogleKey(getApp('google_maps_api_key'));
       const providerVal = getApp('ai_provider');
-      if (providerVal === 'openai' || providerVal === 'gemini') setAiProvider(providerVal);
-      const modelVal = getApp('ai_model');
+      if (providerVal === 'openai' || providerVal === 'gemini' || providerVal === 'openrouter') setAiProvider(providerVal);
+      const modelVal = providerVal === 'openrouter' ? (getApp('openrouter_model') || getApp('ai_model')) : getApp('ai_model');
       if (modelVal) setAiModel(modelVal);
       // Don't pre-fill secret keys — keep inputs blank, show placeholder if configured
     } catch (err) {
@@ -56,6 +61,18 @@ export default function ApiKeysPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    const allowedModels = aiProvider === 'gemini'
+      ? GEMINI_MODELS
+      : aiProvider === 'openai'
+        ? OPENAI_MODELS
+        : OPENROUTER_MODELS;
+
+    if (!allowedModels.includes(aiModel)) {
+      setAiModel(allowedModels[0]);
+    }
+  }, [aiProvider, aiModel, GEMINI_MODELS, OPENAI_MODELS, OPENROUTER_MODELS]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -74,9 +91,14 @@ export default function ApiKeysPage() {
       if (googleKey) setApp('google_maps_api_key', googleKey);
       if (geminiKey) setApp('gemini_api_key', geminiKey);
       if (openaiKey) setApp('openai_api_key', openaiKey);
+      if (openrouterKey) setApp('openrouter_api_key', openrouterKey);
       // Always persist provider + model selection
       setApp('ai_provider', aiProvider);
-      setApp('ai_model', aiModel);
+      if (aiProvider === 'openrouter') {
+        setApp('openrouter_model', aiModel);
+      } else {
+        setApp('ai_model', aiModel);
+      }
 
       // Build pricing_settings payload (only map_provider if it exists)
       const mergedPricing = pricingSettings.filter(s => s.key === 'map_provider');
@@ -104,6 +126,7 @@ export default function ApiKeysPage() {
         setGoogleKey('');
         setGeminiKey('');
         setOpenaiKey('');
+        setOpenrouterKey('');
         await fetchData();
       }
     } catch (err) {
@@ -267,11 +290,12 @@ export default function ApiKeysPage() {
           <p className="text-xs text-gray-400 mb-2">Seleccione qué proveedor de IA utilizar para generar contenido.</p>
           <select
             value={aiProvider}
-            onChange={e => setAiProvider(e.target.value as 'gemini' | 'openai')}
+            onChange={e => setAiProvider(e.target.value as 'gemini' | 'openai' | 'openrouter')}
             className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             <option value="gemini">Géminis</option>
             <option value="openai">OpenAI</option>
+            <option value="openrouter">OpenRouter</option>
           </select>
         </div>
 
@@ -345,6 +369,50 @@ export default function ApiKeysPage() {
           </div>
         )}
 
+        {/* OpenRouter key (shown when openrouter selected) */}
+        {aiProvider === 'openrouter' && (
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <label className="block text-sm font-semibold text-gray-700">Clave API de OpenRouter</label>
+              <a
+                href="https://openrouter.ai/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-500 hover:underline"
+              >
+                Cuenta OpenRouter ↗
+              </a>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">Puedes obtener tus claves API en OpenRouter.</p>
+            <div className="mb-2 rounded-md border border-blue-100 bg-blue-50 p-2 text-xs text-blue-800">
+              <p className="font-semibold">Para usarlo ya:</p>
+              <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                <li>Ir a API Keys y seleccionar OpenRouter.</li>
+                <li>Cargar openrouter_api_key.</li>
+                <li>Elegir modelo (recomendado: deepseek/deepseek-chat).</li>
+                <li>Probar conexión desde el panel.</li>
+              </ol>
+            </div>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={openrouterKey}
+              onChange={e => setOpenrouterKey(e.target.value)}
+              placeholder={
+                appSettings.some(s => s.key === 'openrouter_api_key' && s.value)
+                  ? '••••••••••••••• (configurada)'
+                  : 'Pegar clave API de OpenRouter...'
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {appSettings.some(s => s.key === 'openrouter_api_key' && s.value)
+                ? 'Ya hay una key guardada. Pegá aquí para reemplazarla, o dejá en blanco para mantenerla.'
+                : 'Dejá en blanco para mantener la key existente.'}
+            </p>
+          </div>
+        )}
+
         {/* Modelo */}
         <div className="mb-5">
           <label className="block text-sm font-semibold text-gray-700 mb-0.5">Modelo</label>
@@ -361,7 +429,7 @@ export default function ApiKeysPage() {
               <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
               <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash (preview)</option>
             </select>
-          ) : (
+          ) : aiProvider === 'openai' ? (
             <select
               value={aiModel}
               onChange={e => setAiModel(e.target.value)}
@@ -370,6 +438,16 @@ export default function ApiKeysPage() {
               <option value="gpt-4o-mini">GPT-4o mini</option>
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            </select>
+          ) : (
+            <select
+              value={aiModel}
+              onChange={e => setAiModel(e.target.value)}
+              className="w-60 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="deepseek/deepseek-chat">DeepSeek Chat (barato)</option>
+              <option value="qwen/qwen3-14b">Qwen 3 14B</option>
+              <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
             </select>
           )}
         </div>
@@ -389,9 +467,15 @@ export default function ApiKeysPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${appSettings.some(s => s.key === 'openrouter_api_key' && s.value) ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-500">
+              OpenRouter: {appSettings.some(s => s.key === 'openrouter_api_key' && s.value) ? 'configurada' : 'no configurada'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400" />
             <span className="text-xs text-gray-500">
-              Motor activo: {aiProvider === 'gemini' ? 'Géminis' : 'OpenAI'} · {aiModel}
+              Motor activo: {aiProvider === 'gemini' ? 'Géminis' : aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter'} · {aiModel}
             </span>
           </div>
         </div>
@@ -421,7 +505,7 @@ export default function ApiKeysPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Probar conexión {aiProvider === 'gemini' ? 'Gemini' : 'OpenAI'}
+              Probar conexión {aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'openai' ? 'OpenAI' : 'OpenRouter'}
             </>
           )}
         </button>
