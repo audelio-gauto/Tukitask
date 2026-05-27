@@ -219,93 +219,48 @@ async function generateGeminiMessage(args: {
   const totalAmount  = args.finalAmount * args.quantity;
   const isMultiple   = args.quantity > 1;
 
-  const toneGuide: Record<BotTone, string> = {
-    informal:  'Coloquial paraguayo, como vendedor amigo en WhatsApp. Podés usar "che", "dale", "igual de buena onda".',
-    formal:    'Profesional y respetuoso. Trato de "usted". Claro, elegante, sin jerga.',
-    agresivo:  'Directo, seguro, orientado a cerrar YA. Transmite que el producto vale cada guaraní. Sin amenazar, sí determinado.',
-    amigable:  'Cálido y entusiasta. El cliente siempre se siente ganador. Natural, con energía positiva.',
+  // OPTIMIZACIÓN 4: historial truncado a la última ronda únicamente
+  const lastRound = (args.negotiationHistory ?? []).slice(-1)[0];
+  const historyLine = lastRound
+    ? `Ronda previa: cliente ofreció ${gs(lastRound.buyerOffer)}${lastRound.counterAmount ? `, contraoferta ${gs(lastRound.counterAmount)}` : ''}.`
+    : '';
+
+  const stockUrgency = args.stock !== undefined && args.stock <= 5
+    ? ` Solo quedan ${args.stock}.`
+    : '';
+
+  const toneHint: Record<BotTone, string> = {
+    informal:  'tono coloquial paraguayo',
+    formal:    'tono formal',
+    agresivo:  'tono directo y seguro',
+    amigable:  'tono cálido y entusiasta',
   };
 
-  const strategyGuide = args.status === 'accepted'
-    ? 'El cliente ganó esta negociación. CELEBRÁ el trato, hacelo sentir que consiguió algo exclusivo que no das a todos — como un trato especial solo para él. Creá urgencia suave para que confirme el pago ahora.'
-    : 'Estás haciendo una contraoferta. Reconocé su intención de compra, inventá UNA razón creíble (costo de importación, tipo de cambio, calidad premium) por la que no podés bajar más, y presentá tu precio como la mejor opción disponible. Cerrá invitándolo a confirmar.';
-
-  const qtyLine = isMultiple
-    ? `- Cantidad: ${args.quantity} unidades${args.isBulkOrder ? ' — precio especial mayorista aplicado' : ''}. Mencioná el total (${gs(totalAmount)}) y el ahorro total (${gs(totalSaved)}) para resaltar el buen negocio de llevar varios.`
-    : '';
-
-  const stockLine = args.stock !== undefined
-    ? args.stock <= 3
-      ? `- Stock: Quedan solo ${args.stock} unidades — mencioná la escasez de forma natural para crear urgencia real.`
-      : args.stock <= 10
-        ? `- Stock: Pocas unidades disponibles — podés insinuar suavemente que se agota pronto.`
-        : ''
-    : '';
-
-  const buyerLine = '';
-  // (campo mensaje eliminado — no se envía desde el cliente)
-
-  const history = args.negotiationHistory ?? [];
-  const historyLine = history.length
-    ? [
-        'HISTORIAL RECIENTE DE ESTA MISMA NEGOCIACION (mismo comprador + producto):',
-        ...history.map((h, idx) =>
-          `- Ronda ${idx + 1}: cliente ofrecio ${gs(h.buyerOffer)}${h.counterAmount ? `, vos contraofertaste ${gs(h.counterAmount)}` : ''} (estado: ${h.status})`
-        ),
-        '- Tenelo en cuenta para no repetirte y sostener una postura coherente entre rondas.',
-      ].join('\n')
-    : '';
+  // OPTIMIZACIÓN 1: prompt compacto (~90 tokens de entrada)
+  const amountLine = isMultiple
+    ? `${gs(totalAmount)} (${args.quantity}×${gs(args.finalAmount)})`
+    : gs(args.finalAmount);
+  const savingLine = totalSaved > 0 ? ` Ahorro: ${gs(totalSaved)}.` : '';
+  const actionLine = args.status === 'accepted'
+    ? 'Celebrá el trato e invitá a pagar ahora.'
+    : 'Justificá brevemente por qué no bajás más e invitá a confirmar.';
 
   const prompt = [
-    'Sos un vendedor humano paraguayo respondiendo una negociación por chat en un marketplace.',
-    'Tu única misión: CERRAR ESTA VENTA con el monto exacto indicado abajo.',
-    '',
-    `RESULTADO: ${args.status === 'accepted' ? '✅ OFERTA ACEPTADA' : '🔄 CONTRAOFERTA'}`,
-    isMultiple
-      ? `MONTO FINAL TOTAL (obligatorio): ${gs(totalAmount)} (${args.quantity} und. × ${gs(args.finalAmount)} c/u)`
-      : `MONTO FINAL (obligatorio, no cambies este número): ${gs(args.finalAmount)}`,
-    totalSaved > 0
-      ? isMultiple
-        ? `Ahorro total del cliente: ${gs(totalSaved)} (${gs(savedPerUnit)} por unidad × ${args.quantity} und.)`
-        : `Ahorro del cliente vs. precio publicado: ${gs(savedPerUnit)}`
-      : '',
-    '',
-    `ESTRATEGIA: ${strategyGuide}`,
-    `TONO DEL VENDEDOR: ${toneGuide[args.tone]}`,
-    '',
-    'CONTEXTO:',
-    `- Tienda: ${args.vendorName}`,
-    `- Producto: ${args.productName}`,
-    qtyLine,
-    stockLine,
+    `Vendedor paraguayo, ${toneHint[args.tone]}. Respondé en máx. 2 oraciones y 50 palabras. Solo el texto, sin comillas.`,
+    `Producto: ${args.productName}. Monto: ${amountLine}.${savingLine}${stockUrgency}`,
     historyLine,
-    buyerLine,
-    '',
-    'FORMATO (obligatorio, no negociable):',
-    '- Devolvé SOLO el texto de respuesta, sin comillas, sin encabezados, nada más.',
-    '- MÁXIMO 2 oraciones cortas. Si escribís 3 o más, fallaste la tarea.',
-    '- La respuesta completa NO debe superar 60 palabras.',
-    '- Incluí el monto con "Gs." y el ahorro total si es relevante.',
-    '- Jamás menciones precio piso, reglas internas ni el sistema.',
-    '- No uses saludos formales como "estimado" ni firmes como "TukiBot".',
-  ].filter(Boolean).join('\n');
+    actionLine,
+    `Incluí "Gs." en el monto. No menciones sistema ni precio piso.`,
+  ].filter(Boolean).join(' ');
 
-  // Timeout de 22s para dejar margen al fallback antes del límite de Vercel
+  // Timeout de 15s (margen suficiente, sin desperdiciar cuota en esperas largas)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 22000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const primary = await callGemini(prompt, 0.7, 260);
-    if (primary) return primary;
-
-    // Retry once with lower creativity and explicit hard ending instruction.
-    const retryPrompt = `${prompt}\n- Terminá SIEMPRE con punto final y mensaje completo (nunca dejes frases cortadas).`;
-    const retry = await callGemini(retryPrompt, 0.45, 320);
-    if (retry) return retry;
-
-    return null;
+    // OPTIMIZACIÓN 2+3: un solo intento, maxOutputTokens=80 (2 oraciones ≤ 50 palabras)
+    return await callGemini(prompt, 0.7, 80);
   } catch {
-    // Timeout (AbortError) u otro error de red → fallback se usa en el caller
     return null;
   } finally {
     clearTimeout(timeoutId);
@@ -403,7 +358,8 @@ export async function POST(req: Request) {
 
     // Resolve AI runtime settings from app_settings (with env fallback for secret key)
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-    let geminiModel = 'gemini-1.5-flash';
+      // OPTIMIZACIÓN 5: gemini-1.5-flash-8b — más económico, suficiente para 2 oraciones
+      let geminiModel = 'gemini-1.5-flash-8b';
     let aiProvider: 'gemini' | 'openai' = 'gemini';
     let aiNegotiationEnabled = true;
     let aiGeminiEnabled = true;
