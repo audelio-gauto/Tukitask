@@ -74,6 +74,9 @@ const NEG_CLIMAX = {
   countered: '👀 El vendedor no cedió más, pero bajó bastante',
 } as const;
 
+const ANIM_CLIMAX    = 100; // sentinel step → show climax phrase
+const ANIM_MIN_STEPS = 20;  // 20 × 2 s = 40 s mínimo de animación
+
 type PendingResult = {
   status: 'accepted';
   buyerOffer: number;
@@ -118,27 +121,9 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (animStep < 0) return;
 
-    // Steps 0–5: advance every 2 s; if result ready and ≥3 phrases shown, jump to climax
-    if (animStep <= 5) {
-      const t = setTimeout(() => {
-        if (pendingResult && animStep >= 2) {
-          setAnimStep(7);
-        } else {
-          setAnimStep(s => s + 1);
-        }
-      }, 2000);
-      return () => clearTimeout(t);
-    }
-
-    // Step 6 (last generic phrase): hold until API result is ready
-    if (animStep === 6) {
+    // Climax: mostrar frase final 2 s y luego revelar resultado
+    if (animStep === ANIM_CLIMAX) {
       if (!pendingResult) return;
-      const t = setTimeout(() => setAnimStep(7), 200);
-      return () => clearTimeout(t);
-    }
-
-    // Step 7: climax phrase — show for 2 s then reveal
-    if (animStep === 7 && pendingResult) {
       const t = setTimeout(() => {
         if (pendingResult.status === 'accepted') {
           setDone({
@@ -165,6 +150,18 @@ export default function ProductDetailPage() {
       }, 2000);
       return () => clearTimeout(t);
     }
+
+    // Loop principal: avanza cada 2 s; pasa al clímax solo cuando
+    // se cumplieron ≥40 s (ANIM_MIN_STEPS pasos) Y ya llegó el resultado
+    const t = setTimeout(() => {
+      const next = animStep + 1;
+      if (next >= ANIM_MIN_STEPS && pendingResult) {
+        setAnimStep(ANIM_CLIMAX);
+      } else {
+        setAnimStep(next);
+      }
+    }, 2000);
+    return () => clearTimeout(t);
   }, [animStep, pendingResult]);
 
   // Loading
@@ -553,9 +550,9 @@ export default function ProductDetailPage() {
                     <div className="tnd-neg-anim">
                       <div className="tnd-neg-anim-bot" aria-hidden="true">🤖</div>
                       <div key={animStep} className="tnd-neg-anim-phrase" aria-live="polite">
-                        {animStep === 7 && pendingResult
+                        {animStep === ANIM_CLIMAX && pendingResult
                           ? NEG_CLIMAX[pendingResult.status]
-                          : NEG_PHRASES[Math.min(animStep, NEG_PHRASES.length - 1)]}
+                          : NEG_PHRASES[animStep % NEG_PHRASES.length]}
                       </div>
                       <div className="tnd-neg-anim-dots" aria-hidden="true">
                         <span /><span /><span />
