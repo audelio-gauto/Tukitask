@@ -462,7 +462,7 @@ export async function POST(req: Request) {
     const botTimeoutAction: TimeoutAction = 'auto_counter';
     let negotiationProfile: NegotiationProfile = 'balanced';
     let autoAcceptFromVendor: number | null = null;
-    const timeoutMessage = 'el precio sube de vuelta';
+    const timeoutMessage = 'Seguimos con la negociación.';
     try {
       const { data: vendorCfg } = await sb
         .from('vendor_bot_config')

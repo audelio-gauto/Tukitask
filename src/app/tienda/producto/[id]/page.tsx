@@ -25,9 +25,9 @@ type Mode = 'idle' | 'buy' | 'negotiate';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 
 function getTimeoutActionLabel(action?: TimeoutAction) {
-  if (action === 'auto_accept') return 'el precio vuelve al normal';
-  if (action === 'pressure_client') return 'el precio sube de vuelta';
-  return 'el precio sube de vuelta'; // auto_counter
+  if (action === 'auto_accept') return 'Aceptación automática';
+  if (action === 'pressure_client') return 'Aviso al cliente';
+  return 'Contraoferta automática';
 }
 
 function formatTimeoutAt(timeoutAt?: string) {
@@ -430,7 +430,7 @@ export default function ProductDetailPage() {
                       <div className="tnd-offer-success-hero">😮</div>
                       <div className="tnd-offer-success-title">No soltó del todo, pero te traje esto</div>
                       <p className="tnd-offer-success-tagline">
-                        El vendedor no aceptó tu número exacto, pero TukiBot rescató una contraoferta fuerte para <strong>{p.name}</strong>.
+                        TukiBot preparó una nueva contraoferta para <strong>{p.name}</strong>.
                       </p>
 
                       <div className="tnd-offer-success-pricegrid">
