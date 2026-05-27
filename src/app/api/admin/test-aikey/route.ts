@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       if (!apiKey) {
         return NextResponse.json({ ok: false, error: 'No hay API Key de Gemini configurada.' });
       }
-      const model = getVal('ai_model') || 'gemini-1.5-flash';
+      const model = getVal('ai_model') || 'gemini-2.0-flash-lite';
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {

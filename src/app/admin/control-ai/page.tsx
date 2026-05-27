@@ -56,7 +56,7 @@ export default function ControlAiPage() {
 
   const [appSettings, setAppSettings] = useState<AppSetting[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
-  const [aiModel, setAiModel] = useState('gemini-2.5-flash');
+  const [aiModel, setAiModel] = useState('gemini-2.0-flash-lite');
   const [aiNegotiationEnabled, setAiNegotiationEnabled] = useState(true);
   const [aiGeminiEnabled, setAiGeminiEnabled] = useState(true);
   const [aiOpenAiEnabled, setAiOpenAiEnabled] = useState(true);
@@ -556,10 +556,9 @@ export default function ControlAiPage() {
                     onChange={(e) => setAiModel(e.target.value)}
                     className="w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (recomendado)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash (preview)</option>
                   </select>
                 ) : (
                   <select

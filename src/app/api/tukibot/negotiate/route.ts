@@ -358,8 +358,8 @@ export async function POST(req: Request) {
 
     // Resolve AI runtime settings from app_settings (with env fallback for secret key)
     let geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-      // OPTIMIZACIÓN 5: gemini-1.5-flash-8b — más económico, suficiente para 2 oraciones
-      let geminiModel = 'gemini-1.5-flash-8b';
+      // OPTIMIZACIÓN 5: gemini-2.0-flash-lite — más económico, suficiente para 2 oraciones
+      let geminiModel = 'gemini-2.0-flash-lite';
     let aiProvider: 'gemini' | 'openai' = 'gemini';
     let aiNegotiationEnabled = true;
     let aiGeminiEnabled = true;
