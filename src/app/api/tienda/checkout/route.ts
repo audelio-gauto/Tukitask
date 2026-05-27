@@ -30,6 +30,7 @@ export interface CheckoutBody {
     lng: number | null;
   };
   notes?: string;
+  payment_method?: string;
 }
 
 /** POST /api/tienda/checkout — crea una market_order por cada vendedor */
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
 
-  const { items, billing, delivery, notes } = body;
+  const { items, billing, delivery, notes, payment_method } = body;
 
   if (!items?.length) {
     return NextResponse.json({ error: 'No hay productos en el pedido' }, { status: 400 });
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
         lng:        delivery.lng,
       },
       notes:   notes ?? null,
+      payment_method: payment_method ?? 'contra_entrega',
       status: 'pending',
     };
 

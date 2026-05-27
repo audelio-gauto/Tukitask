@@ -38,6 +38,8 @@ interface DeliveryForm {
   lng: number | null;
 }
 
+type PaymentMethod = 'contra_entrega';
+
 function CheckoutInner() {
   const router       = useRouter();
   const params       = useSearchParams();
@@ -57,6 +59,7 @@ function CheckoutInner() {
   const [delivery, setDelivery] = useState<DeliveryForm>({
     ciudad: 'Asunción', barrio: '', referencia: '', nombre: '', lat: null, lng: null,
   });
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('contra_entrega');
   const [notes,     setNotes]     = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [orderIds,   setOrderIds]   = useState<string[] | null>(null);
@@ -164,7 +167,7 @@ function CheckoutInner() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ items, billing, delivery, notes }),
+        body: JSON.stringify({ items, billing, delivery, notes, payment_method: paymentMethod }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error ?? 'Error al procesar el pedido');
@@ -366,6 +369,30 @@ function CheckoutInner() {
               </div>
             </section>
 
+            {/* ── Método de pago ── */}
+            <section className="tnd-checkout-card">
+              <h2 className="tnd-checkout-section-title">Método de pago</h2>
+              <p style={{ color:'var(--tnd-text-muted)', fontSize:'0.82rem', margin:'-6px 0 14px', lineHeight:1.5 }}>
+                Pagar al recibir el producto.
+              </p>
+              <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
+                <input
+                  type="radio"
+                  name="payment_method"
+                  checked={paymentMethod === 'contra_entrega'}
+                  onChange={() => setPaymentMethod('contra_entrega')}
+                  style={{ marginTop: 4 }}
+                />
+                <span>
+                  <strong>Contra entrega</strong>
+                  <br />
+                  <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
+                    Pagás cuando recibís el producto.
+                  </span>
+                </span>
+              </label>
+            </section>
+
             {/* ── Notas ── */}
             <section className="tnd-checkout-card">
               <h2 className="tnd-checkout-section-title">Notas del pedido <span style={{ fontWeight:400, color:'var(--tnd-text-muted)' }}>(opcional)</span></h2>
@@ -419,6 +446,13 @@ function CheckoutInner() {
                   <span style={{ fontWeight:700, color:'var(--tnd-text-secondary)' }}>Total</span>
                   <span style={{ fontSize:'1.5rem', fontWeight:900, color:'var(--tnd-accent)' }}>{gs(total)}</span>
                 </div>
+              </div>
+
+              <div style={{ background:'var(--tnd-surface-2)', border:'1px solid var(--tnd-border)', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
+                <p style={{ margin:0, fontWeight:800, color:'var(--tnd-text-primary)', fontSize:'0.88rem' }}>Contra entrega</p>
+                <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
+                  Pagar al recibir el producto.
+                </p>
               </div>
 
               {error && (

@@ -134,7 +134,7 @@ export async function GET(req: Request) {
       .from('market_orders')
       .select(
         'id, created_at, updated_at, status, vendor_email, client_email, client_name, ' +
-        'items, total, final_price, address, driver_email, ' +
+        'items, total, final_price, address, driver_email, payment_method, ' +
         'accepted_at, completed_at, cancelled_at, negotiated, notes',
         { count: 'exact' }
       )
