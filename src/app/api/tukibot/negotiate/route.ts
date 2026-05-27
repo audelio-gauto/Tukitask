@@ -344,6 +344,8 @@ async function generateOpenRouterMessage(args: {
     if (normalized.length < 28) return false;
     if (normalized.split(/\s+/).length < 6) return false;
     if (!/Gs\.?\s?/i.test(normalized)) return false;
+    // Prevent model from reframing quantity as installments.
+    if (/\bcuotas?\b|\bmensual(?:idad|idades)?\b/i.test(normalized)) return false;
     if (!/[.!?…]$/.test(normalized)) return false;
     return true;
   }
@@ -362,7 +364,7 @@ async function generateOpenRouterMessage(args: {
     amigable: 'calido y entusiasta',
   };
   const amountLine = isMultiple
-    ? `${gs(totalAmount)} (${args.quantity}x${gs(args.finalAmount)})`
+    ? `Total ${gs(totalAmount)} por ${args.quantity} und de ${gs(args.finalAmount)} c/u`
     : gs(args.finalAmount);
   const savingLine = totalSaved > 0 ? ` Ahorro: ${gs(totalSaved)}.` : '';
   const actionLine = args.status === 'accepted'
@@ -375,6 +377,8 @@ async function generateOpenRouterMessage(args: {
     `Producto: ${args.productName}. Monto: ${amountLine}.${savingLine}${stockUrgency}`,
     actionLine,
     `Incluye "Gs." en el monto y termina con puntuacion final.`,
+    `Prohibido mencionar cuotas, mensualidades, financiamiento o pagos por mes.`,
+    `Si cantidad > 1, expresalo como "X und de Gs. Y c/u" y "Total Gs. Z".`,
   ].join(' ');
 
   const controller = new AbortController();
@@ -509,11 +513,12 @@ export async function POST(req: Request) {
     let aiNegotiationEnabled = true;
     let aiGeminiEnabled = true;
     let aiOpenAiEnabled = true;
+    let aiOpenRouterEnabled = true;
     try {
       const { data: appRows } = await sb
         .from('app_settings')
         .select('key, value')
-        .in('key', ['gemini_api_key', 'openrouter_api_key', 'openrouter_model', 'ai_model', 'ai_provider', 'ai_negotiation_enabled', 'ai_gemini_enabled', 'ai_openai_enabled']);
+        .in('key', ['gemini_api_key', 'openrouter_api_key', 'openrouter_model', 'ai_model', 'ai_provider', 'ai_negotiation_enabled', 'ai_gemini_enabled', 'ai_openai_enabled', 'ai_openrouter_enabled']);
       if (appRows) {
         const keyRow = appRows.find((r: { key: string; value: string }) => r.key === 'gemini_api_key');
         const openRouterKeyRow = appRows.find((r: { key: string; value: string }) => r.key === 'openrouter_api_key');
@@ -523,6 +528,7 @@ export async function POST(req: Request) {
         const enabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_negotiation_enabled');
         const geminiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_gemini_enabled');
         const openAiEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_openai_enabled');
+        const openRouterEnabledRow = appRows.find((r: { key: string; value: string }) => r.key === 'ai_openrouter_enabled');
         if (!geminiApiKey && keyRow?.value) geminiApiKey = keyRow.value;
         if (!openRouterApiKey && openRouterKeyRow?.value) openRouterApiKey = openRouterKeyRow.value;
         if (openRouterModelRow?.value) openRouterModel = openRouterModelRow.value;
@@ -538,6 +544,9 @@ export async function POST(req: Request) {
         }
         if (openAiEnabledRow?.value) {
           aiOpenAiEnabled = openAiEnabledRow.value === 'true';
+        }
+        if (openRouterEnabledRow?.value) {
+          aiOpenRouterEnabled = openRouterEnabledRow.value === 'true';
         }
       }
     } catch { /* silent fallback */ }
@@ -832,7 +841,7 @@ export async function POST(req: Request) {
     const providerEnabled =
       aiProvider === 'gemini' ? aiGeminiEnabled :
       aiProvider === 'openai' ? aiOpenAiEnabled :
-      aiProvider === 'openrouter' ? true : false;
+      aiProvider === 'openrouter' ? aiOpenRouterEnabled : false;
 
     let aiUsed = false;
     let aiSuccess = false;
@@ -892,7 +901,7 @@ export async function POST(req: Request) {
           });
           aiLatencyMs = Date.now() - aiStartedAt;
           aiSuccess = Boolean(aiMessage);
-          if (!aiSuccess && openRouterApiKey) {
+          if (!aiSuccess && openRouterApiKey && aiOpenRouterEnabled) {
             const openRouterAllowed = await allowRequest('rl:tukibot:ai:global:openrouter', AI_LIMIT_GLOBAL_PER_MIN, 60);
             if (openRouterAllowed) {
               aiResolvedProvider = 'openrouter';

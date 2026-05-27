@@ -80,6 +80,7 @@ export default function ControlAiPage() {
   const [aiNegotiationEnabled, setAiNegotiationEnabled] = useState(true);
   const [aiGeminiEnabled, setAiGeminiEnabled] = useState(true);
   const [aiOpenAiEnabled, setAiOpenAiEnabled] = useState(true);
+  const [aiOpenRouterEnabled, setAiOpenRouterEnabled] = useState(true);
   const [aiAutoDegradeEnabled, setAiAutoDegradeEnabled] = useState(true);
   const [alertFallbackPct, setAlertFallbackPct] = useState(25);
   const [alertLatencyP95Ms, setAlertLatencyP95Ms] = useState(16000);
@@ -212,6 +213,8 @@ export default function ControlAiPage() {
       setAiGeminiEnabled(geminiEnabledRaw === '' ? true : geminiEnabledRaw === 'true');
       const openAiEnabledRaw = getApp('ai_openai_enabled');
       setAiOpenAiEnabled(openAiEnabledRaw === '' ? true : openAiEnabledRaw === 'true');
+      const openRouterEnabledRaw = getApp('ai_openrouter_enabled');
+      setAiOpenRouterEnabled(openRouterEnabledRaw === '' ? true : openRouterEnabledRaw === 'true');
       const autoDegradeRaw = getApp('ai_auto_degrade_enabled');
       setAiAutoDegradeEnabled(autoDegradeRaw === '' ? true : autoDegradeRaw === 'true');
 
@@ -417,6 +420,7 @@ export default function ControlAiPage() {
       setApp('ai_negotiation_enabled', aiNegotiationEnabled ? 'true' : 'false');
       setApp('ai_gemini_enabled', aiGeminiEnabled ? 'true' : 'false');
       setApp('ai_openai_enabled', aiOpenAiEnabled ? 'true' : 'false');
+      setApp('ai_openrouter_enabled', aiOpenRouterEnabled ? 'true' : 'false');
       setApp('ai_auto_degrade_enabled', aiAutoDegradeEnabled ? 'true' : 'false');
       setApp('ai_alert_fallback_pct', String(alertFallbackPct));
       setApp('ai_alert_latency_p95_ms', String(alertLatencyP95Ms));
@@ -593,6 +597,7 @@ export default function ControlAiPage() {
               <InfoRow label="Negociación AI" value={aiNegotiationEnabled ? 'Habilitada' : 'Deshabilitada'} />
               <InfoRow label="Gemini habilitado" value={aiGeminiEnabled ? 'Sí' : 'No'} />
               <InfoRow label="OpenAI habilitado" value={aiOpenAiEnabled ? 'Sí' : 'No'} />
+              <InfoRow label="OpenRouter habilitado" value={aiOpenRouterEnabled ? 'Sí' : 'No'} />
               <InfoRow label="Auto-degradación" value={aiAutoDegradeEnabled ? 'Activa' : 'Inactiva'} />
               <InfoRow label="Latencia promedio" value={`${stats.avgLatencyMs} ms`} />
               <InfoRow label="Fallos últimos 15m" value={String(stats.failures15m)} />
@@ -885,6 +890,23 @@ export default function ControlAiPage() {
                   >
                     <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
                       aiOpenAiEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">OpenRouter habilitado</p>
+                    <p className="text-xs text-gray-500">Controla uso del proveedor OpenRouter.</p>
+                  </div>
+                  <button
+                    onClick={() => setAiOpenRouterEnabled((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
+                      aiOpenRouterEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                      aiOpenRouterEnabled ? 'translate-x-5' : 'translate-x-0'
                     }`} />
                   </button>
                 </div>
