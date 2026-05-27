@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-type TabKey = 'observability' | 'operational';
+type TabKey = 'observability' | 'operational' | 'tukibot';
 type AiProvider = 'gemini' | 'openai';
+type MsgTipo = 'accepted_single' | 'accepted_multi' | 'countered_single' | 'countered_multi';
+
+interface TukiMessage {
+  id: string;
+  tipo: MsgTipo;
+  texto: string;
+  activo: boolean;
+}
 
 interface AppSetting {
   id: string;
@@ -53,6 +61,18 @@ export default function ControlAiPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [testMsg, setTestMsg] = useState<string | null>(null);
+
+  // TukiBot messages state
+  const [tukiMessages, setTukiMessages] = useState<TukiMessage[]>([]);
+  const [tukiLoading, setTukiLoading] = useState(false);
+  const [tukiSaving, setTukiSaving] = useState<string | null>(null);
+  const [tukiError, setTukiError] = useState('');
+  const [tukiSuccess, setTukiSuccess] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTexto, setEditingTexto] = useState('');
+  const [newTipo, setNewTipo] = useState<MsgTipo>('accepted_single');
+  const [newTexto, setNewTexto] = useState('');
+  const [addingNew, setAddingNew] = useState(false);
 
   const [appSettings, setAppSettings] = useState<AppSetting[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
@@ -298,6 +318,84 @@ export default function ControlAiPage() {
     fetchData();
   }, [fetchData]);
 
+  const fetchTukiMessages = useCallback(async () => {
+    setTukiLoading(true);
+    setTukiError('');
+    try {
+      const { data, error: dbErr } = await supabase
+        .from('tukibot_messages')
+        .select('id, tipo, texto, activo')
+        .order('tipo')
+        .order('created_at');
+      if (dbErr) throw new Error(dbErr.message);
+      setTukiMessages((data || []) as TukiMessage[]);
+    } catch (err) {
+      setTukiError(String(err));
+    } finally {
+      setTukiLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'tukibot') fetchTukiMessages();
+  }, [activeTab, fetchTukiMessages]);
+
+  const toggleActivo = async (msg: TukiMessage) => {
+    setTukiSaving(msg.id);
+    const { error: dbErr } = await supabase
+      .from('tukibot_messages')
+      .update({ activo: !msg.activo })
+      .eq('id', msg.id);
+    if (dbErr) setTukiError(dbErr.message);
+    else setTukiMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, activo: !m.activo } : m));
+    setTukiSaving(null);
+  };
+
+  const saveTexto = async (msg: TukiMessage) => {
+    if (!editingTexto.trim()) return;
+    setTukiSaving(msg.id);
+    const { error: dbErr } = await supabase
+      .from('tukibot_messages')
+      .update({ texto: editingTexto.trim() })
+      .eq('id', msg.id);
+    if (dbErr) setTukiError(dbErr.message);
+    else {
+      setTukiMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, texto: editingTexto.trim() } : m));
+      setTukiSuccess('Mensaje actualizado.');
+      setTimeout(() => setTukiSuccess(''), 2500);
+    }
+    setEditingId(null);
+    setTukiSaving(null);
+  };
+
+  const deleteMessage = async (id: string) => {
+    if (!confirm('¿Eliminar este mensaje?')) return;
+    setTukiSaving(id);
+    const { error: dbErr } = await supabase.from('tukibot_messages').delete().eq('id', id);
+    if (dbErr) setTukiError(dbErr.message);
+    else setTukiMessages((prev) => prev.filter((m) => m.id !== id));
+    setTukiSaving(null);
+  };
+
+  const addMessage = async () => {
+    if (!newTexto.trim()) return;
+    setTukiSaving('new');
+    const { data, error: dbErr } = await supabase
+      .from('tukibot_messages')
+      .insert({ tipo: newTipo, texto: newTexto.trim(), activo: true })
+      .select('id, tipo, texto, activo')
+      .single();
+    if (dbErr) setTukiError(dbErr.message);
+    else if (data) {
+      setTukiMessages((prev) => [...prev, data as TukiMessage]);
+      setNewTexto('');
+      setAddingNew(false);
+      setTukiSuccess('Mensaje agregado.');
+      setTimeout(() => setTukiSuccess(''), 2500);
+    }
+    setTukiSaving(null);
+  };
+
   const saveOperationalControls = async () => {
     setSaving(true);
     setError('');
@@ -433,6 +531,16 @@ export default function ControlAiPage() {
         >
           Control operativo
         </button>
+        <button
+          onClick={() => setActiveTab('tukibot')}
+          className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
+            activeTab === 'tukibot'
+              ? 'bg-[#F5C518] text-[#1d2327] border-[#F5C518]'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          TukiBot mensajes
+        </button>
       </div>
 
       {loading ? (
@@ -524,6 +632,143 @@ export default function ControlAiPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+      ) : activeTab === 'tukibot' ? (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-gray-800">Mensajes fallback TukiBot</h2>
+              <button
+                onClick={() => { setAddingNew(true); setTukiError(''); setTukiSuccess(''); }}
+                className="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black"
+              >
+                + Agregar mensaje
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Usados cuando la IA no está disponible. Variables: <code className="bg-gray-100 px-1 rounded">{'{precio}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{total}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{ahorro}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{producto}'}</code>.
+            </p>
+
+            {tukiError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{tukiError}</div>}
+            {tukiSuccess && <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{tukiSuccess}</div>}
+
+            {addingNew && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Nuevo mensaje</p>
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={newTipo}
+                    onChange={(e) => setNewTipo(e.target.value as MsgTipo)}
+                    className="w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="accepted_single">accepted_single — Aceptado, unidad</option>
+                    <option value="accepted_multi">accepted_multi — Aceptado, múltiple</option>
+                    <option value="countered_single">countered_single — Contraoferta, unidad</option>
+                    <option value="countered_multi">countered_multi — Contraoferta, múltiple</option>
+                  </select>
+                  <textarea
+                    value={newTexto}
+                    onChange={(e) => setNewTexto(e.target.value)}
+                    rows={3}
+                    placeholder="Texto del mensaje con variables {precio}, {producto}..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-y"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={addMessage}
+                      disabled={tukiSaving === 'new' || !newTexto.trim()}
+                      className="px-4 py-2 rounded-lg bg-[#F5C518] text-[#1d2327] text-sm font-bold hover:bg-yellow-400 disabled:opacity-60"
+                    >
+                      {tukiSaving === 'new' ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button
+                      onClick={() => { setAddingNew(false); setNewTexto(''); }}
+                      className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tukiLoading ? (
+              <p className="text-sm text-gray-500">Cargando mensajes...</p>
+            ) : (
+              (['accepted_single', 'accepted_multi', 'countered_single', 'countered_multi'] as MsgTipo[]).map((tipo) => {
+                const msgs = tukiMessages.filter((m) => m.tipo === tipo);
+                return (
+                  <div key={tipo} className="mb-5">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{tipo.replace('_', ' · ')}</h3>
+                    {msgs.length === 0 && <p className="text-xs text-gray-400">Sin variantes.</p>}
+                    <div className="space-y-2">
+                      {msgs.map((msg) => (
+                        <div key={msg.id} className={`border rounded-xl p-3 text-sm transition-colors ${
+                          msg.activo ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'
+                        }`}>
+                          {editingId === msg.id ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editingTexto}
+                                onChange={(e) => setEditingTexto(e.target.value)}
+                                rows={3}
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm resize-y"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveTexto(msg)}
+                                  disabled={tukiSaving === msg.id}
+                                  className="px-3 py-1.5 rounded-lg bg-[#F5C518] text-[#1d2327] text-xs font-bold disabled:opacity-60"
+                                >
+                                  {tukiSaving === msg.id ? 'Guardando...' : 'Guardar'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingId(null)}
+                                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-gray-700 leading-snug flex-1">{msg.texto}</p>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => { setEditingId(msg.id); setEditingTexto(msg.texto); }}
+                                  className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => toggleActivo(msg)}
+                                  disabled={tukiSaving === msg.id}
+                                  className={`px-2 py-1 text-xs rounded border ${
+                                    msg.activo
+                                      ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                                  } disabled:opacity-60`}
+                                >
+                                  {msg.activo ? 'Activo' : 'Inactivo'}
+                                </button>
+                                <button
+                                  onClick={() => deleteMessage(msg.id)}
+                                  disabled={tukiSaving === msg.id}
+                                  className="px-2 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

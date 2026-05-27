@@ -80,14 +80,33 @@ function roundToNearestThousand(n: number) {
   return Math.round(n / 1000) * 1000;
 }
 
-function fallbackMessage(args: {
+/** Sustituye placeholders en una plantilla de mensaje TukiBot. */
+function applyMessageTemplate(template: string, vars: {
+  precio: string;
+  total: string;
+  ahorro: string;
+  producto: string;
+}): string {
+  return template
+    .replace(/\{precio\}/g, vars.precio)
+    .replace(/\{total\}/g, vars.total)
+    .replace(/\{ahorro\}/g, vars.ahorro)
+    .replace(/\{producto\}/g, vars.producto);
+}
+
+/**
+ * Construye el mensaje fallback.
+ * Si la DB tiene variantes activas las usa (rotación aleatoria).
+ * Si no, usa el texto hardcodeado como último recurso.
+ */
+async function fallbackMessage(args: {
   status: 'accepted' | 'countered';
   vendorName: string;
   productName: string;
   amount: number;
   listedPrice: number;
   quantity: number;
-}) {
+}): Promise<string> {
   const savedPerUnit = Math.max(0, args.listedPrice - args.amount);
   const isMultiple   = args.quantity > 1;
   const totalSaved   = savedPerUnit * args.quantity;
@@ -99,6 +118,35 @@ function fallbackMessage(args: {
   const savedStr = isMultiple ? gs(totalSaved) : gs(savedPerUnit);
   const hasSaving = savedPerUnit > 0;
 
+  // Determinar tipo para consultar la tabla
+  const tipo = args.status === 'accepted'
+    ? (isMultiple ? 'accepted_multi' : 'accepted_single')
+    : (isMultiple ? 'countered_multi' : 'countered_single');
+
+  // Intentar obtener variantes de DB (service role bypasea RLS)
+  try {
+    const { data: rows } = await sb
+      .from('tukibot_messages')
+      .select('texto')
+      .eq('tipo', tipo)
+      .eq('activo', true)
+      .limit(20);
+
+    if (rows && rows.length > 0) {
+      // Elegir variante aleatoria
+      const picked = rows[Math.floor(Math.random() * rows.length)];
+      return applyMessageTemplate(picked.texto, {
+        precio: gs(args.amount),
+        total:  priceStr,
+        ahorro: savedStr,
+        producto: args.productName,
+      });
+    }
+  } catch {
+    // Si la tabla no existe todavía, cae al hardcodeado
+  }
+
+  // Hardcoded fallback (respaldo si la tabla aún no tiene datos)
   if (args.status === 'accepted') {
     return hasSaving
       ? `¡Trato hecho! Te confirmamos ${priceStr} por ${args.productName} — ahorrás ${savedStr} frente al precio publicado. ¡Procedé con el pago para asegurar tu pedido!`
@@ -587,7 +635,7 @@ export async function POST(req: Request) {
         status,
         acceptedAmount: finalAmount,
         totalAmount: finalAmount * quantity,
-        message: fallbackMessage({
+        message: await fallbackMessage({
           status,
           vendorName,
           productName,
@@ -669,7 +717,7 @@ export async function POST(req: Request) {
         timeoutAt,
         timeoutAction: botTimeoutAction,
         timeoutMessage,
-        message: fallbackMessage({
+        message: await fallbackMessage({
           status,
           vendorName,
           productName,
