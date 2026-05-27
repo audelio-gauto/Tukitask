@@ -40,6 +40,10 @@ function formatTimeoutAt(timeoutAt?: string) {
   }
 }
 
+function formatOfferGs(value: number) {
+  return new Intl.NumberFormat('es-PY').format(value);
+}
+
 type Product = {
   id: string;
   vendor_id: string;
@@ -107,7 +111,7 @@ export default function ProductDetailPage() {
 
   const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
   const allImages    = (p.gallery && p.gallery.length > 0) ? p.gallery : (p.image ? [p.image] : []);
-  const offerNum     = parseInt(offerAmount, 10) || 0;
+  const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
 
@@ -428,7 +432,7 @@ export default function ProductDetailPage() {
                     onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')}
                     disabled={submitting}
                   >
-                    <span>🤖 Regatear al TukiBot</span>
+                    <span>🤝 Hacé tu oferta</span>
                     <span style={{ opacity: 0.55, fontSize: '0.75rem', marginLeft: 'auto' }}>
                       {mode === 'negotiate' ? '▲ cerrar' : '▼ abrir'}
                     </span>
@@ -456,13 +460,20 @@ export default function ProductDetailPage() {
                       </label>
                       <input
                         id="offerAmt"
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="tnd-offer-input"
                         placeholder={`Hasta ${gs(p.price)}`}
                         value={offerAmount}
-                        min={1}
-                        max={p.price}
-                        onChange={e => setOfferAmount(e.target.value)}
+                        onChange={e => {
+                          const digits = e.target.value.replace(/\D/g, '');
+                          if (!digits) {
+                            setOfferAmount('');
+                            return;
+                          }
+                          const clamped = Math.min(Number(digits), p.price);
+                          setOfferAmount(formatOfferGs(clamped));
+                        }}
                         required
                         autoFocus
                       />
