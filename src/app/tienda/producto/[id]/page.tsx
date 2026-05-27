@@ -59,28 +59,35 @@ type Product = {
   negotiable: boolean;
 };
 
-const NEGOTIATION_SCENES = [
-  {
-    emoji: '😏',
-    title: 'Dame 3 segundos... le estoy convenciendo',
-    subtitle: 'TukiBot ya puso tu oferta sobre la mesa y está buscando el sí.',
-  },
-  {
-    emoji: '🫣',
-    title: 'El vendedor respiró hondo... creo que acepta',
-    subtitle: 'Estamos empujando el precio sin romper el trato.',
-  },
-  {
-    emoji: '😬',
-    title: 'UFFF casi rechaza',
-    subtitle: 'Tranquilo: TukiBot sigue peleando cada guaraní por vos.',
-  },
-  {
-    emoji: '💸',
-    title: 'TukiBot salvó tu bolsillo otra vez',
-    subtitle: 'Si esto cierra, esta captura vale oro.',
-  },
+const NEG_PHRASES = [
+  'Dame 3 segundos…',
+  'Le estoy convenciendo 😏',
+  'Dame 3 segundos más, ya casi…',
+  'El vendedor respiró hondo…',
+  'Creo que acepta...',
+  '🤖 Dame unos segundos… está dudando...',
+  '📉 El precio acaba de tambalearse...',
 ] as const;
+
+const NEG_CLIMAX = {
+  accepted: '😮 ALTO… creo que va a aceptar',
+  countered: '👀 El vendedor no cedió más, pero bajó bastante',
+} as const;
+
+type PendingResult = {
+  status: 'accepted';
+  buyerOffer: number;
+  acceptedAmount?: number;
+  message?: string | null;
+} | {
+  status: 'countered';
+  buyerOffer: number;
+  counterAmount?: number;
+  message?: string | null;
+  timeoutAt?: string;
+  timeoutAction?: TimeoutAction;
+  timeoutMessage?: string;
+};
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
@@ -93,10 +100,10 @@ export default function ProductDetailPage() {
   const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
   const [offerAmount, setOfferAmount] = useState('');
-  const [submitting,  setSubmitting]  = useState(false);
-  const [analyzing,   setAnalyzing]   = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0);
-  const [done,        setDone]        = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [animStep,      setAnimStep]      = useState(-1);
+  const [pendingResult, setPendingResult] = useState<PendingResult | null>(null);
+  const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
     supabase
@@ -109,18 +116,56 @@ export default function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!analyzing) {
-      setAnalysisStep(0);
-      return;
+    if (animStep < 0) return;
+
+    // Steps 0–5: advance every 2 s; if result ready and ≥3 phrases shown, jump to climax
+    if (animStep <= 5) {
+      const t = setTimeout(() => {
+        if (pendingResult && animStep >= 2) {
+          setAnimStep(7);
+        } else {
+          setAnimStep(s => s + 1);
+        }
+      }, 2000);
+      return () => clearTimeout(t);
     }
 
-    setAnalysisStep(0);
-    const intervalId = window.setInterval(() => {
-      setAnalysisStep((prev) => (prev + 1) % NEGOTIATION_SCENES.length);
-    }, 850);
+    // Step 6 (last generic phrase): hold until API result is ready
+    if (animStep === 6) {
+      if (!pendingResult) return;
+      const t = setTimeout(() => setAnimStep(7), 200);
+      return () => clearTimeout(t);
+    }
 
-    return () => window.clearInterval(intervalId);
-  }, [analyzing]);
+    // Step 7: climax phrase — show for 2 s then reveal
+    if (animStep === 7 && pendingResult) {
+      const t = setTimeout(() => {
+        if (pendingResult.status === 'accepted') {
+          setDone({
+            type: 'negotiate',
+            amount: pendingResult.acceptedAmount ?? pendingResult.buyerOffer,
+            botResponse: 'accepted',
+            botMessage: pendingResult.message ?? undefined,
+          });
+        } else {
+          setDone({
+            type: 'negotiate',
+            amount: pendingResult.buyerOffer,
+            botResponse: 'countered',
+            counterAmount: pendingResult.counterAmount,
+            botMessage: pendingResult.message ?? undefined,
+            timeoutAt: pendingResult.timeoutAt,
+            timeoutAction: pendingResult.timeoutAction,
+            timeoutMessage: pendingResult.timeoutMessage,
+          });
+        }
+        setAnimStep(-1);
+        setPendingResult(null);
+        setSubmitting(false);
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [animStep, pendingResult]);
 
   // Loading
   if (p === undefined) {
@@ -152,9 +197,6 @@ export default function ProductDetailPage() {
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
-  const analysisScene = NEGOTIATION_SCENES[analysisStep % NEGOTIATION_SCENES.length];
-  const analysisProgress = Math.min(96, 26 + (analysisStep * 22));
-  const estimatedSavings = offerNum > 0 ? Math.max(0, (p.price - offerNum) * quantity) : 0;
   const vendorAlias = p.vendor_email.split('@')[0];
   const resultUnitAmount = done?.botResponse === 'countered'
     ? (done.counterAmount ?? done.amount ?? p.price)
@@ -193,6 +235,9 @@ export default function ProductDetailPage() {
   async function handleOffer(e: React.FormEvent) {
     e.preventDefault();
     if (!p || !offerNum || offerNum <= 0) return;
+    const capturedOffer = offerNum;
+    setPendingResult(null);
+    setAnimStep(0);
     setSubmitting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -206,7 +251,7 @@ export default function ProductDetailPage() {
         body: JSON.stringify({
           vendorId: p.vendor_id,
           productId: p.id,
-          buyerOffer: offerNum,
+          buyerOffer: capturedOffer,
           quantity,
           listedPrice: p.price,
           floorPrice: p.floor_price,
@@ -214,62 +259,29 @@ export default function ProductDetailPage() {
           vendorName: p.vendor_email,
         }),
       });
-
       if (!res.ok) throw new Error('Negociación fallida');
-
       const data = await res.json();
-      setAnalyzing(true);
-      await humanDelay();
       if (data.status === 'accepted') {
-        setDone({
-          type: 'negotiate',
-          amount: data.acceptedAmount ?? offerNum,
-          botResponse: 'accepted',
-          botMessage: data.message,
-        });
+        setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: data.acceptedAmount ?? capturedOffer, message: data.message ?? null });
       } else {
-        setDone({
-          type: 'negotiate',
-          amount: offerNum,
-          botResponse: 'countered',
-          counterAmount: data.counterAmount,
-          botMessage: data.message,
-          timeoutAt: data.timeoutAt,
-          timeoutAction: data.timeoutAction,
-          timeoutMessage: data.timeoutMessage,
-        });
+        setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount: data.counterAmount, message: data.message ?? null, timeoutAt: data.timeoutAt, timeoutAction: data.timeoutAction, timeoutMessage: data.timeoutMessage });
       }
     } catch {
-      // Fallback local logic to keep UX responsive even if API fails
-      setAnalyzing(true);
-      await humanDelay();
-      if (offerNum >= p.floor_price) {
-        setDone({
-          type: 'negotiate',
-          amount: offerNum,
-          botResponse: 'accepted',
-          botMessage: `Perfecto, te confirmo ${gs(offerNum)} por unidad.`,
-        });
+      // Fallback: keep animation running, resolve with local logic
+      if (capturedOffer >= p.floor_price) {
+        setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: capturedOffer, message: `Perfecto, te confirmo ${gs(capturedOffer)} por unidad.` });
       } else {
-        const counter = Math.round((p.floor_price + offerNum) / 2 / 1000) * 1000;
+        const counter = Math.round((p.floor_price + capturedOffer) / 2 / 1000) * 1000;
         const counterAmount = Math.max(p.floor_price, counter);
-        setDone({
-          type: 'negotiate',
-          amount: offerNum,
-          botResponse: 'countered',
-          counterAmount,
-          botMessage: `Te puedo mejorar la oferta: ${gs(counterAmount)} por unidad.`,
-        });
+        setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount, message: `Te puedo mejorar la oferta: ${gs(counterAmount)} por unidad.` });
       }
-    } finally {
-      setAnalyzing(false);
-      setSubmitting(false);
     }
+    // setSubmitting(false) is handled by the animation useEffect at step 7
   }
 
   function reset() {
     setDone(null); setMode('idle');
-    setOfferAmount(''); setQuantity(1); setAnalysisStep(0);
+    setOfferAmount(''); setQuantity(1); setAnimStep(-1); setPendingResult(null);
   }
 
   return (
@@ -375,7 +387,7 @@ export default function ProductDetailPage() {
                         <span className="tnd-offer-success-stamp">TukiBot cerró el trato</span>
                       </div>
                       <div className="tnd-offer-success-hero">✅</div>
-                      <div className="tnd-offer-success-title" style={{ color: '#4ade80' }}>TukiBot salvó tu bolsillo</div>
+                      <div className="tnd-offer-success-title">TukiBot salvó tu bolsillo</div>
                       <p className="tnd-offer-success-tagline">
                         {vendorAlias} aceptó tu oferta para <strong>{p.name}</strong>. Si querías una historia para subir, acá está.
                       </p>
@@ -419,7 +431,7 @@ export default function ProductDetailPage() {
                         <span className="tnd-offer-success-stamp">Casi cayó, pero volvió con oferta</span>
                       </div>
                       <div className="tnd-offer-success-hero">😮</div>
-                      <div className="tnd-offer-success-title" style={{ color: '#F5C518' }}>No soltó del todo, pero te traje esto</div>
+                      <div className="tnd-offer-success-title">No soltó del todo, pero te traje esto</div>
                       <p className="tnd-offer-success-tagline">
                         El vendedor no aceptó tu número exacto, pero TukiBot rescató una contraoferta fuerte para <strong>{p.name}</strong>.
                       </p>
@@ -537,49 +549,16 @@ export default function ProductDetailPage() {
                     </div>
                   </div>
 
-                  {analyzing ? (
-                    <div className="tnd-negotiation-live" aria-live="polite">
-                      <div className="tnd-negotiation-live-header">
-                        <span className="tnd-negotiation-live-badge">NEGOCIACION EN VIVO</span>
-                        <span className="tnd-negotiation-live-pulse">•</span>
+                  {animStep >= 0 ? (
+                    <div className="tnd-neg-anim">
+                      <div className="tnd-neg-anim-bot" aria-hidden="true">🤖</div>
+                      <div key={animStep} className="tnd-neg-anim-phrase" aria-live="polite">
+                        {animStep === 7 && pendingResult
+                          ? NEG_CLIMAX[pendingResult.status]
+                          : NEG_PHRASES[Math.min(animStep, NEG_PHRASES.length - 1)]}
                       </div>
-
-                      <div className="tnd-negotiation-live-stage">
-                        <div className="tnd-negotiation-live-bot">🤖</div>
-                        <div className="tnd-negotiation-live-bubble">
-                          <div className="tnd-negotiation-live-emoji">{analysisScene.emoji}</div>
-                          <div className="tnd-negotiation-live-title">{analysisScene.title}</div>
-                          <p className="tnd-negotiation-live-subtitle">{analysisScene.subtitle}</p>
-                        </div>
-                      </div>
-
-                      <div className="tnd-negotiation-live-meter">
-                        <div className="tnd-negotiation-live-meter-top">
-                          <span>Convenciendo al vendedor</span>
-                          <span>{analysisProgress}%</span>
-                        </div>
-                        <div className="tnd-negotiation-live-track">
-                          <div className="tnd-negotiation-live-fill" style={{ width: `${analysisProgress}%` }} />
-                        </div>
-                      </div>
-
-                      <div className="tnd-negotiation-live-chips">
-                        <span className="tnd-negotiation-live-chip">Tu oferta: {gs(offerNum)} c/u</span>
-                        <span className="tnd-negotiation-live-chip">Cantidad: {quantity} und.</span>
-                        {estimatedSavings > 0 && (
-                          <span className="tnd-negotiation-live-chip tnd-negotiation-live-chip-accent">
-                            Ahorro potencial: {gs(estimatedSavings)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="tnd-negotiation-live-footer">
-                        <span className="tnd-negotiation-live-footnote">Modo captura: si sale bien, esta historia merece screenshot.</span>
-                        <div className="tnd-negotiation-live-dots" aria-hidden="true">
-                          <span />
-                          <span />
-                          <span />
-                        </div>
+                      <div className="tnd-neg-anim-dots" aria-hidden="true">
+                        <span /><span /><span />
                       </div>
                     </div>
                   ) : (
