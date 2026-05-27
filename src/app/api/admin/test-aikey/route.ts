@@ -7,11 +7,28 @@ export const dynamic = 'force-dynamic';
 
 function parseProviderError(provider: 'gemini' | 'openai' | 'openrouter', status: number, msg: string) {
   const lower = msg.toLowerCase();
+  const isOpenRouterCredits = provider === 'openrouter' && (
+    lower.includes('insufficient credits') ||
+    lower.includes('never purchased credits') ||
+    lower.includes('purchase more') ||
+    lower.includes('credits') && lower.includes('openrouter')
+  );
   const isQuota =
     status === 429 ||
     lower.includes('quota exceeded') ||
     lower.includes('rate limit') ||
     lower.includes('resource_exhausted');
+
+  if (isOpenRouterCredits) {
+    return {
+      ok: false,
+      code: 'openrouter_credits_required',
+      provider,
+      error: 'OpenRouter no tiene créditos disponibles en esta cuenta u organización.',
+      recommendation: 'Entrá a OpenRouter, cargá créditos en la cuenta correcta y volvé a probar la conexión.',
+      details: msg,
+    };
+  }
 
   if (!isQuota) {
     return {
