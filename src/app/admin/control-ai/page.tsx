@@ -861,7 +861,7 @@ export default function ControlAiPage() {
               <div>
                 <h2 className="text-base font-semibold text-gray-800">Frases de animación</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Se muestran en pantalla mientras TukiBot negocia. Orden aleatorio en cada sesión.
+                  Se muestran en orden secuencial mientras TukiBot negocia. Cada frase aparece ~3 s.
                 </p>
               </div>
               <button

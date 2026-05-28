@@ -75,7 +75,6 @@ const DEFAULT_NEG_CLIMAX = {
 };
 
 const ANIM_CLIMAX    = 100; // sentinel step → show climax phrase
-const ANIM_STEPS_PER_SEC = 0.5; // 1 step cada 2 s
 
 type PendingResult = {
   status: 'accepted';
@@ -108,8 +107,7 @@ export default function ProductDetailPage() {
   const [pendingResult, setPendingResult] = useState<PendingResult | null>(null);
   const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
-  const [shuffledPhrases, setShuffledPhrases] = useState<string[]>(DEFAULT_NEG_PHRASES);
-  const [animMinSteps,  setAnimMinSteps]  = useState(20); // 20 × 2s = 40s default
+  const [animMinSteps,  setAnimMinSteps]  = useState(13); // ≈40s ÷ 3s/paso
   const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
@@ -118,11 +116,10 @@ export default function ProductDetailPage() {
       .then((data) => {
         if (Array.isArray(data.phrases) && data.phrases.length > 0) {
           setNegPhrases(data.phrases);
-          setShuffledPhrases(data.phrases);
         }
         if (data.climax) setNegClimax(data.climax);
         if (typeof data.minSeconds === 'number' && data.minSeconds >= 10) {
-          setAnimMinSteps(Math.round(data.minSeconds * ANIM_STEPS_PER_SEC));
+          setAnimMinSteps(Math.max(1, Math.round(data.minSeconds / 3)));
         }
       })
       .catch(() => {}); // keep defaults on error
@@ -171,18 +168,19 @@ export default function ProductDetailPage() {
       return () => clearTimeout(t);
     }
 
-    // Loop principal: avanza cada 2 s; pasa al clímax solo cuando
-    // se cumplieron ≥40 s (ANIM_MIN_STEPS pasos) Y ya llegó el resultado
+    // Loop principal: avanza cada 3 s; pasa al clímax cuando
+    // se mostraron todas las frases (mínimo) Y ya llegó el resultado
+    const effectiveMin = Math.max(animMinSteps, negPhrases.length);
     const t = setTimeout(() => {
       const next = animStep + 1;
-      if (next >= animMinSteps && pendingResult) {
+      if (next >= effectiveMin && pendingResult) {
         setAnimStep(ANIM_CLIMAX);
       } else {
         setAnimStep(next);
       }
-    }, 2000);
+    }, 3000);
     return () => clearTimeout(t);
-  }, [animStep, pendingResult, animMinSteps]);
+  }, [animStep, pendingResult, animMinSteps, negPhrases.length]);
 
   // Loading
   if (p === undefined) {
@@ -254,13 +252,6 @@ export default function ProductDetailPage() {
     if (!p || !offerNum || offerNum <= 0) return;
     const capturedOffer = offerNum;
     setPendingResult(null);
-    // Fisher-Yates shuffle for random phrase order each negotiation
-    const arr = [...negPhrases];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    setShuffledPhrases(arr);
     setAnimStep(0);
     setSubmitting(true);
     try {
@@ -579,7 +570,7 @@ export default function ProductDetailPage() {
                       <div key={animStep} className="tnd-neg-anim-phrase" aria-live="polite">
                         {animStep === ANIM_CLIMAX && pendingResult
                           ? negClimax[pendingResult.status]
-                          : (shuffledPhrases[animStep % shuffledPhrases.length] ?? negPhrases[0])}
+                          : (negPhrases[animStep % negPhrases.length] ?? negPhrases[0])}
                       </div>
                       <div className="tnd-neg-anim-dots" aria-hidden="true">
                         <span /><span /><span />
