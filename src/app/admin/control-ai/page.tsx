@@ -91,6 +91,7 @@ export default function ControlAiPage() {
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
   const [aiModel, setAiModel] = useState('gemini-2.0-flash-lite');
   const [aiNegotiationEnabled, setAiNegotiationEnabled] = useState(true);
+  const [aiAnimPhrasesEnabled, setAiAnimPhrasesEnabled] = useState(true);
   const [aiGeminiEnabled, setAiGeminiEnabled] = useState(true);
   const [aiOpenAiEnabled, setAiOpenAiEnabled] = useState(true);
   const [aiOpenRouterEnabled, setAiOpenRouterEnabled] = useState(true);
@@ -222,6 +223,8 @@ export default function ControlAiPage() {
 
       const enabledRaw = getApp('ai_negotiation_enabled');
       setAiNegotiationEnabled(enabledRaw === '' ? true : enabledRaw === 'true');
+      const animEnabledRaw = getApp('ai_anim_phrases_enabled');
+      setAiAnimPhrasesEnabled(animEnabledRaw === '' ? true : animEnabledRaw === 'true');
       const geminiEnabledRaw = getApp('ai_gemini_enabled');
       setAiGeminiEnabled(geminiEnabledRaw === '' ? true : geminiEnabledRaw === 'true');
       const openAiEnabledRaw = getApp('ai_openai_enabled');
@@ -478,6 +481,7 @@ export default function ControlAiPage() {
       setApp('ai_provider', aiProvider);
       setApp('ai_model', aiModel);
       setApp('ai_negotiation_enabled', aiNegotiationEnabled ? 'true' : 'false');
+      setApp('ai_anim_phrases_enabled', aiAnimPhrasesEnabled ? 'true' : 'false');
       setApp('ai_gemini_enabled', aiGeminiEnabled ? 'true' : 'false');
       setApp('ai_openai_enabled', aiOpenAiEnabled ? 'true' : 'false');
       setApp('ai_openrouter_enabled', aiOpenRouterEnabled ? 'true' : 'false');
@@ -665,6 +669,7 @@ export default function ControlAiPage() {
               <InfoRow label="OpenAI API Key" value={hasOpenAiKey ? 'Configurada' : 'No configurada'} />
               <InfoRow label="OpenRouter API Key" value={hasOpenRouterKey ? 'Configurada' : 'No configurada'} />
               <InfoRow label="Negociación AI" value={aiNegotiationEnabled ? 'Habilitada' : 'Deshabilitada'} />
+              <InfoRow label="Animación AI" value={aiAnimPhrasesEnabled ? 'Habilitada' : 'Deshabilitada'} />
               <InfoRow label="Gemini habilitado" value={aiGeminiEnabled ? 'Sí' : 'No'} />
               <InfoRow label="OpenAI habilitado" value={aiOpenAiEnabled ? 'Sí' : 'No'} />
               <InfoRow label="OpenRouter habilitado" value={aiOpenRouterEnabled ? 'Sí' : 'No'} />
@@ -1088,6 +1093,25 @@ export default function ControlAiPage() {
                   <span
                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
                       aiNegotiationEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Animación AI habilitada</p>
+                  <p className="text-xs text-gray-500">Si se desactiva, usa frases fijas de fallback y no intenta generar con IA.</p>
+                </div>
+                <button
+                  onClick={() => setAiAnimPhrasesEnabled((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
+                    aiAnimPhrasesEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                      aiAnimPhrasesEnabled ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
                 </button>

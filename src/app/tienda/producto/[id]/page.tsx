@@ -254,6 +254,29 @@ export default function ProductDetailPage() {
     setPendingResult(null);
     setAnimStep(0);
     setSubmitting(true);
+
+    // Best-effort: refresh animation phrases with AI, without blocking negotiation.
+    void fetch('/api/tienda/neg-phrases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productName: p.name,
+        listedPrice: p.price,
+        floorPrice: p.floor_price,
+        buyerOffer: capturedOffer,
+        quantity,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.phrases) && data.phrases.length > 0) {
+          setNegPhrases(data.phrases);
+        }
+      })
+      .catch(() => {
+        // keep current phrases on any error
+      });
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token || '';
