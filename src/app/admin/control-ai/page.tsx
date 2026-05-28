@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-type TabKey = 'observability' | 'operational' | 'tukibot';
+type TabKey = 'observability' | 'operational' | 'tukibot' | 'animaciones';
 type AiProvider = 'gemini' | 'openai' | 'openrouter';
 type MsgTipo = 'accepted_single' | 'accepted_multi' | 'countered_single' | 'countered_multi';
 
@@ -391,10 +391,8 @@ export default function ControlAiPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'tukibot') {
-      fetchTukiMessages();
-      fetchAnimPhrases();
-    }
+    if (activeTab === 'tukibot') fetchTukiMessages();
+    if (activeTab === 'animaciones') fetchAnimPhrases();
   }, [activeTab, fetchTukiMessages, fetchAnimPhrases]);
 
   const toggleActivo = async (msg: TukiMessage) => {
@@ -598,6 +596,16 @@ export default function ControlAiPage() {
           }`}
         >
           TukiBot mensajes
+        </button>
+        <button
+          onClick={() => setActiveTab('animaciones')}
+          className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
+            activeTab === 'animaciones'
+              ? 'bg-[#F5C518] text-[#1d2327] border-[#F5C518]'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          Bot Animaciones
         </button>
       </div>
 
@@ -833,10 +841,17 @@ export default function ControlAiPage() {
             )}
           </div>
 
-          {/* ── Frases de animación de negociación ── */}
+        </div>
+      ) : activeTab === 'animaciones' ? (
+        <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base font-semibold text-gray-800">Frases de animación</h2>
+              <div>
+                <h2 className="text-base font-semibold text-gray-800">Frases de animación</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Se muestran en pantalla mientras TukiBot negocia. Orden aleatorio en cada sesión.
+                </p>
+              </div>
               <button
                 onClick={() => saveAnimPhrases(animPhrases, animClimaxAccepted, animClimaxCountered)}
                 disabled={animPhrasesSaving}
@@ -845,124 +860,124 @@ export default function ControlAiPage() {
                 {animPhrasesSaving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4">
-              Se muestran en pantalla mientras TukiBot negocia. Orden aleatorio en cada sesión.
-            </p>
 
-            {animPhrasesError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{animPhrasesError}</div>}
-            {animPhrasesSuccess && <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{animPhrasesSuccess}</div>}
+            {animPhrasesError && <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{animPhrasesError}</div>}
+            {animPhrasesSuccess && <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{animPhrasesSuccess}</div>}
 
             {animPhrasesLoading ? (
-              <p className="text-sm text-gray-500">Cargando frases...</p>
+              <p className="text-sm text-gray-500 mt-4">Cargando frases...</p>
             ) : (
-              <>
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frases principales</h3>
-                <div className="space-y-2 mb-4">
-                  {animPhrases.map((phrase, idx) => (
-                    <div key={idx} className="border border-gray-200 bg-white rounded-xl p-3 text-sm">
-                      {editingAnimIdx === idx ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={editingAnimText}
-                            onChange={(e) => setEditingAnimText(e.target.value)}
-                            rows={2}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm resize-y"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                if (editingAnimText.trim()) {
-                                  const updated = [...animPhrases];
-                                  updated[idx] = editingAnimText.trim();
-                                  setAnimPhrases(updated);
-                                }
-                                setEditingAnimIdx(null);
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-[#F5C518] text-[#1d2327] text-xs font-bold"
-                            >
-                              Aplicar
-                            </button>
-                            <button
-                              onClick={() => setEditingAnimIdx(null)}
-                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600"
-                            >
-                              Cancelar
-                            </button>
+              <div className="mt-4 space-y-6">
+                <div>
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frases principales</h3>
+                  <div className="space-y-2 mb-3">
+                    {animPhrases.map((phrase, idx) => (
+                      <div key={idx} className="border border-gray-200 bg-white rounded-xl p-3 text-sm">
+                        {editingAnimIdx === idx ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={editingAnimText}
+                              onChange={(e) => setEditingAnimText(e.target.value)}
+                              rows={2}
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm resize-y"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  if (editingAnimText.trim()) {
+                                    const updated = [...animPhrases];
+                                    updated[idx] = editingAnimText.trim();
+                                    setAnimPhrases(updated);
+                                  }
+                                  setEditingAnimIdx(null);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#F5C518] text-[#1d2327] text-xs font-bold"
+                              >
+                                Aplicar
+                              </button>
+                              <button
+                                onClick={() => setEditingAnimIdx(null)}
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-gray-700 leading-snug flex-1">{phrase}</p>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => { setEditingAnimIdx(idx); setEditingAnimText(phrase); }}
-                              className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => setAnimPhrases((prev) => prev.filter((_, i) => i !== idx))}
-                              className="px-2 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                              Eliminar
-                            </button>
+                        ) : (
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-gray-700 leading-snug flex-1">{phrase}</p>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => { setEditingAnimIdx(idx); setEditingAnimText(phrase); }}
+                                className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => setAnimPhrases((prev) => prev.filter((_, i) => i !== idx))}
+                                className="px-2 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newAnimPhrase}
+                      onChange={(e) => setNewAnimPhrase(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newAnimPhrase.trim()) {
+                          setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
+                          setNewAnimPhrase('');
+                        }
+                      }}
+                      placeholder="Nueva frase de animación..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        if (newAnimPhrase.trim()) {
+                          setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
+                          setNewAnimPhrase('');
+                        }
+                      }}
+                      disabled={!newAnimPhrase.trim()}
+                      className="px-4 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black disabled:opacity-40"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frase clímax</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando acepta ✅</label>
+                      <input
+                        type="text"
+                        value={animClimaxAccepted}
+                        onChange={(e) => setAnimClimaxAccepted(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2 mb-6">
-                  <input
-                    type="text"
-                    value={newAnimPhrase}
-                    onChange={(e) => setNewAnimPhrase(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newAnimPhrase.trim()) {
-                        setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
-                        setNewAnimPhrase('');
-                      }
-                    }}
-                    placeholder="Nueva frase de animación..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      if (newAnimPhrase.trim()) {
-                        setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
-                        setNewAnimPhrase('');
-                      }
-                    }}
-                    disabled={!newAnimPhrase.trim()}
-                    className="px-4 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black disabled:opacity-40"
-                  >
-                    + Agregar
-                  </button>
-                </div>
-
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frase clímax</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando acepta ✅</label>
-                    <input
-                      type="text"
-                      value={animClimaxAccepted}
-                      onChange={(e) => setAnimClimaxAccepted(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando contraoferta 🤝</label>
-                    <input
-                      type="text"
-                      value={animClimaxCountered}
-                      onChange={(e) => setAnimClimaxCountered(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
+                    <div>
+                      <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando contraoferta 🤝</label>
+                      <input
+                        type="text"
+                        value={animClimaxCountered}
+                        onChange={(e) => setAnimClimaxCountered(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
