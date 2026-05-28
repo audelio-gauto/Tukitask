@@ -59,7 +59,7 @@ type Product = {
   negotiable: boolean;
 };
 
-const NEG_PHRASES = [
+const DEFAULT_NEG_PHRASES = [
   'Dame 3 segundos…',
   'Le estoy convenciendo 😏',
   'Dame 3 segundos más, ya casi…',
@@ -67,12 +67,12 @@ const NEG_PHRASES = [
   'Creo que acepta...',
   '🤖 Dame unos segundos… está dudando...',
   '📉 El precio acaba de tambalearse...',
-] as const;
+];
 
-const NEG_CLIMAX = {
+const DEFAULT_NEG_CLIMAX = {
   accepted: '😮 ALTO… creo que va a aceptar',
   countered: '👀 El vendedor no cedió más, pero bajó bastante',
-} as const;
+};
 
 const ANIM_CLIMAX    = 100; // sentinel step → show climax phrase
 const ANIM_MIN_STEPS = 20;  // 20 × 2 s = 40 s mínimo de animación
@@ -106,7 +106,23 @@ export default function ProductDetailPage() {
   const [submitting,    setSubmitting]    = useState(false);
   const [animStep,      setAnimStep]      = useState(-1);
   const [pendingResult, setPendingResult] = useState<PendingResult | null>(null);
+  const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
+  const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
+  const [shuffledPhrases, setShuffledPhrases] = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/tienda/neg-phrases')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.phrases) && data.phrases.length > 0) {
+          setNegPhrases(data.phrases);
+          setShuffledPhrases(data.phrases);
+        }
+        if (data.climax) setNegClimax(data.climax);
+      })
+      .catch(() => {}); // keep defaults on error
+  }, []);
 
   useEffect(() => {
     supabase
@@ -234,6 +250,13 @@ export default function ProductDetailPage() {
     if (!p || !offerNum || offerNum <= 0) return;
     const capturedOffer = offerNum;
     setPendingResult(null);
+    // Fisher-Yates shuffle for random phrase order each negotiation
+    const arr = [...negPhrases];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    setShuffledPhrases(arr);
     setAnimStep(0);
     setSubmitting(true);
     try {
@@ -551,8 +574,8 @@ export default function ProductDetailPage() {
                       <div className="tnd-neg-anim-bot" aria-hidden="true">🤖</div>
                       <div key={animStep} className="tnd-neg-anim-phrase" aria-live="polite">
                         {animStep === ANIM_CLIMAX && pendingResult
-                          ? NEG_CLIMAX[pendingResult.status]
-                          : NEG_PHRASES[animStep % NEG_PHRASES.length]}
+                          ? negClimax[pendingResult.status]
+                          : (shuffledPhrases[animStep % shuffledPhrases.length] ?? negPhrases[0])}
                       </div>
                       <div className="tnd-neg-anim-dots" aria-hidden="true">
                         <span /><span /><span />

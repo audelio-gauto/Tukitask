@@ -74,6 +74,18 @@ export default function ControlAiPage() {
   const [newTexto, setNewTexto] = useState('');
   const [addingNew, setAddingNew] = useState(false);
 
+  // Animation phrases state
+  const [animPhrases, setAnimPhrases] = useState<string[]>([]);
+  const [animClimaxAccepted, setAnimClimaxAccepted] = useState('');
+  const [animClimaxCountered, setAnimClimaxCountered] = useState('');
+  const [animPhrasesLoading, setAnimPhrasesLoading] = useState(false);
+  const [animPhrasesSaving, setAnimPhrasesSaving] = useState(false);
+  const [animPhrasesError, setAnimPhrasesError] = useState('');
+  const [animPhrasesSuccess, setAnimPhrasesSuccess] = useState('');
+  const [newAnimPhrase, setNewAnimPhrase] = useState('');
+  const [editingAnimIdx, setEditingAnimIdx] = useState<number | null>(null);
+  const [editingAnimText, setEditingAnimText] = useState('');
+
   const [appSettings, setAppSettings] = useState<AppSetting[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
   const [aiModel, setAiModel] = useState('gemini-2.0-flash-lite');
@@ -343,9 +355,47 @@ export default function ControlAiPage() {
     }
   }, []);
 
+  const fetchAnimPhrases = useCallback(async () => {
+    setAnimPhrasesLoading(true);
+    setAnimPhrasesError('');
+    try {
+      const res = await fetch('/api/tienda/neg-phrases');
+      const data = await res.json();
+      setAnimPhrases(Array.isArray(data.phrases) ? data.phrases : []);
+      setAnimClimaxAccepted(data.climax?.accepted ?? '');
+      setAnimClimaxCountered(data.climax?.countered ?? '');
+    } catch {
+      setAnimPhrasesError('Error cargando frases de animación');
+    } finally {
+      setAnimPhrasesLoading(false);
+    }
+  }, []);
+
+  const saveAnimPhrases = async (phrases: string[], climaxAcc: string, climaxCnt: string) => {
+    setAnimPhrasesSaving(true);
+    setAnimPhrasesError('');
+    try {
+      const { error: dbErr } = await supabase.from('app_settings').upsert([
+        { key: 'neg_anim_phrases',          value: JSON.stringify(phrases) },
+        { key: 'neg_anim_climax_accepted',   value: climaxAcc },
+        { key: 'neg_anim_climax_countered',  value: climaxCnt },
+      ], { onConflict: 'key' });
+      if (dbErr) throw new Error(dbErr.message);
+      setAnimPhrasesSuccess('Frases guardadas correctamente.');
+      setTimeout(() => setAnimPhrasesSuccess(''), 2500);
+    } catch (err) {
+      setAnimPhrasesError(String(err));
+    } finally {
+      setAnimPhrasesSaving(false);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab === 'tukibot') fetchTukiMessages();
-  }, [activeTab, fetchTukiMessages]);
+    if (activeTab === 'tukibot') {
+      fetchTukiMessages();
+      fetchAnimPhrases();
+    }
+  }, [activeTab, fetchTukiMessages, fetchAnimPhrases]);
 
   const toggleActivo = async (msg: TukiMessage) => {
     setTukiSaving(msg.id);
@@ -780,6 +830,139 @@ export default function ControlAiPage() {
                   </div>
                 );
               })
+            )}
+          </div>
+
+          {/* ── Frases de animación de negociación ── */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-gray-800">Frases de animación</h2>
+              <button
+                onClick={() => saveAnimPhrases(animPhrases, animClimaxAccepted, animClimaxCountered)}
+                disabled={animPhrasesSaving}
+                className="px-3 py-1.5 rounded-lg bg-[#F5C518] text-[#1d2327] text-xs font-bold disabled:opacity-60"
+              >
+                {animPhrasesSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Se muestran en pantalla mientras TukiBot negocia. Orden aleatorio en cada sesión.
+            </p>
+
+            {animPhrasesError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{animPhrasesError}</div>}
+            {animPhrasesSuccess && <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{animPhrasesSuccess}</div>}
+
+            {animPhrasesLoading ? (
+              <p className="text-sm text-gray-500">Cargando frases...</p>
+            ) : (
+              <>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frases principales</h3>
+                <div className="space-y-2 mb-4">
+                  {animPhrases.map((phrase, idx) => (
+                    <div key={idx} className="border border-gray-200 bg-white rounded-xl p-3 text-sm">
+                      {editingAnimIdx === idx ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingAnimText}
+                            onChange={(e) => setEditingAnimText(e.target.value)}
+                            rows={2}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm resize-y"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                if (editingAnimText.trim()) {
+                                  const updated = [...animPhrases];
+                                  updated[idx] = editingAnimText.trim();
+                                  setAnimPhrases(updated);
+                                }
+                                setEditingAnimIdx(null);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-[#F5C518] text-[#1d2327] text-xs font-bold"
+                            >
+                              Aplicar
+                            </button>
+                            <button
+                              onClick={() => setEditingAnimIdx(null)}
+                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-gray-700 leading-snug flex-1">{phrase}</p>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => { setEditingAnimIdx(idx); setEditingAnimText(phrase); }}
+                              className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => setAnimPhrases((prev) => prev.filter((_, i) => i !== idx))}
+                              className="px-2 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={newAnimPhrase}
+                    onChange={(e) => setNewAnimPhrase(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newAnimPhrase.trim()) {
+                        setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
+                        setNewAnimPhrase('');
+                      }
+                    }}
+                    placeholder="Nueva frase de animación..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newAnimPhrase.trim()) {
+                        setAnimPhrases((prev) => [...prev, newAnimPhrase.trim()]);
+                        setNewAnimPhrase('');
+                      }
+                    }}
+                    disabled={!newAnimPhrase.trim()}
+                    className="px-4 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black disabled:opacity-40"
+                  >
+                    + Agregar
+                  </button>
+                </div>
+
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Frase clímax</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando acepta ✅</label>
+                    <input
+                      type="text"
+                      value={animClimaxAccepted}
+                      onChange={(e) => setAnimClimaxAccepted(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 font-semibold mb-1 block">Cuando contraoferta 🤝</label>
+                    <input
+                      type="text"
+                      value={animClimaxCountered}
+                      onChange={(e) => setAnimClimaxCountered(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
