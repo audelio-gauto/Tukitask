@@ -448,7 +448,7 @@ export default function ProductDetailPage() {
                       <div className="tnd-offer-success-hero">😮</div>
                       <div className="tnd-offer-success-title">No soltó del todo, pero te traje esto</div>
                       <p className="tnd-offer-success-tagline">
-                        TukiBot preparó una nueva contraoferta para <strong>{p.name}</strong>.
+                        {done.botMessage ?? <>TukiBot preparó una nueva contraoferta para <strong>{p.name}</strong>.</>}
                       </p>
 
                       <div className="tnd-offer-success-pricegrid">
@@ -464,11 +464,6 @@ export default function ProductDetailPage() {
                         </div>
                       </div>
 
-                      {done.botMessage && (
-                        <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
-                          {done.botMessage}
-                        </p>
-                      )}
                       {done.timeoutMessage && (
                         <p style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted)', marginTop: 4 }}>
                           {done.timeoutMessage.replace('{hora}', formatTimeoutAt(done.timeoutAt) ?? '')}
