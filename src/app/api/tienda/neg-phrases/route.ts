@@ -28,6 +28,8 @@ type AnimRequestBody = {
 
 const AI_TIMEOUT_MS = 5000;
 
+const gs = (n: number) => `Gs. ${Math.max(0, Math.round(n)).toLocaleString('es-PY')}`;
+
 function cleanPhrase(text: string) {
   return text
     .replace(/[\u0000-\u001F\u007F]/g, ' ')
@@ -101,6 +103,31 @@ function buildPrompt(ctx: {
     `Oferta cliente: ${ctx.buyerOffer}. Piso vendedor: ${ctx.floorPrice}. Cantidad: ${ctx.quantity}.`,
     'Incluye 1-2 frases de tensión y 1 frase de cierre inminente.',
   ].join(' ');
+}
+
+function buildServerDynamicFallback(ctx: {
+  productName: string;
+  listedPrice: number;
+  floorPrice: number;
+  buyerOffer: number;
+  quantity: number;
+}, base: string[]) {
+  const unitCounter = Math.max(ctx.floorPrice, Math.round((ctx.buyerOffer + ctx.floorPrice) / 2 / 1000) * 1000);
+  const totalCounter = unitCounter * Math.max(1, ctx.quantity);
+  const savings = Math.max(0, (ctx.listedPrice - unitCounter) * Math.max(1, ctx.quantity));
+  const shortName = (ctx.productName || 'producto').slice(0, 28);
+
+  const generated = [
+    `Le marqué que tu oferta por ${shortName} es seria…`,
+    `Está revisando números: ${gs(ctx.buyerOffer)} vs precio publicado.`,
+    `Lo estoy empujando para acercarlo a ${gs(unitCounter)} por unidad…`,
+    `Si cerramos ahora, quedaría en ${gs(totalCounter)} total.`,
+    savings > 0 ? `Estamos peleando un ahorro cercano a ${gs(savings)}.` : 'No afloja fácil, pero sigue la pelea.',
+    'Dame un instante, está por definir la respuesta final…',
+    'Listo, ya tengo la mejor contraoferta posible para vos.',
+  ];
+
+  return uniquePhrases([...generated, ...base], base);
 }
 
 async function loadBaseSettings(supabase: any) {
@@ -321,6 +348,14 @@ export async function POST(req: Request) {
       quantity: Math.max(1, Number(body.quantity) || 1),
     });
 
+    const dynamicFallbackPhrases = buildServerDynamicFallback({
+      productName: body.productName?.trim() || 'producto',
+      listedPrice: Number(body.listedPrice) || 0,
+      floorPrice: Number(body.floorPrice) || 0,
+      buyerOffer: Number(body.buyerOffer) || 0,
+      quantity: Math.max(1, Number(body.quantity) || 1),
+    }, settings.phrases);
+
     for (const selected of orderedProviders) {
       const raw = await callProvider(selected.provider, selected.model, selected.key, prompt);
       if (!raw) continue;
@@ -338,7 +373,13 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ...fallback, aiUsed: false, fallbackReason: 'ai_failed' });
+    return NextResponse.json({
+      phrases: dynamicFallbackPhrases,
+      climax: settings.climax,
+      minSeconds: settings.minSeconds,
+      aiUsed: false,
+      fallbackReason: 'ai_failed',
+    });
   } catch {
     return NextResponse.json({
       phrases: DEFAULT_PHRASES,
