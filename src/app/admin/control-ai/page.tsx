@@ -379,13 +379,20 @@ export default function ControlAiPage() {
     setAnimPhrasesSaving(true);
     setAnimPhrasesError('');
     try {
-      const { error: dbErr } = await supabase.from('app_settings').upsert([
-        { key: 'neg_anim_phrases',          value: JSON.stringify(phrases) },
-        { key: 'neg_anim_climax_accepted',   value: climaxAcc },
-        { key: 'neg_anim_climax_countered',  value: climaxCnt },
-        { key: 'neg_anim_min_seconds',       value: String(animMinSeconds) },
-      ], { onConflict: 'key' });
-      if (dbErr) throw new Error(dbErr.message);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const res = await fetch('/api/admin/anim-phrases', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          phrases,
+          climaxAccepted:  climaxAcc,
+          climaxCountered: climaxCnt,
+          minSeconds:      animMinSeconds,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error guardando');
       setAnimPhrasesSuccess('Frases guardadas correctamente.');
       setTimeout(() => setAnimPhrasesSuccess(''), 2500);
     } catch (err) {
