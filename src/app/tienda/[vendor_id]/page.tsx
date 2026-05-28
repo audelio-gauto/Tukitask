@@ -93,6 +93,7 @@ export default function VendorStorePage() {
   const vendorId = params.vendor_id as string;
 
   const [cfg,       setCfg]       = useState<StoreTemplateConfig | null>(null);
+  const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
   const [activeCat, setActiveCat] = useState('Todos');
   const [search,    setSearch]    = useState('');
 
@@ -130,6 +131,16 @@ export default function VendorStorePage() {
     };
     loadConfig();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorId]);
+
+  useEffect(() => {
+    if (!vendorId || vendorId === 'mi-tienda') return;
+    const controller = new AbortController();
+    fetch(`/api/tienda/vendor-bot-config?vendorId=${encodeURIComponent(vendorId)}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setVendorBotEnabled(data?.config?.botEnabled !== false))
+      .catch(() => setVendorBotEnabled(true));
+    return () => controller.abort();
   }, [vendorId]);
 
   /* fetch real published products for this vendor */
@@ -444,7 +455,7 @@ export default function VendorStorePage() {
                     ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     : p.emoji
                   }
-                  {p.floorPrice < p.price * 0.92 && (
+                  {p.floorPrice < p.price * 0.92 && vendorBotEnabled && (
                     <span className="tnd-negoable-badge">🤖 Negociable</span>
                   )}
                 </div>

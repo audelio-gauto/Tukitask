@@ -108,6 +108,7 @@ export default function ProductDetailPage() {
   const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
   const [animMinSteps,  setAnimMinSteps]  = useState(13); // ≈40s ÷ 3s/paso
+  const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
   const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
@@ -134,6 +135,20 @@ export default function ProductDetailPage() {
       .single()
       .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
   }, [id]);
+
+  useEffect(() => {
+    if (!p?.vendor_id) return;
+    const controller = new AbortController();
+    fetch(`/api/tienda/vendor-bot-config?vendorId=${encodeURIComponent(p.vendor_id)}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        setVendorBotEnabled(data?.config?.botEnabled !== false);
+      })
+      .catch(() => {
+        setVendorBotEnabled(true);
+      });
+    return () => controller.abort();
+  }, [p?.vendor_id]);
 
   useEffect(() => {
     if (animStep < 0) return;
@@ -208,6 +223,7 @@ export default function ProductDetailPage() {
   }
 
   const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
+  const canNegotiate = isNegotiable && vendorBotEnabled;
   const allImages    = (p.gallery && p.gallery.length > 0) ? p.gallery : (p.image ? [p.image] : []);
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
@@ -355,7 +371,7 @@ export default function ProductDetailPage() {
                   />
                 : <span role="img" aria-label={p.name} style={{ fontSize: '5rem' }}>📦</span>
               }
-              {isNegotiable && (
+              {canNegotiate && (
                 <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
               )}
               {allImages.length > 1 && (
@@ -564,7 +580,7 @@ export default function ProductDetailPage() {
                   🛒 Comprar ahora
                 </button>
 
-                {isNegotiable && (
+                {canNegotiate && (
                   <button
                     className="tnd-btn-negotiate"
                     onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')}
@@ -579,7 +595,7 @@ export default function ProductDetailPage() {
               </div>
 
               {/* ── Negotiate panel (collapsible) ── */}
-              {mode === 'negotiate' && (
+              {canNegotiate && mode === 'negotiate' && (
                 <div className="tnd-negotiate-panel">
                   <div className="tnd-robot-notice">
                     <div className="tnd-robot-notice-icon">🤖</div>
@@ -667,6 +683,11 @@ export default function ProductDetailPage() {
                       </button>
                     </form>
                   )}
+                </div>
+              )}
+              {!canNegotiate && (
+                <div className="tnd-chip tnd-chip-stock" style={{ fontSize: '0.85rem', padding: '12px 16px', display: 'inline-block' }}>
+                  🤖 Negociación desactivada por el vendedor
                 </div>
               )}
             </>

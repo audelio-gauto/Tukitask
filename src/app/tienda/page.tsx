@@ -31,6 +31,7 @@ function TiendaPageInner() {
     category: string; price: number; floor_price: number; stock: number;
     image: string | null; negotiable: boolean;
   }>>([]);
+  const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
 
   /* fetch real published products */
   useEffect(() => {
@@ -41,6 +42,28 @@ function TiendaPageInner() {
       .limit(100)
       .then(({ data }) => { if (data) setDbProducts(data); });
   }, []);
+
+  useEffect(() => {
+    const vendorIds = Array.from(new Set(dbProducts.map((p) => p.vendor_id))).filter(Boolean);
+    if (vendorIds.length === 0) return;
+
+    const controller = new AbortController();
+    fetch(`/api/tienda/vendor-bot-config?vendorIds=${encodeURIComponent(vendorIds.join(','))}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        const map: Record<string, boolean> = {};
+        const configs = data?.configs || {};
+        vendorIds.forEach((id) => {
+          map[id] = configs[id]?.botEnabled !== false;
+        });
+        setVendorBotEnabledMap(map);
+      })
+      .catch(() => {
+        setVendorBotEnabledMap({});
+      });
+
+    return () => controller.abort();
+  }, [dbProducts]);
 
   /* fetch real vendors with published products */
   useEffect(() => {
@@ -302,7 +325,7 @@ function TiendaPageInner() {
                     ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     : p.emoji
                   }
-                  {p.floorPrice < p.price * 0.92 && (
+                  {p.floorPrice < p.price * 0.92 && vendorBotEnabledMap[p.vendorId] !== false && (
                     <span className="tnd-negoable-badge">🤝 Negociable</span>
                   )}
                 </div>
