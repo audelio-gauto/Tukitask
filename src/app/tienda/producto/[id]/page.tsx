@@ -426,9 +426,11 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="tnd-offer-success-hero">✅</div>
                       <div className="tnd-offer-success-title">TukiBot salvó tu bolsillo</div>
-                      <p className="tnd-offer-success-tagline">
-                        {vendorAlias} aceptó tu oferta para <strong>{p.name}</strong>. Si querías una historia para subir, acá está.
-                      </p>
+                      {done.botMessage && (
+                        <p className="tnd-offer-success-tagline">
+                          {done.botMessage}
+                        </p>
+                      )}
 
                       <div className="tnd-offer-success-pricegrid">
                         <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-muted">
@@ -447,11 +449,6 @@ export default function ProductDetailPage() {
                         <div className="tnd-offer-success-saving">Ahorro conseguido: {gs(resultSavings)}</div>
                       )}
 
-                      {done.botMessage && (
-                        <p className="tnd-offer-success-sub" style={{ marginTop: 8 }}>
-                          {done.botMessage}
-                        </p>
-                      )}
                       <div className="tnd-offer-success-footnote">
                         Negociado en vivo por TukiBot para {vendorAlias}.
                       </div>
@@ -470,9 +467,11 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="tnd-offer-success-hero">😮</div>
                       <div className="tnd-offer-success-title">No soltó del todo, pero te traje esto</div>
-                      <p className="tnd-offer-success-tagline">
-                        {done.botMessage ?? <>TukiBot preparó una nueva contraoferta para <strong>{p.name}</strong>.</>}
-                      </p>
+                      {(done.botMessage || p.name) && (
+                        <p className="tnd-offer-success-tagline">
+                          {done.botMessage ?? <>TukiBot preparó una contraoferta para <strong>{p.name}</strong>.</>}
+                        </p>
+                      )}
 
                       <div className="tnd-offer-success-pricegrid">
                         <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-muted">
