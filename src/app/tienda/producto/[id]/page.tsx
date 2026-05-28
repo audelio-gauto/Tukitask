@@ -483,6 +483,11 @@ export default function ProductDetailPage() {
                           <span className="tnd-offer-success-pricebox-label">Contraoferta final</span>
                           <strong>{gs(resultTotalAmount)}</strong>
                           <small>{quantity} × {gs(resultUnitAmount)}</small>
+                          {resultSavings > 0 && (
+                            <span className="tnd-offer-success-savings-badge">
+                              Total que podrías ahorrar: {gs(resultSavings)}
+                            </span>
+                          )}
                         </div>
                       </div>
 

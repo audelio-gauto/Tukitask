@@ -1451,6 +1451,21 @@
 .tnd-offer-success-pricebox-counter strong {
   color: #b45309;
 }
+.tnd-offer-success-savings-badge {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(245, 197, 24, 0.16);
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  color: #8a5a00;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+}
 .tnd-offer-success-saving {
   margin-top: 14px;
   display: inline-flex;
