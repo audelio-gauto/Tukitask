@@ -26,7 +26,7 @@ export async function GET() {
     const { data } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['neg_anim_phrases', 'neg_anim_climax_accepted', 'neg_anim_climax_countered']);
+      .in('key', ['neg_anim_phrases', 'neg_anim_climax_accepted', 'neg_anim_climax_countered', 'neg_anim_min_seconds']);
 
     const get = (key: string) => data?.find((r) => r.key === key)?.value ?? '';
 
@@ -41,17 +41,22 @@ export async function GET() {
       }
     }
 
+    const rawSeconds = Number(get('neg_anim_min_seconds'));
+    const minSeconds = Number.isFinite(rawSeconds) && rawSeconds >= 10 ? rawSeconds : 40;
+
     return NextResponse.json({
       phrases,
       climax: {
         accepted:  get('neg_anim_climax_accepted')  || DEFAULT_CLIMAX.accepted,
         countered: get('neg_anim_climax_countered') || DEFAULT_CLIMAX.countered,
       },
+      minSeconds,
     });
   } catch {
     return NextResponse.json({
       phrases: DEFAULT_PHRASES,
       climax: DEFAULT_CLIMAX,
+      minSeconds: 40,
     });
   }
 }

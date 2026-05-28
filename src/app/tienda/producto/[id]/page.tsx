@@ -75,7 +75,7 @@ const DEFAULT_NEG_CLIMAX = {
 };
 
 const ANIM_CLIMAX    = 100; // sentinel step → show climax phrase
-const ANIM_MIN_STEPS = 20;  // 20 × 2 s = 40 s mínimo de animación
+const ANIM_STEPS_PER_SEC = 0.5; // 1 step cada 2 s
 
 type PendingResult = {
   status: 'accepted';
@@ -109,6 +109,7 @@ export default function ProductDetailPage() {
   const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
   const [shuffledPhrases, setShuffledPhrases] = useState<string[]>(DEFAULT_NEG_PHRASES);
+  const [animMinSteps,  setAnimMinSteps]  = useState(20); // 20 × 2s = 40s default
   const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
@@ -120,6 +121,9 @@ export default function ProductDetailPage() {
           setShuffledPhrases(data.phrases);
         }
         if (data.climax) setNegClimax(data.climax);
+        if (typeof data.minSeconds === 'number' && data.minSeconds >= 10) {
+          setAnimMinSteps(Math.round(data.minSeconds * ANIM_STEPS_PER_SEC));
+        }
       })
       .catch(() => {}); // keep defaults on error
   }, []);
@@ -171,14 +175,14 @@ export default function ProductDetailPage() {
     // se cumplieron ≥40 s (ANIM_MIN_STEPS pasos) Y ya llegó el resultado
     const t = setTimeout(() => {
       const next = animStep + 1;
-      if (next >= ANIM_MIN_STEPS && pendingResult) {
+      if (next >= animMinSteps && pendingResult) {
         setAnimStep(ANIM_CLIMAX);
       } else {
         setAnimStep(next);
       }
     }, 2000);
     return () => clearTimeout(t);
-  }, [animStep, pendingResult]);
+  }, [animStep, pendingResult, animMinSteps]);
 
   // Loading
   if (p === undefined) {

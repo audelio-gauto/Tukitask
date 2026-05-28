@@ -85,6 +85,7 @@ export default function ControlAiPage() {
   const [newAnimPhrase, setNewAnimPhrase] = useState('');
   const [editingAnimIdx, setEditingAnimIdx] = useState<number | null>(null);
   const [editingAnimText, setEditingAnimText] = useState('');
+  const [animMinSeconds, setAnimMinSeconds] = useState(40);
 
   const [appSettings, setAppSettings] = useState<AppSetting[]>([]);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
@@ -364,6 +365,9 @@ export default function ControlAiPage() {
       setAnimPhrases(Array.isArray(data.phrases) ? data.phrases : []);
       setAnimClimaxAccepted(data.climax?.accepted ?? '');
       setAnimClimaxCountered(data.climax?.countered ?? '');
+      if (typeof data.minSeconds === 'number' && data.minSeconds >= 10) {
+        setAnimMinSeconds(data.minSeconds);
+      }
     } catch {
       setAnimPhrasesError('Error cargando frases de animación');
     } finally {
@@ -379,6 +383,7 @@ export default function ControlAiPage() {
         { key: 'neg_anim_phrases',          value: JSON.stringify(phrases) },
         { key: 'neg_anim_climax_accepted',   value: climaxAcc },
         { key: 'neg_anim_climax_countered',  value: climaxCnt },
+        { key: 'neg_anim_min_seconds',       value: String(animMinSeconds) },
       ], { onConflict: 'key' });
       if (dbErr) throw new Error(dbErr.message);
       setAnimPhrasesSuccess('Frases guardadas correctamente.');
@@ -975,6 +980,30 @@ export default function ControlAiPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       />
                     </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Límite animación</h3>
+                  <p className="text-xs text-gray-500 mb-3">Duración mínima en segundos antes de revelar el resultado. (mín 10 s, máx 120 s)</p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setAnimMinSeconds((s) => Math.max(10, s - 5))}
+                      className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center"
+                    >−</button>
+                    <input
+                      type="number"
+                      min={10}
+                      max={120}
+                      step={5}
+                      value={animMinSeconds}
+                      onChange={(e) => setAnimMinSeconds(Math.max(10, Math.min(120, Number(e.target.value))))}
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center font-semibold"
+                    />
+                    <button
+                      onClick={() => setAnimMinSeconds((s) => Math.min(120, s + 5))}
+                      className="w-9 h-9 rounded-lg border border-gray-200 text-gray-700 font-bold text-lg hover:bg-gray-50 flex items-center justify-center"
+                    >+</button>
+                    <span className="text-xs text-gray-500">segundos</span>
                   </div>
                 </div>
               </div>
