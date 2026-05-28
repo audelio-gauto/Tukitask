@@ -26,7 +26,7 @@ type AnimRequestBody = {
   quantity?: number;
 };
 
-const AI_TIMEOUT_MS = 1800;
+const AI_TIMEOUT_MS = 5000;
 
 function cleanPhrase(text: string) {
   return text
@@ -52,6 +52,36 @@ function extractArrayFromText(text: string) {
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) return trimmed;
   const match = trimmed.match(/\[[\s\S]*\]/);
   return match?.[0] ?? '';
+}
+
+function parseGeneratedPhrases(raw: string): string[] {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const possibleArray = extractArrayFromText(raw);
+    if (possibleArray) {
+      try {
+        parsed = JSON.parse(possibleArray);
+      } catch {
+        parsed = null;
+      }
+    }
+  }
+
+  if (Array.isArray(parsed)) {
+    return uniquePhrases(parsed as string[], []);
+  }
+
+  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { phrases?: unknown[] }).phrases)) {
+    return uniquePhrases((parsed as { phrases: string[] }).phrases, []);
+  }
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^[-*\d).\s]+/, '').trim())
+    .filter(Boolean);
+  return uniquePhrases(lines, []);
 }
 
 function buildPrompt(ctx: {
@@ -271,8 +301,15 @@ export async function POST(req: Request) {
       { provider: 'openrouter', enabled: settings.ai.openRouterEnabled, key: settings.ai.openRouterKey, model: settings.get('openrouter_model') || 'deepseek/deepseek-chat' },
     ];
 
-    const selected = providerPool.find((p) => p.enabled && Boolean(p.key));
-    if (!selected) {
+    const seen = new Set<string>();
+    const orderedProviders = providerPool.filter((p) => {
+      const id = `${p.provider}:${p.model}`;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return p.enabled && Boolean(p.key);
+    });
+
+    if (orderedProviders.length === 0) {
       return NextResponse.json({ ...fallback, aiUsed: false, fallbackReason: 'no_provider' });
     }
 
@@ -284,38 +321,24 @@ export async function POST(req: Request) {
       quantity: Math.max(1, Number(body.quantity) || 1),
     });
 
-    const raw = await callProvider(selected.provider, selected.model, selected.key, prompt);
-    if (!raw) {
-      return NextResponse.json({ ...fallback, aiUsed: false, fallbackReason: 'ai_failed' });
-    }
+    for (const selected of orderedProviders) {
+      const raw = await callProvider(selected.provider, selected.model, selected.key, prompt);
+      if (!raw) continue;
 
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const possibleArray = extractArrayFromText(raw);
-      if (possibleArray) {
-        try {
-          parsed = JSON.parse(possibleArray);
-        } catch {
-          parsed = null;
-        }
+      const parsedPhrases = parseGeneratedPhrases(raw);
+      if (parsedPhrases.length >= 4) {
+        return NextResponse.json({
+          phrases: uniquePhrases(parsedPhrases, settings.phrases),
+          climax: settings.climax,
+          minSeconds: settings.minSeconds,
+          aiUsed: true,
+          provider: selected.provider,
+          model: selected.model,
+        });
       }
     }
 
-    if (!Array.isArray(parsed)) {
-      return NextResponse.json({ ...fallback, aiUsed: false, fallbackReason: 'bad_format' });
-    }
-
-    const phrases = uniquePhrases(parsed as string[], settings.phrases);
-    return NextResponse.json({
-      phrases,
-      climax: settings.climax,
-      minSeconds: settings.minSeconds,
-      aiUsed: true,
-      provider: selected.provider,
-      model: selected.model,
-    });
+    return NextResponse.json({ ...fallback, aiUsed: false, fallbackReason: 'ai_failed' });
   } catch {
     return NextResponse.json({
       phrases: DEFAULT_PHRASES,
