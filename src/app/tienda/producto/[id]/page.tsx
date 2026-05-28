@@ -218,6 +218,11 @@ export default function ProductDetailPage() {
     : (done?.amount ?? p.price);
   const resultTotalAmount = resultUnitAmount * quantity;
   const resultSavings = Math.max(0, (p.price - resultUnitAmount) * quantity);
+  const resultSavingsTier = resultSavings >= p.price * quantity * 0.2
+    ? 'high'
+    : resultSavings >= p.price * quantity * 0.1
+      ? 'mid'
+      : 'low';
 
   const humanDelay = () => new Promise<void>(r => setTimeout(r, 1200 + Math.random() * 1800));
 
@@ -484,7 +489,7 @@ export default function ProductDetailPage() {
                           <strong>{gs(resultTotalAmount)}</strong>
                           <small>{quantity} × {gs(resultUnitAmount)}</small>
                           {resultSavings > 0 && (
-                            <span className="tnd-offer-success-savings-badge">
+                            <span className={`tnd-offer-success-savings-badge tnd-offer-success-savings-badge-${resultSavingsTier}`}>
                               Total que podrías ahorrar: {gs(resultSavings)}
                             </span>
                           )}
