@@ -642,9 +642,9 @@ export default function ProductDetailPage() {
                   <div className="tnd-robot-notice">
                     <div className="tnd-robot-notice-icon">🤖</div>
                     <div>
-                      <strong>Robot Negociador activo</strong><br />
+                      <strong>TukiBot Negociador IA</strong><br />
                       <span className="tnd-robot-notice-text">
-                        Ponele tu mejor precio — si es justo lo acepta, si es bajo te contraoferta. Nunca rechaza.
+                        Antes de aceptar el precio completo… probemos conseguirte un ahorro en tu bolsillo
                       </span>
                     </div>
                   </div>
