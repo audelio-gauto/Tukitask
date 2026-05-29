@@ -1642,6 +1642,112 @@
 }
 .tnd-btn-negotiate:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.tnd-detail-cta-card {
+  margin-top: 20px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tnd-surface) 88%, #ffffff 12%), var(--tnd-surface));
+  border: 1px solid var(--tnd-border);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--tnd-shadow-card);
+}
+
+.tnd-detail-cta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.tnd-detail-total-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tnd-text-muted);
+}
+
+.tnd-detail-total-chip {
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: var(--tnd-text-primary);
+  background: color-mix(in srgb, var(--tnd-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tnd-accent) 35%, transparent);
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.tnd-detail-cta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tnd-btn-add-cart-detail {
+  width: 100%;
+  height: 52px;
+  background: transparent;
+  color: var(--tnd-text-primary);
+  border: 1.5px solid color-mix(in srgb, var(--tnd-accent) 42%, var(--tnd-border));
+  border-radius: 14px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.tnd-btn-add-cart-detail:hover:not(:disabled) {
+  border-color: var(--tnd-accent);
+  background: color-mix(in srgb, var(--tnd-accent) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.tnd-btn-add-cart-detail:active {
+  transform: scale(0.98);
+}
+
+.tnd-btn-add-cart-detail:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tnd-btn-add-cart-detail.added {
+  background: color-mix(in srgb, #16a34a 13%, transparent);
+  border-color: rgba(22, 163, 74, 0.45);
+  color: #166534;
+}
+
+.tnd-detail-cart-feedback {
+  margin: 0;
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #166534;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.22);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 640px) {
+  .tnd-detail-cta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tnd-detail-cta-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════
    NEGOTIATE PANEL (collapsible)
    ══════════════════════════════════════════════════════════════ */

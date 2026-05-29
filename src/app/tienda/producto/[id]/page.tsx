@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useCart } from '../../cart-context';
 import { gs } from '../../data';
 
 /* ── Deal strength meter (floor price never revealed to user) ── */
@@ -96,6 +97,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router  = useRouter();
   const id      = params.id as string;
+  const { addItem } = useCart();
 
   const [p,           setP]           = useState<Product | null | undefined>(undefined); // undefined=loading
   const [galleryIdx,  setGalleryIdx]  = useState(0);
@@ -108,7 +110,7 @@ export default function ProductDetailPage() {
   const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
   const [animMinSteps,  setAnimMinSteps]  = useState(13); // ≈40s ÷ 3s/paso
-  const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
+  const [cartAdded,     setCartAdded]     = useState(false);
   const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
 
   useEffect(() => {
@@ -135,20 +137,6 @@ export default function ProductDetailPage() {
       .single()
       .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
   }, [id]);
-
-  useEffect(() => {
-    if (!p?.vendor_id) return;
-    const controller = new AbortController();
-    fetch(`/api/tienda/vendor-bot-config?vendorId=${encodeURIComponent(p.vendor_id)}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        setVendorBotEnabled(data?.config?.botEnabled !== false);
-      })
-      .catch(() => {
-        setVendorBotEnabled(true);
-      });
-    return () => controller.abort();
-  }, [p?.vendor_id]);
 
   useEffect(() => {
     if (animStep < 0) return;
@@ -223,7 +211,6 @@ export default function ProductDetailPage() {
   }
 
   const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
-  const canNegotiate = isNegotiable && vendorBotEnabled;
   const allImages    = (p.gallery && p.gallery.length > 0) ? p.gallery : (p.image ? [p.image] : []);
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
@@ -234,11 +221,6 @@ export default function ProductDetailPage() {
     : (done?.amount ?? p.price);
   const resultTotalAmount = resultUnitAmount * quantity;
   const resultSavings = Math.max(0, (p.price - resultUnitAmount) * quantity);
-  const resultSavingsTier = resultSavings >= p.price * quantity * 0.2
-    ? 'high'
-    : resultSavings >= p.price * quantity * 0.1
-      ? 'mid'
-      : 'low';
 
   const humanDelay = () => new Promise<void>(r => setTimeout(r, 1200 + Math.random() * 1800));
 
@@ -252,6 +234,26 @@ export default function ProductDetailPage() {
       vid:     p.vendor_id,
     });
     router.push(`/tienda/checkout?${url.toString()}`);
+  }
+
+  function handleAddToCart() {
+    if (!p || p.stock <= 0) return;
+
+    for (let i = 0; i < quantity; i += 1) {
+      addItem({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        emoji: '📦',
+        image: p.image,
+        vendorName: vendorAlias,
+        vendorId: p.vendor_id,
+        vendorEmail: p.vendor_email,
+      });
+    }
+
+    setCartAdded(true);
+    setTimeout(() => setCartAdded(false), 1600);
   }
 
   function handleProceedToPayment() {
@@ -371,7 +373,7 @@ export default function ProductDetailPage() {
                   />
                 : <span role="img" aria-label={p.name} style={{ fontSize: '5rem' }}>📦</span>
               }
-              {canNegotiate && (
+              {isNegotiable && (
                 <span className="tnd-negoable-badge tnd-negoable-badge-lg">🤖 Negociable</span>
               )}
               {allImages.length > 1 && (
@@ -505,8 +507,8 @@ export default function ProductDetailPage() {
                           <strong>{gs(resultTotalAmount)}</strong>
                           <small>{quantity} × {gs(resultUnitAmount)}</small>
                           {resultSavings > 0 && (
-                            <span className={`tnd-offer-success-savings-badge tnd-offer-success-savings-badge-${resultSavingsTier}`}>
-                              Total que podrías ahorrar: {gs(resultSavings)}
+                            <span className="tnd-offer-success-savings-badge">
+                              Total que podrias ahorrar: {gs(resultSavings)}
                             </span>
                           )}
                         </div>
@@ -571,31 +573,51 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* ── Primary CTAs ── */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-                <button
-                  className="tnd-btn-buy"
-                  onClick={handleBuy}
-                >
-                  🛒 Comprar ahora
-                </button>
+              {/* ── Primary CTAs (rediseño) ── */}
+              <div className="tnd-detail-cta-card">
+                <div className="tnd-detail-cta-head">
+                  <span className="tnd-detail-total-label">Total por {quantity} unidad{quantity > 1 ? 'es' : ''}</span>
+                  <strong className="tnd-detail-total-chip">{gs(p.price * quantity)}</strong>
+                </div>
 
-                {canNegotiate && (
+                <div className="tnd-detail-cta-grid">
+                  <button
+                    className="tnd-btn-buy"
+                    onClick={handleBuy}
+                    disabled={submitting}
+                  >
+                    ⚡ Comprar ahora
+                  </button>
+
+                  <button
+                    className={`tnd-btn-add-cart-detail${cartAdded ? ' added' : ''}`}
+                    onClick={handleAddToCart}
+                    disabled={submitting}
+                  >
+                    {cartAdded ? '✓ Añadido al carrito' : '🛍️ Añadir al carrito'}
+                  </button>
+                </div>
+
+                {isNegotiable && (
                   <button
                     className="tnd-btn-negotiate"
                     onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')}
                     disabled={submitting}
                   >
-                    <span>🤝 Hacé tu oferta</span>
+                    <span>🤝 Ofrecer tu oferta</span>
                     <span style={{ opacity: 0.55, fontSize: '0.75rem', marginLeft: 'auto' }}>
                       {mode === 'negotiate' ? '▲ cerrar' : '▼ abrir'}
                     </span>
                   </button>
                 )}
+
+                {cartAdded && (
+                  <p className="tnd-detail-cart-feedback">Listo, agregaste {quantity} unidad{quantity > 1 ? 'es' : ''} al carrito.</p>
+                )}
               </div>
 
               {/* ── Negotiate panel (collapsible) ── */}
-              {canNegotiate && mode === 'negotiate' && (
+              {mode === 'negotiate' && (
                 <div className="tnd-negotiate-panel">
                   <div className="tnd-robot-notice">
                     <div className="tnd-robot-notice-icon">🤖</div>
@@ -683,11 +705,6 @@ export default function ProductDetailPage() {
                       </button>
                     </form>
                   )}
-                </div>
-              )}
-              {!canNegotiate && (
-                <div className="tnd-chip tnd-chip-stock" style={{ fontSize: '0.85rem', padding: '12px 16px', display: 'inline-block' }}>
-                  🤖 Negociación desactivada por el vendedor
                 </div>
               )}
             </>
