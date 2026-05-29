@@ -586,7 +586,10 @@ export default function ProductDetailPage() {
                     onClick={handleBuy}
                     disabled={submitting}
                   >
-                    ⚡ Comprar ahora
+                    <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
+                    </svg>
+                    Comprar Ahora
                   </button>
 
                   <button
@@ -594,7 +597,23 @@ export default function ProductDetailPage() {
                     onClick={handleAddToCart}
                     disabled={submitting}
                   >
-                    {cartAdded ? '✓ Añadido al carrito' : '🛍️ Añadir al carrito'}
+                    {cartAdded ? (
+                      <>
+                        <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Añadido al carrito
+                      </>
+                    ) : (
+                      <>
+                        <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="9" cy="21" r="1" />
+                          <circle cx="20" cy="21" r="1" />
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                        Añadir al Carrito
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -604,10 +623,11 @@ export default function ProductDetailPage() {
                     onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')}
                     disabled={submitting}
                   >
-                    <span>🤝 Ofrecer tu oferta</span>
-                    <span style={{ opacity: 0.55, fontSize: '0.75rem', marginLeft: 'auto' }}>
-                      {mode === 'negotiate' ? '▲ cerrar' : '▼ abrir'}
-                    </span>
+                    <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M11 13a5 5 0 0 1 7.54.54l2.46 2.46a2 2 0 0 1-2.83 2.83l-2.46-2.46a5 5 0 0 1-.54-7.54" />
+                      <path d="M13 11a5 5 0 0 1-7.54-.54L3 8a2 2 0 0 1 2.83-2.83l2.46 2.46a5 5 0 0 1 .54 7.54" />
+                    </svg>
+                    Ofrecer tu Oferta
                   </button>
                 )}
 
