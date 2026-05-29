@@ -551,9 +551,6 @@ export default function ProductDetailPage() {
                   )}
                 </>
               )}
-              <button className="tnd-offer-submit" style={{ marginTop: 10 }} onClick={reset}>
-                Volver al producto
-              </button>
             </div>
 
           ) : p.stock === 0 ? (
