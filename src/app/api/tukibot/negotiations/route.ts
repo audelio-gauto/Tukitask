@@ -36,5 +36,24 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ items: data ?? [] });
+  const rows = data ?? [];
+
+  // Attach message_count to each negotiation
+  if (rows.length > 0) {
+    const ids = rows.map((n) => n.id as string);
+    const { data: msgRows } = await db
+      .from('tukibot_negotiation_messages')
+      .select('negotiation_id')
+      .in('negotiation_id', ids);
+    const countMap: Record<string, number> = {};
+    if (msgRows) {
+      for (const r of msgRows) {
+        countMap[r.negotiation_id] = (countMap[r.negotiation_id] ?? 0) + 1;
+      }
+    }
+    const items = rows.map((n) => ({ ...n, message_count: countMap[n.id as string] ?? 0 }));
+    return NextResponse.json({ items });
+  }
+
+  return NextResponse.json({ items: [] });
 }
