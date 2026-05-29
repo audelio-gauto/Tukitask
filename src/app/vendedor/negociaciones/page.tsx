@@ -193,15 +193,12 @@ export default function NegociacionesPage() {
                   onClick={() => setSelectedId(item.id)}
                   style={{ textAlign: 'left', borderRadius: 16, border: active ? '1px solid rgba(245,197,24,0.4)' : '1px solid var(--vnd-border)', background: active ? 'rgba(245,197,24,0.08)' : 'var(--vnd-surface-2)', padding: 14, display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 12, cursor: 'pointer' }}
                 >
-                  <div style={{ width: 72, height: 72, borderRadius: 14, overflow: 'visible', position: 'relative', background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0 }}>
-                    <div style={{ width: 72, height: 72, borderRadius: 14, overflow: 'hidden' }}>
-                      {item.product_image ? <img src={item.product_image} alt={item.product_name || 'Producto'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛍️'}
-                    </div>
-                    {item.message_count > 0 && (
-                      <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 999, background: '#F5C518', color: '#1C1C2E', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid var(--vnd-surface)', zIndex: 2 }}>
-                        {item.message_count}
-                      </span>
-                    )}
+                  <div style={{ width: 72, height: 72, borderRadius: 14, overflow: 'hidden', position: 'relative', background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0 }}>
+                    {item.product_image ? <img src={item.product_image} alt={item.product_name || 'Producto'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🛍️'}
+                    {/* Chat badge — always visible */}
+                    <span style={{ position: 'absolute', bottom: 4, right: 4, minWidth: 22, height: 22, borderRadius: 999, background: item.message_count > 0 ? '#F5C518' : 'rgba(0,0,0,0.5)', color: item.message_count > 0 ? '#1C1C2E' : '#fff', fontSize: item.message_count > 0 ? '0.65rem' : '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', zIndex: 2 }}>
+                      {item.message_count > 0 ? item.message_count : '💬'}
+                    </span>
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>

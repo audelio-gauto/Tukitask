@@ -756,6 +756,8 @@
   align-items: center;
   justify-content: center;
   font-size: 2.4rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .tnd-my-offer-message {

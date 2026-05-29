@@ -168,17 +168,16 @@ export default function MisOfertasMarketplacePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                   {section.rows.map((offer) => (
                     <article key={offer.id} className="tnd-my-offer-card">
-                      <div className="tnd-my-offer-media" style={{ position: 'relative' }}>
+                      <div className="tnd-my-offer-media">
                         {offer.product_image ? <img src={offer.product_image} alt={offer.product_name || 'Producto'} /> : <span>🛍️</span>}
-                        {offer.message_count > 0 && (
-                          <button
-                            onClick={() => void openChat(offer)}
-                            title="Ver mensajes del vendedor"
-                            style={{ position: 'absolute', top: 8, right: 8, minWidth: 24, height: 24, borderRadius: 999, background: '#F5C518', color: '#1C1C2E', fontSize: '0.7rem', fontWeight: 900, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', zIndex: 2 }}
-                          >
-                            {offer.message_count}
-                          </button>
-                        )}
+                        {/* Chat button — always visible; shows count badge when there are messages */}
+                        <button
+                          onClick={() => void openChat(offer)}
+                          title={offer.message_count > 0 ? `${offer.message_count} mensaje(s) — tocar para responder` : 'Abrir chat con el vendedor'}
+                          style={{ position: 'absolute', bottom: 8, right: 8, width: 36, height: 36, borderRadius: 999, background: offer.message_count > 0 ? '#F5C518' : 'rgba(0,0,0,0.45)', color: offer.message_count > 0 ? '#1C1C2E' : '#fff', fontSize: offer.message_count > 0 ? '0.78rem' : '1rem', fontWeight: 900, border: offer.message_count > 0 ? '2px solid #fff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.22)', zIndex: 2, backdropFilter: offer.message_count > 0 ? 'none' : 'blur(2px)' }}
+                        >
+                          {offer.message_count > 0 ? offer.message_count : '💬'}
+                        </button>
                       </div>
                       <div className="tnd-my-offer-body">
                         <div className="tnd-my-offer-title">{offer.product_name || 'Producto'}</div>
@@ -201,13 +200,7 @@ export default function MisOfertasMarketplacePage() {
                             </button>
                           )}
                           <Link href={`/tienda/producto/${offer.product_id ?? ''}`} className="tnd-my-offer-link">Ver producto</Link>
-                          {offer.message_count === 0 && (
-                            <button
-                              onClick={() => void openChat(offer)}
-                              className="tnd-my-offer-link"
-                              style={{ background: 'none', border: '1px solid var(--tnd-border)', cursor: 'pointer' }}
-                            >
-                              Mensajes
+                        </div>
                             </button>
                           )}
                         </div>
