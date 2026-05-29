@@ -20,8 +20,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { data, error } = await sb.rpc('fn_tukibot_process_timeouts');
+    const [{ data, error }, { data: cleanupData, error: cleanupError }] = await Promise.all([
+      sb.rpc('fn_tukibot_process_timeouts'),
+      sb.rpc('fn_tukibot_cleanup_expired_negotiations'),
+    ]);
     if (error) return serverError(error, 'cron/tukibot-timeouts');
+    if (cleanupError) return serverError(cleanupError, 'cron/tukibot-timeouts.cleanup');
 
     const result = data as {
       auto_counter_processed: number;
@@ -34,6 +38,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       summary: result,
+      cleanup: cleanupData,
     });
   } catch (err) {
     return serverError(err, 'cron/tukibot-timeouts');

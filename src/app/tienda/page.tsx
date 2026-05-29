@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from './cart-context';
+import { authFetch } from '@/lib/authFetch';
 import { gs } from './data';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -17,6 +18,23 @@ function TiendaPageInner() {
   const [activeCategory, setCategory] = useState('Todos');
   const storesRef    = useRef<HTMLDivElement>(null);
   const featuredRef  = useRef<HTMLDivElement>(null);
+  const offersRef    = useRef<HTMLDivElement>(null);
+
+  type MarketNegotiation = {
+    id: string;
+    vendor_id: string;
+    vendor_email: string | null;
+    product_id: string | null;
+    product_name: string | null;
+    product_image: string | null;
+    buyer_offer: number;
+    counter_amount: number | null;
+    final_amount: number | null;
+    quantity: number;
+    status: 'countered' | 'accepted_pending_payment';
+    bot_message: string | null;
+    expires_at: string | null;
+  };
 
   const [realVendors, setRealVendors] = useState<Array<{
     id: string; name: string; emoji: string; grad: string; category: string; productCount: number;
@@ -34,6 +52,7 @@ function TiendaPageInner() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
+  const [myOffers, setMyOffers] = useState<MarketNegotiation[]>([]);
 
   /* fetch real published products */
   useEffect(() => {
@@ -49,6 +68,24 @@ function TiendaPageInner() {
       }, () => {
         setProductsLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        if (!cancelled) setMyOffers([]);
+        return;
+      }
+      try {
+        const res = await authFetch('/api/tukibot/negotiations?role=buyer&status=all&limit=12');
+        const data = await res.json();
+        if (!cancelled && res.ok) setMyOffers(data.items ?? []);
+      } catch {
+        if (!cancelled) setMyOffers([]);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -203,6 +240,52 @@ function TiendaPageInner() {
 
   return (
     <div className="tnd-page">
+
+      {myOffers.length > 0 && (
+        <div>
+          <div className="tnd-section-head">
+            <div>
+              <h2 className="tnd-section-title">💬 Mis ofertas</h2>
+              <p className="tnd-offers-subtitle">Retomá tus negociaciones activas y pagos pendientes.</p>
+            </div>
+            <Link href="/tienda/mis-ofertas" className="tnd-section-link">Ver todos</Link>
+          </div>
+          <div className="tnd-carousel-wrap">
+            <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => offersRef.current?.scrollBy({ left: -260, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
+            <div className="tnd-offers-carousel" ref={offersRef}>
+              {myOffers.map((offer) => {
+                const actionHref = offer.status === 'accepted_pending_payment' && offer.product_id
+                  ? `/tienda/checkout?product=${offer.product_id}&qty=${offer.quantity}&name=${encodeURIComponent(offer.product_name || '')}&vendor=${encodeURIComponent(offer.vendor_email || '')}&vid=${offer.vendor_id}&price=${offer.final_amount ?? offer.counter_amount ?? offer.buyer_offer}&negotiationId=${offer.id}`
+                  : '/tienda/mis-ofertas';
+
+                return (
+                  <Link key={offer.id} href={actionHref} className="tnd-offer-card-link">
+                    <article className="tnd-market-offer-card">
+                      <div className="tnd-market-offer-media">
+                        {offer.product_image ? <img src={offer.product_image} alt={offer.product_name || 'Oferta'} /> : <span>🛍️</span>}
+                        <span className={`tnd-market-offer-status tnd-market-offer-status-${offer.status}`}>
+                          {offer.status === 'countered' ? 'Esperando tu decisión' : 'Lista para pagar'}
+                        </span>
+                      </div>
+                      <div className="tnd-market-offer-body">
+                        <div className="tnd-market-offer-title">{offer.product_name || 'Producto'}</div>
+                        <div className="tnd-market-offer-vendor">{offer.vendor_email?.split('@')[0] || 'Tienda'}</div>
+                        <div className="tnd-market-offer-prices">
+                          <span>Tu oferta: {gs(offer.buyer_offer)}</span>
+                          <strong>{offer.status === 'accepted_pending_payment' ? `Pagar ${gs(offer.final_amount ?? offer.counter_amount ?? offer.buyer_offer)}` : `Contraoferta ${gs(offer.counter_amount ?? offer.buyer_offer)}`}</strong>
+                        </div>
+                        <div className="tnd-market-offer-expiry">{offer.expires_at ? `Expira ${new Date(offer.expires_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : 'Sin vencimiento'}</div>
+                        <div className="tnd-market-offer-cta">{offer.status === 'accepted_pending_payment' ? 'Proceder al pago' : 'Ver oferta'}</div>
+                      </div>
+                    </article>
+                  </Link>
+                );
+              })}
+            </div>
+            <button className="tnd-carousel-btn tnd-carousel-next" onClick={() => offersRef.current?.scrollBy({ left: 260, behavior: 'smooth' })} aria-label="Siguiente">&#8250;</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tiendas destacadas (carousel) ── */}
       <div>

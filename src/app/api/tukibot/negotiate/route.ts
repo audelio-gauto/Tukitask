@@ -36,6 +36,7 @@ function normalizeNegotiationProfile(input: unknown): NegotiationProfile {
 type NegotiateRequest = {
   vendorId?: string;
   productId?: string;
+  productImage?: string;
   buyerOffer: number;
   quantity?: number;
   listedPrice: number;
@@ -50,6 +51,7 @@ type NegotiateResponse = {
   counterAmount?: number;
   totalAmount: number;
   message: string;
+  negotiationId?: string;
   timeoutAt?: string;
   timeoutAction?: TimeoutAction;
   timeoutMessage?: string;
@@ -415,6 +417,7 @@ export async function POST(req: Request) {
     const quantity = Math.max(1, Number(body?.quantity || 1));
     const vendorId = body?.vendorId?.trim() || 'default-vendor';
     const productId = body?.productId?.trim() || null;
+    const productImage = body?.productImage?.trim() || null;
     const productName = body?.productName?.trim() || 'este producto';
     const vendorName = body?.vendorName?.trim() || 'la tienda';
 
@@ -931,26 +934,66 @@ export async function POST(req: Request) {
 
     if (payload.status === 'countered' && payload.counterAmount && payload.timeoutAt) {
       try {
-        await sb.from('tukibot_negotiations').insert({
+        const { data: inserted } = await sb.from('tukibot_negotiations').insert({
           vendor_id: vendorId,
+          vendor_email: vendorName,
           buyer_id: buyer?.id ?? null,
           buyer_email: buyer?.email ?? null,
+          buyer_name: buyer?.email?.split('@')[0] ?? null,
           product_id: productId,
           product_name: productName,
+          product_image: productImage,
           listed_price: listedPrice,
           floor_price: floorPrice,
           buyer_offer: buyerOffer,
           counter_amount: payload.counterAmount,
+          quantity,
+          bot_message: payload.message,
           status: 'countered',
           timeout_action: payload.timeoutAction,
           timeout_at: payload.timeoutAt,
+          expires_at: payload.timeoutAt,
+          last_price_updated_at: new Date().toISOString(),
           meta: {
             vendorName,
             quantity,
             botTone,
             negotiationProfile,
           },
-        });
+        }).select('id').single();
+        if (inserted?.id) payload.negotiationId = inserted.id;
+      } catch {
+        // Best effort queue write.
+      }
+    } else if (payload.status === 'accepted' && payload.acceptedAmount) {
+      try {
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const { data: inserted } = await sb.from('tukibot_negotiations').insert({
+          vendor_id: vendorId,
+          vendor_email: vendorName,
+          buyer_id: buyer?.id ?? null,
+          buyer_email: buyer?.email ?? null,
+          buyer_name: buyer?.email?.split('@')[0] ?? null,
+          product_id: productId,
+          product_name: productName,
+          product_image: productImage,
+          listed_price: listedPrice,
+          floor_price: floorPrice,
+          buyer_offer: buyerOffer,
+          final_amount: payload.acceptedAmount,
+          quantity,
+          bot_message: payload.message,
+          status: 'accepted_pending_payment',
+          accepted_at: new Date().toISOString(),
+          expires_at: expiresAt,
+          meta: {
+            vendorName,
+            quantity,
+            botTone,
+            negotiationProfile,
+          },
+        }).select('id').single();
+        if (inserted?.id) payload.negotiationId = inserted.id;
       } catch {
         // Best effort queue write.
       }

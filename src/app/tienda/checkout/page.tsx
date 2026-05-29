@@ -46,6 +46,7 @@ function CheckoutInner() {
   const productId    = params.get('product');
   const qtyParam     = parseInt(params.get('qty') ?? '1', 10) || 1;
   const priceParam   = params.get('price');   // used for negotiated price
+  const negotiationId = params.get('negotiationId');
   const productName  = params.get('name');
   const vendorEmail  = params.get('vendor');
   const vendorId     = params.get('vid') ?? '';
@@ -98,6 +99,7 @@ function CheckoutInner() {
             qty:         qtyParam,
             vendorEmail: vendorEmail ?? data.vendor_email,
             vendorId:    vendorId   || data.vendor_id,
+            negotiationId,
             image:       data.image,
           }]);
         }

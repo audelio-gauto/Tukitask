@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { useCart } from '../../cart-context';
 import { gs } from '../../data';
 
@@ -81,12 +82,26 @@ type PendingResult = {
   status: 'accepted';
   buyerOffer: number;
   acceptedAmount?: number;
+  negotiationId?: string;
   message?: string | null;
 } | {
   status: 'countered';
   buyerOffer: number;
   counterAmount?: number;
+  negotiationId?: string;
   message?: string | null;
+  timeoutAt?: string;
+  timeoutAction?: TimeoutAction;
+  timeoutMessage?: string;
+};
+
+type DoneState = {
+  type: Mode;
+  amount?: number;
+  botResponse?: 'accepted' | 'countered';
+  counterAmount?: number;
+  botMessage?: string;
+  negotiationId?: string;
   timeoutAt?: string;
   timeoutAction?: TimeoutAction;
   timeoutMessage?: string;
@@ -111,7 +126,8 @@ export default function ProductDetailPage() {
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
   const [animMinSteps,  setAnimMinSteps]  = useState(13); // ≈40s ÷ 3s/paso
   const [cartAdded,     setCartAdded]     = useState(false);
-  const [done,          setDone]          = useState<{ type: Mode; amount?: number; botResponse?: 'accepted' | 'countered'; counterAmount?: number; botMessage?: string; timeoutAt?: string; timeoutAction?: TimeoutAction; timeoutMessage?: string } | null>(null);
+  const [acceptingCounter, setAcceptingCounter] = useState(false);
+  const [done,          setDone]          = useState<DoneState | null>(null);
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -150,6 +166,7 @@ export default function ProductDetailPage() {
             type: 'negotiate',
             amount: pendingResult.acceptedAmount ?? pendingResult.buyerOffer,
             botResponse: 'accepted',
+            negotiationId: pendingResult.negotiationId,
             botMessage: pendingResult.message ?? undefined,
           });
         } else {
@@ -158,6 +175,7 @@ export default function ProductDetailPage() {
             amount: pendingResult.buyerOffer,
             botResponse: 'countered',
             counterAmount: pendingResult.counterAmount,
+            negotiationId: pendingResult.negotiationId,
             botMessage: pendingResult.message ?? undefined,
             timeoutAt: pendingResult.timeoutAt,
             timeoutAction: pendingResult.timeoutAction,
@@ -267,7 +285,37 @@ export default function ProductDetailPage() {
       vid: p.vendor_id,
       price: String(negotiatedUnitPrice),
     });
+    if (done.negotiationId) {
+      url.set('negotiationId', done.negotiationId);
+    }
     router.push(`/tienda/checkout?${url.toString()}`);
+  }
+
+  async function handleAcceptCounter() {
+    if (!done?.negotiationId || !done.counterAmount) return;
+    setAcceptingCounter(true);
+    try {
+      const res = await authFetch(`/api/tukibot/negotiations/${done.negotiationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'accept_counter' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo aceptar la contraoferta');
+
+      setDone(prev => prev ? {
+        ...prev,
+        botResponse: 'accepted',
+        amount: prev.counterAmount,
+        botMessage: quantity > 1
+          ? `Tu oferta fue aceptada. ${quantity} und. × ${gs(prev.counterAmount!)} c/u = ${gs(prev.counterAmount! * quantity)} en total.`
+          : `Tu oferta fue aceptada. ${gs(prev.counterAmount!)} confirmado.`,
+        timeoutAt: data.expiresAt ?? prev.timeoutAt,
+      } : null);
+    } catch {
+      // keep current card unchanged on failure
+    } finally {
+      setAcceptingCounter(false);
+    }
   }
 
   async function handleOffer(e: React.FormEvent) {
@@ -312,6 +360,7 @@ export default function ProductDetailPage() {
         body: JSON.stringify({
           vendorId: p.vendor_id,
           productId: p.id,
+          productImage: p.image,
           buyerOffer: capturedOffer,
           quantity,
           listedPrice: p.price,
@@ -323,9 +372,9 @@ export default function ProductDetailPage() {
       if (!res.ok) throw new Error('Negociación fallida');
       const data = await res.json();
       if (data.status === 'accepted') {
-        setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: data.acceptedAmount ?? capturedOffer, message: data.message ?? null });
+        setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: data.acceptedAmount ?? capturedOffer, negotiationId: data.negotiationId, message: data.message ?? null });
       } else {
-        setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount: data.counterAmount, message: data.message ?? null, timeoutAt: data.timeoutAt, timeoutAction: data.timeoutAction, timeoutMessage: data.timeoutMessage });
+        setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount: data.counterAmount, negotiationId: data.negotiationId, message: data.message ?? null, timeoutAt: data.timeoutAt, timeoutAction: data.timeoutAction, timeoutMessage: data.timeoutMessage });
       }
     } catch {
       // Fallback: keep animation running, resolve with local logic
@@ -525,16 +574,10 @@ export default function ProductDetailPage() {
                       <div className="tnd-offer-success-actions">
                         <button
                           className="tnd-btn-buy"
-                          onClick={() => setDone(prev => prev ? {
-                            ...prev,
-                            botResponse: 'accepted',
-                            amount: prev.counterAmount,
-                            botMessage: quantity > 1
-                              ? `Tu oferta fue aceptada. ${quantity} und. × ${gs(prev.counterAmount!)} c/u = ${gs(prev.counterAmount! * quantity)} en total.`
-                              : `Tu oferta fue aceptada. ${gs(prev.counterAmount!)} confirmado.`,
-                          } : null)}
+                          onClick={handleAcceptCounter}
+                          disabled={acceptingCounter}
                         >
-                          ✅ Aceptar {gs(done.counterAmount!)}
+                          {acceptingCounter ? '⏳ Confirmando...' : `✅ Aceptar ${gs(done.counterAmount!)}`}
                         </button>
                         <button
                           className="tnd-offer-secondary"

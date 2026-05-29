@@ -9,6 +9,7 @@ export interface CheckoutItem {
   qty: number;
   vendorEmail: string;
   vendorId: string;
+  negotiationId?: string | null;
   image?: string | null;
 }
 
@@ -104,6 +105,8 @@ export async function POST(req: Request) {
       },
       notes:   notes ?? null,
       payment_method: payment_method ?? 'contra_entrega',
+      negotiation_id: vendorItems[0].negotiationId ?? null,
+      negotiated: Boolean(vendorItems[0].negotiationId),
       status: 'pending',
     };
 
@@ -115,6 +118,19 @@ export async function POST(req: Request) {
 
     if (error) return serverError(error);
     createdOrders.push(data.id);
+
+    const negotiationId = vendorItems[0].negotiationId;
+    if (negotiationId) {
+      await db
+        .from('tukibot_negotiations')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          market_order_id: data.id,
+          final_amount: total,
+        })
+        .eq('id', negotiationId);
+    }
 
     // Decrement stock for each product in this vendor's order
     for (const item of vendorItems) {
