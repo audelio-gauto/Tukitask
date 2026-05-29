@@ -31,16 +31,24 @@ function TiendaPageInner() {
     category: string; price: number; floor_price: number; stock: number;
     image: string | null; negotiable: boolean;
   }>>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
 
   /* fetch real published products */
   useEffect(() => {
+    setProductsLoading(true);
     supabase.from('products')
       .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => { if (data) setDbProducts(data); });
+      .then(({ data }) => {
+        if (data) setDbProducts(data);
+        setProductsLoading(false);
+      }, () => {
+        setProductsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -68,12 +76,16 @@ function TiendaPageInner() {
   /* fetch real vendors with published products */
   useEffect(() => {
     const fetchVendors = async () => {
+      setVendorsLoading(true);
       // Derive vendors directly from published products — no dependency on users.role
       const { data: prods } = await supabase
         .from('products')
         .select('vendor_id, vendor_email')
         .eq('status', 'published');
-      if (!prods?.length) return;
+      if (!prods?.length) {
+        setVendorsLoading(false);
+        return;
+      }
 
       const countMap: Record<string, number> = {};
       const emailMap: Record<string, string> = {};
@@ -112,8 +124,9 @@ function TiendaPageInner() {
           };
         })
       );
+      setVendorsLoading(false);
     };
-    fetchVendors();
+    fetchVendors().catch(() => setVendorsLoading(false));
   }, []);
 
   /* sync URL → local state */
@@ -199,7 +212,12 @@ function TiendaPageInner() {
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => storesRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-stores-carousel" ref={storesRef}>
-            {realVendors.length === 0 && (
+            {vendorsLoading && (
+              <div style={{ padding: '2rem 1rem', color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>
+                Cargando tiendas...
+              </div>
+            )}
+            {!vendorsLoading && realVendors.length === 0 && (
               <div style={{ padding: '2rem 1rem', color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>
                 No hay tiendas disponibles aún.
               </div>
@@ -307,7 +325,13 @@ function TiendaPageInner() {
           </div>
         )}
 
-        {filtered.length === 0 ? (
+        {productsLoading ? (
+          <div className="tnd-empty">
+            <div className="tnd-empty-icon">⏳</div>
+            <div className="tnd-empty-title">Cargando productos</div>
+            <div className="tnd-empty-sub">Un momento por favor...</div>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="tnd-empty">
             <div className="tnd-empty-icon">🔍</div>
             <div className="tnd-empty-title">No se encontraron productos</div>

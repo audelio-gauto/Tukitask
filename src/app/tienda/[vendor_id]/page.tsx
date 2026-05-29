@@ -93,6 +93,7 @@ export default function VendorStorePage() {
   const vendorId = params.vendor_id as string;
 
   const [cfg,       setCfg]       = useState<StoreTemplateConfig | null>(null);
+  const [loadingStore, setLoadingStore] = useState(true);
   const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
   const [activeCat, setActiveCat] = useState('Todos');
   const [search,    setSearch]    = useState('');
@@ -114,22 +115,32 @@ export default function VendorStorePage() {
 
   useEffect(() => {
     const loadConfig = async () => {
+      setLoadingStore(true);
       if (vendorId === 'mi-tienda') {
         try {
           const raw = localStorage.getItem('tukimarket_template');
-          if (raw) { setCfg(JSON.parse(raw)); return; }
+          if (raw) {
+            setCfg(JSON.parse(raw));
+            setLoadingStore(false);
+            return;
+          }
         } catch { /* ignore */ }
         setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
       } else if (IS_UUID) {
         const { data } = await supabase
           .from('store_configs').select('config').eq('vendor_id', vendorId).single();
-        if (data?.config) { setCfg(data.config as StoreTemplateConfig); return; }
+        if (data?.config) {
+          setCfg(data.config as StoreTemplateConfig);
+          setLoadingStore(false);
+          return;
+        }
         setCfg(DEFAULT_CFG);
       } else {
         setCfg(null); // unknown slug — show "not found"
       }
+      setLoadingStore(false);
     };
-    loadConfig();
+    loadConfig().catch(() => setLoadingStore(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
@@ -189,6 +200,18 @@ export default function VendorStorePage() {
       document.head.appendChild(link);
     }
   }, [activeCfg?.storeFont]);
+
+  if (loadingStore) {
+    return (
+      <div className="tnd-page">
+        <div className="tnd-not-found">
+          <div style={{ fontSize: '2rem', marginBottom: 16 }}>⏳</div>
+          <h2 style={{ color: 'var(--tnd-text-primary)', marginBottom: 8 }}>Cargando tienda...</h2>
+          <p style={{ color: 'var(--tnd-text-muted)' }}>Estamos preparando la información.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeCfg) {
     return (
