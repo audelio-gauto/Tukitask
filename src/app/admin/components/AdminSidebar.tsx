@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface SubItem {
   label: string;
@@ -199,37 +200,43 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
-      // ── Dashboard ──────────────────────────────────────────
-      { label: 'DASHBOARD', isHeader: true },
-      { label: 'Métricas en tiempo real', href: '/admin/vendors' },
+      // ── Bandeja de Hoy ─────────────────────────────────────
+      { label: 'BANDEJA DE HOY', isHeader: true },
+      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
+      { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
+      { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
+      { label: 'Pagos Pendientes', href: '/admin/finanzas/pagos-pendientes' },
+      // ── Resumen ────────────────────────────────────────────
+      { label: 'RESUMEN', isHeader: true },
+      { label: 'Panel de Vendedores', href: '/admin/vendors' },
+      // ── Catálogo ───────────────────────────────────────────
+      { label: 'CATÁLOGO', isHeader: true },
+      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
+      { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
+      { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
+      { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
+      // ── Pedidos y Reclamos ─────────────────────────────────
+      { label: 'PEDIDOS Y RECLAMOS', isHeader: true },
+      { label: 'Todos los Pedidos', href: '/admin/vendors/pedidos' },
+      { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones' },
+      { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
+      { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
+      // ── Riesgo y Calidad ───────────────────────────────────
+      { label: 'RIESGO Y CALIDAD', isHeader: true },
+      { label: 'Monitoreo de Ofertas', href: '/admin/vendors/negociaciones' },
+      { label: 'Fraude / Spam', href: '/admin/vendors/negociaciones/fraude' },
+      { label: 'Historial de Negociación', href: '/admin/vendors/negociaciones/historial' },
+      { label: 'Límites Automáticos', href: '/admin/vendors/negociaciones/limites' },
       // ── Gestión de Vendedores ──────────────────────────────
       { label: 'GESTIÓN DE VENDEDORES', isHeader: true },
       { label: 'Lista de Vendedores', href: '/admin/vendors/lista' },
       { label: 'Verificaciones', href: '/admin/vendors/verificaciones' },
-      { label: 'Bloqueos / Suspensiones', href: '/admin/vendors/bloqueos' },
-      // ── Gestión de Productos ───────────────────────────────
-      { label: 'GESTIÓN DE PRODUCTOS', isHeader: true },
-      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
-      { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
-      { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
-      { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
-      // ── Gestión de Pedidos ─────────────────────────────────
-      { label: 'GESTIÓN DE PEDIDOS', isHeader: true },
-      { label: 'Ver todos los Pedidos', href: '/admin/vendors/pedidos' },
-      { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones' },
-      { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
-      { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
-      // ── Negociaciones ──────────────────────────────────────
-      { label: 'NEGOCIACIONES', isHeader: true },
-      { label: 'Monitorear Ofertas', href: '/admin/vendors/negociaciones' },
-      { label: 'Spam / Fraude', href: '/admin/vendors/negociaciones/fraude' },
-      { label: 'Historial', href: '/admin/vendors/negociaciones/historial' },
-      { label: 'Límites Automáticos', href: '/admin/vendors/negociaciones/limites' },
-      // ── Configuracion Comercial ──────────────────────────
-      { label: 'CONFIGURACION COMERCIAL', isHeader: true },
-      { label: 'Porcentajes de Comision', href: '/admin/vendors/configuracion/comisiones' },
-      { label: 'Metodos de Pago', href: '/admin/vendors/configuracion/metodos-pago' },
-      { label: 'Limites de Negociacion', href: '/admin/vendors/configuracion/limites-negociacion' },
+      { label: 'Bloqueos y Suspensiones', href: '/admin/vendors/bloqueos' },
+      // ── Configuración Comercial ────────────────────────────
+      { label: 'CONFIGURACIÓN COMERCIAL', isHeader: true },
+      { label: 'Comisiones', href: '/admin/vendors/configuracion/comisiones' },
+      { label: 'Métodos de Pago', href: '/admin/vendors/configuracion/metodos-pago' },
+      { label: 'Límites de Negociación', href: '/admin/vendors/configuracion/limites-negociacion' },
     ],
   },
   {
@@ -241,14 +248,18 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
-      // ── Resumen ────────────────────────────────────────────
-      { label: 'RESUMEN', isHeader: true },
-      { label: 'Resumen General', href: '/admin/finanzas' },
-      // ── Movimientos ────────────────────────────────────────
-      { label: 'MOVIMIENTOS', isHeader: true },
+      // ── Resumen Financiero ─────────────────────────────────
+      { label: 'RESUMEN FINANCIERO', isHeader: true },
+      { label: 'Dashboard de Finanzas', href: '/admin/finanzas' },
+      // ── Cobros ─────────────────────────────────────────────
+      { label: 'COBROS', isHeader: true },
       { label: 'Comisiones', href: '/admin/finanzas/comisiones' },
-      { label: 'Retiros Vendedores', href: '/admin/finanzas/retiros' },
       { label: 'Pagos Pendientes', href: '/admin/finanzas/pagos-pendientes' },
+      // ── Liquidaciones ──────────────────────────────────────
+      { label: 'LIQUIDACIONES', isHeader: true },
+      { label: 'Retiros de Vendedores', href: '/admin/finanzas/retiros' },
+      // ── Auditoría ──────────────────────────────────────────
+      { label: 'AUDITORÍA DE MOVIMIENTOS', isHeader: true },
       { label: 'Movimientos Financieros', href: '/admin/finanzas/movimientos' },
     ],
   },
@@ -287,6 +298,14 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
+  const [criticalCounts, setCriticalCounts] = useState<Record<string, number>>({});
+
+  const badgeTargets = new Set([
+    '/admin/vendors/productos/aprobar',
+    '/admin/vendors/pedidos/reembolsos',
+    '/admin/vendors/pedidos/disputas',
+    '/admin/finanzas/pagos-pendientes',
+  ]);
 
   useEffect(() => {
     const autoOpen = new Set<string>();
@@ -299,6 +318,60 @@ export default function AdminSidebar() {
     });
     setOpenMenus(autoOpen);
   }, [pathname]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadCriticalCounts = async () => {
+      const [
+        pendingProducts,
+        pendingRefunds,
+        pendingDisputesPending,
+        pendingDisputesReviewing,
+        pendingDisputesOpen,
+        pendingDisputesLegacy,
+        pendingPayments,
+      ] = await Promise.all([
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        supabase.from('wallet_transactions').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('type', 'refund'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'pending'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'reviewing'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'open'),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'disputed'),
+        supabase.from('wallet_transactions').select('*', { count: 'exact', head: true }).eq('status', 'pending').neq('type', 'withdrawal'),
+      ]);
+
+      if (!alive) return;
+
+      const disputesFromReports =
+        (pendingDisputesPending.count ?? 0)
+        + (pendingDisputesReviewing.count ?? 0)
+        + (pendingDisputesOpen.count ?? 0);
+      const disputesFromLegacyOrders = pendingDisputesLegacy.count ?? 0;
+
+      setCriticalCounts({
+        '/admin/vendors/productos/aprobar': pendingProducts.count ?? 0,
+        '/admin/vendors/pedidos/reembolsos': pendingRefunds.count ?? 0,
+        '/admin/vendors/pedidos/disputas': Math.max(disputesFromReports, disputesFromLegacyOrders),
+        '/admin/finanzas/pagos-pendientes': pendingPayments.count ?? 0,
+      });
+    };
+
+    loadCriticalCounts().catch(() => {
+      if (alive) setCriticalCounts({});
+    });
+
+    const refreshId = window.setInterval(() => {
+      loadCriticalCounts().catch(() => {
+        if (alive) setCriticalCounts(prev => prev);
+      });
+    }, 60000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(refreshId);
+    };
+  }, []);
 
   function toggleMenu(label: string) {
     setOpenMenus(prev => {
@@ -377,7 +450,7 @@ export default function AdminSidebar() {
                       const isSubActive = !!sub.href && (pathname === sub.href || pathname.startsWith(sub.href + '/'));
                       return (
                         <Link
-                          key={sub.href}
+                          key={`${sub.href}-${idx}`}
                           href={sub.href!}
                           className={`block px-3 py-1.5 rounded-md text-xs font-medium transition-all
                             ${isSubActive
@@ -386,7 +459,14 @@ export default function AdminSidebar() {
                             }
                           `}
                         >
-                          {sub.label}
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="truncate">{sub.label}</span>
+                            {sub.href && badgeTargets.has(sub.href) && (criticalCounts[sub.href] ?? 0) > 0 && (
+                              <span className="shrink-0 min-w-5 px-1.5 h-5 inline-flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                                {criticalCounts[sub.href] > 99 ? '99+' : criticalCounts[sub.href]}
+                              </span>
+                            )}
+                          </span>
                         </Link>
                       );
                     })}
