@@ -3,20 +3,22 @@
 
 ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
   Creating an optimized production build ...
+Ô£ô Compiled successfully in 3.1min
+  Running TypeScript ...
+  Collecting page data using 1 worker ...
+Supabase server client missing env vars; set SUPABASE_SERVICE_ROLE_KEY
+Error: supabaseKey is required.
+    at module evaluation (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[root-of-the-server]__3c16a910._.js:1:8094)
+    at instantiateModule (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:740:9)
+    at getOrInstantiateModuleFromParent (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:763:12)
+    at Context.esmImport [as i] (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:228:20)
+    at module evaluation (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[root-of-the-server]__3c16a910._.js:1:8408)
+    at instantiateModule (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:740:9)
+    at instantiateRuntimeModule (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:768:12)
+    at getOrInstantiateRuntimeModule (C:\Users\Aurelio\Documents\wep-app-local-driver\.next\server\chunks\[turbopack]_runtime.js:781:12)
 
 > Build error occurred
-Error: Turbopack build failed with 1 errors:
-./src/app/vendedor/plantillas/page.tsx:713:157
-Parsing ecmascript source code failed
-  711 |               </div>
-  712 |             </div>
-> 713 |             <Toggle enabled={cfg.showStoreChip !== false} onToggle={() => update('showStoreChip', cfg.showStoreChip === false)} label="­ƒøÆ Chip \"Mi Tienda\" en portada" />
-      |                                                                                                                                                             ^
-  714 |             <Field label="T├¡tulo principal" hint="Us├í \\n para salto de l├¡nea">
-  715 |               <textarea
-  716 |                 className="vnd-input"
-
-Expected unicode escape
-
-
-    at <unknown> (./src/app/vendedor/plantillas/page.tsx:713:157)
+Error: Failed to collect page data for /api/admin/drivers/commissions
+    at ignore-listed frames {
+  type: 'Error'
+}
