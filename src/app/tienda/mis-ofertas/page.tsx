@@ -40,6 +40,7 @@ export default function MisOfertasMarketplacePage() {
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [acceptedInline, setAcceptedInline] = useState<Record<string, true>>({});
 
   // Chat modal state
   const [chatOffer, setChatOffer] = useState<OfferRow | null>(null);
@@ -55,6 +56,7 @@ export default function MisOfertasMarketplacePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudieron cargar tus ofertas');
       setOffers(data.items ?? []);
+      setAcceptedInline({});
     } finally {
       setLoading(false);
     }
@@ -65,9 +67,10 @@ export default function MisOfertasMarketplacePage() {
   }, []);
 
   const grouped = useMemo(() => ({
-    countered: offers.filter((offer) => offer.status === 'countered'),
-    accepted: offers.filter((offer) => offer.status === 'accepted_pending_payment'),
-  }), [offers]);
+    // Keep just-accepted offers visible in-place so payment CTA appears immediately.
+    countered: offers.filter((offer) => offer.status === 'countered' || Boolean(acceptedInline[offer.id])),
+    accepted: offers.filter((offer) => offer.status === 'accepted_pending_payment' && !acceptedInline[offer.id]),
+  }), [offers, acceptedInline]);
 
   async function handleAccept(offer: OfferRow) {
     setBusyId(offer.id);
@@ -78,7 +81,12 @@ export default function MisOfertasMarketplacePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo aceptar la oferta');
-      await loadOffers();
+      const finalAmount = Number(data.finalAmount ?? offer.counter_amount ?? offer.buyer_offer);
+      setOffers((prev) => prev.map((o) => o.id === offer.id
+        ? { ...o, status: 'accepted_pending_payment', final_amount: finalAmount }
+        : o,
+      ));
+      setAcceptedInline((prev) => ({ ...prev, [offer.id]: true }));
     } finally {
       setBusyId(null);
     }
