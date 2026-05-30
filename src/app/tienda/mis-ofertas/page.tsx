@@ -201,9 +201,6 @@ export default function MisOfertasMarketplacePage() {
                           )}
                           <Link href={`/tienda/producto/${offer.product_id ?? ''}`} className="tnd-my-offer-link">Ver producto</Link>
                         </div>
-                            </button>
-                          )}
-                        </div>
                       </div>
                     </article>
                   ))}
