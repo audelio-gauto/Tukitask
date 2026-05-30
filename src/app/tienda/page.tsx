@@ -70,6 +70,7 @@ function TiendaPageInner() {
 
   async function openOfferChat(offer: MarketNegotiation) {
     setChatOffer(offer);
+    setMyOffers((prev) => prev.map((o) => o.id === offer.id ? { ...o, message_count: 0 } : o));
     setChatMessages([]);
     setChatDraft('');
     setChatLoading(true);
@@ -99,7 +100,7 @@ function TiendaPageInner() {
       if (msgRes.ok) {
         const rows = msgData.items ?? [];
         setChatMessages(rows);
-        setMyOffers((prev) => prev.map((o) => o.id === chatOffer.id ? { ...o, message_count: rows.length } : o));
+        setMyOffers((prev) => prev.map((o) => o.id === chatOffer.id ? { ...o, message_count: 0 } : o));
       }
     } finally {
       setChatSending(false);

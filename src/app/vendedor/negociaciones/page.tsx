@@ -81,6 +81,7 @@ export default function NegociacionesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudieron cargar mensajes');
       setMessages(data.items ?? []);
+      setItems((prev) => prev.map((item) => item.id === id ? { ...item, message_count: 0 } : item));
     } finally {
       setMessagesLoading(false);
     }

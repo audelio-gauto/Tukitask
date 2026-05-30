@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { forbidden, getAuthUser, sbAdmin, unauthorized } from '@/lib/apiAuth';
 
+type NegotiationMeta = {
+  last_buyer_read_at?: string;
+  last_vendor_read_at?: string;
+} & Record<string, unknown>;
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(_req);
   if (!user) return unauthorized();
@@ -10,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: negotiation, error } = await db
     .from('tukibot_negotiations')
-    .select('id, vendor_id, buyer_id')
+    .select('id, vendor_id, buyer_id, meta')
     .eq('id', id)
     .maybeSingle();
 
@@ -25,6 +30,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .order('created_at', { ascending: true });
 
   if (messagesError) return NextResponse.json({ error: messagesError.message }, { status: 500 });
+
+  const viewerRole = negotiation.vendor_id === user.id ? 'vendor' : 'buyer';
+  const readKey = viewerRole === 'vendor' ? 'last_vendor_read_at' : 'last_buyer_read_at';
+  const meta = ((negotiation.meta ?? {}) as NegotiationMeta);
+  await db
+    .from('tukibot_negotiations')
+    .update({
+      meta: {
+        ...meta,
+        [readKey]: new Date().toISOString(),
+      },
+    })
+    .eq('id', id);
+
   return NextResponse.json({ items: data ?? [] });
 }
 
@@ -37,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { data: negotiation, error } = await db
     .from('tukibot_negotiations')
-    .select('id, vendor_id, vendor_email, buyer_id, buyer_email, buyer_name, status')
+    .select('id, vendor_id, vendor_email, buyer_id, buyer_email, buyer_name, status, meta')
     .eq('id', id)
     .maybeSingle();
 
@@ -65,6 +84,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single();
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // Sender just interacted with the thread: clear unread for sender side.
+  const readKey = senderRole === 'vendor' ? 'last_vendor_read_at' : 'last_buyer_read_at';
+  const meta = ((negotiation.meta ?? {}) as NegotiationMeta);
+  await db
+    .from('tukibot_negotiations')
+    .update({
+      meta: {
+        ...meta,
+        [readKey]: new Date().toISOString(),
+      },
+    })
+    .eq('id', id);
 
   const notifyEmail = senderRole === 'vendor' ? negotiation.buyer_email : negotiation.vendor_email;
   if (notifyEmail) {

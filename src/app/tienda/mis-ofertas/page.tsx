@@ -100,6 +100,7 @@ export default function MisOfertasMarketplacePage() {
 
   async function openChat(offer: OfferRow) {
     setChatOffer(offer);
+    setOffers((prev) => prev.map((o) => o.id === offer.id ? { ...o, message_count: 0 } : o));
     setChatMessages([]);
     setChatDraft('');
     setChatLoading(true);
@@ -128,7 +129,7 @@ export default function MisOfertasMarketplacePage() {
       const msgData = await msgRes.json();
       if (msgRes.ok) {
         setChatMessages(msgData.items ?? []);
-        setOffers((prev) => prev.map((o) => o.id === chatOffer.id ? { ...o, message_count: (msgData.items ?? []).length } : o));
+        setOffers((prev) => prev.map((o) => o.id === chatOffer.id ? { ...o, message_count: 0 } : o));
       }
     } finally {
       setChatSending(false);
