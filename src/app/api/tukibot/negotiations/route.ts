@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthUser, sbAdmin, unauthorized } from '@/lib/apiAuth';
 
 const ACTIVE_STATUSES = ['countered', 'accepted_pending_payment'] as const;
+type NegotiationLite = { id: string } & Record<string, unknown>;
+type MessageCountRow = { negotiation_id: string };
 
 export async function GET(req: Request) {
   const user = await getAuthUser(req);
@@ -36,22 +38,22 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const rows = data ?? [];
+  const rows: NegotiationLite[] = (data ?? []) as NegotiationLite[];
 
   // Attach message_count to each negotiation
   if (rows.length > 0) {
-    const ids = rows.map((n) => n.id as string);
+    const ids = rows.map((n: NegotiationLite) => n.id);
     const { data: msgRows } = await db
       .from('tukibot_negotiation_messages')
       .select('negotiation_id')
       .in('negotiation_id', ids);
     const countMap: Record<string, number> = {};
     if (msgRows) {
-      for (const r of msgRows) {
+      for (const r of msgRows as MessageCountRow[]) {
         countMap[r.negotiation_id] = (countMap[r.negotiation_id] ?? 0) + 1;
       }
     }
-    const items = rows.map((n) => ({ ...n, message_count: countMap[n.id as string] ?? 0 }));
+    const items = rows.map((n: NegotiationLite) => ({ ...n, message_count: countMap[n.id] ?? 0 }));
     return NextResponse.json({ items });
   }
 
