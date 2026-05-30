@@ -34,6 +34,15 @@ function TiendaPageInner() {
     status: 'countered' | 'accepted_pending_payment';
     bot_message: string | null;
     expires_at: string | null;
+    message_count: number;
+  };
+
+  type NegotiationMessage = {
+    id: string;
+    sender_role: 'buyer' | 'vendor' | 'system';
+    sender_name: string | null;
+    message: string;
+    created_at: string;
   };
 
   const [realVendors, setRealVendors] = useState<Array<{
@@ -53,6 +62,49 @@ function TiendaPageInner() {
   const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
   const [myOffers, setMyOffers] = useState<MarketNegotiation[]>([]);
+  const [chatOffer, setChatOffer] = useState<MarketNegotiation | null>(null);
+  const [chatMessages, setChatMessages] = useState<NegotiationMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
+
+  async function openOfferChat(offer: MarketNegotiation) {
+    setChatOffer(offer);
+    setChatMessages([]);
+    setChatDraft('');
+    setChatLoading(true);
+    try {
+      const res = await authFetch(`/api/tukibot/negotiations/${offer.id}/messages`);
+      const data = await res.json();
+      if (res.ok) setChatMessages(data.items ?? []);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function sendOfferChat() {
+    if (!chatOffer || !chatDraft.trim()) return;
+    setChatSending(true);
+    try {
+      const res = await authFetch(`/api/tukibot/negotiations/${chatOffer.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message: chatDraft }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo enviar el mensaje');
+      setChatDraft('');
+
+      const msgRes = await authFetch(`/api/tukibot/negotiations/${chatOffer.id}/messages`);
+      const msgData = await msgRes.json();
+      if (msgRes.ok) {
+        const rows = msgData.items ?? [];
+        setChatMessages(rows);
+        setMyOffers((prev) => prev.map((o) => o.id === chatOffer.id ? { ...o, message_count: rows.length } : o));
+      }
+    } finally {
+      setChatSending(false);
+    }
+  }
 
   /* fetch real published products */
   useEffect(() => {
@@ -263,6 +315,18 @@ function TiendaPageInner() {
                     <article className="tnd-market-offer-card">
                       <div className="tnd-market-offer-media">
                         {offer.product_image ? <img src={offer.product_image} alt={offer.product_name || 'Oferta'} /> : <span>🛍️</span>}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            void openOfferChat(offer);
+                          }}
+                          title={offer.message_count > 0 ? `${offer.message_count} mensaje(s)` : 'Abrir chat'}
+                          style={{ position: 'absolute', right: 10, bottom: 10, width: 34, height: 34, borderRadius: 999, border: offer.message_count > 0 ? '2px solid #fff' : 'none', background: offer.message_count > 0 ? '#F5C518' : 'rgba(0,0,0,0.45)', color: offer.message_count > 0 ? '#1C1C2E' : '#fff', fontWeight: 900, fontSize: offer.message_count > 0 ? '0.74rem' : '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', zIndex: 3, cursor: 'pointer' }}
+                          aria-label="Abrir chat"
+                        >
+                          {offer.message_count > 0 ? offer.message_count : '💬'}
+                        </button>
                         <span className={`tnd-market-offer-status tnd-market-offer-status-${offer.status}`}>
                           {offer.status === 'countered' ? 'Esperando tu decisión' : 'Lista para pagar'}
                         </span>
@@ -460,6 +524,65 @@ function TiendaPageInner() {
           </div>
         )}
       </div>
+
+      {chatOffer && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) setChatOffer(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <div style={{ width: '100%', maxWidth: 540, background: 'var(--tnd-surface, #fff)', borderRadius: '24px 24px 0 0', padding: 24, display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '85dvh', boxShadow: '0 -4px 32px rgba(0,0,0,0.22)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--tnd-text-primary, #111)' }}>Chat - {chatOffer.product_name || 'Negociacion'}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--tnd-text-muted, #888)', marginTop: 2 }}>{chatOffer.vendor_email?.split('@')[0] || 'Vendedor'}</div>
+              </div>
+              <button onClick={() => setChatOffer(null)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--tnd-text-muted, #888)', lineHeight: 1 }}>x</button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 180, maxHeight: 360 }}>
+              {chatLoading ? (
+                <p style={{ textAlign: 'center', color: 'var(--tnd-text-muted, #888)', fontSize: '0.85rem', marginTop: 24 }}>Cargando mensajes...</p>
+              ) : chatMessages.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--tnd-text-muted, #888)', fontSize: '0.85rem', marginTop: 24 }}>Todavia no hay mensajes. Escribi el primero.</p>
+              ) : chatMessages.map((msg) => {
+                const isMine = msg.sender_role === 'buyer';
+                return (
+                  <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ maxWidth: '78%', padding: '9px 14px', borderRadius: isMine ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isMine ? '#F5C518' : 'var(--tnd-surface-2, #f3f4f6)', color: isMine ? '#1C1C2E' : 'var(--tnd-text-primary, #111)', fontSize: '0.88rem', fontWeight: 500 }}>
+                      {msg.message}
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--tnd-text-muted, #aaa)', marginTop: 3 }}>
+                      {msg.sender_name || (isMine ? 'Vos' : 'Vendedor')} · {new Date(msg.created_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input
+                value={chatDraft}
+                onChange={(e) => setChatDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void sendOfferChat();
+                  }
+                }}
+                placeholder="Escribi tu mensaje..."
+                style={{ flex: 1, height: 46, borderRadius: 14, border: '1.5px solid var(--tnd-border, #e5e7eb)', background: 'var(--tnd-bg, #f9fafb)', color: 'var(--tnd-text-primary, #111)', padding: '0 14px', fontSize: '0.9rem' }}
+              />
+              <button
+                onClick={() => void sendOfferChat()}
+                disabled={chatSending || !chatDraft.trim()}
+                style={{ height: 46, paddingInline: 20, borderRadius: 14, background: '#F5C518', color: '#1C1C2E', fontWeight: 800, border: 'none', cursor: 'pointer', opacity: chatSending || !chatDraft.trim() ? 0.5 : 1 }}
+              >
+                {chatSending ? '...' : 'Enviar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
