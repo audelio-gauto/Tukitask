@@ -123,6 +123,7 @@ const menuItems: MenuItem[] = [
       { label: 'Recargas pendientes', href: '/admin/wallets?tab=pending' },
       { label: 'Ajuste Manual', href: '/admin/wallets?tab=ajuste' },
       { label: 'Historial de Movimientos', href: '/admin/wallets?tab=movimientos' },
+      { label: 'Billetera Vendedores', href: '/admin/billetera/vendedores' },
     ],
   },
   {

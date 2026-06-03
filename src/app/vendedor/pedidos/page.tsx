@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '@/lib/authFetch';
 
 /* ── Types ───────────────────────────────────────────────── */
-type OrderStatus = 'pending' | 'preparing' | 'ready' | 'in_transit' | 'delivered' | 'cancelled';
+type OrderStatus = 'pending' | 'preparing' | 'ready' | 'in_transit' | 'delivered' | 'commission_charged' | 'cancelled';
 
 interface MarketOrder {
   id: string;
@@ -10,7 +11,7 @@ interface MarketOrder {
   createdAt: string;
   clientName: string;
   clientPhone?: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; image?: string | null }[];
   total: number;
   status: OrderStatus;
   driver?: { name: string; phone?: string };
@@ -30,22 +31,47 @@ function fmtDate(iso: string) {
 
 /* ── Status config ───────────────────────────────────────── */
 const S: Record<OrderStatus, { cls: string; label: string; dot: string; bg: string }> = {
-  pending:    { cls: 'vnd-badge-amber',  label: 'En espera',  dot: '#fbbf24', bg: 'var(--vnd-warning-bg)' },
-  preparing:  { cls: 'vnd-badge-blue',   label: 'Preparando', dot: '#38bdf8', bg: 'var(--vnd-info-bg)'    },
-  ready:      { cls: 'vnd-badge-gold',   label: 'Listo',      dot: '#F5C518', bg: 'rgba(245,197,24,0.10)' },
-  in_transit: { cls: 'vnd-badge-purple', label: 'En camino',  dot: '#a78bfa', bg: 'rgba(139,92,246,0.10)' },
-  delivered:  { cls: 'vnd-badge-green',  label: 'Entregado',  dot: '#4ade80', bg: 'var(--vnd-success-bg)' },
-  cancelled:  { cls: 'vnd-badge-red',    label: 'Cancelado',  dot: '#f87171', bg: 'var(--vnd-danger-bg)'  },
+  pending:            { cls: 'vnd-badge-amber',  label: 'En espera',    dot: '#fbbf24', bg: 'var(--vnd-warning-bg)' },
+  preparing:          { cls: 'vnd-badge-blue',   label: 'Preparando',   dot: '#38bdf8', bg: 'var(--vnd-info-bg)'    },
+  ready:              { cls: 'vnd-badge-gold',   label: 'Listo',        dot: '#F5C518', bg: 'rgba(245,197,24,0.10)' },
+  in_transit:         { cls: 'vnd-badge-purple', label: 'En camino',    dot: '#a78bfa', bg: 'rgba(139,92,246,0.10)' },
+  delivered:          { cls: 'vnd-badge-green',  label: 'Entregado',    dot: '#4ade80', bg: 'var(--vnd-success-bg)' },
+  commission_charged: { cls: 'vnd-badge-green',  label: 'Completado',   dot: '#4ade80', bg: 'var(--vnd-success-bg)' },
+  cancelled:          { cls: 'vnd-badge-red',    label: 'Cancelado',    dot: '#f87171', bg: 'var(--vnd-danger-bg)'  },
 };
 
 /* ── Status actions (what the vendor can change to) ──────── */
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus[]>> = {
-  pending:   ['preparing', 'cancelled'],
-  preparing: ['ready', 'cancelled'],
-  ready:     ['in_transit'],
+  pending:    ['preparing', 'cancelled'],
+  preparing:  ['ready', 'cancelled'],
+  ready:      ['in_transit'],
+  in_transit: ['delivered'],
 };
 
-/* ── Mock data ───────────────────────────────────────────── */
+/* ── Helpers ────────────────────────────────────────────── */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
+  const rawItems = (raw.items as Array<Record<string, unknown>>) ?? [];
+  return {
+    id: String(raw.id),
+    number: '#' + String(raw.id).slice(0, 8).toUpperCase(),
+    createdAt: String(raw.created_at ?? raw.createdAt ?? ''),
+    clientName: String(raw.client_name ?? raw.clientName ?? ''),
+    clientPhone: undefined,
+    items: rawItems.map(i => ({
+      name:  String(i.name ?? ''),
+      qty:   Number(i.qty ?? 1),
+      price: Number(i.price ?? 0),
+      image: (i.image as string | null) ?? null,
+    })),
+    total: Number(raw.total ?? 0),
+    status: (raw.status as OrderStatus) ?? 'pending',
+    address: String(raw.address ?? ''),
+    negotiated: Boolean(raw.negotiated),
+  };
+}
+
+/* ── Legacy mock data (kept for reference — not used) ──── */
 const MOCK_ORDERS: MarketOrder[] = [
   {
     id: '1', number: '#5959',
@@ -110,9 +136,24 @@ const TABS: { key: TabKey; label: string }[] = [
 /* ══════════════════════════════════════════════════════════ */
 export default function PedidosPage() {
   const [activeTab, setActiveTab]   = useState<TabKey>('all');
-  const [orders, setOrders]         = useState<MarketOrder[]>(MOCK_ORDERS);
+  const [orders, setOrders]         = useState<MarketOrder[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [busyId, setBusyId]         = useState<string | null>(null);
   const [expanded, setExpanded]     = useState<string | null>(null);
   const [search, setSearch]         = useState('');
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch('/api/tienda/market-orders?limit=100');
+      const data = await res.json();
+      if (res.ok) setOrders((data.orders ?? []).map(toMarketOrder));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
   const filtered = orders
     .filter(o => activeTab === 'all' || o.status === activeTab)
@@ -124,8 +165,20 @@ export default function PedidosPage() {
   const countOf = (k: TabKey) =>
     k === 'all' ? orders.length : orders.filter(o => o.status === k).length;
 
-  function changeStatus(id: string, newStatus: OrderStatus) {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+  async function changeStatus(id: string, newStatus: OrderStatus) {
+    setBusyId(id);
+    try {
+      const res = await authFetch(`/api/tienda/market-orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Error al actualizar pedido'); return; }
+      const finalStatus: OrderStatus = data.status ?? newStatus;
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: finalStatus } : o));
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -133,7 +186,7 @@ export default function PedidosPage() {
       {/* Heading */}
       <h1 className="vnd-page-heading">Gestión de Pedidos</h1>
       <p className="vnd-page-sub">
-        {orders.filter(o => o.status === 'pending').length} pedido{orders.filter(o => o.status === 'pending').length !== 1 ? 's' : ''} esperando confirmación
+        {loading ? 'Cargando pedidos...' : `${orders.filter(o => o.status === 'pending').length} pedido${orders.filter(o => o.status === 'pending').length !== 1 ? 's' : ''} esperando confirmación`}
       </p>
 
       {/* Filter row */}
@@ -174,7 +227,12 @@ export default function PedidosPage() {
 
       {/* Table */}
       <div className="vnd-card">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="vnd-empty">
+            <div className="vnd-empty-icon">⏳</div>
+            <p className="vnd-empty-title">Cargando pedidos...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="vnd-empty">
             <div className="vnd-empty-icon">📭</div>
             <p className="vnd-empty-title">Sin pedidos en esta categoría</p>
@@ -286,16 +344,19 @@ export default function PedidosPage() {
                               <button
                                 key={next}
                                 className="vnd-btn vnd-btn-sm"
+                                disabled={busyId === order.id}
                                 style={{
-                                  background: next === 'cancelled' ? 'var(--vnd-danger-bg)' : '#F5C518',
-                                  color:      next === 'cancelled' ? 'var(--vnd-danger)' : '#0b1220',
+                                  background: next === 'cancelled' ? 'var(--vnd-danger-bg)' : next === 'delivered' ? 'rgba(34,197,94,0.18)' : '#F5C518',
+                                  color:      next === 'cancelled' ? 'var(--vnd-danger)' : next === 'delivered' ? '#4ade80' : '#0b1220',
                                   border:     next === 'cancelled' ? '1px solid transparent' : 'none',
+                                  opacity: busyId === order.id ? 0.6 : 1,
                                 }}
-                                onClick={() => changeStatus(order.id, next)}
+                                onClick={() => void changeStatus(order.id, next)}
                               >
                                 {next === 'preparing'  && '▶ Preparar'}
                                 {next === 'ready'      && '✓ Listo'}
                                 {next === 'in_transit' && '🚗 Despachar'}
+                                {next === 'delivered'  && '✅ Marcar entregado'}
                                 {next === 'cancelled'  && '✕ Cancelar'}
                               </button>
                             ))}
