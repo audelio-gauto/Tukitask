@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getAuthUser } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 
@@ -15,10 +15,11 @@ type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
 // Lazy proxy — createClient is only called on first request, never at build time
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _sb: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const sb: any = new Proxy({}, { get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.SUPABASE_SERVICE_ROLE_KEY as string); return _sb[p]; } });
+let _sb: SupabaseClient | null = null;
+const sb = new Proxy({} as SupabaseClient, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!); return (_sb as any)[p]; },
+});
 
 function normalizeTone(input: unknown): BotTone {
   if (input === 'informal' || input === 'formal' || input === 'agresivo' || input === 'amigable') {

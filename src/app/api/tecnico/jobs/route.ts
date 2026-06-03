@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 // Lazy proxy — createClient is only called on first request, never at build time
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _sb: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const sb: any = new Proxy({}, { get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.SUPABASE_SERVICE_ROLE_KEY as string); return _sb[p]; } });
+let _sb: SupabaseClient | null = null;
+const sb = new Proxy({} as SupabaseClient, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!); return (_sb as any)[p]; },
+});
 
 const ACTIVE_STATUSES = ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'];
 const HISTORY_STATUSES = ['completado', 'cancelled', 'incidente'];
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
       let offerQ = sb.from('tecnico_jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
       if (disabledServices.length > 0) offerQ = offerQ.not('service_type', 'in', `(${disabledServices.join(',')})`);
-      if (rejectedJobIds.length > 0) offerQ = offerQ.not('id', 'in', `(${rejectedJobIds.map(id => `'${id}'`).join(',')})`);
+      if (rejectedJobIds.length > 0) offerQ = offerQ.not('id', 'in', `(${rejectedJobIds.map((id: string) => `'${id}'`).join(',')})`);
       const { count: ofertasActivas } = await offerQ;
 
       const { count: citasConfirmadas } = await sb
