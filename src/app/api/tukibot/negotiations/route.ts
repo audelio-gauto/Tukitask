@@ -26,9 +26,23 @@ export async function GET(req: Request) {
   const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit') || '20')));
 
   const db = sbAdmin();
+  const nowIso = new Date().toISOString();
+
+  // Lazy cleanup: delete expired negotiations for this user before returning results
+  const expiredQuery = db
+    .from('tukibot_negotiations')
+    .delete()
+    .lt('expires_at', nowIso);
+  if (role === 'vendor') {
+    await expiredQuery.eq('vendor_id', user.id);
+  } else {
+    await expiredQuery.eq('buyer_id', user.id);
+  }
+
   let query = db
     .from('tukibot_negotiations')
     .select('id, vendor_id, vendor_email, buyer_id, buyer_email, buyer_name, product_id, product_name, product_image, listed_price, floor_price, buyer_offer, counter_amount, final_amount, quantity, status, bot_message, timeout_action, timeout_at, expires_at, accepted_at, paid_at, market_order_id, created_at, updated_at, last_price_updated_at, meta')
+    .gt('expires_at', nowIso)
     .order('updated_at', { ascending: false })
     .limit(limit);
 
@@ -37,7 +51,8 @@ export async function GET(req: Request) {
     : query.eq('buyer_id', user.id);
 
   if (status === 'all') {
-    // no extra filter
+    // no extra filter — but only active statuses
+    query = query.in('status', [...ACTIVE_STATUSES]);
   } else if (status && ACTIVE_STATUSES.includes(status as (typeof ACTIVE_STATUSES)[number])) {
     query = query.eq('status', status);
   } else {

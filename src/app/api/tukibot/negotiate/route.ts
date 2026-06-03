@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { getAuthUser } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 
@@ -14,12 +14,10 @@ type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
-// Lazy proxy — createClient is only called on first request, never at build time
-let _sb: SupabaseClient | null = null;
-const sb = new Proxy({} as SupabaseClient, {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!); return (_sb as any)[p]; },
-});
+const sb = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+);
 
 function normalizeTone(input: unknown): BotTone {
   if (input === 'informal' || input === 'formal' || input === 'agresivo' || input === 'amigable') {
@@ -936,6 +934,14 @@ export async function POST(req: Request) {
 
     if (payload.status === 'countered' && payload.counterAmount && payload.timeoutAt) {
       try {
+        // Remove any previous negotiation for this buyer+product so only one remains
+        if (buyer?.id && productId) {
+          await sb.from('tukibot_negotiations')
+            .delete()
+            .eq('buyer_id', buyer.id)
+            .eq('product_id', productId);
+        }
+        const negotiationExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         const { data: inserted } = await sb.from('tukibot_negotiations').insert({
           vendor_id: vendorId,
           vendor_email: vendorName,
@@ -954,7 +960,7 @@ export async function POST(req: Request) {
           status: 'countered',
           timeout_action: payload.timeoutAction,
           timeout_at: payload.timeoutAt,
-          expires_at: payload.timeoutAt,
+          expires_at: negotiationExpiresAt,
           last_price_updated_at: new Date().toISOString(),
           meta: {
             vendorName,
@@ -969,7 +975,14 @@ export async function POST(req: Request) {
       }
     } else if (payload.status === 'accepted' && payload.acceptedAmount) {
       try {
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        // Remove any previous negotiation for this buyer+product so only one remains
+        if (buyer?.id && productId) {
+          await sb.from('tukibot_negotiations')
+            .delete()
+            .eq('buyer_id', buyer.id)
+            .eq('product_id', productId);
+        }
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         const { data: inserted } = await sb.from('tukibot_negotiations').insert({
           vendor_id: vendorId,
           vendor_email: vendorName,

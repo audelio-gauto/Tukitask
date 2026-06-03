@@ -55,11 +55,21 @@ export default function MisOfertasMarketplacePage() {
       const res = await authFetch('/api/tukibot/negotiations?role=buyer&status=all&limit=50');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudieron cargar tus ofertas');
-      setOffers(data.items ?? []);
+      const now = Date.now();
+      setOffers((data.items ?? []).filter((o: OfferRow) => !o.expires_at || new Date(o.expires_at).getTime() > now));
       setAcceptedInline({});
     } finally {
       setLoading(false);
     }
+  }
+
+  function expiryLabel(expiresAt: string | null): string {
+    if (!expiresAt) return '⏳ Expira en 48h';
+    const msLeft = new Date(expiresAt).getTime() - Date.now();
+    if (msLeft <= 0) return '⏰ Expirada';
+    const hLeft = Math.floor(msLeft / 3600000);
+    const mLeft = Math.floor((msLeft % 3600000) / 60000);
+    return hLeft > 0 ? `⏳ Expira en ${hLeft}h ${mLeft}m` : `⏳ Expira en ${mLeft}m`;
   }
 
   useEffect(() => {
@@ -197,7 +207,7 @@ export default function MisOfertasMarketplacePage() {
                           <span>Tu oferta: {gs(offer.buyer_offer)}</span>
                           <strong>{offer.status === 'accepted_pending_payment' ? `Total a pagar: ${gs(offer.final_amount ?? offer.counter_amount)}` : `Contraoferta: ${gs(offer.counter_amount)}`}</strong>
                         </div>
-                        <div className="tnd-my-offer-expiry">{offer.expires_at ? `Expira ${new Date(offer.expires_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : 'Sin vencimiento'}</div>
+                        <div className="tnd-my-offer-expiry">{expiryLabel(offer.expires_at)}</div>
                         <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                           {offer.status === 'countered' ? (
                             <button className="tnd-btn-buy" style={{ marginTop: 0 }} onClick={() => void handleAccept(offer)} disabled={busyId === offer.id}>

@@ -133,7 +133,10 @@ function TiendaPageInner() {
       try {
         const res = await authFetch('/api/tukibot/negotiations?role=buyer&status=all&limit=12');
         const data = await res.json();
-        if (!cancelled && res.ok) setMyOffers(data.items ?? []);
+        if (!cancelled && res.ok) {
+          const now = Date.now();
+          setMyOffers((data.items ?? []).filter((o: MarketNegotiation) => !o.expires_at || new Date(o.expires_at).getTime() > now));
+        }
       } catch {
         if (!cancelled) setMyOffers([]);
       }
@@ -339,7 +342,13 @@ function TiendaPageInner() {
                           <span>Tu oferta: {gs(offer.buyer_offer)}</span>
                           <strong>{offer.status === 'accepted_pending_payment' ? `Pagar ${gs(offer.final_amount ?? offer.counter_amount ?? offer.buyer_offer)}` : `Contraoferta ${gs(offer.counter_amount ?? offer.buyer_offer)}`}</strong>
                         </div>
-                        <div className="tnd-market-offer-expiry">{offer.expires_at ? `Expira ${new Date(offer.expires_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : 'Sin vencimiento'}</div>
+                        <div className="tnd-market-offer-expiry">{offer.expires_at ? (() => {
+                          const msLeft = new Date(offer.expires_at).getTime() - Date.now();
+                          if (msLeft <= 0) return '⏰ Expirada';
+                          const hLeft = Math.floor(msLeft / 3600000);
+                          const mLeft = Math.floor((msLeft % 3600000) / 60000);
+                          return hLeft > 0 ? `⏳ Expira en ${hLeft}h ${mLeft}m` : `⏳ Expira en ${mLeft}m`;
+                        })() : '⏳ Expira en 48h'}</div>
                         <div className="tnd-market-offer-cta">{offer.status === 'accepted_pending_payment' ? 'Proceder al pago' : 'Ver oferta'}</div>
                       </div>
                     </article>

@@ -34,13 +34,13 @@ type MessageRow = {
 const gs = (n?: number | null) => `Gs. ${(n ?? 0).toLocaleString('es-PY')}`;
 
 function timeLeftLabel(expiresAt?: string | null) {
-  if (!expiresAt) return 'Sin vencimiento';
+  if (!expiresAt) return '⏳ Expira en 48h';
   const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return 'Expirada';
+  if (diff <= 0) return '⏰ Expirada';
   const totalMinutes = Math.ceil(diff / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours > 0 ? `${hours}h ${minutes}m restantes` : `${minutes}m restantes`;
+  return hours > 0 ? `⏳ Expira en ${hours}h ${minutes}m` : `⏳ Expira en ${minutes}m`;
 }
 
 function statusCopy(status: VendorNegotiationStatus) {
@@ -66,7 +66,8 @@ export default function NegociacionesPage() {
       const res = await authFetch('/api/tukibot/negotiations?role=vendor&status=all&limit=50');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudieron cargar negociaciones');
-      const rows = data.items ?? [];
+      const now = Date.now();
+      const rows = (data.items ?? []).filter((item: NegotiationRow) => !item.expires_at || new Date(item.expires_at).getTime() > now);
       setItems(rows);
       setSelectedId((current) => current && rows.some((item: NegotiationRow) => item.id === current) ? current : rows[0]?.id ?? null);
     } finally {
