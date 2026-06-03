@@ -156,7 +156,7 @@ export default function VendedorSidebar() {
       <nav className="vnd-nav">
         <span className="vnd-nav-label">Principal</span>
 
-        {navItems.slice(0, 7).map((item) => (
+        {navItems.slice(0, 8).map((item) => (
           <Link
             key={item.href}
             href={item.href}
