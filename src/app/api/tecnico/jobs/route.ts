@@ -47,7 +47,7 @@ export async function GET(req: Request) {
         .from('tecnico_job_offers')
         .select('job_id, status')
         .eq('tecnico_email', email);
-      const rejectedJobIds = (myOfferRows ?? []).filter(o => o.status === 'rejected').map(o => o.job_id);
+      const rejectedJobIds = (myOfferRows ?? []).filter((o: { status: string; job_id: string }) => o.status === 'rejected').map((o: { status: string; job_id: string }) => o.job_id);
 
       let offerQ = sb.from('tecnico_jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending');
       if (gender === 'mujer' || gender === 'hombre') offerQ = offerQ.or(`service_gender.in.(${gender},indiferente),service_gender.is.null`);
