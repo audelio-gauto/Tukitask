@@ -57,7 +57,7 @@ export async function PATCH(
     if (order.client_email) {
       emitNotification(
         order.client_email,
-        'order_update',
+        'status_change',
         '✅ Pedido entregado',
         `Tu pedido fue marcado como entregado por el vendedor.`,
         { order_id: id },
@@ -91,7 +91,7 @@ export async function PATCH(
   if (order.client_email && statusMessages[status]) {
     emitNotification(
       order.client_email,
-      'order_update',
+      'status_change',
       '🛒 Actualización de pedido',
       statusMessages[status],
       { order_id: id },
