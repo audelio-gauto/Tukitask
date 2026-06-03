@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { createClient } from '@supabase/supabase-js';
 
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-);
+// Lazy proxy — createClient is only called on first request, never at build time
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sb: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb: any = new Proxy({}, { get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.SUPABASE_SERVICE_ROLE_KEY as string); return _sb[p]; } });
 
 // Vercel Cron Jobs envía automáticamente:
 //   Authorization: Bearer <CRON_SECRET>
