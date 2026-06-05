@@ -47,12 +47,25 @@ export default function MetodosPagoPage() {
   const [bankSaving, setBankSaving] = useState(false);
   const [bankMsg, setBankMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const getAccessToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return session.access_token;
+
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) return null;
+    return data.session?.access_token ?? null;
+  };
+
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
+      const token = await getAccessToken();
+      if (!token) {
+        setSaveMsg({ ok: false, text: 'Sesion expirada. Volve a iniciar sesion.' });
+        setLoading(false);
+        return;
+      }
       const res = await fetch('/api/admin/payment-methods', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json() as MethodConfig[];
@@ -62,6 +75,9 @@ export default function MetodosPagoPage() {
         if (map['transfer']?.bank_data) {
           setBankDraft({ ...EMPTY_BANK, ...map['transfer'].bank_data });
         }
+      } else {
+        const body = await res.json().catch(() => ({ error: 'Error al cargar metodos de pago.' })) as { error?: string };
+        setSaveMsg({ ok: false, text: body.error || 'Error al cargar metodos de pago.' });
       }
       setLoading(false);
     })();
@@ -69,15 +85,17 @@ export default function MetodosPagoPage() {
 
   const patch = async (key: string, field: string, value: boolean | number | null | BankData) => {
     const id = cfg[key]?.id;
-    if (!id) return false;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return false;
+    if (!id) return { ok: false, error: 'Metodo no encontrado para guardar.' };
+    const token = await getAccessToken();
+    if (!token) return { ok: false, error: 'Sesion expirada. Volve a iniciar sesion.' };
     const res = await fetch('/api/admin/payment-methods', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ id, [field]: value }),
     });
-    return res.ok;
+    if (res.ok) return { ok: true };
+    const body = await res.json().catch(() => ({ error: 'No se pudo guardar el cambio.' })) as { error?: string };
+    return { ok: false, error: body.error || 'No se pudo guardar el cambio.' };
   };
 
   const toggle = async (key: string, field: 'is_active' | 'vendor_allowed') => {
@@ -87,10 +105,10 @@ export default function MetodosPagoPage() {
     const prev = !!cfg[key]?.[field];
     const next = !cfg[key]?.[field];
     setCfg(prev => ({ ...prev, [key]: { ...prev[key], [field]: next } }));
-    const ok = await patch(key, field, next);
-    if (!ok) {
+    const result = await patch(key, field, next);
+    if (!result.ok) {
       setCfg(prevCfg => ({ ...prevCfg, [key]: { ...prevCfg[key], [field]: prev } }));
-      setSaveMsg({ ok: false, text: 'No se pudo guardar el cambio. Intentá de nuevo.' });
+      setSaveMsg({ ok: false, text: result.error || 'No se pudo guardar el cambio. Intenta de nuevo.' });
     } else {
       setSaveMsg({ ok: true, text: 'Cambio guardado.' });
     }
@@ -101,18 +119,25 @@ export default function MetodosPagoPage() {
   const saveBankData = async () => {
     setBankSaving(true);
     setBankMsg(null);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setBankSaving(false); return; }
+    const token = await getAccessToken();
+    if (!token) {
+      setBankMsg({ ok: false, text: 'Sesion expirada. Volve a iniciar sesion.' });
+      setBankSaving(false);
+      return;
+    }
     const id = cfg['transfer']?.id;
     if (!id) { setBankSaving(false); return; }
     const res = await fetch('/api/admin/payment-methods', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ id, bank_data: bankDraft }),
     });
-    setBankMsg(res.ok
-      ? { ok: true, text: 'Datos bancarios guardados.' }
-      : { ok: false, text: 'Error al guardar.' });
+    if (res.ok) {
+      setBankMsg({ ok: true, text: 'Datos bancarios guardados.' });
+    } else {
+      const body = await res.json().catch(() => ({ error: 'Error al guardar.' })) as { error?: string };
+      setBankMsg({ ok: false, text: body.error || 'Error al guardar.' });
+    }
     setBankSaving(false);
     setTimeout(() => setBankMsg(null), 3000);
   };
