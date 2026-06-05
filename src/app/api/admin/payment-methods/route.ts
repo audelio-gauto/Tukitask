@@ -16,16 +16,17 @@ export async function GET(req: Request) {
   return NextResponse.json(data ?? []);
 }
 
-// PATCH — actualiza bank_data y/o vendor_allowed de un método (solo admin)
+// PATCH — actualiza bank_data, vendor_allowed y/o is_active de un método (solo admin)
 export async function PATCH(req: Request) {
   const admin = await getAuthAdmin(req);
   if (!admin) return unauthorized();
 
   const body = await req.json();
-  const { id, bank_data, vendor_allowed } = body as {
+  const { id, bank_data, vendor_allowed, is_active } = body as {
     id: string;
     bank_data?: Record<string, string> | null;
     vendor_allowed?: boolean;
+    is_active?: boolean;
   };
 
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
@@ -47,6 +48,10 @@ export async function PATCH(req: Request) {
 
   if (vendor_allowed !== undefined) {
     patch.vendor_allowed = !!vendor_allowed;
+  }
+
+  if (is_active !== undefined) {
+    patch.is_active = !!is_active;
   }
 
   const db = sbAdmin();

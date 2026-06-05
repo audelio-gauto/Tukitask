@@ -42,6 +42,7 @@ export default function MetodosPagoPage() {
   const [cfg, setCfg] = useState<Record<string, MethodConfig>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [bankDraft, setBankDraft] = useState<BankData>({ ...EMPTY_BANK });
   const [bankSaving, setBankSaving] = useState(false);
   const [bankMsg, setBankMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -68,23 +69,33 @@ export default function MetodosPagoPage() {
 
   const patch = async (key: string, field: string, value: boolean | number | null | BankData) => {
     const id = cfg[key]?.id;
-    if (!id) return;
+    if (!id) return false;
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    await fetch('/api/admin/payment-methods', {
+    if (!session) return false;
+    const res = await fetch('/api/admin/payment-methods', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ id, [field]: value }),
     });
+    return res.ok;
   };
 
   const toggle = async (key: string, field: 'is_active' | 'vendor_allowed') => {
     const saveKey = `${key}.${field}`;
+    setSaveMsg(null);
     setSaving(saveKey);
+    const prev = !!cfg[key]?.[field];
     const next = !cfg[key]?.[field];
     setCfg(prev => ({ ...prev, [key]: { ...prev[key], [field]: next } }));
-    await patch(key, field, next);
+    const ok = await patch(key, field, next);
+    if (!ok) {
+      setCfg(prevCfg => ({ ...prevCfg, [key]: { ...prevCfg[key], [field]: prev } }));
+      setSaveMsg({ ok: false, text: 'No se pudo guardar el cambio. Intentá de nuevo.' });
+    } else {
+      setSaveMsg({ ok: true, text: 'Cambio guardado.' });
+    }
     setSaving(null);
+    setTimeout(() => setSaveMsg(null), 3000);
   };
 
   const saveBankData = async () => {
@@ -182,6 +193,11 @@ export default function MetodosPagoPage() {
                 <Toggle active={t.active} disabled={t.saving} onToggle={t.onToggle} />
               </div>
             ))}
+            {saveMsg && (
+              <p className={`text-xs font-medium ${saveMsg.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                {saveMsg.text}
+              </p>
+            )}
           </div>
 
           {/* ── Datos bancarios del marketplace ── */}
