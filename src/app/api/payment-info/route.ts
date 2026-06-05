@@ -19,14 +19,18 @@ export async function GET(req: Request) {
   // Traer configuración de métodos de pago
   const { data: methods, error: methodsError } = await db
     .from('payment_methods_config')
-    .select('id, name, key, description, is_active, fee_fixed, fee_percentage, bank_data')
+    .select('id, name, key, description, is_active, vendor_allowed, fee_fixed, fee_percentage, bank_data')
     .order('id');
 
   if (methodsError) return NextResponse.json({ error: methodsError.message }, { status: 500 });
 
-  type MethodRow = { id: string; key: string; name: string; description: string; is_active: boolean; fee_fixed: number; fee_percentage: number; bank_data: Record<string, string> | null };
-  const transferMethod = (methods as MethodRow[] ?? []).find(m => m.key === 'transfer');
-  const globalTransferActive = !!transferMethod?.is_active;
+  type MethodRow = { id: string; key: string; name: string; description: string; is_active: boolean; vendor_allowed: boolean; fee_fixed: number; fee_percentage: number; bank_data: Record<string, string> | null };
+  const rows = methods as MethodRow[] ?? [];
+  const transferMethod = rows.find(m => m.key === 'transfer');
+  const cashMethod     = rows.find(m => m.key === 'cash_on_delivery');
+  const globalTransferActive    = !!transferMethod?.is_active;
+  const vendorTransferAllowed   = !!transferMethod?.vendor_allowed;
+  const vendorCashAllowed       = !!cashMethod?.vendor_allowed;
 
   let bankData: Record<string, string> | null = null;
   let bankDataSource: 'global' | 'vendor' | null = null;
@@ -35,8 +39,8 @@ export async function GET(req: Request) {
     // Usar datos bancarios globales del marketplace
     bankData = transferMethod?.bank_data ?? null;
     bankDataSource = 'global';
-  } else if (vendorEmail) {
-    // Usar datos bancarios del vendedor específico
+  } else if (vendorEmail && vendorTransferAllowed) {
+    // Usar datos bancarios del vendedor específico (solo si vendor_allowed=true)
     const { data: vendorBank } = await db
       .from('vendor_bank_data')
       .select('banco, cuenta, alias, titular, tipo_cuenta')
@@ -52,19 +56,24 @@ export async function GET(req: Request) {
   const activeTransferEnabled = globalTransferActive || (!!bankData && bankDataSource === 'vendor');
 
   return NextResponse.json({
-    methods: (methods as MethodRow[] ?? []).map(m => ({
-      id:           m.id,
-      key:          m.key,
-      name:         m.name,
-      description:  m.description,
-      is_active:    m.is_active,
-      fee_fixed:    m.fee_fixed,
+    methods: rows.map(m => ({
+      id:             m.id,
+      key:            m.key,
+      name:           m.name,
+      description:    m.description,
+      is_active:      m.is_active,
+      vendor_allowed: m.vendor_allowed,
+      fee_fixed:      m.fee_fixed,
       fee_percentage: m.fee_percentage,
     })),
     transfer: {
       available:   activeTransferEnabled,
       source:      bankDataSource,
       bank_data:   bankData,
+    },
+    vendor_methods: {
+      transfer_allowed:   vendorTransferAllowed,
+      cash_allowed:       vendorCashAllowed,
     },
   });
 }

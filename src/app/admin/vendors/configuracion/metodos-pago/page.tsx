@@ -16,6 +16,7 @@ interface MetodoPago {
   key: string;
   description: string;
   is_active: boolean;
+  vendor_allowed: boolean;
   fee_fixed: number;
   fee_percentage: number;
   icon: string;
@@ -31,6 +32,7 @@ const DEFAULT_METHODS: MetodoPago[] = [
     key: 'transfer',
     description: 'Pago mediante transferencia bancaria o billetera digital (Tigo Money, Personal Pay, etc.)',
     is_active: true,
+    vendor_allowed: true,
     fee_fixed: 0,
     fee_percentage: 0,
     icon: 'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z',
@@ -41,9 +43,10 @@ const DEFAULT_METHODS: MetodoPago[] = [
     key: 'cash_on_delivery',
     description: 'El cliente paga en efectivo al recibir el producto o servicio.',
     is_active: true,
+    vendor_allowed: true,
     fee_fixed: 0,
     fee_percentage: 0,
-    icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
+    icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
   },
 ];
 
@@ -53,7 +56,8 @@ export default function MetodosPagoPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [bankDraft, setBankDraft] = useState<Record<string, BankData>>({});
   const [bankSaving, setBankSaving] = useState<string | null>(null);
-  const [bankMsg, setBankMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
+  const [bankMsg, setBankMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
+  const [vendorToggleSaving, setVendorToggleSaving] = useState<string | null>(null);;
 
   useEffect(() => {
     (async () => {
@@ -124,6 +128,21 @@ export default function MetodosPagoPage() {
     }));
     setBankSaving(null);
     setTimeout(() => setBankMsg(prev => ({ ...prev, [methodId]: { ok: false, text: '' } })), 3000);
+  };
+
+  const toggleVendorAllowed = async (method: MetodoPago) => {
+    setVendorToggleSaving(method.id);
+    const next = !method.vendor_allowed;
+    setMethods(prev => prev.map(m => m.id === method.id ? { ...m, vendor_allowed: next } : m));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await fetch('/api/admin/payment-methods', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id: method.id, vendor_allowed: next }),
+      });
+    }
+    setVendorToggleSaving(null);
   };
 
   return (
@@ -259,6 +278,53 @@ export default function MetodosPagoPage() {
           ))}
         </div>
       )}
+
+      <div className="mt-8 mb-4">
+        <h2 className="text-base font-bold text-gray-900">Métodos disponibles para Vendedores</h2>
+        <p className="text-gray-500 text-sm mt-0.5">
+          Controlá qué métodos de pago pueden ofrecer los vendedores en sus tiendas.
+          Cuando se desactiva <strong>Transferencia Bancaria Global</strong>, los vendedores habilitados
+          cobran directamente en su cuenta bancaria.
+        </p>
+      </div>
+
+      <div className="space-y-3 mb-6">
+        {methods.map(method => (
+          <div key={`vendor-${method.id}`} className={`bg-white rounded-xl border shadow-sm p-4 flex items-center gap-4 transition-opacity ${method.vendor_allowed ? 'border-gray-200' : 'border-gray-100 opacity-70'}`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${method.vendor_allowed ? 'bg-violet-100' : 'bg-gray-100'}`}>
+              <svg className={`w-5 h-5 ${method.vendor_allowed ? 'text-violet-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={method.icon} />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-gray-900">{method.name}</span>
+                {method.vendor_allowed ? (
+                  <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-medium rounded-full">Habilitado para vendedores</span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">Deshabilitado para vendedores</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5 truncate">
+                {method.key === 'transfer'
+                  ? 'Los vendedores pueden configurar sus datos bancarios y recibir transferencias directas.'
+                  : 'Los vendedores pueden aceptar pago en efectivo al momento de la entrega.'}
+              </p>
+            </div>
+            <button
+              onClick={() => toggleVendorAllowed(method)}
+              disabled={vendorToggleSaving === method.id}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-60 ${
+                method.vendor_allowed ? 'bg-violet-500' : 'bg-gray-200'
+              }`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                method.vendor_allowed ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
         <div className="flex gap-3">

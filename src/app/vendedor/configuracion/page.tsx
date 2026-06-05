@@ -68,6 +68,7 @@ export default function ConfiguracionPage() {
   const [bankSaving, setBankSaving] = useState(false);
   const [bankMsg, setBankMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [globalTransferActive, setGlobalTransferActive] = useState<boolean | null>(null);
+  const [vendorTransferAllowed, setVendorTransferAllowed] = useState<boolean>(true);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +86,7 @@ export default function ConfiguracionPage() {
         const p = await paymentRes.json();
         const transferMethod = (p.methods ?? []).find((m: { key: string; is_active: boolean }) => m.key === 'transfer');
         setGlobalTransferActive(transferMethod?.is_active ?? false);
+        setVendorTransferAllowed(p.vendor_methods?.transfer_allowed ?? true);
       }
       setBankLoading(false);
     })();
@@ -324,64 +326,78 @@ export default function ConfiguracionPage() {
 
       {/* ── Datos Bancarios ───────────────────────────────── */}
       <Section title="🏦 Datos para Transferencia Bancaria">
-        {globalTransferActive === true && (
-          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.4)', borderRadius: 10 }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7a6010', margin: 0 }}>
-              ⚠️ Transferencia Bancaria Global activa
+        {!vendorTransferAllowed ? (
+          <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10 }}>
+            <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#991b1b', margin: 0 }}>
+              🚫 Transferencia bancaria deshabilitada
             </p>
-            <p style={{ fontSize: '0.72rem', color: '#7a6010', marginTop: 4, lineHeight: 1.5 }}>
-              El admin activó la transferencia global del marketplace. Los clientes actualmente ven los datos bancarios del marketplace.
-              Podés configurar tus datos igual para cuando se desactive.
-            </p>
-          </div>
-        )}
-        {globalTransferActive === false && (
-          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10 }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', margin: 0 }}>
-              ✅ Transferencia independiente activada
-            </p>
-            <p style={{ fontSize: '0.72rem', color: '#166534', marginTop: 4, lineHeight: 1.5 }}>
-              Los clientes verán tus datos bancarios al pagar por transferencia en tu tienda.
+            <p style={{ fontSize: '0.72rem', color: '#7f1d1d', marginTop: 4, lineHeight: 1.5 }}>
+              El administrador deshabilitó este método de pago para vendedores.
+              Contactá al soporte si creés que es un error.
             </p>
           </div>
-        )}
-        {bankLoading ? (
-          <p style={{ fontSize: '0.8rem', color: 'var(--vnd-text-muted)' }}>Cargando...</p>
         ) : (
           <>
-            <div className="vnd-form-grid">
-              {([
-                { field: 'banco',       label: 'Banco',            placeholder: 'Ej: Banco Itaú, Tigo Money, Personal Pay' },
-                { field: 'titular',     label: 'Titular de cuenta', placeholder: 'Nombre completo o razón social' },
-                { field: 'cuenta',      label: 'Número de cuenta',  placeholder: 'Ej: 0123456789' },
-                { field: 'alias',       label: 'Alias / CBU',       placeholder: 'Ej: mitienda.pagos' },
-                { field: 'tipo_cuenta', label: 'Tipo de cuenta',    placeholder: 'Ej: Cuenta corriente, Caja de ahorro' },
-              ] as { field: keyof BankData; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
-                <div key={field} className="vnd-field">
-                  <label className="vnd-label">{label}</label>
-                  <input
-                    className="vnd-input"
-                    value={bank[field]}
-                    onChange={e => setBank(prev => ({ ...prev, [field]: e.target.value }))}
-                    placeholder={placeholder}
-                  />
+            {globalTransferActive === true && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.4)', borderRadius: 10 }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7a6010', margin: 0 }}>
+                  ⚠️ Transferencia Bancaria Global activa
+                </p>
+                <p style={{ fontSize: '0.72rem', color: '#7a6010', marginTop: 4, lineHeight: 1.5 }}>
+                  El admin activó la transferencia global del marketplace. Los clientes actualmente ven los datos bancarios del marketplace.
+                  Podés configurar tus datos igual para cuando se desactive.
+                </p>
+              </div>
+            )}
+            {globalTransferActive === false && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10 }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', margin: 0 }}>
+                  ✅ Transferencia independiente activada
+                </p>
+                <p style={{ fontSize: '0.72rem', color: '#166534', marginTop: 4, lineHeight: 1.5 }}>
+                  Los clientes verán tus datos bancarios al pagar por transferencia en tu tienda.
+                </p>
+              </div>
+            )}
+            {bankLoading ? (
+              <p style={{ fontSize: '0.8rem', color: 'var(--vnd-text-muted)' }}>Cargando...</p>
+            ) : (
+              <>
+                <div className="vnd-form-grid">
+                  {([
+                    { field: 'banco',       label: 'Banco',            placeholder: 'Ej: Banco Itaú, Tigo Money, Personal Pay' },
+                    { field: 'titular',     label: 'Titular de cuenta', placeholder: 'Nombre completo o razón social' },
+                    { field: 'cuenta',      label: 'Número de cuenta',  placeholder: 'Ej: 0123456789' },
+                    { field: 'alias',       label: 'Alias / CBU',       placeholder: 'Ej: mitienda.pagos' },
+                    { field: 'tipo_cuenta', label: 'Tipo de cuenta',    placeholder: 'Ej: Cuenta corriente, Caja de ahorro' },
+                  ] as { field: keyof BankData; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
+                    <div key={field} className="vnd-field">
+                      <label className="vnd-label">{label}</label>
+                      <input
+                        className="vnd-input"
+                        value={bank[field]}
+                        onChange={e => setBank(prev => ({ ...prev, [field]: e.target.value }))}
+                        placeholder={placeholder}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
-              <button
-                className="vnd-btn vnd-btn-primary"
-                onClick={handleSaveBank}
-                disabled={bankSaving}
-              >
-                {bankSaving ? 'Guardando...' : 'Guardar datos bancarios'}
-              </button>
-              {bankMsg && (
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: bankMsg.ok ? '#16a34a' : '#dc2626' }}>
-                  {bankMsg.text}
-                </span>
-              )}
-            </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+                  <button
+                    className="vnd-btn vnd-btn-primary"
+                    onClick={handleSaveBank}
+                    disabled={bankSaving}
+                  >
+                    {bankSaving ? 'Guardando...' : 'Guardar datos bancarios'}
+                  </button>
+                  {bankMsg && (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: bankMsg.ok ? '#16a34a' : '#dc2626' }}>
+                      {bankMsg.text}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
       </Section>
