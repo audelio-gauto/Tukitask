@@ -128,7 +128,7 @@ export default function ProductDetailPage() {
   const [cartAdded,     setCartAdded]     = useState(false);
   const [acceptingCounter, setAcceptingCounter] = useState(false);
   const [done,          setDone]          = useState<DoneState | null>(null);
-  const [openSection,   setOpenSection]   = useState<string | null>('descripcion');
+  const [openSection,   setOpenSection]   = useState<string>('descripcion');
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -396,7 +396,7 @@ export default function ProductDetailPage() {
   }
 
   const toggleSection = (key: string) =>
-    setOpenSection(prev => (prev === key ? null : key));
+    setOpenSection(key);
 
   return (
     <div className="tnd-page">
@@ -409,7 +409,16 @@ export default function ProductDetailPage() {
         <span className="tnd-pdp-bc-cur">{p.category}</span>
       </nav>
 
-      <div className="tnd-pdp-grid">
+      <section className="tnd-pdp-shell">
+        <header className="tnd-pdp-topbar">
+          <h1 className="tnd-pdp-title-main">{p.name}</h1>
+          <div className="tnd-pdp-top-meta">
+            {isNegotiable && <span className="tnd-pdp-meta-pill">Negociable</span>}
+            <span className="tnd-pdp-meta-pill tnd-pdp-meta-pill-soft">Publicación activa</span>
+          </div>
+        </header>
+
+        <div className="tnd-pdp-grid">
         {/* ── Col 1: Gallery ─────────────────────────────── */}
         <div className="tnd-pdp-gallery-col">
           <div className="tnd-gallery">
@@ -446,20 +455,11 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Trust badges */}
-          <div className="tnd-pdp-trust-row">
-            <div className="tnd-pdp-trust-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-              <span>Compra segura</span>
-            </div>
-            <div className="tnd-pdp-trust-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01M6.5 6.5h.01M6.5 17.5h.01M17.5 17.5h.01"/><rect x="2" y="2" width="20" height="20" rx="5"/></svg>
-              <span>Pago con comprobante</span>
-            </div>
-            <div className="tnd-pdp-trust-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              <span>Soporte por chat</span>
-            </div>
+          <div className="tnd-pdp-gallery-tags">
+            <span className="tnd-chip tnd-chip-cat">{p.category}</span>
+            <span className={`tnd-chip ${p.stock === 0 ? 'tnd-chip-out' : p.stock <= 3 ? 'tnd-chip-low' : 'tnd-chip-stock'}`}>
+              {p.stock === 0 ? 'Sin stock' : p.stock <= 3 ? `Ultimas ${p.stock} unidades` : `${p.stock} disponibles`}
+            </span>
           </div>
         </div>
 
@@ -473,9 +473,6 @@ export default function ProductDetailPage() {
             </Link>
             <span className="tnd-pdp-cat-tag">{p.category}</span>
           </div>
-
-          {/* Title */}
-          <h1 className="tnd-pdp-title">{p.name}</h1>
 
           {/* Price block */}
           <div className="tnd-pdp-price-block">
@@ -497,7 +494,10 @@ export default function ProductDetailPage() {
             <span className="tnd-pdp-condition">Nuevo</span>
           </div>
 
+          <div className="tnd-pdp-divider" />
+
           {/* Seller card */}
+          <div className="tnd-pdp-seller-caption">Vendido por</div>
           <div className="tnd-pdp-seller-card">
             <div className="tnd-pdp-seller-avatar">{vendorAlias.charAt(0).toUpperCase()}</div>
             <div className="tnd-pdp-seller-info">
@@ -743,72 +743,75 @@ export default function ProductDetailPage() {
             </>
           )}
         </div>
-      </div>
 
-      {/* ── Acordeones: Descripción / Detalles / Garantía ── */}
-      <div className="tnd-pdp-accordions">
-        {p.description && (
-          <div className={`tnd-pdp-accordion${openSection === 'descripcion' ? ' open' : ''}`}>
-            <button className="tnd-pdp-accordion-header" onClick={() => toggleSection('descripcion')}>
-              <span className="tnd-pdp-accordion-title">
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Descripción
-              </span>
-              <svg className="tnd-pdp-accordion-chevron" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <div className="tnd-pdp-tabs-wrap">
+          <div className="tnd-pdp-tabs" role="tablist" aria-label="Secciones del producto">
+            {p.description && (
+              <button
+                role="tab"
+                aria-selected={openSection === 'descripcion'}
+                className={`tnd-pdp-tab${openSection === 'descripcion' ? ' active' : ''}`}
+                onClick={() => toggleSection('descripcion')}
+              >
+                Descripcion
+              </button>
+            )}
+            <button
+              role="tab"
+              aria-selected={openSection === 'detalles'}
+              className={`tnd-pdp-tab${openSection === 'detalles' ? ' active' : ''}`}
+              onClick={() => toggleSection('detalles')}
+            >
+              Detalles
             </button>
-            <div className="tnd-pdp-accordion-body">
+            <button
+              role="tab"
+              aria-selected={openSection === 'garantia'}
+              className={`tnd-pdp-tab${openSection === 'garantia' ? ' active' : ''}`}
+              onClick={() => toggleSection('garantia')}
+            >
+              Garantias y devoluciones
+            </button>
+          </div>
+
+          <div className="tnd-pdp-tab-panel" role="tabpanel">
+            {openSection === 'descripcion' && p.description && (
               <p className="tnd-pdp-accordion-text">{p.description}</p>
-            </div>
-          </div>
-        )}
+            )}
 
-        <div className={`tnd-pdp-accordion${openSection === 'detalles' ? ' open' : ''}`}>
-          <button className="tnd-pdp-accordion-header" onClick={() => toggleSection('detalles')}>
-            <span className="tnd-pdp-accordion-title">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-              Detalles del producto
-            </span>
-            <svg className="tnd-pdp-accordion-chevron" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div className="tnd-pdp-accordion-body">
-            <table className="tnd-pdp-details-table">
-              <tbody>
-                <tr><td>Categoría</td><td>{p.category}</td></tr>
-                <tr><td>Estado</td><td>Nuevo</td></tr>
-                <tr><td>Stock disponible</td><td>{p.stock} {p.stock === 1 ? 'unidad' : 'unidades'}</td></tr>
-                <tr><td>Precio negociable</td><td>{isNegotiable ? 'Sí — con TukiBot IA' : 'No'}</td></tr>
-                <tr><td>Vendedor</td><td>{vendorAlias}</td></tr>
-              </tbody>
-            </table>
+            {openSection === 'detalles' && (
+              <table className="tnd-pdp-details-table">
+                <tbody>
+                  <tr><td>Categoria</td><td>{p.category}</td></tr>
+                  <tr><td>Estado</td><td>Nuevo</td></tr>
+                  <tr><td>Stock disponible</td><td>{p.stock} {p.stock === 1 ? 'unidad' : 'unidades'}</td></tr>
+                  <tr><td>Precio negociable</td><td>{isNegotiable ? 'Si - con TukiBot IA' : 'No'}</td></tr>
+                  <tr><td>Vendedor</td><td>{vendorAlias}</td></tr>
+                </tbody>
+              </table>
+            )}
+
+            {openSection === 'garantia' && (
+              <ul className="tnd-pdp-warranty-list">
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Comunicacion directa con el vendedor para cualquier inconveniente
+                </li>
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Garantia sujeta a la politica del vendedor <strong>{vendorAlias}</strong>
+                </li>
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Devoluciones coordinadas directamente entre comprador y vendedor
+                </li>
+              </ul>
+            )}
           </div>
         </div>
-
-        <div className={`tnd-pdp-accordion${openSection === 'garantia' ? ' open' : ''}`}>
-          <button className="tnd-pdp-accordion-header" onClick={() => toggleSection('garantia')}>
-            <span className="tnd-pdp-accordion-title">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-              Garantías y devoluciones
-            </span>
-            <svg className="tnd-pdp-accordion-chevron" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div className="tnd-pdp-accordion-body">
-            <ul className="tnd-pdp-warranty-list">
-              <li>
-                <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Comunicación directa con el vendedor para cualquier inconveniente
-              </li>
-              <li>
-                <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Garantía sujeta a la política del vendedor <strong>{vendorAlias}</strong>
-              </li>
-              <li>
-                <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Devoluciones coordinadas directamente entre comprador y vendedor
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
