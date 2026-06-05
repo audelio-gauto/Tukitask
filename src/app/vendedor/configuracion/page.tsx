@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface StoreConfig {
   storeName: string;
@@ -15,6 +16,16 @@ interface StoreConfig {
   freeDeliveryAbove: number;
   commissionToDriver: boolean;
 }
+
+interface BankData {
+  banco: string;
+  cuenta: string;
+  alias: string;
+  titular: string;
+  tipo_cuenta: string;
+}
+
+const EMPTY_BANK: BankData = { banco: '', cuenta: '', alias: '', titular: '', tipo_cuenta: '' };
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const DAYS_FULL = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
@@ -50,6 +61,51 @@ export default function ConfiguracionPage() {
     freeDeliveryAbove:   0,
     commissionToDriver:  true,
   });
+
+  // ── Datos bancarios ──────────────────────────────────────
+  const [bank, setBank] = useState<BankData>({ ...EMPTY_BANK });
+  const [bankLoading, setBankLoading] = useState(true);
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankMsg, setBankMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [globalTransferActive, setGlobalTransferActive] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const [bankRes, paymentRes] = await Promise.all([
+        fetch('/api/vendor/bank-data', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+        fetch('/api/payment-info'),
+      ]);
+      if (bankRes.ok) {
+        const d = await bankRes.json();
+        setBank({ ...EMPTY_BANK, ...d });
+      }
+      if (paymentRes.ok) {
+        const p = await paymentRes.json();
+        const transferMethod = (p.methods ?? []).find((m: { key: string; is_active: boolean }) => m.key === 'transfer');
+        setGlobalTransferActive(transferMethod?.is_active ?? false);
+      }
+      setBankLoading(false);
+    })();
+  }, []);
+
+  async function handleSaveBank() {
+    setBankSaving(true);
+    setBankMsg(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setBankSaving(false); return; }
+    const res = await fetch('/api/vendor/bank-data', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(bank),
+    });
+    setBankMsg(res.ok
+      ? { ok: true, text: 'Datos bancarios guardados.' }
+      : { ok: false, text: 'Error al guardar. Intentá de nuevo.' });
+    setBankSaving(false);
+    setTimeout(() => setBankMsg(null), 3500);
+  }
 
   function update<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) {
     setCfg(prev => ({ ...prev, [key]: value }));
@@ -264,6 +320,70 @@ export default function ConfiguracionPage() {
             </div>
           </div>
         </div>
+      </Section>
+
+      {/* ── Datos Bancarios ───────────────────────────────── */}
+      <Section title="🏦 Datos para Transferencia Bancaria">
+        {globalTransferActive === true && (
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.4)', borderRadius: 10 }}>
+            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7a6010', margin: 0 }}>
+              ⚠️ Transferencia Bancaria Global activa
+            </p>
+            <p style={{ fontSize: '0.72rem', color: '#7a6010', marginTop: 4, lineHeight: 1.5 }}>
+              El admin activó la transferencia global del marketplace. Los clientes actualmente ven los datos bancarios del marketplace.
+              Podés configurar tus datos igual para cuando se desactive.
+            </p>
+          </div>
+        )}
+        {globalTransferActive === false && (
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10 }}>
+            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', margin: 0 }}>
+              ✅ Transferencia independiente activada
+            </p>
+            <p style={{ fontSize: '0.72rem', color: '#166534', marginTop: 4, lineHeight: 1.5 }}>
+              Los clientes verán tus datos bancarios al pagar por transferencia en tu tienda.
+            </p>
+          </div>
+        )}
+        {bankLoading ? (
+          <p style={{ fontSize: '0.8rem', color: 'var(--vnd-text-muted)' }}>Cargando...</p>
+        ) : (
+          <>
+            <div className="vnd-form-grid">
+              {([
+                { field: 'banco',       label: 'Banco',            placeholder: 'Ej: Banco Itaú, Tigo Money, Personal Pay' },
+                { field: 'titular',     label: 'Titular de cuenta', placeholder: 'Nombre completo o razón social' },
+                { field: 'cuenta',      label: 'Número de cuenta',  placeholder: 'Ej: 0123456789' },
+                { field: 'alias',       label: 'Alias / CBU',       placeholder: 'Ej: mitienda.pagos' },
+                { field: 'tipo_cuenta', label: 'Tipo de cuenta',    placeholder: 'Ej: Cuenta corriente, Caja de ahorro' },
+              ] as { field: keyof BankData; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
+                <div key={field} className="vnd-field">
+                  <label className="vnd-label">{label}</label>
+                  <input
+                    className="vnd-input"
+                    value={bank[field]}
+                    onChange={e => setBank(prev => ({ ...prev, [field]: e.target.value }))}
+                    placeholder={placeholder}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+              <button
+                className="vnd-btn vnd-btn-primary"
+                onClick={handleSaveBank}
+                disabled={bankSaving}
+              >
+                {bankSaving ? 'Guardando...' : 'Guardar datos bancarios'}
+              </button>
+              {bankMsg && (
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: bankMsg.ok ? '#16a34a' : '#dc2626' }}>
+                  {bankMsg.text}
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </Section>
 
       {/* Save button bottom */}

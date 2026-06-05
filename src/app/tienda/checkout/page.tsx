@@ -38,7 +38,23 @@ interface DeliveryForm {
   lng: number | null;
 }
 
-type PaymentMethod = 'contra_entrega';
+type PaymentMethod = 'contra_entrega' | 'transferencia';
+
+interface BankInfo {
+  banco?: string;
+  cuenta?: string;
+  alias?: string;
+  titular?: string;
+  tipo_cuenta?: string;
+}
+
+interface PaymentInfo {
+  transfer: {
+    available: boolean;
+    source: 'global' | 'vendor' | null;
+    bank_data: BankInfo | null;
+  };
+}
 
 function CheckoutInner() {
   const router       = useRouter();
@@ -61,6 +77,7 @@ function CheckoutInner() {
     ciudad: 'Asunción', barrio: '', referencia: '', nombre: '', lat: null, lng: null,
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('contra_entrega');
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [notes,     setNotes]     = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [orderIds,   setOrderIds]   = useState<string[] | null>(null);
@@ -127,6 +144,19 @@ function CheckoutInner() {
       } catch { /* silent */ }
     });
   }, []);
+
+  /* ── Load payment methods + bank data ── */
+  useEffect(() => {
+    const ve = items.find(i => i.vendorEmail)?.vendorEmail ?? vendorEmail ?? '';
+    const url = ve
+      ? `/api/payment-info?vendor_email=${encodeURIComponent(ve)}`
+      : '/api/payment-info';
+    fetch(url)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setPaymentInfo(d); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, vendorEmail]);
 
   /* ── Geolocation ── */
   const handleGeo = useCallback(() => {
@@ -374,10 +404,9 @@ function CheckoutInner() {
             {/* ── Método de pago ── */}
             <section className="tnd-checkout-card">
               <h2 className="tnd-checkout-section-title">Método de pago</h2>
-              <p style={{ color:'var(--tnd-text-muted)', fontSize:'0.82rem', margin:'-6px 0 14px', lineHeight:1.5 }}>
-                Pagar al recibir el producto.
-              </p>
-              <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
+
+              {/* Contra entrega */}
+              <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: paymentInfo?.transfer?.available ? 12 : 0 }}>
                 <input
                   type="radio"
                   name="payment_method"
@@ -393,6 +422,62 @@ function CheckoutInner() {
                   </span>
                 </span>
               </label>
+
+              {/* Transferencia — solo si hay datos bancarios disponibles */}
+              {paymentInfo?.transfer?.available && (
+                <>
+                  <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      checked={paymentMethod === 'transferencia'}
+                      onChange={() => setPaymentMethod('transferencia')}
+                      style={{ marginTop: 4 }}
+                    />
+                    <span>
+                      <strong>Transferencia bancaria</strong>
+                      <br />
+                      <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
+                        Tigo Money, Personal Pay, billetera digital o transferencia bancaria.
+                      </span>
+                    </span>
+                  </label>
+
+                  {/* Datos bancarios cuando se selecciona transferencia */}
+                  {paymentMethod === 'transferencia' && paymentInfo.transfer.bank_data && (
+                    <div style={{ marginTop: 12, padding: '14px 16px', background: 'var(--tnd-surface-2)', border: '1px solid var(--tnd-border)', borderRadius: 12 }}>
+                      <p style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--tnd-text-primary)', marginBottom: 10 }}>
+                        🏦 Datos para la transferencia
+                      </p>
+                      {paymentInfo.transfer.source === 'vendor' && (
+                        <p style={{ fontSize: '0.72rem', color: 'var(--tnd-text-muted)', marginBottom: 8, fontStyle: 'italic' }}>
+                          Datos bancarios del vendedor
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {([
+                          ['Banco',           paymentInfo.transfer.bank_data.banco],
+                          ['Titular',         paymentInfo.transfer.bank_data.titular],
+                          ['Cuenta',          paymentInfo.transfer.bank_data.cuenta],
+                          ['Alias / CBU',     paymentInfo.transfer.bank_data.alias],
+                          ['Tipo de cuenta',  paymentInfo.transfer.bank_data.tipo_cuenta],
+                        ] as [string, string | undefined][])
+                          .filter(([, v]) => v)
+                          .map(([label, value]) => (
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--tnd-text-muted)', flexShrink: 0 }}>{label}</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--tnd-text-primary)', textAlign: 'right' }}>{value}</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--tnd-text-muted)', marginTop: 10, lineHeight: 1.5 }}>
+                        Realizá la transferencia y adjuntá el comprobante en las notas del pedido.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </section>
 
             {/* ── Notas ── */}
@@ -451,9 +536,13 @@ function CheckoutInner() {
               </div>
 
               <div style={{ background:'var(--tnd-surface-2)', border:'1px solid var(--tnd-border)', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
-                <p style={{ margin:0, fontWeight:800, color:'var(--tnd-text-primary)', fontSize:'0.88rem' }}>Contra entrega</p>
+                <p style={{ margin:0, fontWeight:800, color:'var(--tnd-text-primary)', fontSize:'0.88rem' }}>
+                  {paymentMethod === 'transferencia' ? '🏦 Transferencia bancaria' : '💵 Contra entrega'}
+                </p>
                 <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
-                  Pagar al recibir el producto.
+                  {paymentMethod === 'transferencia'
+                    ? 'Realizá la transferencia y adjuntá el comprobante en las notas.'
+                    : 'Pagar al recibir el producto.'}
                 </p>
               </div>
 

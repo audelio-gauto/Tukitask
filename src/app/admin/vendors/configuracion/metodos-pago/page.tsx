@@ -2,6 +2,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
+interface BankData {
+  banco: string;
+  cuenta: string;
+  alias: string;
+  titular: string;
+  tipo_cuenta: string;
+}
+
 interface MetodoPago {
   id: string;
   name: string;
@@ -11,7 +19,10 @@ interface MetodoPago {
   fee_fixed: number;
   fee_percentage: number;
   icon: string;
+  bank_data?: BankData | null;
 }
+
+const EMPTY_BANK: BankData = { banco: '', cuenta: '', alias: '', titular: '', tipo_cuenta: '' };
 
 const DEFAULT_METHODS: MetodoPago[] = [
   {
@@ -40,14 +51,31 @@ export default function MetodosPagoPage() {
   const [methods, setMethods] = useState<MetodoPago[]>(DEFAULT_METHODS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [bankDraft, setBankDraft] = useState<Record<string, BankData>>({});
+  const [bankSaving, setBankSaving] = useState<string | null>(null);
+  const [bankMsg, setBankMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('payment_methods_config').select('*');
-      if (data && data.length > 0) {
-        setMethods(data as MetodoPago[]);
-      } else {
-        setMethods(DEFAULT_METHODS);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/admin/payment-methods', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setMethods(data as MetodoPago[]);
+          // Inicializar drafts de bank_data
+          const drafts: Record<string, BankData> = {};
+          for (const m of data as MetodoPago[]) {
+            drafts[m.id] = m.bank_data ? { ...EMPTY_BANK, ...m.bank_data } : { ...EMPTY_BANK };
+          }
+          setBankDraft(drafts);
+        } else {
+          setMethods(DEFAULT_METHODS);
+          setBankDraft({ transfer: { ...EMPTY_BANK }, cash_on_delivery: { ...EMPTY_BANK } });
+        }
       }
       setLoading(false);
     })();
@@ -69,6 +97,33 @@ export default function MetodosPagoPage() {
     setSaving(method.id);
     await supabase.from('payment_methods_config').upsert(method);
     setSaving(null);
+  };
+
+  const updateBankDraft = (id: string, field: keyof BankData, value: string) => {
+    setBankDraft(prev => ({ ...prev, [id]: { ...(prev[id] ?? EMPTY_BANK), [field]: value } }));
+  };
+
+  const saveBankData = async (methodId: string) => {
+    setBankSaving(methodId);
+    setBankMsg(prev => ({ ...prev, [methodId]: { ok: false, text: '' } }));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch('/api/admin/payment-methods', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ id: methodId, bank_data: bankDraft[methodId] ?? null }),
+    });
+    setBankMsg(prev => ({
+      ...prev,
+      [methodId]: res.ok
+        ? { ok: true, text: 'Datos guardados correctamente.' }
+        : { ok: false, text: 'Error al guardar.' },
+    }));
+    setBankSaving(null);
+    setTimeout(() => setBankMsg(prev => ({ ...prev, [methodId]: { ok: false, text: '' } })), 3000);
   };
 
   return (
@@ -151,6 +206,53 @@ export default function MetodosPagoPage() {
                     </div>
                     {saving === method.id && <span className="text-xs text-gray-400">Guardando...</span>}
                   </div>
+
+                  {/* Datos bancarios — solo para Transferencia */}
+                  {method.key === 'transfer' && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                        Datos bancarios del marketplace
+                      </div>
+                      <p className="text-xs text-gray-400 mb-3">
+                        Cuando Transferencia Bancaria está activa, el cliente verá estos datos para realizar el pago al marketplace.
+                        Si está inactiva, cada vendedor recibe el pago en su propia cuenta.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {([
+                          { field: 'banco',       label: 'Banco',          placeholder: 'Ej: Banco Itaú, Tigo Money' },
+                          { field: 'titular',     label: 'Titular',        placeholder: 'Ej: TukiMarket S.A.' },
+                          { field: 'cuenta',      label: 'Número de cuenta', placeholder: 'Ej: 0123456789' },
+                          { field: 'alias',       label: 'Alias / CBU',    placeholder: 'Ej: tukimarket.py' },
+                          { field: 'tipo_cuenta', label: 'Tipo de cuenta', placeholder: 'Ej: Cuenta corriente' },
+                        ] as { field: keyof BankData; label: string; placeholder: string }[]).map(({ field, label, placeholder }) => (
+                          <div key={field} className={field === 'banco' || field === 'titular' ? 'sm:col-span-1' : ''}>
+                            <label className="block text-xs text-gray-600 mb-1">{label}</label>
+                            <input
+                              type="text"
+                              value={bankDraft[method.id]?.[field] ?? ''}
+                              onChange={e => updateBankDraft(method.id, field, e.target.value)}
+                              placeholder={placeholder}
+                              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3 mt-3">
+                        <button
+                          onClick={() => saveBankData(method.id)}
+                          disabled={bankSaving === method.id}
+                          className="px-4 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                        >
+                          {bankSaving === method.id ? 'Guardando...' : 'Guardar datos bancarios'}
+                        </button>
+                        {bankMsg[method.id]?.text && (
+                          <span className={`text-xs font-medium ${bankMsg[method.id].ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {bankMsg[method.id].text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
