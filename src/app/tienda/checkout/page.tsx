@@ -569,16 +569,18 @@ function CheckoutInner() {
                 </div>
               </div>
 
-              <div style={{ background:'var(--tnd-surface-2)', border:'1px solid var(--tnd-border)', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
-                <p style={{ margin:0, fontWeight:800, color:'var(--tnd-text-primary)', fontSize:'0.88rem' }}>
-                  {paymentMethod === 'transferencia' ? '🏦 Transferencia bancaria' : '💵 Contra entrega'}
-                </p>
-                <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
-                  {paymentMethod === 'transferencia'
-                    ? 'Realizá la transferencia y adjuntá el comprobante en las notas.'
-                    : 'Pagar al recibir el producto.'}
-                </p>
-              </div>
+              {(paymentInfo?.cash_on_delivery?.available || paymentInfo?.transfer?.available) && (
+                <div style={{ background:'var(--tnd-surface-2)', border:'1px solid var(--tnd-border)', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
+                  <p style={{ margin:0, fontWeight:800, color:'var(--tnd-text-primary)', fontSize:'0.88rem' }}>
+                    {paymentMethod === 'transferencia' ? '🏦 Transferencia bancaria' : '💵 Contra entrega'}
+                  </p>
+                  <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
+                    {paymentMethod === 'transferencia'
+                      ? 'Realizá la transferencia y adjuntá el comprobante en las notas.'
+                      : 'Pagar al recibir el producto.'}
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div style={{ background:'var(--tnd-danger-bg)', border:'1px solid var(--tnd-danger)', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:'0.82rem', color:'var(--tnd-danger)' }}>
