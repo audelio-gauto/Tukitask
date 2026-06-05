@@ -128,7 +128,7 @@ export default function ProductDetailPage() {
   const [cartAdded,     setCartAdded]     = useState(false);
   const [acceptingCounter, setAcceptingCounter] = useState(false);
   const [done,          setDone]          = useState<DoneState | null>(null);
-  const [openSection,   setOpenSection]   = useState<string>('descripcion');
+  const [openSection,   setOpenSection]   = useState<string | null>('descripcion');
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -395,8 +395,7 @@ export default function ProductDetailPage() {
     setOfferAmount(''); setQuantity(1); setAnimStep(-1); setPendingResult(null);
   }
 
-  const toggleSection = (key: string) =>
-    setOpenSection(key);
+  const setTab = (key: string) => setOpenSection(key);
 
   return (
     <div className="tnd-page">
@@ -409,23 +408,17 @@ export default function ProductDetailPage() {
         <span className="tnd-pdp-bc-cur">{p.category}</span>
       </nav>
 
-      <section className="tnd-pdp-shell">
-        <header className="tnd-pdp-topbar">
-          <h1 className="tnd-pdp-title-main">{p.name}</h1>
-          <div className="tnd-pdp-top-meta">
-            {isNegotiable && <span className="tnd-pdp-meta-pill">Negociable</span>}
-            <span className="tnd-pdp-meta-pill tnd-pdp-meta-pill-soft">Publicación activa</span>
-          </div>
-        </header>
+      {/* Title — full width above grid */}
+      <h1 className="tnd-pdp-title">{p.name}</h1>
 
-        <div className="tnd-pdp-grid">
-        {/* ── Col 1: Gallery ─────────────────────────────── */}
+      <div className="tnd-pdp-grid">
+        {/* ── Col 1: Gallery + Tabs ──────────────────── */}
         <div className="tnd-pdp-gallery-col">
           <div className="tnd-gallery">
             <div className="tnd-gallery-main">
               {allImages.length > 0
                 ? <img src={allImages[galleryIdx] ?? allImages[0]} alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 12 }} />
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 14 }} />
                 : <span role="img" aria-label={p.name} style={{ fontSize: '5rem' }}>📦</span>
               }
               {isNegotiable && (
@@ -455,61 +448,73 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <div className="tnd-pdp-gallery-tags">
-            <span className="tnd-chip tnd-chip-cat">{p.category}</span>
-            <span className={`tnd-chip ${p.stock === 0 ? 'tnd-chip-out' : p.stock <= 3 ? 'tnd-chip-low' : 'tnd-chip-stock'}`}>
-              {p.stock === 0 ? 'Sin stock' : p.stock <= 3 ? `Ultimas ${p.stock} unidades` : `${p.stock} disponibles`}
-            </span>
+          {/* ── Tabs ── */}
+          <div className="tnd-pdp-tabs">
+            {(['descripcion', 'resenas', 'envio', 'garantias'] as const).map((tab, i) => {
+              const labels = ['Descripción', 'Reseñas', 'Envío', 'Garantías y devoluciones'];
+              return (
+                <button
+                  key={tab}
+                  className={`tnd-pdp-tab${openSection === tab ? ' active' : ''}`}
+                  onClick={() => setTab(tab)}
+                >{labels[i]}</button>
+              );
+            })}
+          </div>
+
+          {/* ── Tab content ── */}
+          <div className="tnd-pdp-tab-body">
+            {openSection === 'descripcion' && (
+              p.description
+                ? <p className="tnd-pdp-tab-text">{p.description}</p>
+                : <p className="tnd-pdp-tab-text" style={{ color: 'var(--tnd-text-muted)' }}>Sin descripción disponible.</p>
+            )}
+            {openSection === 'resenas' && (
+              <p className="tnd-pdp-tab-text" style={{ color: 'var(--tnd-text-muted)' }}>Aún no hay reseñas para este producto.</p>
+            )}
+            {openSection === 'envio' && (
+              <div>
+                <p className="tnd-pdp-tab-text">El vendedor <strong>{vendorAlias}</strong> coordinará el envío directamente con vos una vez confirmado el pedido.</p>
+                <table className="tnd-pdp-details-table" style={{ marginTop: 12 }}>
+                  <tbody>
+                    <tr><td>Modalidad</td><td>A coordinar con el vendedor</td></tr>
+                    <tr><td>Cobertura</td><td>Depende del vendedor</td></tr>
+                    <tr><td>Tiempo estimado</td><td>A confirmar al comprar</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {openSection === 'garantias' && (
+              <ul className="tnd-pdp-warranty-list">
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Comunicación directa con el vendedor ante cualquier inconveniente
+                </li>
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Garantía sujeta a la política de <strong>{vendorAlias}</strong>
+                </li>
+                <li>
+                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  Devoluciones coordinadas directamente entre comprador y vendedor
+                </li>
+              </ul>
+            )}
           </div>
         </div>
 
-        {/* ── Col 2: Info + Actions ──────────────────────── */}
+        {/* ── Col 2: Price + Actions + Seller ──────────── */}
         <div className="tnd-pdp-info-col">
-          {/* Vendor + Category */}
-          <div className="tnd-pdp-meta-row">
-            <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp-vendor-badge">
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              {vendorAlias}
-            </Link>
-            <span className="tnd-pdp-cat-tag">{p.category}</span>
+
+          {/* Price */}
+          <div className="tnd-pdp-price">{gs(p.price)}</div>
+
+          {/* Stock */}
+          <div className={`tnd-pdp-stock-badge ${p.stock === 0 ? 'out' : p.stock <= 3 ? 'low' : 'ok'}`} style={{ marginBottom: 18 }}>
+            {p.stock === 0 ? '❌ Sin stock' : p.stock <= 3 ? `⚠ Últimas ${p.stock} unidades` : `✓ ${p.stock} disponibles`}
           </div>
 
-          {/* Price block */}
-          <div className="tnd-pdp-price-block">
-            <span className="tnd-pdp-price">{gs(p.price)}</span>
-            {isNegotiable && (
-              <span className="tnd-pdp-neg-pill">🤖 Precio negociable</span>
-            )}
-          </div>
-
-          {/* Stock & condition row */}
-          <div className="tnd-pdp-stock-row">
-            <span className={`tnd-pdp-stock-badge ${p.stock === 0 ? 'out' : p.stock <= 3 ? 'low' : 'ok'}`}>
-              {p.stock === 0
-                ? '❌ Sin stock'
-                : p.stock <= 3
-                  ? `⚠ Últimas ${p.stock} unidades`
-                  : `✓ ${p.stock} disponibles`}
-            </span>
-            <span className="tnd-pdp-condition">Nuevo</span>
-          </div>
-
-          <div className="tnd-pdp-divider" />
-
-          {/* Seller card */}
-          <div className="tnd-pdp-seller-caption">Vendido por</div>
-          <div className="tnd-pdp-seller-card">
-            <div className="tnd-pdp-seller-avatar">{vendorAlias.charAt(0).toUpperCase()}</div>
-            <div className="tnd-pdp-seller-info">
-              <span className="tnd-pdp-seller-label">Vendido por</span>
-              <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp-seller-name">{vendorAlias}</Link>
-            </div>
-            <svg className="tnd-pdp-seller-chevron" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-
-          <div className="tnd-pdp-divider" />
-
-          {/* ══ DONE state ══════════════════════════════════ */}
+          {/* ══ DONE state ════════════════════════════════ */}
           {done ? (
             <div className="tnd-offer-success">
               {done.type === 'buy' ? (
@@ -531,9 +536,7 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="tnd-offer-success-hero">✅</div>
                       <div className="tnd-offer-success-title">TukiBot salvó tu bolsillo</div>
-                      {done.botMessage && (
-                        <p className="tnd-offer-success-tagline">{done.botMessage}</p>
-                      )}
+                      {done.botMessage && <p className="tnd-offer-success-tagline">{done.botMessage}</p>}
                       <div className="tnd-offer-success-pricegrid">
                         <div className="tnd-offer-success-pricebox tnd-offer-success-pricebox-muted">
                           <span className="tnd-offer-success-pricebox-label">Precio publicado</span>
@@ -546,16 +549,10 @@ export default function ProductDetailPage() {
                           <small>{quantity} × {gs(resultUnitAmount)}</small>
                         </div>
                       </div>
-                      {resultSavings > 0 && (
-                        <div className="tnd-offer-success-saving">Ahorro conseguido: {gs(resultSavings)}</div>
-                      )}
+                      {resultSavings > 0 && <div className="tnd-offer-success-saving">Ahorro conseguido: {gs(resultSavings)}</div>}
                       <div className="tnd-offer-success-footnote">Negociado en vivo por TukiBot para {vendorAlias}.</div>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--tnd-text-muted)', margin: '6px 0 0' }}>
-                        Revisá el pedido y confirmá para reservarlo.
-                      </p>
-                      <button className="tnd-btn-buy" style={{ marginTop: 12 }} onClick={handleProceedToPayment}>
-                        💳 Proceder al pago
-                      </button>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--tnd-text-muted)', margin: '6px 0 0' }}>Revisá el pedido y confirmá para reservarlo.</p>
+                      <button className="tnd-btn-buy" style={{ marginTop: 12 }} onClick={handleProceedToPayment}>💳 Proceder al pago</button>
                     </div>
                   ) : done.botResponse === 'countered' ? (
                     <div className="tnd-offer-success-card tnd-offer-success-card-countered">
@@ -580,9 +577,7 @@ export default function ProductDetailPage() {
                           <span className="tnd-offer-success-pricebox-label">Contraoferta final</span>
                           <strong>{gs(resultTotalAmount)}</strong>
                           <small>{quantity} × {gs(resultUnitAmount)}</small>
-                          {resultSavings > 0 && (
-                            <span className="tnd-offer-success-savings-badge">Total que podrias ahorrar: {gs(resultSavings)}</span>
-                          )}
+                          {resultSavings > 0 && <span className="tnd-offer-success-savings-badge">Podés ahorrar: {gs(resultSavings)}</span>}
                         </div>
                       </div>
                       {done.timeoutMessage && (
@@ -590,9 +585,7 @@ export default function ProductDetailPage() {
                           {done.timeoutMessage.replace('{hora}', formatTimeoutAt(done.timeoutAt) ?? '')}
                         </p>
                       )}
-                      <div className="tnd-offer-success-footnote">
-                        UFFF, casi rechaza. TukiBot la sostuvo y dejó una chance real de cierre.
-                      </div>
+                      <div className="tnd-offer-success-footnote">TukiBot la sostuvo y dejó una chance real de cierre.</div>
                       <div className="tnd-offer-success-actions">
                         <button className="tnd-btn-buy" onClick={handleAcceptCounter} disabled={acceptingCounter}>
                           {acceptingCounter ? '⏳ Confirmando...' : `✅ Aceptar ${gs(done.counterAmount!)}`}
@@ -610,15 +603,15 @@ export default function ProductDetailPage() {
             </div>
 
           ) : p.stock === 0 ? (
-            <div className="tnd-chip tnd-chip-out" style={{ fontSize: '0.95rem', padding: '12px 18px', display: 'inline-block' }}>
+            <div className="tnd-chip tnd-chip-out" style={{ fontSize: '0.95rem', padding: '12px 18px', display: 'inline-block', marginBottom: 16 }}>
               ❌ Sin stock — producto no disponible
             </div>
 
           ) : (
             <>
-              {/* ── Quantity selector ── */}
-              <div className="tnd-qty-row">
-                <span style={{ color: 'var(--tnd-text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>Cantidad</span>
+              {/* Quantity */}
+              <div className="tnd-pdp-qty-row">
+                <span className="tnd-pdp-qty-label">CANTIDAD</span>
                 <div className="tnd-qty-ctrl">
                   <button onClick={() => setQuantity(clampQty(quantity - 1))} disabled={quantity <= 1} className="tnd-qty-btn">−</button>
                   <span className="tnd-qty-val">{quantity}</span>
@@ -626,58 +619,48 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* ── Primary CTAs ── */}
-              <div className="tnd-detail-cta-card">
-                <div className="tnd-detail-cta-head">
-                  <span className="tnd-detail-total-label">Total por {quantity} unidad{quantity > 1 ? 'es' : ''}</span>
-                  <strong className="tnd-detail-total-chip">{gs(p.price * quantity)}</strong>
-                </div>
-
-                <div className="tnd-detail-cta-grid">
-                  <button className="tnd-btn-buy" onClick={handleBuy} disabled={submitting}>
-                    <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" />
-                    </svg>
-                    Comprar Ahora
-                  </button>
-
-                  <button className={`tnd-btn-add-cart-detail${cartAdded ? ' added' : ''}`} onClick={handleAddToCart} disabled={submitting}>
-                    {cartAdded ? (
-                      <><svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>Añadido al carrito</>
-                    ) : (
-                      <><svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>Añadir al Carrito</>
-                    )}
-                  </button>
-                </div>
-
+              {/* CTA stack */}
+              <div className="tnd-pdp-cta-stack">
+                <button className="tnd-pdp-cta-buy" onClick={handleBuy} disabled={submitting}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+                  Comprar Ahora
+                </button>
+                <button className={`tnd-pdp-cta-cart${cartAdded ? ' added' : ''}`} onClick={handleAddToCart} disabled={submitting}>
+                  {cartAdded
+                    ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Añadido al carrito</>
+                    : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>Añadir al Carrito</>
+                  }
+                </button>
                 {isNegotiable && (
-                  <button className="tnd-btn-negotiate" onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')} disabled={submitting}>
-                    <svg className="tnd-cta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M11 13a5 5 0 0 1 7.54.54l2.46 2.46a2 2 0 0 1-2.83 2.83l-2.46-2.46a5 5 0 0 1-.54-7.54" />
-                      <path d="M13 11a5 5 0 0 1-7.54-.54L3 8a2 2 0 0 1 2.83-2.83l2.46 2.46a5 5 0 0 1 .54 7.54" />
-                    </svg>
+                  <button className="tnd-pdp-cta-offer" onClick={() => setMode(m => m === 'negotiate' ? 'idle' : 'negotiate')} disabled={submitting}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 13a5 5 0 017.54.54l2.46 2.46a2 2 0 01-2.83 2.83l-2.46-2.46A5 5 0 0111 13"/><path d="M13 11a5 5 0 00-7.54-.54L3 8a2 2 0 012.83-2.83l2.46 2.46A5 5 0 0113 11"/></svg>
                     Ofrecer tu Oferta
                   </button>
                 )}
-
-                {cartAdded && (
-                  <p className="tnd-detail-cart-feedback">Listo, agregaste {quantity} unidad{quantity > 1 ? 'es' : ''} al carrito.</p>
-                )}
               </div>
 
-              {/* ── Negotiate panel ── */}
+              {/* Total line */}
+              {quantity > 1 && (
+                <div className="tnd-pdp-total-line">
+                  Total por {quantity} unidades: <strong>{gs(p.price * quantity)}</strong>
+                </div>
+              )}
+
+              {/* Cart feedback */}
+              {cartAdded && (
+                <p className="tnd-detail-cart-feedback">Listo, agregaste {quantity} unidad{quantity > 1 ? 'es' : ''} al carrito.</p>
+              )}
+
+              {/* Negotiate panel */}
               {mode === 'negotiate' && (
                 <div className="tnd-negotiate-panel">
                   <div className="tnd-robot-notice">
                     <div className="tnd-robot-notice-icon">🤖</div>
                     <div>
                       <strong>TukiBot Negociador IA</strong><br />
-                      <span className="tnd-robot-notice-text">
-                        Antes de aceptar el precio completo… probemos conseguirte un ahorro en tu bolsillo
-                      </span>
+                      <span className="tnd-robot-notice-text">Antes de aceptar el precio completo… probemos conseguirte un ahorro en tu bolsillo</span>
                     </div>
                   </div>
-
                   {animStep >= 0 ? (
                     <div className="tnd-neg-anim">
                       <div className="tnd-neg-anim-bot" aria-hidden="true">🤖</div>
@@ -686,35 +669,24 @@ export default function ProductDetailPage() {
                           ? negClimax[pendingResult.status]
                           : (negPhrases[animStep % negPhrases.length] ?? negPhrases[0])}
                       </div>
-                      <div className="tnd-neg-anim-dots" aria-hidden="true">
-                        <span /><span /><span />
-                      </div>
+                      <div className="tnd-neg-anim-dots" aria-hidden="true"><span /><span /><span /></div>
                     </div>
                   ) : (
                     <form onSubmit={handleOffer} className="tnd-offer-form" style={{ marginTop: 0 }}>
                       <div className="tnd-offer-field">
                         <label htmlFor="offerAmt" className="tnd-offer-label">Tu oferta por unidad</label>
                         <input
-                          id="offerAmt"
-                          type="text"
-                          inputMode="numeric"
-                          className="tnd-offer-input"
-                          placeholder={`Hasta ${gs(p.price)}`}
-                          value={offerAmount}
+                          id="offerAmt" type="text" inputMode="numeric" className="tnd-offer-input"
+                          placeholder={`Hasta ${gs(p.price)}`} value={offerAmount}
                           onChange={e => {
                             const digits = e.target.value.replace(/\D/g, '');
                             if (!digits) { setOfferAmount(''); return; }
-                            const clamped = Math.min(Number(digits), p.price);
-                            setOfferAmount(formatOfferGs(clamped));
+                            setOfferAmount(formatOfferGs(Math.min(Number(digits), p.price)));
                           }}
-                          required
-                          autoFocus
+                          required autoFocus
                         />
-                        <p style={{ margin: '6px 0 0', fontSize: '0.74rem', color: 'var(--tnd-text-muted)' }}>
-                          Escribí solo números. Ejemplo: 25000
-                        </p>
+                        <p style={{ margin: '6px 0 0', fontSize: '0.74rem', color: 'var(--tnd-text-muted)' }}>Escribí solo números. Ejemplo: 25000</p>
                       </div>
-
                       {dealStrength && (
                         <div className="tnd-deal-meter">
                           <div className="tnd-deal-meter-track">
@@ -726,13 +698,11 @@ export default function ProductDetailPage() {
                           </div>
                         </div>
                       )}
-
                       {offerNum > 0 && (
                         <div className="tnd-offer-summary">
                           Total estimado: <strong>{gs(offerNum * quantity)}</strong>&nbsp;({quantity} × {gs(offerNum)})
                         </div>
                       )}
-
                       <button type="submit" className="tnd-offer-submit" disabled={submitting || offerNum <= 0}>
                         {submitting ? '⏳ Enviando...' : '🤝 Enviar oferta'}
                       </button>
@@ -742,76 +712,23 @@ export default function ProductDetailPage() {
               )}
             </>
           )}
-        </div>
 
-        </div>
-
-        <div className="tnd-pdp-tabs-wrap">
-          <div className="tnd-pdp-tabs" role="tablist" aria-label="Secciones del producto">
-            {p.description && (
-              <button
-                role="tab"
-                aria-selected={openSection === 'descripcion'}
-                className={`tnd-pdp-tab${openSection === 'descripcion' ? ' active' : ''}`}
-                onClick={() => toggleSection('descripcion')}
-              >
-                Descripcion
-              </button>
-            )}
-            <button
-              role="tab"
-              aria-selected={openSection === 'detalles'}
-              className={`tnd-pdp-tab${openSection === 'detalles' ? ' active' : ''}`}
-              onClick={() => toggleSection('detalles')}
-            >
-              Detalles
-            </button>
-            <button
-              role="tab"
-              aria-selected={openSection === 'garantia'}
-              className={`tnd-pdp-tab${openSection === 'garantia' ? ' active' : ''}`}
-              onClick={() => toggleSection('garantia')}
-            >
-              Garantias y devoluciones
-            </button>
-          </div>
-
-          <div className="tnd-pdp-tab-panel" role="tabpanel">
-            {openSection === 'descripcion' && p.description && (
-              <p className="tnd-pdp-accordion-text">{p.description}</p>
-            )}
-
-            {openSection === 'detalles' && (
-              <table className="tnd-pdp-details-table">
-                <tbody>
-                  <tr><td>Categoria</td><td>{p.category}</td></tr>
-                  <tr><td>Estado</td><td>Nuevo</td></tr>
-                  <tr><td>Stock disponible</td><td>{p.stock} {p.stock === 1 ? 'unidad' : 'unidades'}</td></tr>
-                  <tr><td>Precio negociable</td><td>{isNegotiable ? 'Si - con TukiBot IA' : 'No'}</td></tr>
-                  <tr><td>Vendedor</td><td>{vendorAlias}</td></tr>
-                </tbody>
-              </table>
-            )}
-
-            {openSection === 'garantia' && (
-              <ul className="tnd-pdp-warranty-list">
-                <li>
-                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                  Comunicacion directa con el vendedor para cualquier inconveniente
-                </li>
-                <li>
-                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                  Garantia sujeta a la politica del vendedor <strong>{vendorAlias}</strong>
-                </li>
-                <li>
-                  <svg width="14" height="14" fill="none" stroke="var(--tnd-success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                  Devoluciones coordinadas directamente entre comprador y vendedor
-                </li>
-              </ul>
-            )}
+          {/* ── Seller card ── */}
+          <div className="tnd-pdp-seller-card">
+            <p className="tnd-pdp-seller-heading">VENDEDOR:</p>
+            <div className="tnd-pdp-seller-body">
+              <div className="tnd-pdp-seller-avatar-circle">{vendorAlias.charAt(0).toUpperCase()}</div>
+              <div className="tnd-pdp-seller-info">
+                <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp-seller-name">
+                  {vendorAlias}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--tnd-success)" style={{ marginLeft: 4, verticalAlign: 'middle' }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </Link>
+                <span className="tnd-pdp-seller-sub">Vendedor verificado</span>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
