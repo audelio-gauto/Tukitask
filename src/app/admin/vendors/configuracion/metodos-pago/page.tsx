@@ -255,14 +255,6 @@ export default function MetodosPagoPage() {
     </div>
   );
 }
-
-
-interface BankData {
-  banco: string;
-  cuenta: string;
-  alias: string;
-  titular: string;
-  tipo_cuenta: string;
 }
 
 interface MetodoPago {
