@@ -30,6 +30,7 @@ export async function GET(req: Request) {
   const cashMethod     = rows.find(m => m.key === 'cash_on_delivery');
   const globalTransferActive    = !!transferMethod?.is_active;
   const vendorTransferAllowed   = !!transferMethod?.vendor_allowed;
+  const cashActive              = !!cashMethod?.is_active;
   const vendorCashAllowed       = !!cashMethod?.vendor_allowed;
 
   let bankData: Record<string, string> | null = null;
@@ -70,6 +71,9 @@ export async function GET(req: Request) {
       available:   activeTransferEnabled,
       source:      bankDataSource,
       bank_data:   bankData,
+    },
+    cash_on_delivery: {
+      available: cashActive,
     },
     vendor_methods: {
       transfer_allowed:   vendorTransferAllowed,

@@ -49,6 +49,9 @@ interface BankInfo {
 }
 
 interface PaymentInfo {
+  cash_on_delivery: {
+    available: boolean;
+  };
   transfer: {
     available: boolean;
     source: 'global' | 'vendor' | null;
@@ -158,6 +161,23 @@ function CheckoutInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, vendorEmail]);
 
+  useEffect(() => {
+    if (!paymentInfo) return;
+
+    if (paymentMethod === 'contra_entrega' && !paymentInfo.cash_on_delivery?.available) {
+      if (paymentInfo.transfer?.available) {
+        setPaymentMethod('transferencia');
+      }
+      return;
+    }
+
+    if (paymentMethod === 'transferencia' && !paymentInfo.transfer?.available) {
+      if (paymentInfo.cash_on_delivery?.available) {
+        setPaymentMethod('contra_entrega');
+      }
+    }
+  }, [paymentInfo, paymentMethod]);
+
   /* ── Geolocation ── */
   const handleGeo = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -176,6 +196,10 @@ function CheckoutInner() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!items.length) { setError('No hay productos para comprar.'); return; }
+    if (!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available) {
+      setError('No hay métodos de pago disponibles para este pedido.');
+      return;
+    }
     if (!billing.name || !billing.email || !billing.phone) {
       setError('Completá los datos de facturación obligatorios (*).');
       return;
@@ -406,22 +430,24 @@ function CheckoutInner() {
               <h2 className="tnd-checkout-section-title">Método de pago</h2>
 
               {/* Contra entrega */}
-              <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: paymentInfo?.transfer?.available ? 12 : 0 }}>
-                <input
-                  type="radio"
-                  name="payment_method"
-                  checked={paymentMethod === 'contra_entrega'}
-                  onChange={() => setPaymentMethod('contra_entrega')}
-                  style={{ marginTop: 4 }}
-                />
-                <span>
-                  <strong>Contra entrega</strong>
-                  <br />
-                  <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
-                    Pagás cuando recibís el producto.
+              {paymentInfo?.cash_on_delivery?.available && (
+                <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: paymentInfo?.transfer?.available ? 12 : 0 }}>
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    checked={paymentMethod === 'contra_entrega'}
+                    onChange={() => setPaymentMethod('contra_entrega')}
+                    style={{ marginTop: 4 }}
+                  />
+                  <span>
+                    <strong>Contra entrega</strong>
+                    <br />
+                    <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
+                      Pagás cuando recibís el producto.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              )}
 
               {/* Transferencia — solo si hay datos bancarios disponibles */}
               {paymentInfo?.transfer?.available && (
@@ -477,6 +503,14 @@ function CheckoutInner() {
                     </div>
                   )}
                 </>
+              )}
+
+              {!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available && (
+                <div style={{ marginTop: 4, padding: '12px 14px', borderRadius: 12, background: 'var(--tnd-danger-bg)', border: '1px solid var(--tnd-danger)' }}>
+                  <p style={{ margin: 0, color: 'var(--tnd-danger)', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                    No hay métodos de pago disponibles para este pedido en este momento.
+                  </p>
+                </div>
               )}
             </section>
 
@@ -554,7 +588,7 @@ function CheckoutInner() {
 
               <button
                 type="submit"
-                disabled={submitting || !items.length}
+                disabled={submitting || !items.length || (!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available)}
                 style={{ width:'100%', height:50, background:'var(--tnd-accent)', color:'var(--tnd-accent-text)', border:'none', borderRadius:13, fontSize:'1rem', fontWeight:900, cursor:'pointer', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity: (submitting || !items.length) ? 0.6 : 1 }}
               >
                 {submitting ? '⏳ Procesando...' : '✅ Confirmar pedido'}
