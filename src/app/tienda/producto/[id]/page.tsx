@@ -128,6 +128,7 @@ export default function ProductDetailPage() {
   const [cartAdded,     setCartAdded]     = useState(false);
   const [acceptingCounter, setAcceptingCounter] = useState(false);
   const [done,          setDone]          = useState<DoneState | null>(null);
+  const [openSection,   setOpenSection]   = useState<string | null>('descripcion');
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -393,8 +394,6 @@ export default function ProductDetailPage() {
     setDone(null); setMode('idle');
     setOfferAmount(''); setQuantity(1); setAnimStep(-1); setPendingResult(null);
   }
-
-  const [openSection, setOpenSection] = useState<string | null>('descripcion');
 
   const toggleSection = (key: string) =>
     setOpenSection(prev => (prev === key ? null : key));
