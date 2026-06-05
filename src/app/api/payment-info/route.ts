@@ -24,7 +24,8 @@ export async function GET(req: Request) {
 
   if (methodsError) return NextResponse.json({ error: methodsError.message }, { status: 500 });
 
-  const transferMethod = (methods ?? []).find(m => m.key === 'transfer');
+  type MethodRow = { id: string; key: string; name: string; description: string; is_active: boolean; fee_fixed: number; fee_percentage: number; bank_data: Record<string, string> | null };
+  const transferMethod = (methods as MethodRow[] ?? []).find(m => m.key === 'transfer');
   const globalTransferActive = !!transferMethod?.is_active;
 
   let bankData: Record<string, string> | null = null;
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
   const activeTransferEnabled = globalTransferActive || (!!bankData && bankDataSource === 'vendor');
 
   return NextResponse.json({
-    methods: (methods ?? []).map(m => ({
+    methods: (methods as MethodRow[] ?? []).map(m => ({
       id:           m.id,
       key:          m.key,
       name:         m.name,
