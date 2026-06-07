@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
 type ProductType   = 'physical' | 'digital' | 'service';
+type TaxonomyType  = 'category' | 'brand' | 'attribute' | 'tag';
 
 /* Tramo de precio por cantidad */
 interface PricingTier {
@@ -22,6 +23,7 @@ interface ProductForm {
   name: string;
   sku: string;
   category: string;
+  brandId: string;
   type: ProductType;
   description: string;
   price: string;
@@ -33,20 +35,28 @@ interface ProductForm {
   negotiable:       boolean;
   hasTieredPricing: boolean;
   pricingTiers:     PricingTier[];
+  tagIds:           number[];
+  attributeValues:  Record<number, number[]>;
 }
 
-const CATEGORIES = [
-  { value: 'electronica',   label: '📱 Electrónica' },
-  { value: 'ropa',          label: '👗 Ropa & Moda' },
-  { value: 'hogar',         label: '🏠 Hogar' },
-  { value: 'alimentos',     label: '🍔 Alimentos' },
-  { value: 'libros',        label: '📚 Libros' },
-  { value: 'deportes',      label: '⚽ Deportes' },
-  { value: 'juguetes',      label: '🧸 Juguetes' },
-  { value: 'salud',         label: '💊 Salud & Belleza' },
-  { value: 'servicios',     label: '🔧 Servicios' },
-  { value: 'otros',         label: '📦 Otros' },
-];
+interface CatalogTaxonomy {
+  id: number;
+  taxonomy_type: TaxonomyType;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+interface AttributeValue {
+  id: number;
+  attribute_id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+}
 
 const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
   { value: 'physical', label: '📦 Físico' },
@@ -57,7 +67,8 @@ const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
 const INITIAL: ProductForm = {
   name:         '',
   sku:          '',
-  category:     'electronica',
+  category:     '',
+  brandId:      '',
   type:         'physical',
   description:  '',
   price:        '',
@@ -69,6 +80,8 @@ const INITIAL: ProductForm = {
   negotiable:       true,
   hasTieredPricing: false,
   pricingTiers:     [],
+  tagIds:           [],
+  attributeValues:  {},
 };
 
 function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -84,13 +97,20 @@ function FieldGroup({ label, hint, children }: { label: string; hint?: string; c
 /* ══════════════════════════════════════════════════════════ */
 export default function NuevoProductoPage() {
   const router = useRouter();
-  const [form, setForm]         = useState<ProductForm>(INITIAL);
+  const [form, setForm]           = useState<ProductForm>(INITIAL);
   const [saving, setSaving]       = useState(false);
   const [errors, setErrors]       = useState<Partial<Record<keyof ProductForm, string>>>({});
   const [tierError, setTierError] = useState<string | null>(null);
   const [saved, setSaved]         = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CatalogTaxonomy[]>([]);
+  const [brands, setBrands]       = useState<CatalogTaxonomy[]>([]);
+  const [tags, setTags]           = useState<CatalogTaxonomy[]>([]);
+  const [attributes, setAttributes] = useState<CatalogTaxonomy[]>([]);
+  const [attributeValues, setAttributeValues] = useState<Record<number, AttributeValue[]>>({});
   const [userId, setUserId]       = useState<string | null>(null);
   const fileInputRef              = useRef<HTMLInputElement>(null);
 
@@ -100,9 +120,89 @@ export default function NuevoProductoPage() {
     });
   }, []);
 
+  useEffect(() => {
+    async function loadCatalogs() {
+      setCatalogLoading(true);
+      setCatalogError(null);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? '';
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const loadType = async (type: TaxonomyType) => {
+          const res = await fetch(`/api/vendor/catalog-taxonomies?type=${type}`, { headers });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || `No se pudieron cargar ${type}`);
+          return (json.items ?? []) as CatalogTaxonomy[];
+        };
+
+        const [loadedCategories, loadedBrands, loadedTags, loadedAttributes] = await Promise.all([
+          loadType('category'),
+          loadType('brand'),
+          loadType('tag'),
+          loadType('attribute'),
+        ]);
+
+        setCategories(loadedCategories);
+        setBrands(loadedBrands);
+        setTags(loadedTags);
+        setAttributes(loadedAttributes);
+
+        if (loadedCategories.length > 0) {
+          setForm(prev => (prev.category ? prev : { ...prev, category: loadedCategories[0].slug }));
+        }
+
+        const loadedValues = await Promise.all(
+          loadedAttributes.map(async (attribute) => {
+            const res = await fetch(`/api/vendor/catalog-attribute-values?attribute_id=${attribute.id}`, { headers });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || `No se pudieron cargar los valores de ${attribute.name}`);
+            return [attribute.id, (json.items ?? []) as AttributeValue[]] as const;
+          })
+        );
+
+        setAttributeValues(Object.fromEntries(loadedValues));
+      } catch (error) {
+        setCatalogError(error instanceof Error ? error.message : String(error));
+      } finally {
+        setCatalogLoading(false);
+      }
+    }
+
+    loadCatalogs();
+  }, []);
+
   function update<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors(prev => ({ ...prev, [key]: undefined }));
+  }
+
+  function toggleTag(tagId: number) {
+    setForm(prev => ({
+      ...prev,
+      tagIds: prev.tagIds.includes(tagId)
+        ? prev.tagIds.filter(id => id !== tagId)
+        : [...prev.tagIds, tagId],
+    }));
+  }
+
+  function toggleAttributeValue(attributeId: number, valueId: number) {
+    setForm(prev => {
+      const currentValues = prev.attributeValues[attributeId] ?? [];
+      const nextValues = currentValues.includes(valueId)
+        ? currentValues.filter(id => id !== valueId)
+        : [...currentValues, valueId];
+
+      const nextAttributeValues = { ...prev.attributeValues };
+      if (nextValues.length > 0) {
+        nextAttributeValues[attributeId] = nextValues;
+      } else {
+        delete nextAttributeValues[attributeId];
+      }
+
+      return { ...prev, attributeValues: nextAttributeValues };
+    });
   }
 
   function addTier() {
@@ -133,6 +233,7 @@ export default function NuevoProductoPage() {
     const errs: Partial<Record<keyof ProductForm, string>> = {};
     let tiersErr: string | null = null;
     if (!form.name.trim())             errs.name       = 'El nombre es obligatorio';
+    if (!form.category.trim())         errs.category    = 'Selecciona una categoría';
     if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
                                        errs.price      = 'Precio inválido';
     if (form.negotiable && !form.hasTieredPricing) {
@@ -251,6 +352,7 @@ export default function NuevoProductoPage() {
       name:          form.name.trim(),
       sku:           form.sku.trim() || null,
       category:      form.category,
+      brand_id:      form.brandId ? Number(form.brandId) : null,
       type:          form.type,
       description:   form.description.trim() || null,
       price:         Number(form.price),
@@ -261,6 +363,11 @@ export default function NuevoProductoPage() {
       status:        dbStatus,
       negotiable:    form.negotiable,
       pricing_tiers: form.hasTieredPricing ? form.pricingTiers : [],
+      tag_ids:       form.tagIds,
+      attribute_values: Object.entries(form.attributeValues).map(([attributeId, valueIds]) => ({
+        attribute_id: Number(attributeId),
+        value_ids: valueIds,
+      })),
     };
 
     const { error } = await supabase.from('products').insert(row);
@@ -323,11 +430,6 @@ export default function NuevoProductoPage() {
               </FieldGroup>
 
               <div className="vnd-form-grid">
-                <FieldGroup label="Categoría">
-                  <select className="vnd-select" value={form.category} onChange={e => update('category', e.target.value)}>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </FieldGroup>
                 <FieldGroup label="Tipo de producto">
                   <select className="vnd-select" value={form.type} onChange={e => update('type', e.target.value as ProductType)}>
                     {PRODUCT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -356,6 +458,114 @@ export default function NuevoProductoPage() {
                   maxLength={800}
                 />
               </FieldGroup>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4, borderTop: '1px solid var(--vnd-border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <FieldGroup label="Categoría del catálogo *" hint="Creada por admin para vendedores">
+                    <select className="vnd-select" value={form.category} onChange={e => update('category', e.target.value)}>
+                      <option value="" disabled>{catalogLoading ? 'Cargando categorías…' : 'Selecciona una categoría'}</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.slug}>{category.name}</option>
+                      ))}
+                    </select>
+                    {errors.category && <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{errors.category}</span>}
+                  </FieldGroup>
+
+                  <FieldGroup label="Marca" hint="Opcional">
+                    <select className="vnd-select" value={form.brandId} onChange={e => update('brandId', e.target.value)}>
+                      <option value="">Sin marca</option>
+                      {brands.map(brand => (
+                        <option key={brand.id} value={brand.id}>{brand.name}</option>
+                      ))}
+                    </select>
+                  </FieldGroup>
+                </div>
+
+                <FieldGroup label="Etiquetas" hint="Seleccioná una o varias etiquetas del admin">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {tags.length === 0 ? (
+                      <span style={{ color: 'var(--vnd-text-muted)', fontSize: '0.78rem' }}>
+                        {catalogLoading ? 'Cargando etiquetas…' : 'No hay etiquetas activas.'}
+                      </span>
+                    ) : tags.map(tag => {
+                      const selected = form.tagIds.includes(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggleTag(tag.id)}
+                          style={{
+                            border: selected ? '1px solid #F5C518' : '1px solid var(--vnd-border)',
+                            background: selected ? '#F5C51816' : 'var(--vnd-bg-elevated)',
+                            color: 'var(--vnd-text)',
+                            borderRadius: 999,
+                            padding: '7px 12px',
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FieldGroup>
+
+                <FieldGroup label="Atributos" hint="Elegí los valores creados por admin para este producto">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {attributes.length === 0 ? (
+                      <span style={{ color: 'var(--vnd-text-muted)', fontSize: '0.78rem' }}>
+                        {catalogLoading ? 'Cargando atributos…' : 'No hay atributos activos.'}
+                      </span>
+                    ) : attributes.map(attribute => {
+                      const values = attributeValues[attribute.id] ?? [];
+                      return (
+                        <div key={attribute.id} style={{ padding: 12, borderRadius: 10, border: '1px solid var(--vnd-border)', background: 'var(--vnd-bg-elevated)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--vnd-text)' }}>{attribute.name}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--vnd-text-muted)' }}>Selecciona uno o varios valores</span>
+                          </div>
+                          {values.length === 0 ? (
+                            <span style={{ color: 'var(--vnd-text-muted)', fontSize: '0.78rem' }}>Este atributo no tiene valores activos.</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {values.map(value => {
+                                const selected = (form.attributeValues[attribute.id] ?? []).includes(value.id);
+                                return (
+                                  <button
+                                    key={value.id}
+                                    type="button"
+                                    onClick={() => toggleAttributeValue(attribute.id, value.id)}
+                                    style={{
+                                      border: selected ? '1px solid #4ade80' : '1px solid var(--vnd-border)',
+                                      background: selected ? '#4ade8018' : '#fff',
+                                      color: 'var(--vnd-text)',
+                                      borderRadius: 999,
+                                      padding: '7px 12px',
+                                      fontSize: '0.78rem',
+                                      cursor: 'pointer',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {value.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </FieldGroup>
+
+                {catalogError && (
+                  <div style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>
+                    {catalogError}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
