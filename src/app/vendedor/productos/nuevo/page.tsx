@@ -128,10 +128,11 @@ export default function NuevoProductoPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token ?? '';
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const requestHeaders = new Headers();
+        if (token) requestHeaders.set('Authorization', `Bearer ${token}`);
 
         const loadType = async (type: TaxonomyType) => {
-          const res = await fetch(`/api/vendor/catalog-taxonomies?type=${type}`, { headers });
+          const res = await fetch(`/api/vendor/catalog-taxonomies?type=${type}`, { headers: requestHeaders });
           const json = await res.json();
           if (!res.ok) throw new Error(json.error || `No se pudieron cargar ${type}`);
           return (json.items ?? []) as CatalogTaxonomy[];
@@ -155,7 +156,7 @@ export default function NuevoProductoPage() {
 
         const loadedValues = await Promise.all(
           loadedAttributes.map(async (attribute) => {
-            const res = await fetch(`/api/vendor/catalog-attribute-values?attribute_id=${attribute.id}`, { headers });
+            const res = await fetch(`/api/vendor/catalog-attribute-values?attribute_id=${attribute.id}`, { headers: requestHeaders });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || `No se pudieron cargar los valores de ${attribute.name}`);
             return [attribute.id, (json.items ?? []) as AttributeValue[]] as const;
