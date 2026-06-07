@@ -44,55 +44,51 @@ export default function AprobarProductosPage() {
   const [rejectId, setRejectId]       = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  const getToken = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? '';
+  }, []);
+
   const fetchProducts = useCallback(async (t: TabKey) => {
     setLoading(true);
     setError('');
     try {
-      const { data, error: err } = await supabase
-        .from('products')
-        .select('id, vendor_email, name, sku, category, type, description, price, floor_price, stock, image, status, negotiable, rejection_reason, created_at')
-        .eq('status', t)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (err) throw err;
-      setProducts(data as Product[] || []);
+      const token = await getToken();
+      const res = await fetch(`/api/admin/vendors/products-review?status=${t}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'No se pudieron cargar los productos');
+      setProducts((json.items ?? []) as Product[]);
+      setCounts(json.counts ?? { pending_review: 0, published: 0, rejected: 0 });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const fetchCounts = useCallback(async () => {
-    const [r1, r2, r3] = await Promise.all([
-      supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
-      supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'published'),
-      supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
-    ]);
-    setCounts({
-      pending_review: r1.count ?? 0,
-      published:      r2.count ?? 0,
-      rejected:       r3.count ?? 0,
-    });
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     fetchProducts(tab);
-    fetchCounts();
-  }, [fetchProducts, fetchCounts, tab]);
+  }, [fetchProducts, tab]);
 
   const approve = async (id: string) => {
     setActing(id);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error: err } = await supabase
-      .from('products')
-      .update({ status: 'published', approved_by: user?.email ?? 'admin', approved_at: new Date().toISOString() })
-      .eq('id', id);
-    if (!err) {
+    const token = await getToken();
+    const res = await fetch('/api/admin/vendors/products-review', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ id, action: 'approve' }),
+    });
+    const json = await res.json();
+    if (res.ok) {
       setProducts(prev => prev.filter(p => p.id !== id));
-      fetchCounts();
+      fetchProducts(tab);
     } else {
-      setError(err.message);
+      setError(json.error || 'No se pudo aprobar el producto');
     }
     setActing(null);
   };
@@ -105,15 +101,21 @@ export default function AprobarProductosPage() {
   const confirmReject = async () => {
     if (!rejectId) return;
     setActing(rejectId);
-    const { error: err } = await supabase
-      .from('products')
-      .update({ status: 'rejected', rejection_reason: rejectReason.trim() || 'Rechazado por admin' })
-      .eq('id', rejectId);
-    if (!err) {
+    const token = await getToken();
+    const res = await fetch('/api/admin/vendors/products-review', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ id: rejectId, action: 'reject', reason: rejectReason }),
+    });
+    const json = await res.json();
+    if (res.ok) {
       setProducts(prev => prev.filter(p => p.id !== rejectId));
-      fetchCounts();
+      fetchProducts(tab);
     } else {
-      setError(err.message);
+      setError(json.error || 'No se pudo rechazar el producto');
     }
     setRejectId(null);
     setActing(null);
