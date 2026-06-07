@@ -201,9 +201,18 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     subItems: [
+      // ── Productos (WooCommerce) ──────────────────────────
+      { label: 'PRODUCTOS', isHeader: true },
+      { label: 'Todos los Productos', href: '/admin/vendors/productos' },
+      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
+      { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
+      { label: 'Marcas', href: '/admin/vendors/productos/marcas' },
+      { label: 'Atributos', href: '/admin/vendors/productos/atributos' },
+      { label: 'Etiquetas', href: '/admin/vendors/productos/etiquetas' },
+      { label: 'Valoraciones', href: '/admin/vendors/productos/valoraciones' },
+
       // ── Bandeja de Hoy ─────────────────────────────────────
       { label: 'BANDEJA DE HOY', isHeader: true },
-      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
       { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
       { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
       { label: 'Pagos Pendientes', href: '/admin/finanzas/pagos-pendientes' },
@@ -212,7 +221,6 @@ const menuItems: MenuItem[] = [
       { label: 'Panel de Vendedores', href: '/admin/vendors' },
       // ── Catálogo ───────────────────────────────────────────
       { label: 'CATÁLOGO', isHeader: true },
-      { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
       { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
       { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
       { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
