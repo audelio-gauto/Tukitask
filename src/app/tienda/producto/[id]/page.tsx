@@ -57,6 +57,7 @@ type Product = {
   stock: number;
   image: string | null;
   gallery: string[] | null;
+  short_description: string | null;
   description: string | null;
   negotiable: boolean;
 };
@@ -148,7 +149,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, description, negotiable')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, short_description, description, negotiable')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -410,6 +411,11 @@ export default function ProductDetailPage() {
 
       {/* Title — full width above grid */}
       <h1 className="tnd-pdp-title">{p.name}</h1>
+      {(p.short_description || p.description) && (
+        <p style={{ margin: '2px 0 18px', fontSize: '0.95rem', color: 'var(--tnd-text-muted)', lineHeight: 1.6, maxWidth: 980 }}>
+          {(p.short_description || p.description || '').trim()}
+        </p>
+      )}
 
       <div className="tnd-pdp-grid">
         {/* ── Col 1: Gallery + Tabs ──────────────────── */}
@@ -465,8 +471,8 @@ export default function ProductDetailPage() {
           {/* ── Tab content ── */}
           <div className="tnd-pdp-tab-body">
             {openSection === 'descripcion' && (
-              p.description
-                ? <p className="tnd-pdp-tab-text">{p.description}</p>
+              (p.description || p.short_description)
+                ? <p className="tnd-pdp-tab-text">{p.description || p.short_description}</p>
                 : <p className="tnd-pdp-tab-text" style={{ color: 'var(--tnd-text-muted)' }}>Sin descripción disponible.</p>
             )}
             {openSection === 'resenas' && (

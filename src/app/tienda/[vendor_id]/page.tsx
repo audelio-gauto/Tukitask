@@ -101,7 +101,7 @@ export default function VendorStorePage() {
   const [dbProducts, setDbProducts] = useState<Array<{
     id: string; vendor_id: string; vendor_email: string; name: string;
     category: string; price: number; floor_price: number; stock: number;
-    image: string | null; negotiable: boolean;
+    image: string | null; short_description: string | null; negotiable: boolean;
   }>>([]);
 
   const IS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(vendorId);
@@ -166,7 +166,7 @@ export default function VendorStorePage() {
         return; // unknown slug — no products
       }
       const { data } = await supabase.from('products')
-        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
+        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, short_description, negotiable')
         .eq('vendor_id', uid)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
@@ -180,10 +180,12 @@ export default function VendorStorePage() {
   type MergedProduct = {
     id: string; vendorId: string; name: string; category: string;
     emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
+    shortDescription?: string | null;
   };
   const dbMapped: MergedProduct[] = dbProducts.map(p => ({
     id: p.id, vendorId: p.vendor_id, name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+    shortDescription: p.short_description,
   }));
   const products: MergedProduct[] = dbMapped;
 
@@ -485,6 +487,11 @@ export default function VendorStorePage() {
                 <div className="tnd-product-body">
                   <div className="tnd-product-store">{activeCfg.storeName}</div>
                   <div className="tnd-product-name">{p.name}</div>
+                  {p.shortDescription && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tnd-text-muted)', lineHeight: 1.45, minHeight: 32, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {p.shortDescription}
+                    </div>
+                  )}
                   <div className="tnd-product-price">{gs(p.price)}</div>
                   <div className="tnd-product-floor">{p.category}</div>
                   <div style={{ marginBottom: 10 }}>

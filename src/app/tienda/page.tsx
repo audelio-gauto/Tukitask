@@ -56,7 +56,7 @@ function TiendaPageInner() {
   const [dbProducts, setDbProducts] = useState<Array<{
     id: string; vendor_id: string; vendor_email: string; name: string;
     category: string; price: number; floor_price: number; stock: number;
-    image: string | null; negotiable: boolean;
+    image: string | null; short_description: string | null; negotiable: boolean;
   }>>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
@@ -111,7 +111,7 @@ function TiendaPageInner() {
   useEffect(() => {
     setProductsLoading(true);
     supabase.from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, negotiable')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, short_description, negotiable')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(100)
@@ -270,6 +270,7 @@ function TiendaPageInner() {
   interface DisplayProduct {
     id: string; vendorName: string; vendorId: string; vendorEmail: string; name: string; category: string;
     emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
+    shortDescription?: string | null;
   }
 
   const allProducts: DisplayProduct[] = dbProducts.map(p => ({
@@ -277,6 +278,7 @@ function TiendaPageInner() {
     vendorId: p.vendor_id, vendorEmail: p.vendor_email,
     name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+    shortDescription: p.short_description,
   }));
 
   const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
@@ -430,6 +432,11 @@ function TiendaPageInner() {
                 <div className="tnd-product-body">
                   <div className="tnd-product-store">{p.vendorName}</div>
                   <div className="tnd-product-name">{p.name}</div>
+                  {p.shortDescription && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tnd-text-muted)', lineHeight: 1.45, minHeight: 32, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {p.shortDescription}
+                    </div>
+                  )}
                   <div className="tnd-product-price">{gs(p.price)}</div>
                   <button
                     className={`tnd-product-action${added[p.id] ? ' tnd-added' : ''}`}
@@ -513,6 +520,11 @@ function TiendaPageInner() {
                 <div className="tnd-product-body">
                   <div className="tnd-product-store">{p.vendorName}</div>
                   <div className="tnd-product-name">{p.name}</div>
+                  {p.shortDescription && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tnd-text-muted)', lineHeight: 1.45, minHeight: 32, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {p.shortDescription}
+                    </div>
+                  )}
                   <div className="tnd-product-price">{gs(p.price)}</div>
                   <div className="tnd-product-floor">Ofertá desde {gs(p.floorPrice)}</div>
                   <div className="tnd-product-card-actions">

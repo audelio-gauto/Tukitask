@@ -32,9 +32,6 @@ function BuscarInner() {
   const [storeConfigs, setStoreConfigs] = useState<Map<string, Record<string, unknown>>>(new Map());
   const [loading, setLoading] = useState(false);
 
-  /* Reset category filter when query changes */
-  useEffect(() => { setCat('Todos'); }, [q]);
-
   /* Redirect if no query */
   useEffect(() => {
     if (!q) router.replace('/tienda');
@@ -86,7 +83,7 @@ function BuscarInner() {
   const handleAdd = (productId: string) => {
     const p = dbProducts.find(x => x.id === productId);
     if (!p) return;
-    addItem({ id: p.id, name: p.name, price: p.floor_price, emoji: '📦', image: p.image, vendorName: p.vendor_email, vendorId: p.vendor_id, vendorEmail: p.vendor_email });
+    addItem({ id: p.id, name: p.name, price: p.price, emoji: '📦', image: p.image, vendorName: p.vendor_email, vendorId: p.vendor_id, vendorEmail: p.vendor_email });
     setAdded(prev => ({ ...prev, [productId]: true }));
     setTimeout(() => setAdded(prev => ({ ...prev, [productId]: false })), 1400);
   };
@@ -176,9 +173,9 @@ function BuscarInner() {
                     <p className="tnd-buscar-product-vendor">{p.vendor_email}</p>
                     <h3 className="tnd-buscar-product-name">{p.name}</h3>
                     <div className="tnd-buscar-product-prices">
-                      <span className="tnd-buscar-product-price">{gs(p.floor_price)}</span>
+                      <span className="tnd-buscar-product-price">{gs(p.price)}</span>
                       {p.floor_price < p.price && (
-                        <span className="tnd-buscar-product-orig">{gs(p.price)}</span>
+                        <span className="tnd-buscar-product-orig">Oferta desde {gs(p.floor_price)}</span>
                       )}
                     </div>
                     {p.stock <= 3 && p.stock > 0 && (
