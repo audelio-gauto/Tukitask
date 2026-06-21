@@ -22,6 +22,7 @@ interface ProductForm {
   sku:              string;
   category:         string;
   type:             ProductType;
+  shortDescription: string;
   description:      string;
   price:            string;
   floorPrice:       string;
@@ -55,7 +56,7 @@ const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
 
 const EMPTY: ProductForm = {
   name: '', sku: '', category: 'electronica', type: 'physical',
-  description: '', price: '', floorPrice: '', stock: '',
+  shortDescription: '', description: '', price: '', floorPrice: '', stock: '',,
   image: '', gallery: [], status: 'draft',
   negotiable: true, hasTieredPricing: false, pricingTiers: [],
 };
@@ -122,6 +123,7 @@ export default function EditarProductoPage() {
         category:         data.category      ?? 'electronica',
         type:             (data.type         ?? 'physical') as ProductType,
         description:      data.description   ?? '',
+        shortDescription: data.short_description ?? '',
         price:            String(data.price   ?? ''),
         floorPrice:       String(data.floor_price ?? ''),
         stock:            String(data.stock   ?? ''),
@@ -255,6 +257,7 @@ export default function EditarProductoPage() {
       sku:           form.sku.trim() || null,
       category:      form.category,
       type:          form.type,
+      short_description: form.shortDescription.trim() || null,
       description:   form.description.trim() || null,
       price:         Number(form.price),
       floor_price:   Number(form.floorPrice) || 0,
@@ -372,18 +375,72 @@ export default function EditarProductoPage() {
                   maxLength={60}
                 />
               </FieldGroup>
+            </div>
+          </div>
 
-              <FieldGroup label="Descripción">
+          {/* ── Descripción del producto ─────────────────── */}
+          <div className="vnd-card">
+            <div className="vnd-card-header">
+              <span className="vnd-card-title"><span className="vnd-card-title-dot" />📝 Descripción del producto</span>
+            </div>
+            <div className="vnd-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Descripción corta */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <label className="vnd-label">Descripción corta</label>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em', color: '#F5C518', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.25)', padding: '2px 8px', borderRadius: 999 }}>
+                    📌 Tarjetas y debajo del precio
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>
+                  Resumen breve — 1 ó 2 oraciones que convencen al comprador a primera vista
+                </span>
                 <textarea
                   className="vnd-input"
-                  placeholder="Describe el producto: características, materiales, garantía…"
+                  placeholder="Ej: Zapatillas ultralivianas con suela EVA, ideales para running y entrenamiento diario."
+                  value={form.shortDescription}
+                  onChange={e => update('shortDescription', e.target.value)}
+                  rows={3}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  maxLength={300}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: '0.68rem', color: form.shortDescription.length >= 280 ? '#f87171' : 'var(--vnd-text-muted)' }}>
+                    {form.shortDescription.length}/300
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: 'var(--vnd-border)' }} />
+
+              {/* Descripción larga */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <label className="vnd-label">Descripción detallada</label>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.03em', color: '#60a5fa', background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)', padding: '2px 8px', borderRadius: 999 }}>
+                    📄 Ficha completa del producto
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>
+                  Características, materiales, dimensiones, garantía y todo lo que el comprador necesita saber
+                </span>
+                <textarea
+                  className="vnd-input"
+                  placeholder="Ej: La mediasuela de EVA LIGHTSTRIKE ofrece resiliencia optimizada para cada pisada. El exterior está hecho de malla técnica suave, zonificada en áreas clave…"
                   value={form.description}
                   onChange={e => update('description', e.target.value)}
-                  rows={4}
-                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                  maxLength={800}
+                  rows={9}
+                  style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.65 }}
+                  maxLength={3000}
                 />
-              </FieldGroup>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: '0.68rem', color: form.description.length >= 2800 ? '#f87171' : 'var(--vnd-text-muted)' }}>
+                    {form.description.length}/3000
+                  </span>
+                </div>
+              </div>
+
             </div>
           </div>
 
