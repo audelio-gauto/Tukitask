@@ -14,10 +14,24 @@ type BotTone = 'informal' | 'formal' | 'agresivo' | 'amigable';
 type TimeoutAction = 'auto_counter' | 'auto_accept' | 'pressure_client';
 type NegotiationProfile = 'balanced' | 'high_close' | 'high_margin';
 
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sb: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb: any = new Proxy({}, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(_target, prop: string): any {
+    if (!_sb) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) {
+        throw new Error('Missing Supabase server env vars');
+      }
+      _sb = createClient(url, key);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (_sb as any)[prop];
+  },
+});
 
 function normalizeTone(input: unknown): BotTone {
   if (input === 'informal' || input === 'formal' || input === 'agresivo' || input === 'amigable') {
@@ -118,14 +132,16 @@ async function fallbackMessage(args: {
 
   // Intentar obtener variantes de DB (service role bypasea RLS)
   try {
-    const { data: rows } = await sb
+    const { data } = await sb
       .from('tukibot_messages')
       .select('texto')
       .eq('tipo', tipo)
       .eq('activo', true)
       .limit(20);
 
-    if (rows && rows.length > 0) {
+    const rows = (data ?? []) as Array<{ texto: string }>;
+
+    if (rows.length > 0) {
       // Elegir variante aleatoria
       const picked = rows[Math.floor(Math.random() * rows.length)];
       return applyMessageTemplate(picked.texto, {
@@ -571,7 +587,7 @@ export async function POST(req: Request) {
           .limit(3);
 
         if (rounds?.length) {
-          negotiationHistory = rounds.map((r) => ({
+          negotiationHistory = rounds.map((r: { buyer_offer?: unknown; counter_amount?: unknown; status?: unknown; created_at?: unknown }) => ({
             buyerOffer: Number(r.buyer_offer) || 0,
             counterAmount: r.counter_amount ? Number(r.counter_amount) : null,
             status: String(r.status || ''),
