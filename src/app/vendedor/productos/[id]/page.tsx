@@ -56,7 +56,7 @@ const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
 
 const EMPTY: ProductForm = {
   name: '', sku: '', category: 'electronica', type: 'physical',
-  shortDescription: '', description: '', price: '', floorPrice: '', stock: '',,
+  shortDescription: '', description: '', price: '', floorPrice: '', stock: '',
   image: '', gallery: [], status: 'draft',
   negotiable: true, hasTieredPricing: false, pricingTiers: [],
 };
