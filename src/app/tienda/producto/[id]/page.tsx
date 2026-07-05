@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
@@ -419,8 +420,18 @@ export default function ProductDetailPage() {
             {/* Imagen principal */}
             <div className="tnd-pdp2-gallery-main">
               {allImages.length > 0
-                ? <img src={allImages[galleryIdx] ?? allImages[0]} alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ? (
+                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <Image
+                      src={allImages[galleryIdx] ?? allImages[0]}
+                      alt={p.name}
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      unoptimized
+                      priority
+                    />
+                  </div>
+                )
                 : <span style={{ fontSize: '6rem' }}>📦</span>
               }
               {isNegotiable && (
@@ -447,17 +458,19 @@ export default function ProductDetailPage() {
               )}
             </div>
             {/* Miniaturas */}
-            {allImages.length > 1 && (
-              <div className="tnd-pdp2-thumbs">
-                {allImages.map((url, idx) => (
-                  <button key={url + idx}
-                    className={`tnd-pdp2-thumb${galleryIdx === idx ? ' active' : ''}`}
-                    onClick={() => setGalleryIdx(idx)}>
-                    <img src={url} alt={`Vista ${idx + 1}`} />
-                  </button>
-                ))}
-              </div>
-            )}
+              {allImages.length > 1 && (
+                <div className="tnd-pdp2-thumbs">
+                  {allImages.map((url, idx) => (
+                    <button key={url + idx}
+                      className={`tnd-pdp2-thumb${galleryIdx === idx ? ' active' : ''}`}
+                      onClick={() => setGalleryIdx(idx)}>
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <Image src={url} alt={`Vista ${idx + 1}`} fill style={{ objectFit: 'cover' }} unoptimized />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
 
           {/* ── Tabs de información (debajo de la galería en desktop) ── */}
@@ -470,6 +483,8 @@ export default function ProductDetailPage() {
                 { id: 'resenas',     label: '⭐ Reseñas' },
               ] as const).map(t => (
                 <button key={t.id} role="tab"
+                  id={`tab-${t.id}`}
+                  aria-controls={`panel-${t.id}`}
                   aria-selected={openSection === t.id}
                   className={`tnd-pdp2-tab${openSection === t.id ? ' active' : ''}`}
                   onClick={() => setOpenSection(t.id)}>
@@ -481,16 +496,16 @@ export default function ProductDetailPage() {
               {openSection === 'descripcion' && (
                 <div>
                   {p.short_description && (
-                    <p className="tnd-pdp2-short-desc">{p.short_description}</p>
+                    <p id={`panel-descripcion`} role="tabpanel" aria-labelledby={`tab-descripcion`} className="tnd-pdp2-short-desc">{p.short_description}</p>
                   )}
                   {p.description
-                    ? <p className="tnd-pdp2-long-desc">{p.description}</p>
-                    : !p.short_description && <p className="tnd-pdp2-long-desc" style={{ color: 'var(--tnd-text-muted)' }}>Sin descripción disponible.</p>
+                    ? <p id={`panel-descripcion-long`} role="tabpanel" aria-labelledby={`tab-descripcion`} className="tnd-pdp2-long-desc">{p.description}</p>
+                    : !p.short_description && <p id={`panel-descripcion-long`} role="tabpanel" aria-labelledby={`tab-descripcion`} className="tnd-pdp2-long-desc" style={{ color: 'var(--tnd-text-muted)' }}>Sin descripción disponible.</p>
                   }
                 </div>
               )}
               {openSection === 'envio' && (
-                <div className="tnd-pdp2-info-grid">
+                <div id={`panel-envio`} role="tabpanel" aria-labelledby={`tab-envio`} className="tnd-pdp2-info-grid">
                   <div className="tnd-pdp2-info-row"><span>Modalidad</span><strong>A coordinar con el vendedor</strong></div>
                   <div className="tnd-pdp2-info-row"><span>Cobertura</span><strong>Depende del vendedor</strong></div>
                   <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>A confirmar al comprar</strong></div>
@@ -500,7 +515,7 @@ export default function ProductDetailPage() {
                 </div>
               )}
               {openSection === 'garantias' && (
-                <ul className="tnd-pdp2-warranty">
+                <ul id={`panel-garantias`} role="tabpanel" aria-labelledby={`tab-garantias`} className="tnd-pdp2-warranty">
                   {[
                     'Comunicación directa con el vendedor ante cualquier inconveniente',
                     `Garantía sujeta a la política de ${vendorAlias}`,
@@ -514,7 +529,7 @@ export default function ProductDetailPage() {
                 </ul>
               )}
               {openSection === 'resenas' && (
-                <div className="tnd-pdp2-reviews-empty">
+                <div id={`panel-resenas`} role="tabpanel" aria-labelledby={`tab-resenas`} className="tnd-pdp2-reviews-empty">
                   <span style={{ fontSize: '2rem' }}>⭐</span>
                   <p>Aún no hay reseñas para este producto.</p>
                   <p style={{ fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>Sé el primero en comprarlo y dejar tu opinión.</p>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from './cart-context';
 import { authFetch } from '@/lib/authFetch';
 import { gs } from './data';
@@ -320,7 +321,11 @@ function TiendaPageInner() {
                   <Link key={offer.id} href={actionHref} className="tnd-offer-card-link">
                     <article className="tnd-market-offer-card">
                       <div className="tnd-market-offer-media">
-                        {offer.product_image ? <img src={offer.product_image} alt={offer.product_name || 'Oferta'} /> : <span>🛍️</span>}
+                        {offer.product_image ? (
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <Image src={offer.product_image} alt={offer.product_name || 'Oferta'} fill style={{ objectFit: 'cover' }} unoptimized />
+                          </div>
+                        ) : <span>🛍️</span>}
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -387,8 +392,11 @@ function TiendaPageInner() {
                   <div className="tnd-store-logo-wrap">
                     <div className="tnd-store-logo">
                       {v.logoImage
-                        ? <img src={v.logoImage} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
-                        : v.emoji}
+                        ? (
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <Image src={v.logoImage} alt={v.name} fill style={{ objectFit: 'cover', borderRadius: 'inherit' }} unoptimized />
+                          </div>
+                        ) : v.emoji}
                     </div>
                   </div>
                 </div>
@@ -421,8 +429,9 @@ function TiendaPageInner() {
                     style={{ background: 'linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))' }}
                   >
                     {p.image
-                      ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : p.emoji
+                      ? (
+                        <Image src={p.image} alt={p.name} fill style={{ objectFit: 'cover' }} unoptimized />
+                      ) : p.emoji
                     }
                     {p.floorPrice < p.price * 0.92 && (
                       <span className="tnd-negoable-badge">🤝 Neg.</span>
@@ -510,7 +519,7 @@ function TiendaPageInner() {
                   style={{ background: `linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))` }}
                 >
                   {p.image
-                    ? <img src={p.image} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Image src={p.image} alt={p.name} fill style={{ objectFit: 'cover' }} unoptimized />
                     : p.emoji
                   }
                   {p.floorPrice < p.price * 0.92 && vendorBotEnabledMap[p.vendorId] !== false && (

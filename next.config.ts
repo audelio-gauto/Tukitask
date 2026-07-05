@@ -41,6 +41,22 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve("."),
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.githubusercontent.com',
+      },
+    ],
+  },
   async rewrites() {
     return [
       // Combined service worker (PWA caching + FCM notifications)
