@@ -4011,6 +4011,34 @@
 .tnd-pdp2-seller:hover .tnd-pdp2-seller-arrow { transform: translateX(3px); }
 @media (max-width: 860px) { .tnd-pdp2-info-col { position: static; } }
 
+/* Featured (🔥 Productos más vendidos) — hide add button and set responsive counts
+   Shows 2 cards on mobile, 3 on tablet, and 5 on desktop (main tienda page only) */
+.tnd-main-page .tnd-featured-carousel .tnd-add-cart-btn {
+  display: none !important;
+}
+
+/* Override fixed width with container-based fractions so carousel shows N cards */
+.tnd-main-page .tnd-featured-carousel {
+  gap: 12px;
+}
+.tnd-main-page .tnd-featured-carousel .tnd-product-card {
+  flex-shrink: 0;
+  width: calc((100% - 12px) / 2); /* 2 cards on very small screens */
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tnd-main-page .tnd-featured-carousel .tnd-product-card {
+    width: calc((100% - 24px) / 3); /* 3 cards on tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .tnd-main-page .tnd-featured-carousel .tnd-product-card {
+    width: calc((100% - 48px) / 5); /* 5 cards on desktop */
+  }
+}
+
+
 /* Hide marketplace action UI on the main tienda listing only (visual-only) */
 .tnd-main-page .tnd-product-floor,
 .tnd-main-page .tnd-product-card-actions > .tnd-product-action,
