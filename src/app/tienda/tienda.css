@@ -4013,7 +4013,7 @@
 
 /* Featured (🔥 Productos más vendidos) — hide add button and set responsive counts
    Shows 2 cards on mobile, 3 on tablet, and 5 on desktop (main tienda page only) */
-.tnd-main-page .tnd-featured-carousel .tnd-add-cart-btn {
+.tnd-main-page .tnd-featured-carousel .tnd-product-action {
   display: none !important;
 }
 
