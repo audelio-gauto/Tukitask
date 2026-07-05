@@ -4010,3 +4010,15 @@
 .tnd-pdp2-seller-arrow { color: var(--tnd-text-muted); flex-shrink: 0; transition: transform 0.15s; }
 .tnd-pdp2-seller:hover .tnd-pdp2-seller-arrow { transform: translateX(3px); }
 @media (max-width: 860px) { .tnd-pdp2-info-col { position: static; } }
+
+/* Hide marketplace action UI on the main tienda listing only (visual-only) */
+.tnd-main-page .tnd-product-floor,
+.tnd-main-page .tnd-product-card-actions > .tnd-product-action,
+.tnd-main-page .tnd-product-card-actions > .tnd-add-cart-btn {
+  display: none !important;
+}
+
+/* Keep layout spacing intact when hiding actions */
+.tnd-main-page .tnd-product-card .tnd-product-body {
+  padding-bottom: 12px;
+}

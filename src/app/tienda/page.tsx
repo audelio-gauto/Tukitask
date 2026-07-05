@@ -298,7 +298,7 @@ function TiendaPageInner() {
   });
 
   return (
-    <div className="tnd-page">
+    <div className="tnd-page tnd-main-page">
 
       {myOffers.length > 0 && (
         <div>
