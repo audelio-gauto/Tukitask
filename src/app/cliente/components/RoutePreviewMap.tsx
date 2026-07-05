@@ -233,7 +233,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
         duration: 600,
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [ready, styleVersion, pickup.lat, pickup.lng, stops, routeCoords]);
 
 

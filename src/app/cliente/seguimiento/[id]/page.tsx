@@ -621,7 +621,7 @@ export default function SeguimientoPage() {
       console.error('[tracking] map effect error:', err);
     }
 
-  }, [order, driverLoc, mapReady, type, getToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order, driverLoc, mapReady, type, getToken]);  
 
   // ── Haversine ETA (separate from map, no loop risk) ─────────────────────
   useEffect(() => {
@@ -635,7 +635,7 @@ export default function SeguimientoPage() {
     const dLng = Number(driverLoc.lng);
     const distKm = haversineKm(dLat, dLng, destLat, destLng);
     setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
-  }, [driverLoc, order]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [driverLoc, order]);  
   useEffect(() => {
     if (id) {
       fetchOrder();

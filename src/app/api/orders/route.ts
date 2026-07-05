@@ -173,8 +173,8 @@ export async function GET(req: Request) {
     // Enrich with client profile info
     const raw = (fetched || []) as Record<string, unknown>[];
     const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
-    let profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
-    let orderCountMap: Record<string, number> = {};
+    const profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
+    const orderCountMap: Record<string, number> = {};
     if (emails.length > 0) {
       const [profilesRes, countRes] = await Promise.all([
         db.from('client_profiles').select('email, photo_url, avg_rating, is_verified').in('email', emails),
@@ -225,7 +225,7 @@ export async function GET(req: Request) {
     const driverEmails = [...new Set(
       (data as Record<string, unknown>[]).map(o => o.accepted_by as string).filter(Boolean)
     )];
-    let driverMap: Record<string, { name: string; photo: string | null; avg_rating: number | null; total_ratings: number | null }> = {};
+    const driverMap: Record<string, { name: string; photo: string | null; avg_rating: number | null; total_ratings: number | null }> = {};
     if (driverEmails.length > 0) {
       const { data: profiles } = await db
         .from('driver_profiles')

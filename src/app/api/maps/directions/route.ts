@@ -38,8 +38,8 @@ function decodePolyline(polyline: string): Array<[number, number]> {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
-  let from: any = body?.from
-  let to: any = body?.to
+  const from: any = body?.from
+  const to: any = body?.to
   if (!from || !to) return NextResponse.json({ error: 'missing from/to' }, { status: 400 })
 
   // accept objects {lat,lng} or arrays [lat,lng]

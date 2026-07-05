@@ -49,7 +49,7 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus[]>> = {
 };
 
 /* ── Helpers ────────────────────────────────────────────── */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
   const rawItems = (raw.items as Array<Record<string, unknown>>) ?? [];
   return {

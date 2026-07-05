@@ -45,7 +45,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let query = db
       .from('users')
       .select('id,email,role,created_at', { count: 'exact' })

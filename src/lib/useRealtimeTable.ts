@@ -56,7 +56,7 @@ export function useRealtimeTable(
     return () => {
       supabase.removeChannel(ch);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [channelName, table, opts.event, opts.filter, enabled]);
 }
 
@@ -109,6 +109,6 @@ export function useRealtimeMulti(
     return () => {
       supabase.removeChannel(ch);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [channelName, key, enabled]);
 }

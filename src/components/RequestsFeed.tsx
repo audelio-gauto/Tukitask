@@ -208,7 +208,7 @@ export default memo(function RequestsFeed({
     if (visibleLive.length === 0 && soundIvRef.current) {
       clearInterval(soundIvRef.current); soundIvRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [items, dismissed]);
 
   useEffect(() => () => {

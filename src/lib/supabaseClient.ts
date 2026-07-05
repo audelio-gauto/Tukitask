@@ -10,7 +10,7 @@ function getClient(): SupabaseClient {
 
 	if (!supabaseUrl || !supabaseAnonKey) {
 		const msg = 'Missing Supabase env vars: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY';
-		// eslint-disable-next-line no-console
+		 
 		console.error(msg, {
 			NEXT_PUBLIC_SUPABASE_URL: !!supabaseUrl,
 			NEXT_PUBLIC_SUPABASE_ANON_KEY: !!supabaseAnonKey,
@@ -23,7 +23,7 @@ function getClient(): SupabaseClient {
 }
 
 export const supabase = new Proxy({} as SupabaseClient, {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	 
 	get(_target, prop) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return (getClient() as any)[prop];

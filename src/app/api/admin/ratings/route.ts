@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [ratingsRes, recentRes] = await Promise.all([
       // All ratings in last 30 days
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

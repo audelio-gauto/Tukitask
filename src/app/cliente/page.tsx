@@ -728,7 +728,7 @@ export default function ClienteHomePage() {
     });
 
     return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [orders, jobs, email]);
 
   /* ─── Elapsed timer for searching state ────────────────────────────────── */

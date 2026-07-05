@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   const since7d  = new Date(Date.now() -  7 * 24 * 3600 * 1000).toISOString();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [recentOrdersRes, cancellationsRes, lowOfferRes] = await Promise.all([
       // All orders in last 30 days (status != cancelled) with a driver assigned
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

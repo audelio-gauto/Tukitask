@@ -158,7 +158,7 @@ function CheckoutInner() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setPaymentInfo(d); })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [items, vendorEmail]);
 
   useEffect(() => {

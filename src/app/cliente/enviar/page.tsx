@@ -178,7 +178,7 @@ export default function EnviarPaquetePage() {
       () => setPickupLoading(false),
       { enableHighAccuracy: true, timeout: 10000 },
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [orderType]);
 
   /** Fetch route via backend proxy (API key stays server-side) */
@@ -380,7 +380,7 @@ export default function EnviarPaquetePage() {
         setRouteDistanceMeters(null);
         setRouteDurationSec(null);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [form.pickupLat, form.pickupLng, deliveryLat, deliveryLng, stops]);
 
   const validatePromo = async () => {

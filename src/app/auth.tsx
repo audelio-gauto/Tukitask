@@ -67,7 +67,7 @@ export default function Auth() {
       const userEmail = (data?.user?.email || email).toLowerCase();
       try {
         let tries = 0;
-        let token = data.session?.access_token ?? '';
+        const token = data.session?.access_token ?? '';
         while (tries < 10) {
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user) break;
