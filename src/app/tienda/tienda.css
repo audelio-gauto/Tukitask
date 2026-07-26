@@ -3869,16 +3869,33 @@
    PDP v2 — REDISEÑO PROFESIONAL (Amazon / ML / Dokan style)
    ══════════════════════════════════════════════════════════════ */
 
-.tnd-pdp2-page { padding-top: 16px; }
+.tnd-pdp2-page {
+  padding-top: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
+}
 
-.tnd-pdp2-breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--tnd-text-muted); margin-bottom: 20px; flex-wrap: wrap; }
+.tnd-pdp2-breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--tnd-text-muted); margin-bottom: 20px; flex-wrap: wrap; width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .tnd-pdp2-bc-link { color: var(--tnd-accent); text-decoration: none; font-weight: 600; transition: color 0.15s; }
 .tnd-pdp2-bc-link:hover { color: var(--tnd-accent-hover); }
 .tnd-pdp2-bc-sep, .tnd-pdp2-bc-cur { color: var(--tnd-text-muted); }
 
-.tnd-pdp2-grid { display: grid; grid-template-columns: 55% 1fr; gap: 36px; align-items: start; }
+.tnd-pdp2-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 55%) minmax(0, 1fr);
+  gap: 36px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
 @media (max-width: 860px) { .tnd-pdp2-grid { grid-template-columns: 1fr; gap: 24px; } }
 
+.tnd-pdp2-gallery-col,
+.tnd-pdp2-info-col {
+  min-width: 0;
+}
 .tnd-pdp2-gallery-col { display: flex; flex-direction: column; gap: 28px; }
 .tnd-pdp2-gallery { display: flex; flex-direction: column; gap: 10px; }
 .tnd-pdp2-gallery-main { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 500px; border-radius: 20px; border: 1px solid var(--tnd-border); background: var(--tnd-surface); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); cursor: zoom-in; }
@@ -3904,8 +3921,8 @@
 .tnd-pdp2-tab:hover { color: var(--tnd-text-primary); }
 .tnd-pdp2-tab.active { color: var(--tnd-accent); border-bottom-color: var(--tnd-accent); background: var(--tnd-surface); }
 .tnd-pdp2-tab-panel { padding: 24px; min-height: 140px; }
-.tnd-pdp2-short-desc { font-size: 1rem; font-weight: 600; color: var(--tnd-text-primary); line-height: 1.6; margin: 0 0 14px; }
-.tnd-pdp2-long-desc { font-size: 0.9rem; color: var(--tnd-text-secondary); line-height: 1.8; margin: 0; white-space: pre-wrap; }
+.tnd-pdp2-short-desc { font-size: 1rem; font-weight: 600; color: var(--tnd-text-primary); line-height: 1.6; margin: 0 0 14px; overflow-wrap: anywhere; word-break: break-word; }
+.tnd-pdp2-long-desc { font-size: 0.9rem; color: var(--tnd-text-secondary); line-height: 1.8; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 .tnd-pdp2-info-grid { display: flex; flex-direction: column; gap: 0; }
 .tnd-pdp2-info-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--tnd-border); font-size: 0.88rem; color: var(--tnd-text-secondary); gap: 10px; }
 .tnd-pdp2-info-row:last-of-type { border-bottom: none; }
@@ -3919,9 +3936,9 @@
 @media (min-width: 861px) { .tnd-pdp2-info-col { position: sticky; top: 76px; } }
 .tnd-pdp2-cat-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 20px; background: rgba(245,197,24,0.1); border: 1px solid rgba(245,197,24,0.28); color: #a07000; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; width: fit-content; }
 [data-theme="dark"] .tnd-pdp2-cat-chip { color: #F5C518; }
-.tnd-pdp2-title { font-size: 1.55rem; font-weight: 900; color: var(--tnd-text-primary); line-height: 1.25; margin: 0; }
+.tnd-pdp2-title { font-size: 1.55rem; font-weight: 900; color: var(--tnd-text-primary); line-height: 1.25; margin: 0; overflow-wrap: anywhere; word-break: break-word; }
 @media (max-width: 639px) { .tnd-pdp2-title { font-size: 1.3rem; } }
-.tnd-pdp2-inline-short { font-size: 0.9rem; color: var(--tnd-text-secondary); line-height: 1.6; margin: -6px 0 0; }
+.tnd-pdp2-inline-short { font-size: 0.9rem; color: var(--tnd-text-secondary); line-height: 1.6; margin: -6px 0 0; overflow-wrap: anywhere; word-break: break-word; }
 .tnd-pdp2-price-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tnd-pdp2-price { font-size: 2.4rem; font-weight: 900; color: var(--tnd-accent); line-height: 1; letter-spacing: -0.01em; }
 @media (max-width: 639px) { .tnd-pdp2-price { font-size: 2rem; } }
