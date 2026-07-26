@@ -304,7 +304,7 @@ function TiendaPageInner() {
         <div>
           <div className="tnd-section-head">
             <div>
-              <h2 className="tnd-section-title">💬 Mis ofertas</h2>
+              <h2 className="tnd-section-title">Mis ofertas</h2>
               <p className="tnd-offers-subtitle">Retomá tus negociaciones activas y pagos pendientes.</p>
             </div>
             <Link href="/tienda/mis-ofertas" className="tnd-section-link">Ver todos</Link>
@@ -371,7 +371,7 @@ function TiendaPageInner() {
       {/* ── Tiendas destacadas (carousel) ── */}
       <div>
         <div className="tnd-section-head">
-          <h2 className="tnd-section-title">🏪 Tiendas destacadas</h2>
+          <h2 className="tnd-section-title">Tiendas destacadas</h2>
         </div>
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => storesRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
@@ -416,7 +416,7 @@ function TiendaPageInner() {
       {/* ── Productos más vendidos (carousel) ── */}
       <div>
         <div className="tnd-section-head">
-          <h2 className="tnd-section-title">🔥 Productos más vendidos</h2>
+          <h2 className="tnd-section-title">Productos más vendidos</h2>
         </div>
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => featuredRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
@@ -464,7 +464,7 @@ function TiendaPageInner() {
       {/* ── Productos ── */}
       <div id="productos-section">
         <div className="tnd-section-head">
-          <h2 className="tnd-section-title">📦 Explorar todos los productos</h2>
+          <h2 className="tnd-section-title">Explorar todos los productos</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
             {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
           </span>

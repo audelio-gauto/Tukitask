@@ -391,7 +391,7 @@ export default function VendorStorePage() {
         {activeCfg.showMasVendidos !== false && products.length >= 2 && (
           <div style={{ marginBottom: 32 }}>
             <div className="tnd-section-head" style={{ marginBottom: 16 }}>
-              <h2 className="tnd-section-title">{activeCfg.masVendidosTitle ?? '🔥 Productos más vendidos'}</h2>
+              <h2 className="tnd-section-title">{activeCfg.masVendidosTitle ?? 'Productos más vendidos'}</h2>
             </div>
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', alignItems: 'flex-end' }}>
               {products.slice(0, Math.min(4, products.length)).map((p, i) => {
