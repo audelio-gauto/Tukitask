@@ -345,6 +345,8 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 32px 24px 80px;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 @media (max-width: 1023px) {
   .tnd-page { padding: 20px 14px 80px; }
@@ -612,7 +614,7 @@
   .tnd-stores-carousel .tnd-store-card,
   .tnd-featured-carousel .tnd-product-card,
   .tnd-offers-carousel .tnd-offer-card-link {
-    width: calc((100vw - 28px - 24px) / 3);
+    width: calc((100% - 24px) / 3);
   }
 }
 
@@ -623,7 +625,7 @@
   .tnd-stores-carousel .tnd-store-card,
   .tnd-featured-carousel .tnd-product-card,
   .tnd-offers-carousel .tnd-offer-card-link {
-    width: calc((100vw - 16px - 10px) / 2);
+    width: calc((100% - 10px) / 2);
   }
 }
 
