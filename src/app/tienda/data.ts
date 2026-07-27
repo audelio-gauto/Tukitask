@@ -1,6 +1,6 @@
 /* ── TukiMarket — shared utilities ───────────────────────── */
 
-export const gs = (n: number) => `Gs. ${n.toLocaleString('es-PY')}`;
+export const gs = (n: number | null | undefined) => `Gs. ${(n ?? 0).toLocaleString('es-PY')}`;
 
 export const PY_CITIES = [
   'Asunción','Fernando de la Mora','Lambaré','Luque','San Lorenzo',
