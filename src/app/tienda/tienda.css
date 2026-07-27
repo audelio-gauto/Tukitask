@@ -2907,6 +2907,18 @@
   z-index: 1;
 }
 
+.tnd-buscar-product-img-link {
+  display: block;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.tnd-buscar-product-name-link {
+  text-decoration: none;
+  color: inherit;
+}
+.tnd-buscar-product-name-link:hover .tnd-buscar-product-name {
+  color: var(--tnd-accent);
+}
 .tnd-buscar-product-img {
   background: #f8fafc;
   display: flex;

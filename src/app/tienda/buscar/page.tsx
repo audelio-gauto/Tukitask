@@ -158,24 +158,28 @@ function BuscarInner() {
           </h2>
           <div className="tnd-buscar-grid">
             {filteredProducts.map(p => {
-              const disc = p.price > 0 ? Math.round((1 - p.floor_price / p.price) * 100) : 0;
+              const isNegotiable = p.floor_price > 0 && p.floor_price < p.price * 0.92;
               const isAdded = added[p.id];
               return (
                 <div key={p.id} className="tnd-buscar-product-card">
-                  {disc > 0 && <span className="tnd-buscar-product-disc">-{disc}%</span>}
-                  <div className="tnd-buscar-product-img">
-                    {p.image
-                      ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span>📦</span>
-                    }
-                  </div>
+                  {isNegotiable && <span className="tnd-buscar-product-disc">🤝 Neg.</span>}
+                  <Link href={`/tienda/producto/${p.id}`} className="tnd-buscar-product-img-link">
+                    <div className="tnd-buscar-product-img">
+                      {p.image
+                        ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span>📦</span>
+                      }
+                    </div>
+                  </Link>
                   <div className="tnd-buscar-product-body">
-                    <p className="tnd-buscar-product-vendor">{p.vendor_email}</p>
-                    <h3 className="tnd-buscar-product-name">{p.name}</h3>
+                    <p className="tnd-buscar-product-vendor">{p.vendor_email?.split('@')[0] || 'Tienda'}</p>
+                    <Link href={`/tienda/producto/${p.id}`} className="tnd-buscar-product-name-link">
+                      <h3 className="tnd-buscar-product-name">{p.name}</h3>
+                    </Link>
                     <div className="tnd-buscar-product-prices">
                       <span className="tnd-buscar-product-price">{gs(p.price)}</span>
-                      {p.floor_price < p.price && (
-                        <span className="tnd-buscar-product-orig">Oferta desde {gs(p.floor_price)}</span>
+                      {isNegotiable && (
+                        <span className="tnd-buscar-product-orig">Precio negociable</span>
                       )}
                     </div>
                     {p.stock <= 3 && p.stock > 0 && (
