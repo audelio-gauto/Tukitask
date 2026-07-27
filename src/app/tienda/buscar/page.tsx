@@ -128,26 +128,7 @@ function BuscarInner() {
         </div>
       )}
 
-      {/* ── Tiendas encontradas ────────────────────────────── */}
-      {matchedVendors.length > 0 && cat === 'Todos' && (
-        <section className="tnd-buscar-section">
-          <h2 className="tnd-buscar-section-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-            Tiendas
-          </h2>
-          <div className="tnd-buscar-vendors">
-            {matchedVendors.map(v => (
-              <Link key={v.id} href={`/tienda/${v.id}`} className="tnd-buscar-vendor-card" style={{ background: v.grad }}>
-                <span className="tnd-buscar-vendor-emoji">{v.emoji}</span>
-                <div className="tnd-buscar-vendor-info">
-                  <span className="tnd-buscar-vendor-name">{v.name}</span>
-                  <span className="tnd-buscar-vendor-cat">{v.category}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── Tiendas encontradas — oculto por decisión de producto ── */}
 
       {/* ── Products grid ──────────────────────────────────── */}
       {filteredProducts.length > 0 ? (
