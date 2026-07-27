@@ -275,8 +275,8 @@ function TiendaPageInner() {
   }
 
   const allProducts: DisplayProduct[] = dbProducts.map(p => ({
-    id: p.id, vendorName: vendorNames[p.vendor_id] || p.vendor_email.split('@')[0],
-    vendorId: p.vendor_id, vendorEmail: p.vendor_email,
+    id: p.id, vendorName: vendorNames[p.vendor_id] || (p.vendor_email?.split('@')[0] || 'Tienda'),
+    vendorId: p.vendor_id, vendorEmail: p.vendor_email || '',
     name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
     shortDescription: p.short_description,

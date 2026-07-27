@@ -69,7 +69,7 @@ function BuscarInner() {
     const cfg = storeConfigs.get(p.vendor_id);
     return {
       id: p.vendor_id,
-      name: (cfg?.storeName as string) || p.vendor_email.split('@')[0],
+      name: (cfg?.storeName as string) || (p.vendor_email?.split('@')[0] || 'Tienda'),
       emoji: (cfg?.logoEmoji as string) || '🏪',
       grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
       category: ((cfg?.categories as string[]))?.[1] || 'General',

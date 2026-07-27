@@ -94,7 +94,7 @@ export default function EditarProductoPage() {
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/auth/login'); return; }
+      if (!user) { router.push('/auth'); return; }
       setUserId(user.id);
 
       const { data } = await supabase

@@ -236,7 +236,8 @@ export default function ProductDetailPage() {
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
-  const vendorAlias = p.vendor_email.split('@')[0];
+  const vendorEmail = p.vendor_email || 'tienda@tukimarket.local';
+  const vendorAlias = vendorEmail.split('@')[0] || 'Tienda';
   const resultUnitAmount = done?.botResponse === 'countered'
     ? (done.counterAmount ?? done.amount ?? p.price)
     : (done?.amount ?? p.price);
@@ -251,7 +252,7 @@ export default function ProductDetailPage() {
       product: p.id,
       qty:     String(quantity),
       name:    p.name,
-      vendor:  p.vendor_email,
+      vendor:  vendorEmail,
       vid:     p.vendor_id,
     });
     router.push(`/tienda/checkout?${url.toString()}`);
@@ -284,7 +285,7 @@ export default function ProductDetailPage() {
       product: p.id,
       qty: String(quantity),
       name: p.name,
-      vendor: p.vendor_email,
+      vendor: vendorEmail,
       vid: p.vendor_id,
       price: String(negotiatedUnitPrice),
     });
