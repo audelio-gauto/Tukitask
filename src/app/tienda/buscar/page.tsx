@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { gs } from '../data';
 import { useCart } from '../cart-context';
-import { supabase } from '@/lib/supabaseClient';
+import type { DbProduct } from '@/types/market';
 
 /* ── Loader ──────────────────────────────────────────────── */
 function Spinner() {
@@ -24,12 +24,7 @@ function BuscarInner() {
   const [cat, setCat] = useState('Todos');
   const [added, setAdded] = useState<Record<string, boolean>>({});
 
-  type DbProduct = {
-    id: string; vendor_id: string; vendor_email: string; name: string;
-    category: string; price: number; floor_price: number; stock: number; image: string | null;
-  };
   const [dbProducts, setDbProducts] = useState<DbProduct[]>([]);
-  const [storeConfigs, setStoreConfigs] = useState<Map<string, Record<string, unknown>>>(new Map());
   const [loading, setLoading] = useState(false);
 
   /* Redirect if no query */
@@ -37,45 +32,30 @@ function BuscarInner() {
     if (!q) router.replace('/tienda');
   }, [q, router]);
 
-  /* Fetch real products from Supabase */
+  /* Fetch real products via API route (injection-safe, server-side) */
   useEffect(() => {
     if (!q) return;
+    const controller = new AbortController();
     const run = async () => {
       setLoading(true);
-      const { data: prods } = await supabase.from('products')
-        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image')
-        .eq('status', 'published')
-        .or(`name.ilike.%${q}%,category.ilike.%${q}%`)
-        .order('created_at', { ascending: false })
-        .limit(60);
-      const results = prods ?? [];
-      setDbProducts(results);
-      // Fetch store configs for display in vendor cards
-      const vendorIds = [...new Set(results.map(p => p.vendor_id))];
-      if (vendorIds.length > 0) {
-        const { data: configs } = await supabase.from('store_configs')
-          .select('vendor_id, config').in('vendor_id', vendorIds);
-        setStoreConfigs(new Map(
-          (configs ?? []).map(c => [c.vendor_id, c.config as Record<string, unknown>])
-        ));
+      try {
+        const res = await fetch(
+          `/api/tienda/products?q=${encodeURIComponent(q)}&limit=60`,
+          { signal: controller.signal },
+        );
+        const { products } = await res.json();
+        setDbProducts(products ?? []);
+      } catch {
+        // aborted or network error
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     run();
+    return () => controller.abort();
   }, [q]);
 
-  /* Derive unique vendor store cards from product results */
-  const matchedVendors = [...new Map(dbProducts.map(p => [p.vendor_id, p])).values()].map(p => {
-    const cfg = storeConfigs.get(p.vendor_id);
-    return {
-      id: p.vendor_id,
-      name: (cfg?.storeName as string) || (p.vendor_email?.split('@')[0] || 'Tienda'),
-      emoji: (cfg?.logoEmoji as string) || '🏪',
-      grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
-      category: ((cfg?.categories as string[]))?.[1] || 'General',
-    };
-  });
-
+  /* Derive unique vendor store cards from product results (hidden — kept for future use) */
   const filteredProducts = dbProducts.filter(p =>
     cat === 'Todos' || p.category === cat
   );

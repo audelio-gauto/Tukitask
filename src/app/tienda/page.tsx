@@ -7,6 +7,7 @@ import { useCart } from './cart-context';
 import { authFetch } from '@/lib/authFetch';
 import { gs } from './data';
 import { supabase } from '@/lib/supabaseClient';
+import type { DbProduct } from '@/types/market';
 
 /* ── Component ─────────────────────────────────────────────── */
 function TiendaPageInner() {
@@ -54,11 +55,7 @@ function TiendaPageInner() {
   // vendor_id → display name (storeName or email prefix)
   const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
 
-  const [dbProducts, setDbProducts] = useState<Array<{
-    id: string; vendor_id: string; vendor_email: string; name: string;
-    category: string; price: number; floor_price: number; stock: number;
-    image: string | null; short_description: string | null; negotiable: boolean;
-  }>>([]);
+  const [dbProducts, setDbProducts] = useState<DbProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
@@ -111,17 +108,13 @@ function TiendaPageInner() {
   /* fetch real published products */
   useEffect(() => {
     setProductsLoading(true);
-    supabase.from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, short_description, negotiable')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data }) => {
-        if (data) setDbProducts(data);
+    fetch('/api/tienda/products?limit=100')
+      .then(r => r.json())
+      .then(({ products }) => {
+        if (products) setDbProducts(products);
         setProductsLoading(false);
-      }, () => {
-        setProductsLoading(false);
-      });
+      })
+      .catch(() => setProductsLoading(false));
   }, []);
 
   useEffect(() => {

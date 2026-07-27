@@ -443,7 +443,7 @@ export default function PlantillasPage() {
       }
       // 2. Fallback to localStorage — auto-sync to Supabase so client store page gets real data
       try {
-        const raw = localStorage.getItem('tukimarket_template');
+        const raw = localStorage.getItem('tukimarket_template_mi-tienda');
         if (raw) {
           const parsed = applyOrder(JSON.parse(raw));
           setCfg(parsed);
@@ -496,7 +496,7 @@ export default function PlantillasPage() {
 
   async function handleSave() {
     try {
-      localStorage.setItem('tukimarket_template', JSON.stringify(cfg));
+      localStorage.setItem('tukimarket_template_mi-tienda', JSON.stringify(cfg));
       localStorage.setItem(`tukimarket_config_${cfg.storeSlug}`, JSON.stringify(cfg));
       // Save to Supabase so visitors can load vendor store branding by UUID
       const { data: { user } } = await supabase.auth.getUser();

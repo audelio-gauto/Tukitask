@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { gs } from '../data';
+import type { DbProduct } from '@/types/market';
 
 /* Inline type — mirrors StoreTemplateConfig from /vendedor/plantillas/page */
 interface StoreTemplateConfig {
@@ -98,11 +99,7 @@ export default function VendorStorePage() {
   const [activeCat, setActiveCat] = useState('Todos');
   const [search,    setSearch]    = useState('');
 
-  const [dbProducts, setDbProducts] = useState<Array<{
-    id: string; vendor_id: string; vendor_email: string; name: string;
-    category: string; price: number; floor_price: number; stock: number;
-    image: string | null; short_description: string | null; negotiable: boolean;
-  }>>([]);
+  const [dbProducts, setDbProducts] = useState<DbProduct[]>([]);
 
   const IS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(vendorId);
   const DEFAULT_CFG: StoreTemplateConfig = {
@@ -118,7 +115,7 @@ export default function VendorStorePage() {
       setLoadingStore(true);
       if (vendorId === 'mi-tienda') {
         try {
-          const raw = localStorage.getItem('tukimarket_template');
+          const raw = localStorage.getItem('tukimarket_template_mi-tienda');
           if (raw) {
             setCfg(JSON.parse(raw));
             setLoadingStore(false);
@@ -154,7 +151,7 @@ export default function VendorStorePage() {
     return () => controller.abort();
   }, [vendorId]);
 
-  /* fetch real published products for this vendor */
+  /* fetch real published products for this vendor via API route */
   useEffect(() => {
     const fetchVendorProducts = async () => {
       let uid = vendorId;
@@ -165,12 +162,11 @@ export default function VendorStorePage() {
       } else if (!IS_UUID) {
         return; // unknown slug — no products
       }
-      const { data } = await supabase.from('products')
-        .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, short_description, negotiable')
-        .eq('vendor_id', uid)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false });
-      if (data) setDbProducts(data);
+      const res = await fetch(`/api/tienda/products?vendor_id=${encodeURIComponent(uid)}&limit=100`);
+      if (res.ok) {
+        const { products } = await res.json();
+        if (products) setDbProducts(products);
+      }
     };
     fetchVendorProducts();
   }, [vendorId, IS_UUID]);

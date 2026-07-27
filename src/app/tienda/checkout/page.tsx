@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
 import { useCart } from '../cart-context';
-import { gs } from '../data';
+import { gs, PY_CITIES } from '../data';
 import type { CheckoutItem } from '@/app/api/tienda/checkout/route';
 
 const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false, loading: () => (
@@ -13,13 +13,6 @@ const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false, loading: ()
     Cargando mapa...
   </div>
 ) });
-
-const PY_CITIES = [
-  'Asunción','Fernando de la Mora','Lambaré','Luque','San Lorenzo',
-  'Capiatá','Villa Elisa','Ita','Itauguá','Ypané','Mariano Roque Alonso',
-  'Limpio','Areguá','Caacupé','Villarrica','Encarnación','Ciudad del Este',
-  'Pedro Juan Caballero','Concepción','Coronel Oviedo',
-];
 
 interface BillingForm {
   name: string;

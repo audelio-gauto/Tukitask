@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
+import { gs } from '../data';
 
 type OfferStatus = 'countered' | 'accepted_pending_payment';
 
@@ -32,8 +33,6 @@ type MessageRow = {
   message: string;
   created_at: string;
 };
-
-const gs = (n?: number | null) => `Gs. ${(n ?? 0).toLocaleString('es-PY')}`;
 
 export default function MisOfertasMarketplacePage() {
   const router = useRouter();
