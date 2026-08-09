@@ -38,6 +38,7 @@ interface ProductForm {
   pricingTiers:     PricingTier[];
   tagIds:           number[];
   attributeValues:  Record<number, number[]>;
+  warrantyDays:     string;
 }
 
 interface CatalogTaxonomy {
@@ -83,8 +84,7 @@ const INITIAL: ProductForm = {
   hasTieredPricing: false,
   pricingTiers:     [],
   tagIds:           [],
-  attributeValues:  {},
-};
+  attributeValues:  {},  warrantyDays:     '',};
 
 function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -372,6 +372,7 @@ export default function NuevoProductoPage() {
         attribute_id: Number(attributeId),
         value_ids: valueIds,
       })),
+      warranty_days: Number(form.warrantyDays) || 0,
     };
 
     const { error } = await supabase.from('products').insert(row);
@@ -935,6 +936,47 @@ export default function NuevoProductoPage() {
 
               {uploadError && (
                 <span style={{ color: '#f87171', fontSize: '0.78rem' }}>{uploadError}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Garantía */}
+          <div className="vnd-card">
+            <div className="vnd-card-header">
+              <span className="vnd-card-title"><span className="vnd-card-title-dot" />🛡️ Garantía</span>
+            </div>
+            <div className="vnd-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label className="vnd-label">Días de garantía <span style={{ color: 'var(--vnd-text-muted)', fontWeight: 400 }}>(opcional)</span></label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[0, 15, 30, 60, 90, 180, 365].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => update('warrantyDays', d === 0 ? '' : String(d))}
+                    style={{
+                      padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                      background: (d === 0 ? !form.warrantyDays : form.warrantyDays === String(d)) ? '#F5C518' : 'var(--vnd-bg-elevated)',
+                      color: (d === 0 ? !form.warrantyDays : form.warrantyDays === String(d)) ? '#1C1C2E' : 'var(--vnd-text-muted)',
+                      border: '1px solid var(--vnd-border)',
+                    }}
+                  >
+                    {d === 0 ? 'Sin garantía' : `${d} días`}
+                  </button>
+                ))}
+              </div>
+              <input
+                className="vnd-input"
+                type="number"
+                min="0"
+                max="3650"
+                placeholder="O escribí los días (ej: 45)"
+                value={form.warrantyDays}
+                onChange={e => update('warrantyDays', e.target.value)}
+              />
+              {form.warrantyDays && Number(form.warrantyDays) > 0 && (
+                <p style={{ fontSize: '0.73rem', color: '#4ade80', margin: 0 }}>
+                  ✓ Se mostrará &ldquo;Garantía de {form.warrantyDays} días&rdquo; en la ficha del producto
+                </p>
               )}
             </div>
           </div>

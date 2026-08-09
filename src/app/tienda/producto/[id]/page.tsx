@@ -61,6 +61,7 @@ type Product = {
   short_description: string | null;
   description: string | null;
   negotiable: boolean;
+  warranty_days: number | null;
 };
 
 const DEFAULT_NEG_PHRASES = [
@@ -170,7 +171,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, short_description, description, negotiable')
+      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, short_description, description, negotiable, warranty_days')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -597,18 +598,33 @@ export default function ProductDetailPage() {
                 </div>
               )}
               {openSection === 'garantias' && (
-                <ul id={`panel-garantias`} role="tabpanel" aria-labelledby={`tab-garantias`} className="tnd-pdp2-warranty">
-                  {[
-                    'Comunicación directa con el vendedor ante cualquier inconveniente',
-                    `Garantía sujeta a la política de ${vendorAlias}`,
-                    'Devoluciones coordinadas directamente entre comprador y vendedor',
-                  ].map((item, i) => (
-                    <li key={i} className="tnd-pdp2-warranty-item">
-                      <span className="tnd-pdp2-warranty-icon">✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <div id="panel-garantias" role="tabpanel" aria-labelledby="tab-garantias">
+                  {p?.warranty_days != null && p.warranty_days > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1.5px solid #86efac', borderRadius: 14, marginBottom: 14 }}>
+                      <span style={{ fontSize: '2rem', lineHeight: 1 }}>🛡️</span>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: '#15803d' }}>
+                          Garantía de {p.warranty_days} días
+                        </p>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#166534' }}>
+                          El vendedor ofrece {p.warranty_days} días de garantía en este producto
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <ul className="tnd-pdp2-warranty">
+                    {[
+                      'Comunicación directa con el vendedor ante cualquier inconveniente',
+                      `Garantía sujeta a la política de ${vendorAlias}`,
+                      'Devoluciones coordinadas directamente entre comprador y vendedor',
+                    ].map((item, i) => (
+                      <li key={i} className="tnd-pdp2-warranty-item">
+                        <span className="tnd-pdp2-warranty-icon">✓</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {openSection === 'resenas' && (
                 <div id="panel-resenas" role="tabpanel" aria-labelledby="tab-resenas">
