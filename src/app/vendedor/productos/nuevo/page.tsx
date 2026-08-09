@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
-type ProductType   = 'physical' | 'digital' | 'service';
 type TaxonomyType  = 'category' | 'brand' | 'attribute' | 'tag';
 
 /* Tramo de precio por cantidad */
@@ -24,7 +23,6 @@ interface ProductForm {
   sku: string;
   category: string;
   brandId: string;
-  type: ProductType;
   shortDescription: string;
   description: string;
   price: string;
@@ -60,18 +58,12 @@ interface AttributeValue {
   sort_order: number;
 }
 
-const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
-  { value: 'physical', label: '📦 Físico' },
-  { value: 'digital',  label: '💾 Digital' },
-  { value: 'service',  label: '🔧 Servicio' },
-];
 
 const INITIAL: ProductForm = {
   name:             '',
   sku:              '',
   category:         '',
   brandId:          '',
-  type:             'physical',
   shortDescription: '',
   description:      '',
   price:        '',
@@ -356,7 +348,7 @@ export default function NuevoProductoPage() {
       sku:           form.sku.trim() || null,
       category:      form.category,
       brand_id:      form.brandId ? Number(form.brandId) : null,
-      type:          form.type,
+      type:          'physical',
       short_description: form.shortDescription.trim() || null,
       description:   form.description.trim() || null,
       price:         Number(form.price),
@@ -435,11 +427,6 @@ export default function NuevoProductoPage() {
               </FieldGroup>
 
               <div className="vnd-form-grid">
-                <FieldGroup label="Tipo de producto">
-                  <select className="vnd-select" value={form.type} onChange={e => update('type', e.target.value as ProductType)}>
-                    {PRODUCT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </FieldGroup>
               </div>
 
               <FieldGroup label="SKU / Código" hint="Opcional — código interno de referencia">

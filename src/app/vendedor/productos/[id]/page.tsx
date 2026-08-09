@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
-type ProductType   = 'physical' | 'digital' | 'service';
 
 interface PricingTier {
   id:             string;
@@ -21,7 +20,6 @@ interface ProductForm {
   name:             string;
   sku:              string;
   category:         string;
-  type:             ProductType;
   shortDescription: string;
   description:      string;
   price:            string;
@@ -49,14 +47,9 @@ const CATEGORIES = [
   { value: 'otros',         label: '📦 Otros' },
 ];
 
-const PRODUCT_TYPES: { value: ProductType; label: string }[] = [
-  { value: 'physical', label: '📦 Físico' },
-  { value: 'digital',  label: '💾 Digital' },
-  { value: 'service',  label: '🔧 Servicio' },
-];
 
 const EMPTY: ProductForm = {
-  name: '', sku: '', category: 'electronica', type: 'physical',
+  name: '', sku: '', category: 'electronica',
   shortDescription: '', description: '', price: '', floorPrice: '', stock: '',
   image: '', gallery: [], status: 'draft',
   negotiable: true, hasTieredPricing: false, pricingTiers: [], warrantyDays: '',
@@ -122,7 +115,6 @@ export default function EditarProductoPage() {
         name:             data.name         ?? '',
         sku:              data.sku           ?? '',
         category:         data.category      ?? 'electronica',
-        type:             (data.type         ?? 'physical') as ProductType,
         description:      data.description   ?? '',
         shortDescription: data.short_description ?? '',
         price:            String(data.price   ?? ''),
@@ -258,7 +250,7 @@ export default function EditarProductoPage() {
       name:          form.name.trim(),
       sku:           form.sku.trim() || null,
       category:      form.category,
-      type:          form.type,
+      type:          'physical',
       short_description: form.shortDescription.trim() || null,
       description:   form.description.trim() || null,
       price:         Number(form.price),
@@ -360,11 +352,6 @@ export default function EditarProductoPage() {
                 <FieldGroup label="Categoría">
                   <select className="vnd-select" value={form.category} onChange={e => update('category', e.target.value)}>
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </FieldGroup>
-                <FieldGroup label="Tipo de producto">
-                  <select className="vnd-select" value={form.type} onChange={e => update('type', e.target.value as ProductType)}>
-                    {PRODUCT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </FieldGroup>
               </div>
