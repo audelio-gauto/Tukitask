@@ -109,6 +109,14 @@ type DoneState = {
   timeoutMessage?: string;
 };
 
+type Review = {
+  id: string;
+  buyer_email: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
@@ -131,6 +139,16 @@ export default function ProductDetailPage() {
   const [acceptingCounter, setAcceptingCounter] = useState(false);
   const [done,          setDone]          = useState<DoneState | null>(null);
   const [openSection,   setOpenSection]   = useState<string | null>('descripcion');
+
+  // ── Reviews state ──────────────────────────────────────────
+  const [reviews,          setReviews]          = useState<Review[]>([]);
+  const [reviewsLoading,   setReviewsLoading]   = useState(false);
+  const [userEmail,        setUserEmail]        = useState<string | null>(null);
+  const [reviewRating,     setReviewRating]     = useState(5);
+  const [reviewComment,    setReviewComment]    = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError,      setReviewError]      = useState<string | null>(null);
+  const [reviewDone,       setReviewDone]       = useState(false);
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -156,6 +174,24 @@ export default function ProductDetailPage() {
       .single()
       .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
   }, [id]);
+
+  // Get session email once (shared across reviews + offer flow)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+  }, []);
+
+  // Load reviews when tab is activated
+  useEffect(() => {
+    if (openSection !== 'resenas' || !p?.id) return;
+    setReviewsLoading(true);
+    fetch(`/api/tienda/reviews?product_id=${p.id}`)
+      .then(r => r.json())
+      .then(({ reviews: data }: { reviews?: Review[] }) => setReviews(data ?? []))
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false));
+  }, [openSection, p?.id]);
 
   useEffect(() => {
     if (animStep < 0) return;
@@ -393,6 +429,32 @@ export default function ProductDetailPage() {
     // setSubmitting(false) is handled by the animation useEffect at step 7
   }
 
+  async function handleReviewSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!p || !userEmail) return;
+    setReviewSubmitting(true);
+    setReviewError(null);
+    try {
+      const res = await authFetch('/api/tienda/reviews', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: p.id, rating: reviewRating, comment: reviewComment.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo enviar la reseña');
+      setReviewDone(true);
+      setReviewComment('');
+      // Refresh list
+      fetch(`/api/tienda/reviews?product_id=${p.id}`)
+        .then(r => r.json())
+        .then(({ reviews: data }: { reviews?: Review[] }) => setReviews(data ?? []))
+        .catch(() => {});
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Error inesperado');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
   function reset() {
     setDone(null); setMode('idle');
     setOfferAmount(''); setQuantity(1); setAnimStep(-1); setPendingResult(null);
@@ -530,10 +592,93 @@ export default function ProductDetailPage() {
                 </ul>
               )}
               {openSection === 'resenas' && (
-                <div id={`panel-resenas`} role="tabpanel" aria-labelledby={`tab-resenas`} className="tnd-pdp2-reviews-empty">
-                  <span style={{ fontSize: '2rem' }}>⭐</span>
-                  <p>Aún no hay reseñas para este producto.</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>Sé el primero en comprarlo y dejar tu opinión.</p>
+                <div id="panel-resenas" role="tabpanel" aria-labelledby="tab-resenas">
+
+                  {/* ── Success banner ── */}
+                  {reviewDone && (
+                    <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, marginBottom: 14, color: '#15803d', fontSize: '0.85rem', fontWeight: 600 }}>
+                      ✅ ¡Reseña publicada! Gracias por tu opinión.
+                    </div>
+                  )}
+
+                  {/* ── Write review form ── */}
+                  {userEmail && !reviewDone && !reviews.some(r => r.buyer_email === userEmail) && (
+                    <form onSubmit={handleReviewSubmit} style={{ marginBottom: 20, padding: '14px', background: 'var(--tnd-surface-2)', borderRadius: 12, border: '1px solid var(--tnd-border)' }}>
+                      <p style={{ margin: '0 0 10px', fontSize: '0.88rem', fontWeight: 700, color: 'var(--tnd-text-primary)' }}>
+                        Dejá tu reseña
+                      </p>
+                      {/* Star selector */}
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                        {[1,2,3,4,5].map(star => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.7rem', color: star <= reviewRating ? '#F5C518' : 'var(--tnd-border)', padding: 0, lineHeight: 1 }}
+                          >★</button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={reviewComment}
+                        onChange={e => setReviewComment(e.target.value)}
+                        placeholder="Contá tu experiencia con este producto (opcional)"
+                        maxLength={500}
+                        rows={3}
+                        style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--tnd-border)', background: 'var(--tnd-surface)', color: 'var(--tnd-text-primary)', fontSize: '0.85rem', resize: 'vertical', boxSizing: 'border-box' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--tnd-text-muted)' }}>{reviewComment.length}/500</span>
+                        <button
+                          type="submit"
+                          disabled={reviewSubmitting}
+                          style={{ padding: '7px 16px', background: 'var(--tnd-accent)', color: 'var(--tnd-accent-text)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.83rem', cursor: reviewSubmitting ? 'not-allowed' : 'pointer', opacity: reviewSubmitting ? 0.7 : 1 }}
+                        >
+                          {reviewSubmitting ? 'Enviando...' : 'Publicar reseña'}
+                        </button>
+                      </div>
+                      {reviewError && <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: '#ef4444' }}>{reviewError}</p>}
+                    </form>
+                  )}
+
+                  {/* ── Reviews list ── */}
+                  {reviewsLoading ? (
+                    <p style={{ textAlign: 'center', color: 'var(--tnd-text-muted)', padding: '20px 0', fontSize: '0.85rem' }}>Cargando reseñas...</p>
+                  ) : reviews.length === 0 ? (
+                    <div className="tnd-pdp2-reviews-empty">
+                      <span style={{ fontSize: '2rem' }}>⭐</span>
+                      <p>Aún no hay reseñas para este producto.</p>
+                      {!userEmail && <p style={{ fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>Iniciá sesión y comprá el producto para dejar tu opinión.</p>}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {reviews.map(review => {
+                        const parts = review.buyer_email.split('@');
+                        const maskedEmail = `${parts[0].slice(0, 3)}***@${parts[1] ?? ''}` ;
+                        const date = new Date(review.created_at).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', year: 'numeric' });
+                        return (
+                          <div key={review.id} style={{ padding: '12px 14px', background: 'var(--tnd-surface)', border: '1px solid var(--tnd-border)', borderRadius: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                              <div>
+                                <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                                  {[1,2,3,4,5].map(s => (
+                                    <span key={s} style={{ color: s <= review.rating ? '#F5C518' : 'var(--tnd-border)', fontSize: '0.9rem' }}>★</span>
+                                  ))}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--tnd-text-muted)' }}>{maskedEmail}</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--tnd-text-muted)', flexShrink: 0, marginLeft: 8 }}>{date}</span>
+                            </div>
+                            {review.comment && (
+                              <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: 'var(--tnd-text-primary)', lineHeight: 1.5 }}>
+                                {review.comment}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
