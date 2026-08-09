@@ -12,4 +12,6 @@ export interface DbProduct {
   image: string | null;
   short_description: string | null;
   negotiable: boolean;
+  avg_rating?: number | null;
+  review_count?: number;
 }

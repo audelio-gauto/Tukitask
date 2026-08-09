@@ -264,7 +264,7 @@ function TiendaPageInner() {
   interface DisplayProduct {
     id: string; vendorName: string; vendorId: string; vendorEmail: string; name: string; category: string;
     emoji: string; image?: string | null; price: number; floorPrice: number; stock: number;
-    shortDescription?: string | null;
+    shortDescription?: string | null; avgRating?: number | null; reviewCount?: number;
   }
 
   const allProducts: DisplayProduct[] = dbProducts.map(p => ({
@@ -272,7 +272,7 @@ function TiendaPageInner() {
     vendorId: p.vendor_id, vendorEmail: p.vendor_email || '',
     name: p.name, category: p.category,
     emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
-    shortDescription: p.short_description,
+    shortDescription: p.short_description, avgRating: p.avg_rating, reviewCount: p.review_count,
   }));
 
   const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
@@ -525,6 +525,15 @@ function TiendaPageInner() {
                   {p.shortDescription && (
                     <div style={{ fontSize: '0.74rem', color: 'var(--tnd-text-muted)', lineHeight: 1.45, minHeight: 32, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {p.shortDescription}
+                    </div>
+                  )}
+                  {p.avgRating != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, margin: '3px 0 4px' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <span key={s} style={{ color: s <= Math.round(p.avgRating!) ? '#F5C518' : '#d1d5db', fontSize: '0.72rem', lineHeight: 1 }}>★</span>
+                      ))}
+                      <span style={{ fontSize: '0.68rem', color: 'var(--tnd-text-muted)', marginLeft: 1 }}>{p.avgRating.toFixed(1)}</span>
+                      {(p.reviewCount ?? 0) > 0 && <span style={{ fontSize: '0.65rem', color: 'var(--tnd-text-muted)' }}>({p.reviewCount})</span>}
                     </div>
                   )}
                   <div className="tnd-product-price">{gs(p.price)}</div>

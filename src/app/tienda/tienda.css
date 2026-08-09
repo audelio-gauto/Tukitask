@@ -951,13 +951,13 @@
 
 .tnd-product-store  { font-size: 0.68rem; color: var(--tnd-text-muted); margin-bottom: 2px; }
 .tnd-product-name   { font-size: 0.88rem; font-weight: 700; color: var(--tnd-text-primary); margin-bottom: 5px; line-height: 1.3;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tnd-product-price  { font-size: 1rem; font-weight: 800; color: var(--tnd-accent); margin-bottom: 2px; }
 .tnd-product-floor  { font-size: 0.68rem; color: var(--tnd-text-muted); margin-bottom: 10px; }
 
 @media (max-width: 639px) {
   .tnd-product-store  { font-size: 0.62rem; }
-  .tnd-product-name   { font-size: 0.78rem; -webkit-line-clamp: 2; }
+  .tnd-product-name   { font-size: 0.78rem; -webkit-line-clamp: 2; line-clamp: 2; }
   .tnd-product-price  { font-size: 0.88rem; }
   .tnd-product-floor  { font-size: 0.62rem; margin-bottom: 8px; }
 }
@@ -2952,6 +2952,7 @@
   margin: 0 0 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.35;

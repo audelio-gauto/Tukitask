@@ -31,5 +31,36 @@ export async function GET(req: Request) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ products: data ?? [] });
+  // Enrich with avg_rating + review_count from product_reviews
+  const productIds = (data ?? []).map((p: { id: string }) => p.id);
+  const ratingsMap: Record<string, { avg: number; count: number }> = {};
+
+  if (productIds.length > 0) {
+    const { data: ratingsData } = await db
+      .from('product_reviews')
+      .select('product_id, rating')
+      .in('product_id', productIds);
+
+    if (ratingsData) {
+      const groups: Record<string, number[]> = {};
+      for (const r of ratingsData as { product_id: string; rating: number }[]) {
+        if (!groups[r.product_id]) groups[r.product_id] = [];
+        groups[r.product_id].push(r.rating);
+      }
+      for (const [pid, ratings] of Object.entries(groups)) {
+        ratingsMap[pid] = {
+          avg: ratings.reduce((s, r) => s + r, 0) / ratings.length,
+          count: ratings.length,
+        };
+      }
+    }
+  }
+
+  const products = (data ?? []).map((p: { id: string }) => ({
+    ...p,
+    avg_rating:   ratingsMap[p.id]?.avg   ?? null,
+    review_count: ratingsMap[p.id]?.count ?? 0,
+  }));
+
+  return NextResponse.json({ products });
 }

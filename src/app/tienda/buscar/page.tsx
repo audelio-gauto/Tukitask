@@ -137,6 +137,15 @@ function BuscarInner() {
                     <Link href={`/tienda/producto/${p.id}`} className="tnd-buscar-product-name-link">
                       <h3 className="tnd-buscar-product-name">{p.name}</h3>
                     </Link>
+                    {p.avg_rating != null && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 4 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <span key={s} style={{ color: s <= Math.round(p.avg_rating!) ? '#F5C518' : '#d1d5db', fontSize: '0.72rem', lineHeight: 1 }}>★</span>
+                        ))}
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', marginLeft: 1 }}>{p.avg_rating.toFixed(1)}</span>
+                        {(p.review_count ?? 0) > 0 && <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>({p.review_count})</span>}
+                      </div>
+                    )}
                     <div className="tnd-buscar-product-prices">
                       <span className="tnd-buscar-product-price">{gs(p.price)}</span>
                       {isNegotiable && (
