@@ -58,9 +58,9 @@ export async function POST(req: Request) {
     .eq('client_email', user.email)
     .neq('status', 'cancelled');
 
-  const hasPurchased = (orders ?? []).some(order =>
+  const hasPurchased = (orders ?? []).some((order: { items: unknown }) =>
     Array.isArray(order.items) &&
-    order.items.some((item: { productId?: string }) => item.productId === product_id)
+    (order.items as { productId?: string }[]).some(item => item.productId === product_id)
   );
 
   if (!hasPurchased) {
