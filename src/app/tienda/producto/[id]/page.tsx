@@ -555,8 +555,8 @@ export default function ProductDetailPage() {
                 </div>
               )}
           </div>
-
-          {/* ── Tabs de información (debajo de la galería en desktop) ── */}
+        </div>
+        {/* ── COL A row 2: Tabs (desktop: bajo galería / móvil: tras compartir) ── */}
           <div className="tnd-pdp2-tabs-section">
             <div className="tnd-pdp2-tabs" role="tablist">
               {([
@@ -719,7 +719,6 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
-        </div>
 
         {/* ── COL B: Info + Acciones ── */}
         <div className="tnd-pdp2-info-col">
