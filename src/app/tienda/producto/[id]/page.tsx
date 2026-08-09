@@ -144,6 +144,8 @@ export default function ProductDetailPage() {
   const [reviews,          setReviews]          = useState<Review[]>([]);
   const [reviewsLoading,   setReviewsLoading]   = useState(false);
   const [userEmail,        setUserEmail]        = useState<string | null>(null);
+  const [vendorStoreName,  setVendorStoreName]  = useState<string | null>(null);
+  const [linkCopied,       setLinkCopied]       = useState(false);
   const [reviewRating,     setReviewRating]     = useState(5);
   const [reviewComment,    setReviewComment]    = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -182,16 +184,30 @@ export default function ProductDetailPage() {
     });
   }, []);
 
-  // Load reviews when tab is activated
+  // Load reviews on product mount — used for avg rating widget + tab count + tab panel
   useEffect(() => {
-    if (openSection !== 'resenas' || !p?.id) return;
+    if (!p?.id) return;
     setReviewsLoading(true);
     fetch(`/api/tienda/reviews?product_id=${p.id}`)
       .then(r => r.json())
       .then(({ reviews: data }: { reviews?: Review[] }) => setReviews(data ?? []))
       .catch(() => {})
       .finally(() => setReviewsLoading(false));
-  }, [openSection, p?.id]);
+  }, [p?.id]);
+
+  // Fetch vendor store name for breadcrumb
+  useEffect(() => {
+    if (!p?.vendor_id) return;
+    supabase
+      .from('store_configs')
+      .select('config')
+      .eq('vendor_id', p.vendor_id)
+      .single()
+      .then(({ data }) => {
+        const cfg = data?.config as { storeName?: string } | null;
+        if (cfg?.storeName) setVendorStoreName(cfg.storeName);
+      });
+  }, [p?.vendor_id]);
 
   useEffect(() => {
     if (animStep < 0) return;
@@ -273,7 +289,10 @@ export default function ProductDetailPage() {
   const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
   const vendorEmail = p.vendor_email || 'tienda@tukimarket.local';
-  const vendorAlias = vendorEmail.split('@')[0] || 'Tienda';
+  const vendorAlias = vendorStoreName ?? (vendorEmail.split('@')[0] || 'Tienda');
+  const avgRating   = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : null;
   const resultUnitAmount = done?.botResponse === 'countered'
     ? (done.counterAmount ?? done.amount ?? p.price)
     : (done?.amount ?? p.price);
@@ -467,7 +486,7 @@ export default function ProductDetailPage() {
       <nav className="tnd-pdp2-breadcrumb" aria-label="Navegación">
         <Link href="/tienda" className="tnd-pdp2-bc-link">TukiMarket</Link>
         <span className="tnd-pdp2-bc-sep">›</span>
-        <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp2-bc-link">{vendorAlias}</Link>
+        <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp2-bc-link">{vendorStoreName ?? vendorAlias}</Link>
         <span className="tnd-pdp2-bc-sep">›</span>
         <span className="tnd-pdp2-bc-cur">{p.category}</span>
         <span className="tnd-pdp2-bc-sep">›</span>
@@ -543,7 +562,7 @@ export default function ProductDetailPage() {
                 { id: 'descripcion', label: 'Descripción' },
                 { id: 'envio',       label: '🚚 Envío' },
                 { id: 'garantias',   label: '🛡️ Garantía' },
-                { id: 'resenas',     label: '⭐ Reseñas' },
+                { id: 'resenas',     label: reviews.length > 0 ? `⭐ Reseñas (${reviews.length})` : '⭐ Reseñas' },
               ] as const).map(t => (
                 <button key={t.id} role="tab"
                   id={`tab-${t.id}`}
@@ -638,6 +657,7 @@ export default function ProductDetailPage() {
                         </button>
                       </div>
                       {reviewError && <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: '#ef4444' }}>{reviewError}</p>}
+                      <p style={{ margin: '10px 0 0', fontSize: '0.72rem', color: 'var(--tnd-text-muted)' }}>⚠️ Solo compradores verificados pueden publicar reseñas</p>
                     </form>
                   )}
 
@@ -695,6 +715,22 @@ export default function ProductDetailPage() {
           {/* Descripción corta inline (visible arriba del precio) */}
           {p.short_description && (
             <p className="tnd-pdp2-inline-short">{p.short_description}</p>
+          )}
+
+          {/* Rating promedio */}
+          {avgRating !== null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '-4px 0 8px' }}>
+              {[1,2,3,4,5].map(s => (
+                <span key={s} style={{ color: s <= Math.round(avgRating) ? '#F5C518' : 'var(--tnd-border)', fontSize: '0.95rem', lineHeight: 1 }}>★</span>
+              ))}
+              <span style={{ fontSize: '0.83rem', fontWeight: 700, color: 'var(--tnd-text-primary)', marginLeft: 2 }}>{avgRating.toFixed(1)}</span>
+              <button
+                onClick={() => setOpenSection('resenas')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--tnd-text-muted)', textDecoration: 'underline', padding: 0 }}
+              >
+                ({reviews.length} {reviews.length === 1 ? 'reseña' : 'reseñas'})
+              </button>
+            </div>
           )}
 
           {/* Precio */}
@@ -916,6 +952,19 @@ export default function ProductDetailPage() {
               <span>💬</span> Soporte directo
             </div>
           </div>
+
+          {/* ── Compartir ── */}
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href).then(() => {
+                setLinkCopied(true);
+                setTimeout(() => setLinkCopied(false), 2000);
+              }).catch(() => {});
+            }}
+            style={{ width: '100%', marginTop: 6, padding: '9px 14px', background: 'transparent', border: '1px solid var(--tnd-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer', fontSize: '0.83rem', color: linkCopied ? '#16a34a' : 'var(--tnd-text-muted)', fontWeight: 600, transition: 'color 0.2s' }}
+          >
+            {linkCopied ? '✅ ¡Enlace copiado!' : '🔗 Compartir producto'}
+          </button>
 
           {/* ── Tarjeta vendedor ── */}
           <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp2-seller">
