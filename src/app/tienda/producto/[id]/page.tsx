@@ -146,6 +146,7 @@ export default function ProductDetailPage() {
   const [reviewsLoading,   setReviewsLoading]   = useState(false);
   const [userEmail,        setUserEmail]        = useState<string | null>(null);
   const [vendorStoreName,  setVendorStoreName]  = useState<string | null>(null);
+  const [vendorLogo,       setVendorLogo]       = useState<string | null>(null);
   const [linkCopied,       setLinkCopied]       = useState(false);
   const [reviewRating,     setReviewRating]     = useState(5);
   const [reviewComment,    setReviewComment]    = useState('');
@@ -223,18 +224,37 @@ export default function ProductDetailPage() {
       .finally(() => setReviewsLoading(false));
   }, [p?.id]);
 
-  // Fetch vendor store name for breadcrumb
+  // Fetch vendor store branding for breadcrumb + seller card logo
   useEffect(() => {
     if (!p?.vendor_id) return;
-    supabase
-      .from('store_configs')
-      .select('config')
-      .eq('vendor_id', p.vendor_id)
-      .single()
-      .then(({ data }) => {
-        const cfg = data?.config as { storeName?: string } | null;
+
+    const loadVendorBranding = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('store_configs')
+          .select('config')
+          .eq('vendor_id', p.vendor_id)
+          .single();
+
+        if (error) {
+          setVendorStoreName(null);
+          setVendorLogo(null);
+          return;
+        }
+
+        const cfg = data?.config as { storeName?: string; logoImage?: string } | null;
         if (cfg?.storeName) setVendorStoreName(cfg.storeName);
-      });
+        else setVendorStoreName(null);
+
+        if (cfg?.logoImage) setVendorLogo(cfg.logoImage);
+        else setVendorLogo(null);
+      } catch {
+        setVendorStoreName(null);
+        setVendorLogo(null);
+      }
+    };
+
+    void loadVendorBranding();
   }, [p?.vendor_id]);
 
   useEffect(() => {
@@ -1010,8 +1030,12 @@ export default function ProductDetailPage() {
 
           {/* ── Tarjeta vendedor ── */}
           <Link href={`/tienda/${p.vendor_id}`} className="tnd-pdp2-seller">
-            <div className="tnd-pdp2-seller-avatar">
-              {vendorAlias.charAt(0).toUpperCase()}
+            <div className="tnd-pdp2-seller-avatar" style={vendorLogo ? { overflow: 'hidden', background: '#fff' } : undefined}>
+              {vendorLogo ? (
+                <img src={vendorLogo} alt={vendorAlias} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                vendorAlias.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="tnd-pdp2-seller-info">
               <span className="tnd-pdp2-seller-label">Vendido por</span>
