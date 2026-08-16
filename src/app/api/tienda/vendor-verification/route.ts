@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
   const { data: vendor, error: vendorError } = await sbAdmin()
     .from('users')
-    .select('id, email')
+    .select('id, email, verification_status, is_active')
     .eq('id', vendorId)
     .maybeSingle();
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   }
 
   type VendorDocRow = { doc_type: string; status?: string | null };
-  const docRows = (docs ?? []) as VendorDocRow[];
+  const docRows: VendorDocRow[] = Array.isArray(docs) ? (docs as VendorDocRow[]) : [];
   const approvedMap = new Map<string, string | null>();
   for (const doc of docRows) {
     if (typeof doc.doc_type === 'string') {
@@ -41,17 +41,22 @@ export async function GET(req: Request) {
   }
 
   const missingDocs = REQUIRED_VENDOR_DOCS.filter((doc) => approvedMap.get(doc) !== 'approved');
-  const blocked = docRows.length === 0 || missingDocs.length > 0 || docRows.some((doc) => {
+  const hasRejected = docRows.some((doc: VendorDocRow) => REQUIRED_VENDOR_DOCS.includes(doc.doc_type) && doc.status === 'rejected');
+  const isApprovedByFlag = vendor.verification_status === 'approved' || vendor.is_active === true;
+  const blockedByDocs = docRows.length === 0 || missingDocs.length > 0 || docRows.some((doc: VendorDocRow) => {
     const isRequired = REQUIRED_VENDOR_DOCS.includes(doc.doc_type);
     return isRequired && doc.status !== 'approved';
   });
+  const blocked = !isApprovedByFlag && blockedByDocs;
 
   return NextResponse.json({
     blocked,
     vendor_email: vendor.email,
+    verification_status: vendor.verification_status ?? (isApprovedByFlag ? 'approved' : blockedByDocs ? 'pending' : 'approved'),
     required_docs: REQUIRED_VENDOR_DOCS,
     approved_docs: REQUIRED_VENDOR_DOCS.filter((doc) => approvedMap.get(doc) === 'approved'),
     missing_docs: missingDocs,
+    has_rejected: hasRejected,
     docs: docRows,
     message: blocked
       ? 'La tienda está en verificación pendiente. Cuando todos los documentos sean aprobados, podrá volver a publicarse.'

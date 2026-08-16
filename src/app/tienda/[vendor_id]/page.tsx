@@ -126,9 +126,9 @@ export default function VendorStorePage() {
         } catch { /* ignore */ }
         setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
       } else if (IS_UUID) {
-        const { data } = await supabase
-          .from('store_configs').select('config').eq('vendor_id', vendorId).single();
-        if (data?.config) {
+        const { data, error } = await supabase
+          .from('store_configs').select('config').eq('vendor_id', vendorId).maybeSingle();
+        if (!error && data?.config) {
           setCfg(data.config as StoreTemplateConfig);
           setLoadingStore(false);
           return;

@@ -169,13 +169,40 @@ export default function ProductDetailPage() {
   }, []);
 
   useEffect(() => {
-    supabase
-      .from('products')
-      .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, short_description, description, negotiable, warranty_days')
-      .eq('id', id)
-      .eq('status', 'published')
-      .single()
-      .then(({ data }) => { setP(data ?? null); setGalleryIdx(0); });
+    let isActive = true;
+
+    const loadProduct = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, vendor_id, vendor_email, name, category, price, floor_price, stock, image, gallery, short_description, description, negotiable, warranty_days')
+          .eq('id', id)
+          .eq('status', 'published')
+          .maybeSingle();
+
+        if (!isActive) return;
+
+        if (error) {
+          setP(null);
+          setGalleryIdx(0);
+          return;
+        }
+
+        setP(data ?? null);
+        setGalleryIdx(0);
+      } catch {
+        if (isActive) {
+          setP(null);
+          setGalleryIdx(0);
+        }
+      }
+    };
+
+    void loadProduct();
+
+    return () => {
+      isActive = false;
+    };
   }, [id]);
 
   // Get session email once (shared across reviews + offer flow)
