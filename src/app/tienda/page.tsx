@@ -193,56 +193,73 @@ function TiendaPageInner() {
   useEffect(() => {
     const fetchVendors = async () => {
       setVendorsLoading(true);
-      // Derive vendors directly from published products — no dependency on users.role
-      const { data: prods } = await supabase
-        .from('products')
-        .select('vendor_id, vendor_email')
-        .eq('status', 'published');
-      if (!prods?.length) {
-        setVendorsLoading(false);
-        return;
-      }
 
-      const countMap: Record<string, number> = {};
-      const emailMap: Record<string, string> = {};
-      prods.forEach(p => {
-        countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1;
-        emailMap[p.vendor_id] = p.vendor_email;
-      });
-      const ids = Object.keys(countMap).filter((id) => !blockedVendorIds.has(id));
+      try {
+        const { data: prods } = await supabase
+          .from('products')
+          .select('vendor_id, vendor_email')
+          .eq('status', 'published');
 
-      // Enrich with store_configs if table exists (graceful fallback)
-      let cfgMap = new Map<string, Record<string, unknown>>();
-      const { data: configs } = await supabase
-        .from('store_configs').select('vendor_id, config').in('vendor_id', ids);
-      if (configs) cfgMap = new Map(configs.map(c => [c.vendor_id, c.config as Record<string, unknown>]));
+        if (!prods?.length) {
+          setRealVendors([]);
+          setVendorNames({});
+          setVendorsLoading(false);
+          return;
+        }
 
-      // Build display-name map for use in product cards too
-      const nameMap: Record<string, string> = {};
-      ids.forEach(id => {
-        const cfg = cfgMap.get(id);
-        nameMap[id] = (cfg?.storeName as string) || emailMap[id].split('@')[0];
-      });
-      setVendorNames(nameMap);
+        const countMap: Record<string, number> = {};
+        const emailMap: Record<string, string> = {};
+        prods.forEach(p => {
+          countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1;
+          emailMap[p.vendor_id] = p.vendor_email;
+        });
+        const ids = Object.keys(countMap).filter((id) => !blockedVendorIds.has(id));
 
-      setRealVendors(
-        ids.map(id => {
+        let cfgMap = new Map<string, Record<string, unknown>>();
+        try {
+          const { data: configs } = await Promise.race([
+            supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
+            new Promise((resolve) => setTimeout(() => resolve({ data: null, error: null }), 600)),
+          ]);
+
+          if (configs && Array.isArray(configs)) {
+            cfgMap = new Map(configs.map((c: any) => [c.vendor_id, c.config as Record<string, unknown>]));
+          }
+        } catch {
+          cfgMap = new Map();
+        }
+
+        const nameMap: Record<string, string> = {};
+        ids.forEach(id => {
           const cfg = cfgMap.get(id);
-          return {
-            id,
-            name: nameMap[id],
-            emoji: (cfg?.logoEmoji as string) || '🏪',
-            grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
-            category: ((cfg?.categories as string[]))?.[1] || 'General',
-            productCount: countMap[id] ?? 0,
-            logoImage: (cfg?.logoImage as string) || undefined,
-            coverImage: (cfg?.heroCoverImage as string) || undefined,
-          };
-        })
-      );
-      setVendorsLoading(false);
+          nameMap[id] = (cfg?.storeName as string) || (emailMap[id]?.split('@')[0] ?? 'Tienda');
+        });
+        setVendorNames(nameMap);
+
+        setRealVendors(
+          ids.map(id => {
+            const cfg = cfgMap.get(id);
+            return {
+              id,
+              name: nameMap[id],
+              emoji: (cfg?.logoEmoji as string) || '🏪',
+              grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
+              category: ((cfg?.categories as string[]))?.[1] || 'General',
+              productCount: countMap[id] ?? 0,
+              logoImage: (cfg?.logoImage as string) || undefined,
+              coverImage: (cfg?.heroCoverImage as string) || undefined,
+            };
+          })
+        );
+      } catch {
+        setRealVendors([]);
+        setVendorNames({});
+      } finally {
+        setVendorsLoading(false);
+      }
     };
-    fetchVendors().catch(() => setVendorsLoading(false));
+
+    fetchVendors();
   }, [blockedVendorIds]);
 
   /* sync URL → local state */

@@ -115,6 +115,7 @@ export default function VendorStorePage() {
   useEffect(() => {
     const loadConfig = async () => {
       setLoadingStore(true);
+
       if (vendorId === 'mi-tienda') {
         try {
           const raw = localStorage.getItem('tukimarket_template_mi-tienda');
@@ -124,21 +125,50 @@ export default function VendorStorePage() {
             return;
           }
         } catch { /* ignore */ }
+
         setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
-      } else if (IS_UUID) {
+        setLoadingStore(false);
+        return;
+      }
+
+      if (!IS_UUID) {
+        setCfg(null);
+        setLoadingStore(false);
+        return;
+      }
+
+      const fallbackToDefault = () => {
+        setCfg(DEFAULT_CFG);
+        setLoadingStore(false);
+      };
+
+      let timeoutId: number | undefined;
+      timeoutId = window.setTimeout(fallbackToDefault, 700);
+
+      try {
         const { data, error } = await supabase
-          .from('store_configs').select('config').eq('vendor_id', vendorId).maybeSingle();
+          .from('store_configs')
+          .select('config')
+          .eq('vendor_id', vendorId)
+          .maybeSingle();
+
+        if (timeoutId) window.clearTimeout(timeoutId);
+
         if (!error && data?.config) {
           setCfg(data.config as StoreTemplateConfig);
           setLoadingStore(false);
           return;
         }
+
         setCfg(DEFAULT_CFG);
-      } else {
-        setCfg(null); // unknown slug — show "not found"
+      } catch {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        setCfg(DEFAULT_CFG);
+      } finally {
+        setLoadingStore(false);
       }
-      setLoadingStore(false);
     };
+
     loadConfig().catch(() => setLoadingStore(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
