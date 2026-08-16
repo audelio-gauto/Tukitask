@@ -10,11 +10,13 @@ const VEHICLE_PREFIXES    = ['moto', 'auto', 'moto_carro', 'camion'];
 const VEHICLE_DOC_KEYS    = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
 const VALID_TECNICO_DOCS  = ['selfie_cedula', 'cedula_frente', 'antecedentes', 'domicilio'];
 export const VALID_CLIENT_DOCS  = ['selfie_cedula', 'cedula_frente'];
+export const VALID_VENDOR_DOCS  = ['cedula_frente', 'ruc_documento', 'constancia_bancaria', 'registro_comercial'];
 
 /** Returns true for any doc_type that is still valid (not deprecated) */
 function isCurrentDocType(doc_type: string, role: string): boolean {
-  if (role === 'tecnico') return VALID_TECNICO_DOCS.includes(doc_type);
-  if (role === 'client')  return VALID_CLIENT_DOCS.includes(doc_type);
+  if (role === 'tecnico')  return VALID_TECNICO_DOCS.includes(doc_type);
+  if (role === 'client')   return VALID_CLIENT_DOCS.includes(doc_type);
+  if (role === 'vendedor') return VALID_VENDOR_DOCS.includes(doc_type);
   return isValidDriverDoc(doc_type);
 }
 
@@ -98,8 +100,9 @@ export async function POST(req: Request) {
     }
 
     // Validar tipo de documento según el rol
-    const isValid = role === 'tecnico' ? VALID_TECNICO_DOCS.includes(doc_type)
-      : role === 'client' ? VALID_CLIENT_DOCS.includes(doc_type)
+    const isValid = role === 'tecnico'  ? VALID_TECNICO_DOCS.includes(doc_type)
+      : role === 'client'   ? VALID_CLIENT_DOCS.includes(doc_type)
+      : role === 'vendedor' ? VALID_VENDOR_DOCS.includes(doc_type)
       : isValidDriverDoc(doc_type);
     if (!isValid) {
       return NextResponse.json({ error: 'Tipo de documento inválido' }, { status: 400 });

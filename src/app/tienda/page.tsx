@@ -59,6 +59,7 @@ function TiendaPageInner() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
+  const [blockedVendorIds, setBlockedVendorIds] = useState<Set<string>>(new Set());
   const [myOffers, setMyOffers] = useState<MarketNegotiation[]>([]);
   const [chatOffer, setChatOffer] = useState<MarketNegotiation | null>(null);
   const [chatMessages, setChatMessages] = useState<NegotiationMessage[]>([]);
@@ -140,12 +141,37 @@ function TiendaPageInner() {
 
   useEffect(() => {
     const vendorIds = Array.from(new Set(dbProducts.map((p) => p.vendor_id))).filter(Boolean);
-    if (vendorIds.length === 0) return;
+    if (vendorIds.length === 0) {
+      setBlockedVendorIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      vendorIds.map(async (id) => {
+        try {
+          const res = await fetch(`/api/tienda/vendor-verification?vendor_id=${encodeURIComponent(id)}`);
+          if (!res.ok) return { id, blocked: false };
+          const data = await res.json();
+          return { id, blocked: Boolean(data.blocked) };
+        } catch {
+          return { id, blocked: false };
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const blocked = new Set<string>();
+      results.forEach((item) => {
+        if (item.blocked) blocked.add(item.id);
+      });
+      setBlockedVendorIds(blocked);
+    });
 
     const controller = new AbortController();
     fetch(`/api/tienda/vendor-bot-config?vendorIds=${encodeURIComponent(vendorIds.join(','))}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
+        if (cancelled) return;
         const map: Record<string, boolean> = {};
         const configs = data?.configs || {};
         vendorIds.forEach((id) => {
@@ -154,10 +180,13 @@ function TiendaPageInner() {
         setVendorBotEnabledMap(map);
       })
       .catch(() => {
-        setVendorBotEnabledMap({});
+        if (!cancelled) setVendorBotEnabledMap({});
       });
 
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [dbProducts]);
 
   /* fetch real vendors with published products */
@@ -180,7 +209,7 @@ function TiendaPageInner() {
         countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1;
         emailMap[p.vendor_id] = p.vendor_email;
       });
-      const ids = Object.keys(countMap);
+      const ids = Object.keys(countMap).filter((id) => !blockedVendorIds.has(id));
 
       // Enrich with store_configs if table exists (graceful fallback)
       let cfgMap = new Map<string, Record<string, unknown>>();
@@ -214,7 +243,7 @@ function TiendaPageInner() {
       setVendorsLoading(false);
     };
     fetchVendors().catch(() => setVendorsLoading(false));
-  }, []);
+  }, [blockedVendorIds]);
 
   /* sync URL → local state */
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 
 interface StoreConfig {
   storeName: string;
@@ -26,6 +27,13 @@ interface BankData {
 }
 
 const EMPTY_BANK: BankData = { banco: '', cuenta: '', alias: '', titular: '', tipo_cuenta: '' };
+
+const VENDOR_DOCS = [
+  { key: 'cedula_frente', label: 'Cédula — frente', hint: 'Identificación oficial del representante', requiresExpiry: false },
+  { key: 'ruc_documento', label: 'RUC / documento tributario', hint: 'Documento fiscal o RUC', requiresExpiry: false },
+  { key: 'constancia_bancaria', label: 'Constancia bancaria', hint: 'Extracto o comprobante del banco', requiresExpiry: false },
+  { key: 'registro_comercial', label: 'Registro comercial', hint: 'Registro, acta o permiso comercial', requiresExpiry: false },
+] as const;
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const DAYS_FULL = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
@@ -69,11 +77,16 @@ export default function ConfiguracionPage() {
   const [bankMsg, setBankMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [globalTransferActive, setGlobalTransferActive] = useState<boolean | null>(null);
   const [vendorTransferAllowed, setVendorTransferAllowed] = useState<boolean>(true);
+  const [vendorDocStatus, setVendorDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
+  const [vendorDocUploading, setVendorDocUploading] = useState<Record<string, boolean>>({});
+  const [vendorEmail, setVendorEmail] = useState('');
+  const vendorFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      setVendorEmail(session.user?.email || '');
       const [bankRes, paymentRes] = await Promise.all([
         fetch('/api/vendor/bank-data', { headers: { Authorization: `Bearer ${session.access_token}` } }),
         fetch('/api/payment-info'),
@@ -91,6 +104,60 @@ export default function ConfiguracionPage() {
       setBankLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!vendorEmail) return;
+    (async () => {
+      try {
+        const res = await authFetch(`/api/upload-driver-doc?email=${encodeURIComponent(vendorEmail)}`);
+        const json = await res.json();
+        const next: Record<string, { status: string; rejection_reason?: string; expires_at?: string }> = {};
+        for (const d of (json.docs || []).filter((doc: { role: string }) => doc.role === 'vendedor')) {
+          next[d.doc_type] = { status: d.status, rejection_reason: d.rejection_reason, expires_at: d.expires_at };
+        }
+        setVendorDocStatus(next);
+      } catch {
+        // no-op, endpoint may be unavailable for sellers before initial upload
+      }
+    })();
+  }, [vendorEmail]);
+
+  const handleVendorDocUpload = async (docType: string, file: File) => {
+    if (!vendorEmail) return;
+    setVendorDocUploading(prev => ({ ...prev, [docType]: true }));
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const base64 = btoa(binary);
+      const res = await authFetch('/api/upload-driver-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: vendorEmail,
+          doc_type: docType,
+          base64,
+          mimeType: file.type,
+          role: 'vendedor',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setBankMsg({ ok: false, text: json.error || 'No se pudo subir el documento.' });
+      } else {
+        setVendorDocStatus(prev => ({ ...prev, [docType]: { status: 'pending' } }));
+        setBankMsg({ ok: true, text: 'Documento enviado para revisión.' });
+      }
+    } catch {
+      setBankMsg({ ok: false, text: 'Error al subir el documento.' });
+    } finally {
+      setVendorDocUploading(prev => ({ ...prev, [docType]: false }));
+      const input = vendorFileRefs.current[docType];
+      if (input) input.value = '';
+      setTimeout(() => setBankMsg(null), 3500);
+    }
+  };
 
   async function handleSaveBank() {
     setBankSaving(true);
@@ -321,6 +388,66 @@ export default function ConfiguracionPage() {
               </button>
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* ── Verificación de identidad del vendedor ─────────────────────── */}
+      <Section title="✅ Verificación del vendedor">
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: 0, color: 'var(--vnd-text-muted)', fontSize: '0.82rem', lineHeight: 1.6 }}>
+            Subí tus documentos para validación del equipo. La revisión se hace como en Dokan: cada archivo queda en estado pendiente, aprobado o rechazado y se puede reenviar si se requiere.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          {VENDOR_DOCS.map((doc) => {
+            const status = vendorDocStatus[doc.key]?.status || 'missing';
+            const rejectionReason = vendorDocStatus[doc.key]?.rejection_reason;
+            const color = status === 'approved' ? '#16a34a' : status === 'rejected' ? '#dc2626' : status === 'pending' ? '#d97706' : '#6b7280';
+            const bg = status === 'approved' ? '#ecfdf5' : status === 'rejected' ? '#fef2f2' : status === 'pending' ? '#fffbeb' : '#f3f4f6';
+            return (
+              <div key={doc.key} style={{ border: '1px solid var(--vnd-border)', borderRadius: 14, background: 'var(--vnd-surface-2)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 14px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 800, color: 'var(--vnd-text-primary)', fontSize: '0.9rem' }}>{doc.label}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: 'var(--vnd-text-muted)' }}>{doc.hint}</p>
+                    </div>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '4px 8px', borderRadius: 999, background: bg, color, border: `1px solid ${color}33` }}>
+                      {status === 'approved' ? 'Aprobado' : status === 'rejected' ? 'Rechazado' : status === 'pending' ? 'Pendiente' : 'No cargado'}
+                    </span>
+                  </div>
+
+                  {rejectionReason && (
+                    <div style={{ marginBottom: 10, borderLeft: '3px solid #dc2626', background: 'rgba(239,68,68,0.05)', padding: '6px 8px', borderRadius: 8 }}>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: '#991b1b', fontWeight: 700 }}>Motivo del rechazo</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#991b1b' }}>{rejectionReason}</p>
+                    </div>
+                  )}
+
+                  <input
+                    ref={el => { vendorFileRefs.current[doc.key] = el; }}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    hidden
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleVendorDocUpload(doc.key, file);
+                    }}
+                  />
+
+                  <button
+                    className="vnd-btn vnd-btn-primary"
+                    onClick={() => vendorFileRefs.current[doc.key]?.click()}
+                    disabled={vendorDocUploading[doc.key]}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    {vendorDocUploading[doc.key] ? 'Subiendo...' : status === 'approved' ? 'Reemplazar archivo' : 'Subir documento'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Section>
 

@@ -7,7 +7,7 @@ import { Icon, type IconName } from '@/components/Icon';
 interface DocRecord {
   id: string;
   driver_email: string;
-  role: 'driver' | 'tecnico' | 'client';
+  role: 'driver' | 'tecnico' | 'client' | 'vendedor';
   doc_type: string;
   file_path: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -28,26 +28,30 @@ interface AuditEntry {
 
 interface DriverGroup {
   email: string;
-  role: 'driver' | 'tecnico' | 'client';
+  role: 'driver' | 'tecnico' | 'client' | 'vendedor';
   docs: DocRecord[];
   profile: { name: string; photo: string | null; vehicle: string | null };
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const DRIVER_REQUIRED  = 7;
-const TECNICO_REQUIRED = 4;
-const CLIENT_REQUIRED  = 2;
-const EXPIRY_WARN_DAYS = 30;
+const DRIVER_REQUIRED   = 7;
+const TECNICO_REQUIRED  = 4;
+const CLIENT_REQUIRED   = 2;
+const VENDOR_REQUIRED   = 4;
+const EXPIRY_WARN_DAYS  = 30;
 
 const DOC_LABELS: Record<string, string> = {
-  selfie_cedula:       'Selfie con cédula',
-  cedula_frente:       'Cédula frente',
-  antecedentes:        'Antecedentes',
-  domicilio:           'Domicilio',
-  registro_frente:     'Registro frente',
-  registro_dorso:      'Registro dorso',
-  cedula_verde_frente: 'Céd. Verde frente',
-  cedula_verde_dorso:  'Céd. Verde dorso',
+  selfie_cedula:        'Selfie con cédula',
+  cedula_frente:        'Cédula frente',
+  antecedentes:         'Antecedentes',
+  domicilio:            'Domicilio',
+  registro_frente:      'Registro frente',
+  registro_dorso:       'Registro dorso',
+  cedula_verde_frente:  'Céd. Verde frente',
+  cedula_verde_dorso:   'Céd. Verde dorso',
+  ruc_documento:        'RUC / documento tributario',
+  constancia_bancaria:  'Constancia bancaria',
+  registro_comercial:   'Registro comercial',
 };
 
 function docLabel(key: string): string {
@@ -83,7 +87,7 @@ function oldestPendingDate(docs: DocRecord[]): Date | null {
 function exportCSV(groups: DriverGroup[]): void {
   const headers = ['Email', 'Nombre', 'Rol', 'Vehículo', 'Total docs', 'Aprobados', 'Pendientes', 'Rechazados', 'Faltantes', 'Estado'];
   const rows = groups.map(g => {
-    const req      = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
+    const req      = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : g.role === 'vendedor' ? VENDOR_REQUIRED : TECNICO_REQUIRED;
     const approved = g.docs.filter(d => d.status === 'approved').length;
     const pending  = g.docs.filter(d => d.status === 'pending').length;
     const rejected = g.docs.filter(d => d.status === 'rejected').length;
@@ -108,7 +112,7 @@ function exportCSV(groups: DriverGroup[]): void {
 type DriverTab = 'listos' | 'incompletos' | 'rechazados' | 'aprobados';
 
 function classifyDriver(g: DriverGroup): DriverTab {
-  const required    = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
+  const required    = g.role === 'driver' ? DRIVER_REQUIRED : g.role === 'client' ? CLIENT_REQUIRED : g.role === 'vendedor' ? VENDOR_REQUIRED : TECNICO_REQUIRED;
   const hasRejected = g.docs.some(d => d.status === 'rejected');
   const hasPending  = g.docs.some(d => d.status === 'pending');
   const allApproved = g.docs.length >= required && g.docs.every(d => d.status === 'approved');
@@ -403,7 +407,7 @@ function DriverCard({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [localDocs,   setLocalDocs]  = useState<DocRecord[]>(group.docs);
 
-  const required     = group.role === 'driver' ? DRIVER_REQUIRED : group.role === 'client' ? CLIENT_REQUIRED : TECNICO_REQUIRED;
+  const required     = group.role === 'driver' ? DRIVER_REQUIRED : group.role === 'client' ? CLIENT_REQUIRED : group.role === 'vendedor' ? VENDOR_REQUIRED : TECNICO_REQUIRED;
   const approved     = localDocs.filter(d => d.status === 'approved').length;
   const pending      = localDocs.filter(d => d.status === 'pending').length;
   const rejected     = localDocs.filter(d => d.status === 'rejected').length;
@@ -473,10 +477,10 @@ function DriverCard({
             <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1f2937' }}>
               {group.profile.name !== group.email ? group.profile.name : '(sin nombre)'}
             </span>
-            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: group.role === 'tecnico' ? '#f3e8ff' : group.role === 'client' ? '#fef9c3' : '#e0f2fe', color: group.role === 'tecnico' ? '#7c3aed' : group.role === 'client' ? '#854d0e' : '#0369a1' }}>
+            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: group.role === 'tecnico' ? '#f3e8ff' : group.role === 'client' ? '#fef9c3' : group.role === 'vendedor' ? '#dcfce7' : '#e0f2fe', color: group.role === 'tecnico' ? '#7c3aed' : group.role === 'client' ? '#854d0e' : group.role === 'vendedor' ? '#166534' : '#0369a1' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Icon name={group.role === 'tecnico' ? 'tool' : group.role === 'client' ? 'user' : 'car'} size={10} />
-                {group.role === 'tecnico' ? 'Tecnico' : group.role === 'client' ? 'Cliente' : 'Driver'}
+                <Icon name={group.role === 'tecnico' ? 'tool' : group.role === 'client' ? 'user' : group.role === 'vendedor' ? 'briefcase' : 'car'} size={10} />
+                {group.role === 'tecnico' ? 'Tecnico' : group.role === 'client' ? 'Cliente' : group.role === 'vendedor' ? 'Vendedor' : 'Driver'}
               </span>
             </span>
           </div>
@@ -599,7 +603,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
   const [loading,     setLoading]     = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [token,       setToken]       = useState<string | null>(null);
-  const [roleFilter,  setRoleFilter]  = useState<'all' | 'driver' | 'tecnico' | 'client'>('all');
+  const [roleFilter,  setRoleFilter]  = useState<'all' | 'driver' | 'tecnico' | 'client' | 'vendedor'>('all');
   const [search,      setSearch]      = useState('');
   const [activeTab,   setActiveTab]   = useState<DriverTab | 'todos'>('listos');
   const [total,       setTotal]       = useState(0);
@@ -768,7 +772,7 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
           className="flex-1 min-w-[220px] px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#F5C518] shadow-sm"
         />
         <div className="flex bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          {(['all', 'driver', 'tecnico', 'client'] as const).map(r => (
+          {(['all', 'driver', 'tecnico', 'client', 'vendedor'] as const).map(r => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -776,9 +780,9 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
             >
               <span className="inline-flex items-center gap-1">
                 {r === 'all' ? null : (
-                  <Icon name={r === 'driver' ? 'car' : r === 'tecnico' ? 'tool' : 'user'} size={12} />
+                  <Icon name={r === 'driver' ? 'car' : r === 'tecnico' ? 'tool' : r === 'client' ? 'user' : 'briefcase'} size={12} />
                 )}
-                {r === 'all' ? 'Todos' : r === 'driver' ? 'Driver' : r === 'tecnico' ? 'Tecnico' : 'Cliente'}
+                {r === 'all' ? 'Todos' : r === 'driver' ? 'Driver' : r === 'tecnico' ? 'Tecnico' : r === 'client' ? 'Cliente' : 'Vendedor'}
               </span>
             </button>
           ))}

@@ -96,6 +96,8 @@ export default function VendorStorePage() {
   const [cfg,       setCfg]       = useState<StoreTemplateConfig | null>(null);
   const [loadingStore, setLoadingStore] = useState(true);
   const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
+  const [verificationBlocked, setVerificationBlocked] = useState(false);
+  const [verificationMsg, setVerificationMsg] = useState('');
   const [activeCat, setActiveCat] = useState('Todos');
   const [search,    setSearch]    = useState('');
 
@@ -140,6 +142,25 @@ export default function VendorStorePage() {
     loadConfig().catch(() => setLoadingStore(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
+
+  useEffect(() => {
+    if (!vendorId || !IS_UUID) return;
+    fetch(`/api/tienda/vendor-verification?vendor_id=${encodeURIComponent(vendorId)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          setVerificationBlocked(false);
+          setVerificationMsg('');
+          return;
+        }
+        const json = await res.json();
+        setVerificationBlocked(Boolean(json.blocked));
+        setVerificationMsg(json.message || '');
+      })
+      .catch(() => {
+        setVerificationBlocked(false);
+        setVerificationMsg('');
+      });
+  }, [vendorId, IS_UUID]);
 
   useEffect(() => {
     if (!vendorId || vendorId === 'mi-tienda') return;
@@ -219,6 +240,23 @@ export default function VendorStorePage() {
           <h2 style={{ color: 'var(--tnd-text-primary)', marginBottom: 8 }}>Tienda no encontrada</h2>
           <p style={{ color: 'var(--tnd-text-muted)', marginBottom: 24 }}>Esta tienda no existe o fue removida.</p>
           <Link href="/tienda" className="tnd-back">← Volver al catálogo</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (verificationBlocked) {
+    return (
+      <div className="tnd-page">
+        <div className="tnd-not-found" style={{ maxWidth: 680 }}>
+          <div style={{ fontSize: '3rem', marginBottom: 16 }}>⏳</div>
+          <h2 style={{ color: 'var(--tnd-text-primary)', marginBottom: 8 }}>Tienda en verificación</h2>
+          <p style={{ color: 'var(--tnd-text-muted)', marginBottom: 18, lineHeight: 1.6 }}>
+            {verificationMsg || 'Esta tienda está pendiente de aprobación documental. Cuando los documentos del vendedor sean validados, la tienda volverá a estar disponible.'}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+            <Link href="/tienda" className="tnd-back">← Volver al catálogo</Link>
+          </div>
         </div>
       </div>
     );

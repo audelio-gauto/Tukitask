@@ -1,3 +1,251 @@
-ÔÜá turbopack.root should be absolute, using: C:\Users\Aurelio\Documents\wep-app-local-driver
-Ô¿» Unable to acquire lock at C:\Users\Aurelio\Documents\wep-app-local-driver\.next\lock, is another instance of next build running?
-  Suggestion: If you intended to restart next build, terminate the other process, and then try again.
+
+> wep-app-local-driver@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 2.8min
+  Running TypeScript ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/199) ...
+  Generating static pages using 1 worker (49/199) 
+  Generating static pages using 1 worker (99/199) 
+  Generating static pages using 1 worker (149/199) 
+Ô£ô Generating static pages using 1 worker (199/199) in 17.7s
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /admin
+Ôö£ Ôùï /admin/apikeys
+Ôö£ Ôùï /admin/audit
+Ôö£ Ôùï /admin/bank-alias
+Ôö£ Ôùï /admin/billetera
+Ôö£ Ôùï /admin/billetera/historial
+Ôö£ Ôùï /admin/billetera/vendedores
+Ôö£ Ôùï /admin/clients
+Ôö£ ãÆ /admin/clients/[id]
+Ôö£ Ôùï /admin/configuracion/comisiones
+Ôö£ Ôùï /admin/configuracion/limites-negociacion
+Ôö£ Ôùï /admin/configuracion/metodos-pago
+Ôö£ Ôùï /admin/control-ai
+Ôö£ Ôùï /admin/documentos
+Ôö£ Ôùï /admin/documentos/aprobados
+Ôö£ Ôùï /admin/documentos/rechazados
+Ôö£ Ôùï /admin/drivers
+Ôö£ ãÆ /admin/drivers/[id]
+Ôö£ Ôùï /admin/drivers/commission
+Ôö£ Ôùï /admin/drivers/driver
+Ôö£ Ôùï /admin/drivers/pricing
+Ôö£ Ôùï /admin/drivers/rates
+Ôö£ Ôùï /admin/finanzas
+Ôö£ Ôùï /admin/finanzas/comisiones
+Ôö£ Ôùï /admin/finanzas/movimientos
+Ôö£ Ôùï /admin/finanzas/pagos-pendientes
+Ôö£ Ôùï /admin/finanzas/retiros
+Ôö£ Ôùï /admin/hotels
+Ôö£ Ôùï /admin/metrics
+Ôö£ Ôùï /admin/orders
+Ôö£ Ôùï /admin/orders/suspicious
+Ôö£ ãÆ /admin/profile/[email]
+Ôö£ Ôùï /admin/promos
+Ôö£ Ôùï /admin/ratings
+Ôö£ Ôùï /admin/reports
+Ôö£ Ôùï /admin/ruta
+Ôö£ Ôùï /admin/services
+Ôö£ Ôùï /admin/services/commission
+Ôö£ Ôùï /admin/services/tecnico
+Ôö£ Ôùï /admin/settings
+Ôö£ Ôùï /admin/users
+Ôö£ Ôùï /admin/vendors
+Ôö£ Ôùï /admin/vendors/bloqueos
+Ôö£ Ôùï /admin/vendors/configuracion/comisiones
+Ôö£ Ôùï /admin/vendors/configuracion/limites-negociacion
+Ôö£ Ôùï /admin/vendors/configuracion/metodos-pago
+Ôö£ Ôùï /admin/vendors/lista
+Ôö£ Ôùï /admin/vendors/negociaciones
+Ôö£ Ôùï /admin/vendors/negociaciones/fraude
+Ôö£ Ôùï /admin/vendors/negociaciones/historial
+Ôö£ Ôùï /admin/vendors/negociaciones/limites
+Ôö£ Ôùï /admin/vendors/pedidos
+Ôö£ Ôùï /admin/vendors/pedidos/cancelaciones
+Ôö£ Ôùï /admin/vendors/pedidos/disputas
+Ôö£ Ôùï /admin/vendors/pedidos/reembolsos
+Ôö£ Ôùï /admin/vendors/productos
+Ôö£ Ôùï /admin/vendors/productos/aprobar
+Ôö£ Ôùï /admin/vendors/productos/atributos
+Ôö£ Ôùï /admin/vendors/productos/categorias
+Ôö£ Ôùï /admin/vendors/productos/etiquetas
+Ôö£ Ôùï /admin/vendors/productos/marcas
+Ôö£ Ôùï /admin/vendors/productos/reportados
+Ôö£ Ôùï /admin/vendors/productos/stock
+Ôö£ Ôùï /admin/vendors/productos/valoraciones
+Ôö£ Ôùï /admin/vendors/verificaciones
+Ôö£ Ôùï /admin/wallets
+Ôö£ ãÆ /api/admin/anim-phrases
+Ôö£ ãÆ /api/admin/bank-alias
+Ôö£ ãÆ /api/admin/clients
+Ôö£ ãÆ /api/admin/clients/[id]
+Ôö£ ãÆ /api/admin/config
+Ôö£ ãÆ /api/admin/documents
+Ôö£ ãÆ /api/admin/drivers/[id]
+Ôö£ ãÆ /api/admin/drivers/commissions
+Ôö£ ãÆ /api/admin/drivers/list
+Ôö£ ãÆ /api/admin/drivers/rates
+Ôö£ ãÆ /api/admin/drivers/verify
+Ôö£ ãÆ /api/admin/metrics
+Ôö£ ãÆ /api/admin/metrics/clear
+Ôö£ ãÆ /api/admin/orders
+Ôö£ ãÆ /api/admin/orders/suspicious
+Ôö£ ãÆ /api/admin/payment-methods
+Ôö£ ãÆ /api/admin/pricing
+Ôö£ ãÆ /api/admin/profile/[email]
+Ôö£ ãÆ /api/admin/promos
+Ôö£ ãÆ /api/admin/ratings
+Ôö£ ãÆ /api/admin/recharge-history
+Ôö£ ãÆ /api/admin/ruta/action
+Ôö£ ãÆ /api/admin/ruta/live
+Ôö£ ãÆ /api/admin/ruta/mapkey
+Ôö£ ãÆ /api/admin/services/commissions
+Ôö£ ãÆ /api/admin/services/tecnico
+Ôö£ ãÆ /api/admin/suspend
+Ôö£ ãÆ /api/admin/test-aikey
+Ôö£ ãÆ /api/admin/test-google-key
+Ôö£ ãÆ /api/admin/upload-logo
+Ôö£ ãÆ /api/admin/upload-pwa-icon
+Ôö£ ãÆ /api/admin/upload-vehicle-image
+Ôö£ ãÆ /api/admin/users
+Ôö£ ãÆ /api/admin/users/delete
+Ôö£ ãÆ /api/admin/users/lookup
+Ôö£ ãÆ /api/admin/users/search
+Ôö£ ãÆ /api/admin/vendor-wallets
+Ôö£ ãÆ /api/admin/vendors
+Ôö£ ãÆ /api/admin/vendors/catalog-attribute-values
+Ôö£ ãÆ /api/admin/vendors/catalog-taxonomies
+Ôö£ ãÆ /api/admin/vendors/products-review
+Ôö£ ãÆ /api/admin/wallets
+Ôö£ ãÆ /api/auth/forgot-password
+Ôö£ ãÆ /api/chat
+Ôö£ ãÆ /api/chat/threads
+Ôö£ ãÆ /api/check-admin
+Ôö£ ãÆ /api/check-role
+Ôö£ ãÆ /api/client-profile
+Ôö£ ãÆ /api/create-user
+Ôö£ ãÆ /api/cron/cleanup
+Ôö£ ãÆ /api/cron/tukibot-timeouts
+Ôö£ ãÆ /api/debug-env
+Ôö£ ãÆ /api/driver-location
+Ôö£ ãÆ /api/driver-match/dismiss
+Ôö£ ãÆ /api/driver-profile
+Ôö£ ãÆ /api/driver/rates
+Ôö£ ãÆ /api/favorites
+Ôö£ ãÆ /api/firebase-sw
+Ôö£ ãÆ /api/logo
+Ôö£ ãÆ /api/manifest
+Ôö£ ãÆ /api/maps/directions
+Ôö£ ãÆ /api/maps/geocode
+Ôö£ ãÆ /api/me/suspension
+Ôö£ ãÆ /api/notifications
+Ôö£ ãÆ /api/orders
+Ôö£ ãÆ /api/orders/offers
+Ôö£ ãÆ /api/orders/rate
+Ôö£ ãÆ /api/payment-info
+Ôö£ ãÆ /api/pricing
+Ôö£ ãÆ /api/pricing/dynamic
+Ôö£ ãÆ /api/promo/validate
+Ôö£ ãÆ /api/push-tokens
+Ôö£ ãÆ /api/pwa-icon/[size]
+Ôö£ ãÆ /api/register
+Ôö£ ãÆ /api/reports
+Ôö£ ãÆ /api/service-categories
+Ôö£ ãÆ /api/service-pricing
+Ôö£ ãÆ /api/sw
+Ôö£ ãÆ /api/tecnico/jobs
+Ôö£ ãÆ /api/tecnico/settings
+Ôö£ ãÆ /api/test-push
+Ôö£ ãÆ /api/tienda/checkout
+Ôö£ ãÆ /api/tienda/market-orders
+Ôö£ ãÆ /api/tienda/market-orders/[id]
+Ôö£ ãÆ /api/tienda/mis-pedidos
+Ôö£ ãÆ /api/tienda/neg-phrases
+Ôö£ ãÆ /api/tienda/vendor-bot-config
+Ôö£ ãÆ /api/tips
+Ôö£ ãÆ /api/tukibot/negotiate
+Ôö£ ãÆ /api/tukibot/negotiations
+Ôö£ ãÆ /api/tukibot/negotiations/[id]
+Ôö£ ãÆ /api/tukibot/negotiations/[id]/messages
+Ôö£ ãÆ /api/upload-audio
+Ôö£ ãÆ /api/upload-delivery-photo
+Ôö£ ãÆ /api/upload-driver-doc
+Ôö£ ãÆ /api/upload-payment-proof
+Ôö£ ãÆ /api/upload-photo
+Ôö£ ãÆ /api/upload-service-photo
+Ôö£ ãÆ /api/vendedor/tukibot-config
+Ôö£ ãÆ /api/vendor/bank-data
+Ôö£ ãÆ /api/vendor/catalog-attribute-values
+Ôö£ ãÆ /api/vendor/catalog-taxonomies
+Ôö£ ãÆ /api/vendor/wallet
+Ôö£ ãÆ /api/wallet
+Ôö£ Ôùï /auth
+Ôö£ Ôùï /auth/reset-password
+Ôö£ Ôùï /cliente
+Ôö£ Ôùï /cliente/direcciones
+Ôö£ Ôùï /cliente/enviar
+Ôö£ Ôùï /cliente/historial
+Ôö£ Ôùï /cliente/historial-ofertas
+Ôö£ Ôùï /cliente/mis-envios
+Ôö£ Ôùï /cliente/mis-ofertas
+Ôö£ Ôùï /cliente/mis-servicios
+Ôö£ Ôùï /cliente/pedidos
+Ôö£ ãÆ /cliente/seguimiento/[id]
+Ôö£ Ôùï /cliente/servicio
+Ôö£ Ôùï /cliente/settings
+Ôö£ Ôùï /driver
+Ôö£ Ôùï /driver/aceptacion
+Ôö£ Ôùï /driver/activo
+Ôö£ Ôùï /driver/billetera
+Ôö£ Ôùï /driver/delivered
+Ôö£ Ôùï /driver/failed
+Ôö£ Ôùï /driver/ganancias
+Ôö£ Ôùï /driver/historial-ofertas
+Ôö£ Ôùï /driver/settings
+Ôö£ Ôùï /tecnico
+Ôö£ Ôùï /tecnico/aceptacion
+Ôö£ Ôùï /tecnico/activo
+Ôö£ Ôùï /tecnico/billetera
+Ôö£ Ôùï /tecnico/citas
+Ôö£ Ôùï /tecnico/ganancias
+Ôö£ Ôùï /tecnico/historial
+Ôö£ Ôùï /tecnico/historial-ofertas
+Ôö£ Ôùï /tecnico/settings
+Ôö£ Ôùï /tienda
+Ôö£ ãÆ /tienda/[vendor_id]
+Ôö£ Ôùï /tienda/buscar
+Ôö£ Ôùï /tienda/checkout
+Ôö£ Ôùï /tienda/mis-ofertas
+Ôö£ Ôùï /tienda/mis-pedidos
+Ôö£ ãÆ /tienda/producto/[id]
+Ôö£ Ôùï /tukibot/resultados
+Ôö£ Ôùï /vendedor
+Ôö£ Ôùï /vendedor/analisis
+Ôö£ Ôùï /vendedor/billetera
+Ôö£ Ôùï /vendedor/configuracion
+Ôö£ Ôùï /vendedor/negociaciones
+Ôö£ Ôùï /vendedor/pedidos
+Ôö£ Ôùï /vendedor/plantillas
+Ôö£ Ôùï /vendedor/productos
+Ôö£ ãÆ /vendedor/productos/[id]
+Ôö£ Ôùï /vendedor/productos/nuevo
+Ôö£ Ôùï /vendedor/tukibot
+Ôöö Ôùï /vendedor/tukibot/resultados
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+
