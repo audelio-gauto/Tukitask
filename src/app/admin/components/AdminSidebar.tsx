@@ -245,6 +245,7 @@ const menuItems: MenuItem[] = [
       { label: 'CONFIGURACIÓN COMERCIAL', isHeader: true },
       { label: 'Comisiones', href: '/admin/vendors/configuracion/comisiones' },
       { label: 'Métodos de Pago', href: '/admin/vendors/configuracion/metodos-pago' },
+      { label: 'Ciudades de Entrega', href: '/admin/vendors/configuracion/ciudades' },
       { label: 'Límites de Negociación', href: '/admin/vendors/configuracion/limites-negociacion' },
     ],
   },

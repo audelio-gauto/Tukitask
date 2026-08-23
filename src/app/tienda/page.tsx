@@ -217,13 +217,14 @@ function TiendaPageInner() {
 
         let cfgMap = new Map<string, Record<string, unknown>>();
         try {
-          const { data: configs } = await Promise.race([
+          const result = (await Promise.race([
             supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
             new Promise((resolve) => setTimeout(() => resolve({ data: null, error: null }), 600)),
-          ]);
+          ])) as { data?: Array<{ vendor_id: string; config: Record<string, unknown> }> | null; error?: unknown } | { data: null; error: null };
 
+          const configs = result?.data;
           if (configs && Array.isArray(configs)) {
-            cfgMap = new Map(configs.map((c: any) => [c.vendor_id, c.config as Record<string, unknown>]));
+            cfgMap = new Map(configs.map((c: { vendor_id: string; config: Record<string, unknown> }) => [c.vendor_id, c.config]));
           }
         } catch {
           cfgMap = new Map();

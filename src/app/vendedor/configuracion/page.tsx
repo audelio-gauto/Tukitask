@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
+import { DEFAULT_DELIVERY_CITIES, PY_CITIES, type DeliveryCityConfig } from '@/app/tienda/data';
 
 interface StoreConfig {
   storeName: string;
@@ -16,6 +17,7 @@ interface StoreConfig {
   openDays: string[];
   freeDeliveryAbove: number;
   commissionToDriver: boolean;
+  deliveryCities: DeliveryCityConfig[];
 }
 
 interface BankData {
@@ -27,6 +29,8 @@ interface BankData {
 }
 
 const EMPTY_BANK: BankData = { banco: '', cuenta: '', alias: '', titular: '', tipo_cuenta: '' };
+
+const makeDefaultDeliveryCities = (): DeliveryCityConfig[] => DEFAULT_DELIVERY_CITIES.map(city => ({ ...city }));
 
 const VENDOR_DOCS = [
   { key: 'cedula_frente', label: 'Cédula — frente', hint: 'Identificación oficial del representante', requiresExpiry: false },
@@ -68,6 +72,7 @@ export default function ConfiguracionPage() {
     openDays:            ['lunes','martes','miercoles','jueves','viernes'],
     freeDeliveryAbove:   0,
     commissionToDriver:  true,
+    deliveryCities:      makeDefaultDeliveryCities(),
   });
 
   // ── Datos bancarios ──────────────────────────────────────
@@ -159,6 +164,65 @@ export default function ConfiguracionPage() {
     }
   };
 
+  useEffect(() => {
+    const loadStoreConfig = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const { data, error } = await supabase
+        .from('store_configs')
+        .select('config')
+        .eq('vendor_id', session.user.id)
+        .maybeSingle();
+
+      if (!error && data?.config) {
+        const payload = { ...cfg, ...(data.config as Partial<StoreConfig>) };
+        const storedCities = Array.isArray((data.config as Partial<StoreConfig>)?.deliveryCities)
+          ? (data.config as Partial<StoreConfig>).deliveryCities as DeliveryCityConfig[]
+          : makeDefaultDeliveryCities();
+
+        setCfg({
+          ...payload,
+          deliveryCities: storedCities.length ? storedCities : makeDefaultDeliveryCities(),
+        });
+      }
+    };
+
+    loadStoreConfig();
+  }, []);
+
+  function upsertDeliveryCity(city: string) {
+    setCfg(prev => {
+      const existing = prev.deliveryCities.find(item => item.city === city);
+      if (existing) {
+        return {
+          ...prev,
+          deliveryCities: prev.deliveryCities.filter(item => item.city !== city),
+        };
+      }
+
+      return {
+        ...prev,
+        deliveryCities: [
+          ...prev.deliveryCities,
+          {
+            city,
+            shipping_price: 25000,
+            cash_on_delivery: true,
+            transfer: true,
+          },
+        ],
+      };
+    });
+  }
+
+  function updateDeliveryCity(city: string, patch: Partial<DeliveryCityConfig>) {
+    setCfg(prev => ({
+      ...prev,
+      deliveryCities: prev.deliveryCities.map(item => item.city === city ? { ...item, ...patch } : item),
+    }));
+  }
+
   async function handleSaveBank() {
     setBankSaving(true);
     setBankMsg(null);
@@ -189,10 +253,35 @@ export default function ConfiguracionPage() {
     }));
   }
 
-  function handleSave() {
-    /* TODO: persist to Supabase vendor_settings table */
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  async function handleSave() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      setSaved(false);
+      return;
+    }
+
+    const payload: StoreConfig = {
+      ...cfg,
+      deliveryCities: cfg.deliveryCities
+        .filter(city => city && city.city.trim())
+        .map(city => ({
+          city: city.city.trim(),
+          shipping_price: Number(city.shipping_price) || 0,
+          cash_on_delivery: Boolean(city.cash_on_delivery),
+          transfer: Boolean(city.transfer),
+        })),
+    };
+
+    const { error } = await supabase.from('store_configs').upsert({
+      vendor_id: session.user.id,
+      config: payload,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'vendor_id' });
+
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
   }
 
   return (
@@ -388,6 +477,72 @@ export default function ConfiguracionPage() {
               </button>
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* ── Cobertura de entrega por ciudad ─────────────────────────── */}
+      <Section title="🚚 Cobertura de entrega por ciudad">
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ margin: 0, color: 'var(--vnd-text-muted)', fontSize: '0.82rem', lineHeight: 1.6 }}>
+            Seleccioná las ciudades donde entregás y asigná el precio de envío. Los clientes solo verán las ciudades habilitadas con sus métodos de pago disponibles.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          {PY_CITIES.map(city => {
+            const item = cfg.deliveryCities.find(entry => entry.city === city) ?? null;
+            const enabled = Boolean(item);
+            return (
+              <div key={city} style={{ border: '1px solid var(--vnd-border)', borderRadius: 12, background: enabled ? 'rgba(245,197,24,0.04)' : 'var(--vnd-surface-2)', padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => upsertDeliveryCity(city)}
+                    style={{
+                      border: '1px solid var(--vnd-border)',
+                      background: enabled ? '#F5C518' : 'transparent',
+                      color: enabled ? '#111827' : 'var(--vnd-text-primary)',
+                      borderRadius: 999,
+                      padding: '6px 12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {enabled ? 'Habilitada' : 'Habilitar'}
+                  </button>
+                  <span style={{ fontWeight: 700, color: 'var(--vnd-text-primary)' }}>{city}</span>
+                </div>
+
+                {item && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginTop: 12 }}>
+                    <div>
+                      <label className="vnd-label">Precio de envío (₲)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        className="vnd-input"
+                        value={item.shipping_price || ''}
+                        onChange={e => updateDeliveryCity(city, { shipping_price: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <label className="vnd-label">Métodos habilitados</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
+                        <input type="checkbox" checked={Boolean(item.cash_on_delivery)} onChange={e => updateDeliveryCity(city, { cash_on_delivery: e.target.checked })} />
+                        Contra entrega
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
+                        <input type="checkbox" checked={Boolean(item.transfer)} onChange={e => updateDeliveryCity(city, { transfer: e.target.checked })} />
+                        Transferencia
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </Section>
 
