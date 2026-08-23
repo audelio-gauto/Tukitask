@@ -243,12 +243,17 @@ function TiendaPageInner() {
         setRealVendors(
           ids.map(id => {
             const cfg = cfgMap.get(id);
+            const fallbackName = (emailMap[id]?.split('@')[0] || 'Tienda').trim() || 'Tienda';
+            const storeName = String((cfg?.storeName as string) || fallbackName).trim() || fallbackName;
+            const primaryCategory = Array.isArray(cfg?.categories) ? String((cfg?.categories as string[])[0] || '').trim() : '';
+            const secondaryCategory = Array.isArray(cfg?.categories) ? String((cfg?.categories as string[])[1] || '').trim() : '';
+
             return {
               id,
-              name: nameMap[id],
-              emoji: (cfg?.logoEmoji as string) || '🏪',
+              name: storeName,
+              emoji: (cfg?.logoEmoji as string) || (storeName.charAt(0)?.toUpperCase() || '🏪'),
               grad: `linear-gradient(135deg, ${(cfg?.heroGrad1 as string) || '#1e3a5f'} 0%, ${(cfg?.heroGrad2 as string) || '#0d2035'} 100%)`,
-              category: ((cfg?.categories as string[]))?.[1] || 'General',
+              category: secondaryCategory || primaryCategory || 'General',
               productCount: countMap[id] ?? 0,
               logoImage: (cfg?.logoImage as string) || undefined,
               coverImage: (cfg?.heroCoverImage as string) || undefined,
@@ -433,18 +438,20 @@ function TiendaPageInner() {
               <Link key={v.id} href={`/tienda/${v.id}`} className="tnd-store-card">
                 <div className="tnd-store-banner" style={v.coverImage ? { backgroundImage: `url(${v.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: v.grad }}>
                   <div className="tnd-store-logo-wrap">
-                    <div className="tnd-store-logo">
+                    <div className="tnd-store-logo" aria-label={v.name}>
                       {v.logoImage
                         ? (
                           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                             <Image src={v.logoImage} alt={v.name} fill style={{ objectFit: 'cover', borderRadius: 'inherit' }} unoptimized />
                           </div>
-                        ) : v.emoji}
+                        ) : (
+                          <span className="tnd-store-logo-fallback">{String(v.emoji || v.name?.charAt(0) || 'T').toUpperCase()}</span>
+                        )}
                     </div>
                   </div>
                 </div>
                 <div className="tnd-store-body">
-                  <div className="tnd-store-name">{v.name}</div>
+                  <div className="tnd-store-name" title={v.name}>{v.name}</div>
                   <div className="tnd-store-cat">{v.category}</div>
                   <div className="tnd-store-meta">
                     <span className="tnd-store-prod">{v.productCount} productos</span>

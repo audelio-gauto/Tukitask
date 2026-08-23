@@ -783,15 +783,21 @@ export default function ProductDetailPage() {
                     </div>
 
                     {shippingCityCheck && (
-                      <div style={{
-                        borderRadius: 12,
-                        border: `1px solid ${shippingCityCheck.available ? '#86efac' : 'rgba(239, 68, 68, 0.35)'}`,
-                        background: shippingCityCheck.available ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.04)',
-                        padding: '12px 14px',
-                      }}>
-                        <p style={{ margin: 0, color: 'var(--tnd-text-primary)', fontWeight: 800 }}>
-                          {shippingCityCheck.available ? '✅ Envío disponible' : '❌ Sin entrega en esta ciudad'}
-                        </p>
+                      <div
+                        className={shippingCityCheck.available ? 'tnd-shipping-status success' : 'tnd-shipping-status danger'}
+                        style={{
+                          borderRadius: 12,
+                          border: `1px solid ${shippingCityCheck.available ? '#86efac' : 'rgba(239, 68, 68, 0.35)'}`,
+                          background: shippingCityCheck.available ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.04)',
+                          padding: '12px 14px',
+                        }}
+                      >
+                        <div className="tnd-shipping-status-head">
+                          <span className="tnd-shipping-status-icon">{shippingCityCheck.available ? '✓' : '!'}</span>
+                          <p style={{ margin: 0, color: 'var(--tnd-text-primary)', fontWeight: 800 }}>
+                            {shippingCityCheck.available ? '✅ Envío disponible' : '❌ Sin entrega en esta ciudad'}
+                          </p>
+                        </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
                           {shippingCityCheck.available
                             ? `${shippingCityCheck.city}: ${gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
