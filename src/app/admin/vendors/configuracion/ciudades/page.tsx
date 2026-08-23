@@ -16,6 +16,9 @@ export default function DeliveryCitiesAdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [newCity, setNewCity] = useState('');
+
+  const allCities = Array.from(new Set([...PY_CITIES, ...cities.map(item => item.city)])).sort((a, b) => a.localeCompare(b, 'es'));
 
   const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -56,8 +59,31 @@ export default function DeliveryCitiesAdminPage() {
     })();
   }, []);
 
+  const addCustomCity = () => {
+    const city = newCity.trim();
+    if (!city) return;
+
+    const clean = city.replace(/\s+/g, ' ');
+    if (cities.some(item => item.city.toLowerCase() === clean.toLowerCase())) {
+      setNewCity('');
+      return;
+    }
+
+    setCities(prev => [...prev, {
+      city: clean,
+      shipping_price: 25000,
+      cash_on_delivery: true,
+      transfer: true,
+    }]);
+    setNewCity('');
+  };
+
   const setValue = (city: string, patch: Partial<DeliveryCity>) => {
     setCities(prev => prev.map(item => item.city === city ? { ...item, ...patch } : item));
+  };
+
+  const removeCity = (city: string) => {
+    setCities(prev => prev.filter(item => item.city !== city));
   };
 
   const handleSave = async () => {
@@ -98,7 +124,26 @@ export default function DeliveryCitiesAdminPage() {
         <div className="text-sm text-gray-400 py-12 text-center">Cargando ciudades...</div>
       ) : (
         <div className="space-y-4">
-          {PY_CITIES.map(city => {
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Crear ciudad nueva</label>
+            <div className="flex gap-3 flex-wrap">
+              <input
+                value={newCity}
+                onChange={e => setNewCity(e.target.value)}
+                placeholder="Ej: Pedro Juan Caballero"
+                className="flex-1 min-w-[180px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              />
+              <button
+                type="button"
+                onClick={addCustomCity}
+                className="bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg"
+              >
+                Agregar ciudad
+              </button>
+            </div>
+          </div>
+
+          {allCities.map(city => {
             const item = cities.find(entry => entry.city === city) ?? {
               city,
               shipping_price: 25000,
@@ -110,19 +155,30 @@ export default function DeliveryCitiesAdminPage() {
             return (
               <div key={city} className={`rounded-xl border p-4 ${enabled ? 'bg-amber-50/40 border-amber-200' : 'bg-white border-gray-200'}`}>
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCities(prev => {
-                        const exists = prev.some(entry => entry.city === city);
-                        if (exists) return prev.filter(entry => entry.city !== city);
-                        return [...prev, { city, shipping_price: 25000, cash_on_delivery: true, transfer: true }];
-                      });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold ${enabled ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
-                  >
-                    {enabled ? 'Habilitada' : 'Habilitar'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCities(prev => {
+                          const exists = prev.some(entry => entry.city === city);
+                          if (exists) return prev.filter(entry => entry.city !== city);
+                          return [...prev, { city, shipping_price: 25000, cash_on_delivery: true, transfer: true }];
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold ${enabled ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+                    >
+                      {enabled ? 'Habilitada' : 'Habilitar'}
+                    </button>
+                    {enabled && !PY_CITIES.includes(city) && (
+                      <button
+                        type="button"
+                        onClick={() => removeCity(city)}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                   <span className="font-semibold text-gray-900">{city}</span>
                 </div>
 

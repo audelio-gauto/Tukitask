@@ -85,6 +85,7 @@ export default function ConfiguracionPage() {
   const [vendorDocStatus, setVendorDocStatus] = useState<Record<string, { status: string; rejection_reason?: string; expires_at?: string }>>({});
   const [vendorDocUploading, setVendorDocUploading] = useState<Record<string, boolean>>({});
   const [vendorEmail, setVendorEmail] = useState('');
+  const [availableCities, setAvailableCities] = useState<string[]>(PY_CITIES);
   const vendorFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
@@ -163,6 +164,28 @@ export default function ConfiguracionPage() {
       setTimeout(() => setBankMsg(null), 3500);
     }
   };
+
+  useEffect(() => {
+    const loadAdminCities = async () => {
+      try {
+        const res = await fetch('/api/admin/delivery-cities', {
+          headers: { Accept: 'application/json' },
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const cities = Array.isArray(json?.cities)
+            ? json.cities.map((city: { city: string }) => city.city).filter(Boolean)
+            : [];
+          if (cities.length) setAvailableCities(Array.from(new Set([...PY_CITIES, ...cities])));
+        }
+      } catch {
+        setAvailableCities(PY_CITIES);
+      }
+    };
+
+    loadAdminCities();
+  }, []);
 
   useEffect(() => {
     const loadStoreConfig = async () => {
@@ -489,7 +512,7 @@ export default function ConfiguracionPage() {
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
-          {PY_CITIES.map(city => {
+          {availableCities.map(city => {
             const item = cfg.deliveryCities.find(entry => entry.city === city) ?? null;
             const enabled = Boolean(item);
             return (
