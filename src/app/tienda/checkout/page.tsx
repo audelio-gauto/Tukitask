@@ -290,12 +290,21 @@ function CheckoutInner() {
       setError('No hay métodos de pago disponibles para este pedido.');
       return;
     }
-    if (!billing.name || !billing.email || !billing.phone) {
-      setError('Completá los datos de facturación obligatorios (*).');
-      return;
-    }
-    if (!delivery.ciudad) {
-      setError('Ingresá la ciudad de entrega.');
+    const missingFields: string[] = [];
+
+    if (!billing.name) missingFields.push('nombre y apellido');
+    if (!billing.email) missingFields.push('email');
+    if (!billing.phone) missingFields.push('teléfono');
+    if (!billing.cedula) missingFields.push('cédula o documento');
+
+    if (!delivery.ciudad) missingFields.push('ciudad');
+    if (!delivery.barrio) missingFields.push('barrio');
+    if (!delivery.referencia) missingFields.push('referencia');
+    if (!delivery.nombre) missingFields.push('nombre del lugar');
+    if (delivery.lat === null || delivery.lng === null) missingFields.push('ubicación en el mapa');
+
+    if (missingFields.length > 0) {
+      setError(`Faltan completar campos obligatorios: ${missingFields.join(', ')}.`);
       return;
     }
     const cityAvailability = getCityPaymentAvailability(delivery.ciudad);
@@ -435,12 +444,13 @@ function CheckoutInner() {
                   />
                 </div>
                 <div className="tnd-checkout-field">
-                  <label className="tnd-checkout-label">Cédula o Documento</label>
+                  <label className="tnd-checkout-label">Cédula o Documento <span className="tnd-checkout-req">*</span></label>
                   <input
                     className="tnd-checkout-input"
                     value={billing.cedula}
                     onChange={e => setBilling(b => ({ ...b, cedula: e.target.value }))}
                     placeholder="1.234.567"
+                    required
                   />
                 </div>
               </div>
@@ -470,31 +480,34 @@ function CheckoutInner() {
                   </select>
                 </div>
                 <div className="tnd-checkout-field">
-                  <label className="tnd-checkout-label">Barrio</label>
+                  <label className="tnd-checkout-label">Barrio <span className="tnd-checkout-req">*</span></label>
                   <input
                     className="tnd-checkout-input"
                     value={delivery.barrio}
                     onChange={e => setDelivery(d => ({ ...d, barrio: e.target.value }))}
                     placeholder="Ej. 1ro de Marzo, Las Mercedes…"
+                    required
                   />
                 </div>
               </div>
               <div className="tnd-checkout-field" style={{ marginTop: 12 }}>
-                <label className="tnd-checkout-label">Referencia</label>
+                <label className="tnd-checkout-label">Referencia <span className="tnd-checkout-req">*</span></label>
                 <input
                   className="tnd-checkout-input"
                   value={delivery.referencia}
                   onChange={e => setDelivery(d => ({ ...d, referencia: e.target.value }))}
                   placeholder="Ej. Casa de la esquina con portón rojo"
+                  required
                 />
               </div>
               <div className="tnd-checkout-field" style={{ marginTop: 12 }}>
-                <label className="tnd-checkout-label">Nombre del lugar</label>
+                <label className="tnd-checkout-label">Nombre del lugar <span className="tnd-checkout-req">*</span></label>
                 <input
                   className="tnd-checkout-input"
                   value={delivery.nombre}
                   onChange={e => setDelivery(d => ({ ...d, nombre: e.target.value }))}
                   placeholder="Ej. Mi casa, Mi oficina"
+                  required
                 />
               </div>
 
