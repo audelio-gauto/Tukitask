@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { useCart } from '../../cart-context';
-import { gs } from '../../data';
+import { DEFAULT_DELIVERY_CITIES, gs, normalizeCityName, type DeliveryCityConfig } from '../../data';
 
 /* ── Deal strength meter (floor price never revealed to user) ── */
 function getDealStrength(offer: number, price: number, floor: number) {
@@ -153,6 +153,14 @@ export default function ProductDetailPage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError,      setReviewError]      = useState<string | null>(null);
   const [reviewDone,       setReviewDone]       = useState(false);
+  const [vendorDeliveryCities, setVendorDeliveryCities] = useState<DeliveryCityConfig[]>([]);
+  const [shippingCityQuery, setShippingCityQuery] = useState('');
+  const [shippingCityCheck, setShippingCityCheck] = useState<{
+    city: string;
+    available: boolean;
+    shipping_price: number;
+    methods: string[];
+  } | null>(null);
 
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
@@ -239,18 +247,38 @@ export default function ProductDetailPage() {
         if (error) {
           setVendorStoreName(null);
           setVendorLogo(null);
+          setVendorDeliveryCities(DEFAULT_DELIVERY_CITIES);
           return;
         }
 
-        const cfg = data?.config as { storeName?: string; logoImage?: string } | null;
+        const cfg = (data?.config ?? {}) as {
+          storeName?: string;
+          logoImage?: string;
+          deliveryCities?: DeliveryCityConfig[];
+        };
+
         if (cfg?.storeName) setVendorStoreName(cfg.storeName);
         else setVendorStoreName(null);
 
         if (cfg?.logoImage) setVendorLogo(cfg.logoImage);
         else setVendorLogo(null);
+
+        const nextCities = Array.isArray(cfg.deliveryCities) && cfg.deliveryCities.length > 0
+          ? cfg.deliveryCities
+          : DEFAULT_DELIVERY_CITIES;
+
+        setVendorDeliveryCities(nextCities
+          .map(city => ({
+            city: String(city.city ?? '').trim(),
+            shipping_price: Number(city.shipping_price ?? 0) || 0,
+            cash_on_delivery: Boolean(city.cash_on_delivery),
+            transfer: Boolean(city.transfer),
+          }))
+          .filter(city => city.city));
       } catch {
         setVendorStoreName(null);
         setVendorLogo(null);
+        setVendorDeliveryCities(DEFAULT_DELIVERY_CITIES);
       }
     };
 
@@ -522,6 +550,49 @@ export default function ProductDetailPage() {
     }
   }
 
+  const deliveryCitySuggestions = shippingCityQuery.trim()
+    ? vendorDeliveryCities.filter(item => {
+        const city = normalizeCityName(item.city);
+        const query = normalizeCityName(shippingCityQuery);
+        return city.includes(query) || query.includes(city);
+      }).slice(0, 8)
+    : vendorDeliveryCities.slice(0, 6);
+
+  function checkShippingCity() {
+    const query = shippingCityQuery.trim();
+    if (!query) {
+      setShippingCityCheck(null);
+      return;
+    }
+
+    const normalizedQuery = normalizeCityName(query);
+    const match = vendorDeliveryCities.find(item => {
+      const target = normalizeCityName(item.city);
+      return target === normalizedQuery || target.includes(normalizedQuery) || normalizedQuery.includes(target);
+    });
+
+    if (!match) {
+      setShippingCityCheck({
+        city: query,
+        available: false,
+        shipping_price: 0,
+        methods: [],
+      });
+      return;
+    }
+
+    const methods: string[] = [];
+    if (match.cash_on_delivery) methods.push('Efectivo');
+    if (match.transfer) methods.push('Transferencia');
+
+    setShippingCityCheck({
+      city: match.city,
+      available: true,
+      shipping_price: Number(match.shipping_price ?? 0),
+      methods,
+    });
+  }
+
   function reset() {
     setDone(null); setMode('idle');
     setOfferAmount(''); setQuantity(1); setAnimStep(-1); setPendingResult(null);
@@ -636,12 +707,97 @@ export default function ProductDetailPage() {
               )}
               {openSection === 'envio' && (
                 <div id={`panel-envio`} role="tabpanel" aria-labelledby={`tab-envio`} className="tnd-pdp2-info-grid">
-                  <div className="tnd-pdp2-info-row"><span>Modalidad</span><strong>A coordinar con el vendedor</strong></div>
-                  <div className="tnd-pdp2-info-row"><span>Cobertura</span><strong>Depende del vendedor</strong></div>
-                  <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>A confirmar al comprar</strong></div>
-                  <p style={{ margin: '14px 0 0', fontSize: '0.83rem', color: 'var(--tnd-text-muted)', lineHeight: 1.6 }}>
-                    <strong>{vendorAlias}</strong> coordinará el método y costo de envío directamente con vos una vez confirmado el pedido.
-                  </p>
+                  <div style={{ display: 'grid', gap: 14 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        value={shippingCityQuery}
+                        onChange={e => setShippingCityQuery(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            checkShippingCity();
+                          }
+                        }}
+                        placeholder="Buscar tu ciudad"
+                        style={{
+                          flex: 1,
+                          minWidth: 180,
+                          height: 42,
+                          padding: '0 12px',
+                          borderRadius: 10,
+                          border: '1px solid var(--tnd-border)',
+                          background: 'var(--tnd-surface)',
+                          color: 'var(--tnd-text-primary)',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={checkShippingCity}
+                        style={{
+                          height: 42,
+                          padding: '0 14px',
+                          borderRadius: 10,
+                          border: 'none',
+                          background: 'var(--tnd-accent)',
+                          color: 'var(--tnd-accent-text)',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Verificar
+                      </button>
+                    </div>
+
+                    {shippingCityCheck && (
+                      <div style={{
+                        borderRadius: 12,
+                        border: `1px solid ${shippingCityCheck.available ? '#86efac' : 'rgba(239, 68, 68, 0.35)'}`,
+                        background: shippingCityCheck.available ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.04)',
+                        padding: '12px 14px',
+                      }}>
+                        <p style={{ margin: 0, color: 'var(--tnd-text-primary)', fontWeight: 800 }}>
+                          {shippingCityCheck.available ? '✅ Envío disponible' : '❌ Sin entrega en esta ciudad'}
+                        </p>
+                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
+                          {shippingCityCheck.available
+                            ? `${shippingCityCheck.city}: ${gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
+                            : `No hay entrega en ${shippingCityCheck.city} para este vendedor en este momento.`}
+                        </p>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: 'var(--tnd-text-primary)' }}>Ciudades de entrega del vendedor</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {deliveryCitySuggestions.length > 0 ? deliveryCitySuggestions.map(item => (
+                          <span
+                            key={item.city}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: 999,
+                              background: 'rgba(245, 197, 24, 0.08)',
+                              border: '1px solid rgba(245, 197, 24, 0.24)',
+                              color: 'var(--tnd-text-primary)',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {item.city}
+                          </span>
+                        )) : (
+                          <span style={{ color: 'var(--tnd-text-muted)', fontSize: '0.8rem' }}>Sin ciudades configuradas todavía.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="tnd-pdp2-info-row"><span>Modalidad</span><strong>A coordinar con el vendedor</strong></div>
+                    <div className="tnd-pdp2-info-row"><span>Cobertura</span><strong>{vendorDeliveryCities.length > 0 ? `${vendorDeliveryCities.length} ciudades activas` : 'Depende del vendedor'}</strong></div>
+                    <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>A confirmar al comprar</strong></div>
+                    <p style={{ margin: '14px 0 0', fontSize: '0.83rem', color: 'var(--tnd-text-muted)', lineHeight: 1.6 }}>
+                      <strong>{vendorAlias}</strong> coordina la entrega y el costo según la ciudad elegida una vez confirmado el pedido.
+                    </p>
+                  </div>
                 </div>
               )}
               {openSection === 'garantias' && (
