@@ -795,7 +795,7 @@ export default function ProductDetailPage() {
                         <div className="tnd-shipping-status-head">
                           <span className="tnd-shipping-status-icon">{shippingCityCheck.available ? '✓' : '!'}</span>
                           <p style={{ margin: 0, color: 'var(--tnd-text-primary)', fontWeight: 800 }}>
-                            {shippingCityCheck.available ? '✅ Envío disponible' : '❌ Sin entrega en esta ciudad'}
+                            {shippingCityCheck.available ? 'Envío disponible' : 'Sin entrega en esta ciudad'}
                           </p>
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
