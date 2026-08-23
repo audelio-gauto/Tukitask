@@ -52,6 +52,13 @@ interface PaymentInfo {
   };
 }
 
+interface VendorDeliveryCity {
+  city: string;
+  shipping_price: number;
+  cash_on_delivery: boolean;
+  transfer: boolean;
+}
+
 function CheckoutInner() {
   const router       = useRouter();
   const params       = useSearchParams();
@@ -79,6 +86,25 @@ function CheckoutInner() {
   const [orderIds,   setOrderIds]   = useState<string[] | null>(null);
   const [error,      setError]      = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [vendorDeliveryCities, setVendorDeliveryCities] = useState<VendorDeliveryCity[]>([]);
+
+  const availableDeliveryCities = vendorDeliveryCities.length > 0
+    ? vendorDeliveryCities.map(item => item.city)
+    : PY_CITIES;
+
+  const getCityPaymentAvailability = useCallback((city: string) => {
+    const byCity = vendorDeliveryCities.find(item => item.city === city);
+    if (byCity) {
+      return {
+        cash_on_delivery: byCity.cash_on_delivery,
+        transfer: byCity.transfer,
+      };
+    }
+    return {
+      cash_on_delivery: Boolean(paymentInfo?.cash_on_delivery?.available),
+      transfer: Boolean(paymentInfo?.transfer?.available),
+    };
+  }, [paymentInfo, vendorDeliveryCities]);
 
   /* ── Load product from URL param ── */
   useEffect(() => {
@@ -171,6 +197,77 @@ function CheckoutInner() {
     }
   }, [paymentInfo, paymentMethod]);
 
+  useEffect(() => {
+    const vendorIdToUse = vendorId || items.find(item => item.vendorId)?.vendorId || '';
+    if (!vendorIdToUse) {
+      setVendorDeliveryCities([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadVendorCities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('store_configs')
+          .select('config')
+          .eq('vendor_id', vendorIdToUse)
+          .maybeSingle();
+
+        if (cancelled || error) return;
+
+        const cfg = (data?.config ?? {}) as {
+          deliveryCities?: Array<{
+            city?: string;
+            shipping_price?: number;
+            cash_on_delivery?: boolean;
+            transfer?: boolean;
+          }>;
+        };
+
+        const cities = Array.isArray(cfg.deliveryCities)
+          ? cfg.deliveryCities
+              .map(item => ({
+                city: String(item?.city ?? '').trim(),
+                shipping_price: Number(item?.shipping_price ?? 0) || 0,
+                cash_on_delivery: Boolean(item?.cash_on_delivery),
+                transfer: Boolean(item?.transfer),
+              }))
+              .filter(item => item.city)
+          : [];
+
+        if (!cancelled) {
+          setVendorDeliveryCities(cities);
+        }
+      } catch {
+        if (!cancelled) setVendorDeliveryCities([]);
+      }
+    };
+
+    void loadVendorCities();
+    return () => { cancelled = true; };
+  }, [items, vendorId]);
+
+  useEffect(() => {
+    const citiesList = availableDeliveryCities;
+    if (!citiesList.length) return;
+
+    if (!citiesList.includes(delivery.ciudad)) {
+      setDelivery(d => ({ ...d, ciudad: citiesList[0] }));
+      return;
+    }
+
+    const enabled = getCityPaymentAvailability(delivery.ciudad);
+    if (paymentMethod === 'contra_entrega' && !enabled.cash_on_delivery && enabled.transfer) {
+      setPaymentMethod('transferencia');
+      return;
+    }
+
+    if (paymentMethod === 'transferencia' && !enabled.transfer && enabled.cash_on_delivery) {
+      setPaymentMethod('contra_entrega');
+    }
+  }, [availableDeliveryCities, delivery.ciudad, getCityPaymentAvailability, paymentMethod]);
+
   /* ── Geolocation ── */
   const handleGeo = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -199,6 +296,15 @@ function CheckoutInner() {
     }
     if (!delivery.ciudad) {
       setError('Ingresá la ciudad de entrega.');
+      return;
+    }
+    const cityAvailability = getCityPaymentAvailability(delivery.ciudad);
+    if (paymentMethod === 'contra_entrega' && !cityAvailability.cash_on_delivery) {
+      setError('La ciudad seleccionada no acepta pago contra entrega. Elegí otra opción de pago.');
+      return;
+    }
+    if (paymentMethod === 'transferencia' && !cityAvailability.transfer) {
+      setError('La ciudad seleccionada no acepta transferencia bancaria. Elegí otra opción de pago.');
       return;
     }
     setError(null);
@@ -230,6 +336,9 @@ function CheckoutInner() {
   }
 
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const cityMethodState = getCityPaymentAvailability(delivery.ciudad);
+  const cashAllowedForCity = cityMethodState.cash_on_delivery;
+  const transferAllowedForCity = cityMethodState.transfer;
 
   /* ── Success screen ── */
   if (orderIds) {
@@ -357,7 +466,7 @@ function CheckoutInner() {
                     onChange={e => setDelivery(d => ({ ...d, ciudad: e.target.value }))}
                     required
                   >
-                    {PY_CITIES.map(c => <option key={c}>{c}</option>)}
+                    {availableDeliveryCities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="tnd-checkout-field">
@@ -423,14 +532,15 @@ function CheckoutInner() {
               <h2 className="tnd-checkout-section-title">Método de pago</h2>
 
               {/* Contra entrega */}
-              {paymentInfo?.cash_on_delivery?.available && (
-                <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: paymentInfo?.transfer?.available ? 12 : 0 }}>
+              {(paymentInfo?.cash_on_delivery?.available || cashAllowedForCity) && (
+                <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: (paymentInfo?.transfer?.available || transferAllowedForCity) ? 12 : 0 }}>
                   <input
                     type="radio"
                     name="payment_method"
                     checked={paymentMethod === 'contra_entrega'}
                     onChange={() => setPaymentMethod('contra_entrega')}
                     style={{ marginTop: 4 }}
+                    disabled={!cashAllowedForCity}
                   />
                   <span>
                     <strong>Contra entrega</strong>
@@ -443,7 +553,7 @@ function CheckoutInner() {
               )}
 
               {/* Transferencia — solo si hay datos bancarios disponibles */}
-              {paymentInfo?.transfer?.available && (
+              {(paymentInfo?.transfer?.available || transferAllowedForCity) && (
                 <>
                   <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
                     <input
@@ -452,6 +562,7 @@ function CheckoutInner() {
                       checked={paymentMethod === 'transferencia'}
                       onChange={() => setPaymentMethod('transferencia')}
                       style={{ marginTop: 4 }}
+                      disabled={!transferAllowedForCity}
                     />
                     <span>
                       <strong>Transferencia bancaria</strong>
@@ -463,23 +574,23 @@ function CheckoutInner() {
                   </label>
 
                   {/* Datos bancarios cuando se selecciona transferencia */}
-                  {paymentMethod === 'transferencia' && paymentInfo.transfer.bank_data && (
+                  {paymentMethod === 'transferencia' && paymentInfo?.transfer?.bank_data && (
                     <div style={{ marginTop: 12, padding: '14px 16px', background: 'var(--tnd-surface-2)', border: '1px solid var(--tnd-border)', borderRadius: 12 }}>
                       <p style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--tnd-text-primary)', marginBottom: 10 }}>
                         🏦 Datos para la transferencia
                       </p>
-                      {paymentInfo.transfer.source === 'vendor' && (
+                      {paymentInfo?.transfer?.source === 'vendor' && (
                         <p style={{ fontSize: '0.72rem', color: 'var(--tnd-text-muted)', marginBottom: 8, fontStyle: 'italic' }}>
                           Datos bancarios del vendedor
                         </p>
                       )}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {([
-                          ['Banco',           paymentInfo.transfer.bank_data.banco],
-                          ['Titular',         paymentInfo.transfer.bank_data.titular],
-                          ['Cuenta',          paymentInfo.transfer.bank_data.cuenta],
-                          ['Alias / CBU',     paymentInfo.transfer.bank_data.alias],
-                          ['Tipo de cuenta',  paymentInfo.transfer.bank_data.tipo_cuenta],
+                          ['Banco',           paymentInfo?.transfer?.bank_data?.banco],
+                          ['Titular',         paymentInfo?.transfer?.bank_data?.titular],
+                          ['Cuenta',          paymentInfo?.transfer?.bank_data?.cuenta],
+                          ['Alias / CBU',     paymentInfo?.transfer?.bank_data?.alias],
+                          ['Tipo de cuenta',  paymentInfo?.transfer?.bank_data?.tipo_cuenta],
                         ] as [string, string | undefined][])
                           .filter(([, v]) => v)
                           .map(([label, value]) => (
