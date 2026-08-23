@@ -118,6 +118,33 @@ type Review = {
   created_at: string;
 };
 
+function normalizeDeliveryCityEntry(raw: unknown): DeliveryCityConfig | null {
+  if (!raw || typeof raw !== 'object') {
+    if (typeof raw === 'string' && raw.trim()) {
+      return { city: raw.trim(), shipping_price: 25000, cash_on_delivery: true, transfer: true };
+    }
+    return null;
+  }
+
+  const item = raw as Record<string, unknown>;
+  const city = String(item.city ?? item.name ?? '').trim();
+  if (!city) return null;
+
+  return {
+    city,
+    shipping_price: Number(item.shipping_price ?? item.price ?? 0) || 0,
+    cash_on_delivery: Boolean(item.cash_on_delivery ?? item.cashOnDelivery ?? true),
+    transfer: Boolean(item.transfer ?? item.bank_transfer ?? true),
+  };
+}
+
+function normalizeDeliveryCities(raw: unknown): DeliveryCityConfig[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeDeliveryCityEntry)
+    .filter((entry): entry is DeliveryCityConfig => Boolean(entry));
+}
+
 /* ══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const params = useParams();
@@ -242,14 +269,7 @@ export default function ProductDetailPage() {
           .from('store_configs')
           .select('config')
           .eq('vendor_id', p.vendor_id)
-          .single();
-
-        if (error) {
-          setVendorStoreName(null);
-          setVendorLogo(null);
-          setVendorDeliveryCities(DEFAULT_DELIVERY_CITIES);
-          return;
-        }
+          .maybeSingle();
 
         const cfg = (data?.config ?? {}) as {
           storeName?: string;
@@ -263,11 +283,24 @@ export default function ProductDetailPage() {
         if (cfg?.logoImage) setVendorLogo(cfg.logoImage);
         else setVendorLogo(null);
 
-        const nextCities = Array.isArray(cfg.deliveryCities) && cfg.deliveryCities.length > 0
-          ? cfg.deliveryCities
-          : DEFAULT_DELIVERY_CITIES;
+        let vendorCities = normalizeDeliveryCities(cfg.deliveryCities);
 
-        setVendorDeliveryCities(nextCities
+        if (!vendorCities.length && !error) {
+          try {
+            const adminRes = await fetch('/api/admin/delivery-cities', { cache: 'no-store' });
+            if (adminRes.ok) {
+              const adminJson = await adminRes.json();
+              const adminCities = normalizeDeliveryCities(adminJson?.cities ?? []);
+              if (adminCities.length) vendorCities = adminCities;
+            }
+          } catch {
+            // Ignore admin fallback errors and keep vendor defaults below.
+          }
+        }
+
+        const finalCities = vendorCities.length ? vendorCities : DEFAULT_DELIVERY_CITIES;
+
+        setVendorDeliveryCities(finalCities
           .map(city => ({
             city: String(city.city ?? '').trim(),
             shipping_price: Number(city.shipping_price ?? 0) || 0,

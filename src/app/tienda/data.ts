@@ -23,6 +23,15 @@ export const DEFAULT_DELIVERY_CITIES: DeliveryCityConfig[] = PY_CITIES.slice(0, 
   transfer: true,
 }));
 
+export function normalizeCityName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /** Merge raw store config JSON with typed defaults — prevents crashes on missing fields */
 export function parseStoreConfig<T extends object>(raw: unknown, defaults: T): T {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;

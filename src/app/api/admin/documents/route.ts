@@ -265,7 +265,7 @@ export async function PATCH(req: Request) {
     notifyDocDecision(updated.driver_email, updated.doc_type, status, rejection_reason).catch(() => {});
   }
 
-  // Auto-verify client identity when both required docs are approved
+  // Auto-sync verification state for client and vendor flows.
   if (updated) {
     const docRole = await sbAdmin()
       .from('driver_documents')
@@ -277,6 +277,10 @@ export async function PATCH(req: Request) {
 
     if (docRole === 'client') {
       autoVerifyClient(updated.driver_email).catch(() => {});
+    }
+
+    if (docRole === 'vendedor') {
+      syncVendorVerificationState(updated.driver_email).catch(() => {});
     }
   }
 
@@ -335,5 +339,33 @@ async function autoVerifyClient(email: string) {
       verified_at: allApproved ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'email' });
+}
+
+async function syncVendorVerificationState(email: string) {
+  const VENDOR_REQUIRED = ['cedula_frente', 'ruc_documento', 'constancia_bancaria', 'registro_comercial'];
+
+  const { data: docs } = await sbAdmin()
+    .from('driver_documents')
+    .select('doc_type, status')
+    .eq('driver_email', email)
+    .eq('role', 'vendedor');
+
+  const allApproved = VENDOR_REQUIRED.every(dt =>
+    (docs || []).some((d: { doc_type: string; status: string }) => d.doc_type === dt && d.status === 'approved'),
+  );
+
+  const hasRejected = (docs || []).some((d: { status: string }) => d.status === 'rejected');
+  const status = allApproved ? 'approved' : hasRejected ? 'rejected' : 'pending';
+
+  await sbAdmin()
+    .from('users')
+    .update({
+      verification_status: status,
+      verified_at: allApproved ? new Date().toISOString() : null,
+      is_active: allApproved,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('email', email)
+    .catch(() => {});
 }
 
