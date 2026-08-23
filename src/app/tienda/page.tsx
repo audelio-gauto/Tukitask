@@ -220,9 +220,12 @@ function TiendaPageInner() {
           const result = (await Promise.race([
             supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
             new Promise((resolve) => setTimeout(() => resolve({ data: null, error: null }), 600)),
-          ])) as { data?: Array<{ vendor_id: string; config: Record<string, unknown> }> | null; error?: unknown } | { data: null; error: null };
+          ])) as {
+            data?: Array<{ vendor_id: string; config: Record<string, unknown> }> | null;
+            error?: unknown;
+          } | null;
 
-          const configs = result?.data;
+          const configs = result?.data ?? null;
           if (configs && Array.isArray(configs)) {
             cfgMap = new Map(configs.map((c: { vendor_id: string; config: Record<string, unknown> }) => [c.vendor_id, c.config]));
           }
