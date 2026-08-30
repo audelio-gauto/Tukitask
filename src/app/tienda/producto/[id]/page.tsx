@@ -135,6 +135,7 @@ function normalizeDeliveryCityEntry(raw: unknown): DeliveryCityConfig | null {
     shipping_price: Number(item.shipping_price ?? item.price ?? 0) || 0,
     cash_on_delivery: Boolean(item.cash_on_delivery ?? item.cashOnDelivery ?? true),
     transfer: Boolean(item.transfer ?? item.bank_transfer ?? true),
+    ...(item.delivery_days != null ? { delivery_days: Number(item.delivery_days) } : {}),
   };
 }
 
