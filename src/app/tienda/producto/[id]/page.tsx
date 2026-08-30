@@ -133,8 +133,6 @@ function normalizeDeliveryCityEntry(raw: unknown): DeliveryCityConfig | null {
   return {
     city,
     shipping_price: Number(item.shipping_price ?? item.price ?? 0) || 0,
-    delivery_days: Number(item.delivery_days ?? item.deliveryDays ?? 4) || 4,
-    free_shipping: Boolean(item.free_shipping ?? item.freeShipping ?? (Number(item.shipping_price ?? item.price ?? 0) === 0)),
     cash_on_delivery: Boolean(item.cash_on_delivery ?? item.cashOnDelivery ?? true),
     transfer: Boolean(item.transfer ?? item.bank_transfer ?? true),
   };
@@ -188,8 +186,6 @@ export default function ProductDetailPage() {
     city: string;
     available: boolean;
     shipping_price: number;
-    delivery_days: number;
-    free_shipping: boolean;
     methods: string[];
   } | null>(null);
 
@@ -613,8 +609,6 @@ export default function ProductDetailPage() {
         city: query,
         available: false,
         shipping_price: 0,
-        delivery_days: 4,
-        free_shipping: false,
         methods: [],
       });
       return;
@@ -623,15 +617,11 @@ export default function ProductDetailPage() {
     const methods: string[] = [];
     if (match.cash_on_delivery) methods.push('Efectivo');
     if (match.transfer) methods.push('Transferencia');
-    const freeShipping = Boolean(match.free_shipping ?? (Number(match.shipping_price ?? 0) === 0));
-    const shippingPrice = freeShipping ? 0 : Number(match.shipping_price ?? 0);
 
     setShippingCityCheck({
       city: match.city,
       available: true,
-      shipping_price: shippingPrice,
-      delivery_days: Number(match.delivery_days ?? 4) || 4,
-      free_shipping: freeShipping,
+      shipping_price: Number(match.shipping_price ?? 0),
       methods,
     });
   }
@@ -810,7 +800,7 @@ export default function ProductDetailPage() {
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
                           {shippingCityCheck.available
-                            ? `${shippingCityCheck.city}: ${shippingCityCheck.free_shipping ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · Entrega en ${shippingCityCheck.delivery_days} días hábiles · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
+                            ? `${shippingCityCheck.city}: ${gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
                             : `No hay entrega en ${shippingCityCheck.city} para este vendedor en este momento.`}
                         </p>
                       </div>
@@ -842,9 +832,9 @@ export default function ProductDetailPage() {
 
                     <div className="tnd-pdp2-info-row"><span>Modalidad</span><strong>A coordinar con el vendedor</strong></div>
                     <div className="tnd-pdp2-info-row"><span>Cobertura</span><strong>{vendorDeliveryCities.length > 0 ? `${vendorDeliveryCities.length} ciudades activas` : 'Depende del vendedor'}</strong></div>
-                    <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>{vendorDeliveryCities[0]?.delivery_days ? `Entrega en ${vendorDeliveryCities[0].delivery_days} días hábiles` : 'A confirmar al comprar'}</strong></div>
+                    <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>A confirmar al comprar</strong></div>
                     <p style={{ margin: '14px 0 0', fontSize: '0.83rem', color: 'var(--tnd-text-muted)', lineHeight: 1.6 }}>
-                      <strong>{vendorAlias}</strong> coordina la entrega y el costo según la ciudad elegida una vez confirmado el pedido. Cuando esté habilitado, la ciudad muestra el costo exacto o envío gratis y la estimación de entrega en días hábiles.
+                      <strong>{vendorAlias}</strong> coordina la entrega y el costo según la ciudad elegida una vez confirmado el pedido.
                     </p>
                   </div>
                 </div>

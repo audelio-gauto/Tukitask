@@ -155,7 +155,9 @@ export default function VendorStorePage() {
         if (timeoutId) window.clearTimeout(timeoutId);
 
         if (!error && data?.config) {
-          setCfg(data.config as StoreTemplateConfig);
+          // Merge over DEFAULT_CFG so any missing field (e.g. categories saved from
+          // configuracion page) falls back to a safe default instead of crashing.
+          setCfg({ ...DEFAULT_CFG, ...(data.config as StoreTemplateConfig) });
           setLoadingStore(false);
           return;
         }
@@ -298,8 +300,7 @@ export default function VendorStorePage() {
   const waUrl     = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
 
   /* Filter products */
-  const safeCats  = Array.isArray(activeCfg.categories) ? activeCfg.categories : [];
-  const baseCats  = safeCats.length > 0 ? safeCats : ['Todos'];
+  const baseCats  = Array.isArray(activeCfg.categories) && activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
   const extraCats = Array.from(new Set(dbMapped.map(p => p.category).filter(c => !baseCats.includes(c))));
   const cats      = extraCats.length > 0 ? [...baseCats, ...extraCats] : baseCats;
   const visibleProducts = products.filter(p => {
