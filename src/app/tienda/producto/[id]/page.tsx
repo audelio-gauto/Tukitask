@@ -800,7 +800,7 @@ export default function ProductDetailPage() {
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
                           {shippingCityCheck.available
-                            ? `${shippingCityCheck.city}: ${gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
+                            ? `${shippingCityCheck.city}: ${shippingCityCheck.shipping_price === 0 ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
                             : `No hay entrega en ${shippingCityCheck.city} para este vendedor en este momento.`}
                         </p>
                       </div>
