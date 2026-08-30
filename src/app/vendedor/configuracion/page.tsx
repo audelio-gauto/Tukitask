@@ -231,6 +231,8 @@ export default function ConfiguracionPage() {
           {
             city,
             shipping_price: 25000,
+            delivery_days: 4,
+            free_shipping: false,
             cash_on_delivery: true,
             transfer: true,
           },
@@ -289,7 +291,9 @@ export default function ConfiguracionPage() {
         .filter(city => city && city.city.trim())
         .map(city => ({
           city: city.city.trim(),
-          shipping_price: Number(city.shipping_price) || 0,
+          shipping_price: city.free_shipping ? 0 : Number(city.shipping_price) || 0,
+          delivery_days: Number(city.delivery_days) || 4,
+          free_shipping: Boolean(city.free_shipping),
           cash_on_delivery: Boolean(city.cash_on_delivery),
           transfer: Boolean(city.transfer),
         })),
@@ -545,13 +549,30 @@ export default function ConfiguracionPage() {
                         min={0}
                         step={1000}
                         className="vnd-input"
-                        value={item.shipping_price || ''}
-                        onChange={e => updateDeliveryCity(city, { shipping_price: Number(e.target.value) || 0 })}
+                        value={item.free_shipping ? 0 : item.shipping_price || ''}
+                        onChange={e => updateDeliveryCity(city, { shipping_price: Number(e.target.value) || 0, free_shipping: Number(e.target.value) === 0 })}
+                        disabled={item.free_shipping}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="vnd-label">Días hábiles</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        className="vnd-input"
+                        value={item.delivery_days || 4}
+                        onChange={e => updateDeliveryCity(city, { delivery_days: Number(e.target.value) || 4 })}
                       />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <label className="vnd-label">Métodos habilitados</label>
+                      <label className="vnd-label">Opciones</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
+                        <input type="checkbox" checked={Boolean(item.free_shipping)} onChange={e => updateDeliveryCity(city, { free_shipping: e.target.checked, shipping_price: e.target.checked ? 0 : item.shipping_price || 25000 })} />
+                        Envío gratis
+                      </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
                         <input type="checkbox" checked={Boolean(item.cash_on_delivery)} onChange={e => updateDeliveryCity(city, { cash_on_delivery: e.target.checked })} />
                         Contra entrega

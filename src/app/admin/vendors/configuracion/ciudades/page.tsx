@@ -7,6 +7,8 @@ import { PY_CITIES } from '@/app/tienda/data';
 interface DeliveryCity {
   city: string;
   shipping_price: number;
+  delivery_days: number;
+  free_shipping: boolean;
   cash_on_delivery: boolean;
   transfer: boolean;
 }
@@ -52,6 +54,8 @@ export default function DeliveryCitiesAdminPage() {
       setCities(list.length ? list : PY_CITIES.slice(0, 6).map(city => ({
         city,
         shipping_price: 25000,
+        delivery_days: 4,
+        free_shipping: false,
         cash_on_delivery: true,
         transfer: true,
       })));
@@ -72,6 +76,8 @@ export default function DeliveryCitiesAdminPage() {
     setCities(prev => [...prev, {
       city: clean,
       shipping_price: 25000,
+      delivery_days: 4,
+      free_shipping: false,
       cash_on_delivery: true,
       transfer: true,
     }]);
@@ -147,6 +153,8 @@ export default function DeliveryCitiesAdminPage() {
             const item = cities.find(entry => entry.city === city) ?? {
               city,
               shipping_price: 25000,
+              delivery_days: 4,
+              free_shipping: false,
               cash_on_delivery: true,
               transfer: true,
             };
@@ -162,7 +170,7 @@ export default function DeliveryCitiesAdminPage() {
                         setCities(prev => {
                           const exists = prev.some(entry => entry.city === city);
                           if (exists) return prev.filter(entry => entry.city !== city);
-                          return [...prev, { city, shipping_price: 25000, cash_on_delivery: true, transfer: true }];
+                          return [...prev, { city, shipping_price: 25000, delivery_days: 4, free_shipping: false, cash_on_delivery: true, transfer: true }];
                         });
                       }}
                       className={`px-3 py-1.5 rounded-full text-xs font-bold ${enabled ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
@@ -183,20 +191,42 @@ export default function DeliveryCitiesAdminPage() {
                 </div>
 
                 {enabled && (
-                  <div className="mt-4 grid md:grid-cols-3 gap-4">
+                  <div className="mt-4 grid md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Precio de envío</label>
                       <input
                         type="number"
                         min={0}
                         step={1000}
-                        value={item.shipping_price || ''}
-                        onChange={e => setValue(city, { shipping_price: Number(e.target.value) || 0 })}
+                        value={item.free_shipping ? 0 : item.shipping_price || ''}
+                        onChange={e => setValue(city, { shipping_price: Number(e.target.value) || 0, free_shipping: Number(e.target.value) === 0 })}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                        disabled={item.free_shipping}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Días hábiles</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={item.delivery_days || 4}
+                        onChange={e => setValue(city, { delivery_days: Number(e.target.value) || 4 })}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                       />
                     </div>
 
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 pt-6">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(item.free_shipping)}
+                        onChange={e => setValue(city, { free_shipping: e.target.checked, shipping_price: e.target.checked ? 0 : item.shipping_price || 25000 })}
+                      />
+                      Envío gratis
+                    </label>
+
+                    <label className="flex items-center gap-2 text-sm text-gray-700 pt-6">
                       <input
                         type="checkbox"
                         checked={Boolean(item.cash_on_delivery)}
@@ -205,7 +235,7 @@ export default function DeliveryCitiesAdminPage() {
                       Contra entrega
                     </label>
 
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 pt-6 md:col-span-1">
                       <input
                         type="checkbox"
                         checked={Boolean(item.transfer)}

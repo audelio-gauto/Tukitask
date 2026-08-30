@@ -12,6 +12,8 @@ export const PY_CITIES = [
 export interface DeliveryCityConfig {
   city: string;
   shipping_price: number;
+  delivery_days?: number;
+  free_shipping?: boolean;
   cash_on_delivery: boolean;
   transfer: boolean;
 }
@@ -19,6 +21,8 @@ export interface DeliveryCityConfig {
 export const DEFAULT_DELIVERY_CITIES: DeliveryCityConfig[] = PY_CITIES.slice(0, 6).map((city) => ({
   city,
   shipping_price: 25000,
+  delivery_days: 4,
+  free_shipping: false,
   cash_on_delivery: true,
   transfer: true,
 }));

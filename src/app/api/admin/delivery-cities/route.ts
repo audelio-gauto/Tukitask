@@ -5,9 +5,15 @@ function normalizeCityEntry(raw: Record<string, unknown>) {
   const city = String(raw.city ?? '').trim();
   if (!city) return null;
 
+  const shippingPrice = Number(raw.shipping_price ?? 0) || 0;
+  const deliveryDays = Number(raw.delivery_days ?? raw.deliveryDuration ?? 4) || 4;
+  const freeShipping = Boolean(raw.free_shipping ?? raw.freeShipping ?? (shippingPrice === 0));
+
   return {
     city,
-    shipping_price: Number(raw.shipping_price ?? 0) || 0,
+    shipping_price: freeShipping ? 0 : shippingPrice,
+    delivery_days: deliveryDays,
+    free_shipping: freeShipping,
     cash_on_delivery: Boolean(raw.cash_on_delivery),
     transfer: Boolean(raw.transfer),
   };
