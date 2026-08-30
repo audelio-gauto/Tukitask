@@ -187,6 +187,7 @@ export default function ProductDetailPage() {
     available: boolean;
     shipping_price: number;
     methods: string[];
+    delivery_days?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -306,6 +307,7 @@ export default function ProductDetailPage() {
             shipping_price: Number(city.shipping_price ?? 0) || 0,
             cash_on_delivery: Boolean(city.cash_on_delivery),
             transfer: Boolean(city.transfer),
+            delivery_days: city.delivery_days != null ? Number(city.delivery_days) : undefined,
           }))
           .filter(city => city.city));
       } catch {
@@ -591,8 +593,8 @@ export default function ProductDetailPage() {
       }).slice(0, 8)
     : vendorDeliveryCities.slice(0, 6);
 
-  function checkShippingCity() {
-    const query = shippingCityQuery.trim();
+  function checkShippingCity(cityOverride?: string) {
+    const query = (cityOverride ?? shippingCityQuery).trim();
     if (!query) {
       setShippingCityCheck(null);
       return;
@@ -623,6 +625,7 @@ export default function ProductDetailPage() {
       available: true,
       shipping_price: Number(match.shipping_price ?? 0),
       methods,
+      delivery_days: match.delivery_days,
     });
   }
 
@@ -766,7 +769,7 @@ export default function ProductDetailPage() {
                       />
                       <button
                         type="button"
-                        onClick={checkShippingCity}
+                        onClick={() => checkShippingCity()}
                         style={{
                           height: 42,
                           padding: '0 14px',
@@ -800,7 +803,7 @@ export default function ProductDetailPage() {
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
                           {shippingCityCheck.available
-                            ? `${shippingCityCheck.city}: ${shippingCityCheck.shipping_price === 0 ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}`
+                            ? `${shippingCityCheck.city}: ${shippingCityCheck.shipping_price === 0 ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}${shippingCityCheck.delivery_days ? ` · ${shippingCityCheck.delivery_days} días hábiles` : ''}`
                             : `No hay entrega en ${shippingCityCheck.city} para este vendedor en este momento.`}
                         </p>
                       </div>
@@ -810,8 +813,10 @@ export default function ProductDetailPage() {
                       <p style={{ margin: 0, fontWeight: 700, color: 'var(--tnd-text-primary)' }}>Ciudades de entrega del vendedor</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {deliveryCitySuggestions.length > 0 ? deliveryCitySuggestions.map(item => (
-                          <span
+                          <button
                             key={item.city}
+                            type="button"
+                            onClick={() => { setShippingCityQuery(item.city); checkShippingCity(item.city); }}
                             style={{
                               padding: '6px 10px',
                               borderRadius: 999,
@@ -820,10 +825,11 @@ export default function ProductDetailPage() {
                               color: 'var(--tnd-text-primary)',
                               fontSize: '0.76rem',
                               fontWeight: 700,
+                              cursor: 'pointer',
                             }}
                           >
                             {item.city}
-                          </span>
+                          </button>
                         )) : (
                           <span style={{ color: 'var(--tnd-text-muted)', fontSize: '0.8rem' }}>Sin ciudades configuradas todavía.</span>
                         )}
