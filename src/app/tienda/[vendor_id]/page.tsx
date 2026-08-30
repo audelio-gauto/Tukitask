@@ -298,7 +298,8 @@ export default function VendorStorePage() {
   const waUrl     = `https://wa.me/595${activeCfg.whatsapp.replace(/^0/, '')}`;
 
   /* Filter products */
-  const baseCats  = activeCfg.categories.length > 0 ? activeCfg.categories : ['Todos'];
+  const safeCats  = Array.isArray(activeCfg.categories) ? activeCfg.categories : [];
+  const baseCats  = safeCats.length > 0 ? safeCats : ['Todos'];
   const extraCats = Array.from(new Set(dbMapped.map(p => p.category).filter(c => !baseCats.includes(c))));
   const cats      = extraCats.length > 0 ? [...baseCats, ...extraCats] : baseCats;
   const visibleProducts = products.filter(p => {
