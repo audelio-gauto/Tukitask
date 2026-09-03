@@ -55,6 +55,7 @@ interface PaymentInfo {
 interface VendorDeliveryCity {
   city: string;
   shipping_price: number;
+  free_shipping: boolean;
   cash_on_delivery: boolean;
   transfer: boolean;
 }
@@ -223,6 +224,7 @@ function CheckoutInner() {
           deliveryCities?: Array<{
             city?: string;
             shipping_price?: number;
+            free_shipping?: boolean;
             cash_on_delivery?: boolean;
             transfer?: boolean;
           }>;
@@ -233,6 +235,7 @@ function CheckoutInner() {
               .map(item => ({
                 city: String(item?.city ?? '').trim(),
                 shipping_price: Number(item?.shipping_price ?? 0) || 0,
+                free_shipping: Boolean(item?.free_shipping),
                 cash_on_delivery: Boolean(item?.cash_on_delivery),
                 transfer: Boolean(item?.transfer),
               }))
@@ -374,7 +377,11 @@ function CheckoutInner() {
     }
   }
 
-  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const matchedDeliveryCity = vendorDeliveryCities.find(c => c.city === delivery.ciudad);
+  const isFreeShipping = Boolean(matchedDeliveryCity?.free_shipping);
+  const shippingCost = matchedDeliveryCity ? (isFreeShipping ? 0 : matchedDeliveryCity.shipping_price) : 0;
+  const total = subtotal + shippingCost;
   const cityMethodState = getCityPaymentAvailability(delivery.ciudad);
   const cashAllowedForCity = cityMethodState.cash_on_delivery;
   const transferAllowedForCity = cityMethodState.transfer;
@@ -575,15 +582,14 @@ function CheckoutInner() {
               <h2 className="tnd-checkout-section-title">Método de pago</h2>
 
               {/* Contra entrega */}
-              {(paymentInfo?.cash_on_delivery?.available || cashAllowedForCity) && (
-                <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: (paymentInfo?.transfer?.available || transferAllowedForCity) ? 12 : 0 }}>
+              {cashAllowedForCity && (
+                <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: transferAllowedForCity ? 12 : 0 }}>
                   <input
                     type="radio"
                     name="payment_method"
                     checked={paymentMethod === 'contra_entrega'}
                     onChange={() => setPaymentMethod('contra_entrega')}
                     style={{ marginTop: 4 }}
-                    disabled={!cashAllowedForCity}
                   />
                   <span>
                     <strong>Contra entrega</strong>
@@ -596,7 +602,7 @@ function CheckoutInner() {
               )}
 
               {/* Transferencia — solo si hay datos bancarios disponibles */}
-              {(paymentInfo?.transfer?.available || transferAllowedForCity) && (
+              {transferAllowedForCity && (
                 <>
                   <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
                     <input
@@ -605,7 +611,6 @@ function CheckoutInner() {
                       checked={paymentMethod === 'transferencia'}
                       onChange={() => setPaymentMethod('transferencia')}
                       style={{ marginTop: 4 }}
-                      disabled={!transferAllowedForCity}
                     />
                     <span>
                       <strong>Transferencia bancaria</strong>
@@ -725,7 +730,19 @@ function CheckoutInner() {
               )}
 
               <div style={{ borderTop:'1px solid var(--tnd-border)', paddingTop:14, marginBottom:20 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                  <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.85rem' }}>Subtotal</span>
+                  <span style={{ color:'var(--tnd-text-secondary)', fontSize:'0.85rem', fontWeight:700 }}>{gs(subtotal)}</span>
+                </div>
+                {matchedDeliveryCity && (
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                    <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.85rem' }}>Envío</span>
+                    <span style={{ color: isFreeShipping ? 'var(--tnd-success)' : 'var(--tnd-text-secondary)', fontSize:'0.85rem', fontWeight:700 }}>
+                      {isFreeShipping ? 'Envío gratis' : gs(shippingCost)}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid var(--tnd-border)', paddingTop:10 }}>
                   <span style={{ fontWeight:700, color:'var(--tnd-text-secondary)' }}>Total</span>
                   <span style={{ fontSize:'1.5rem', fontWeight:900, color:'var(--tnd-accent)' }}>{gs(total)}</span>
                 </div>
@@ -752,7 +769,7 @@ function CheckoutInner() {
 
               <button
                 type="submit"
-                disabled={submitting || !items.length || (!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available)}
+                disabled={submitting || !items.length || (!cashAllowedForCity && !transferAllowedForCity)}
                 style={{ width:'100%', height:50, background:'var(--tnd-accent)', color:'var(--tnd-accent-text)', border:'none', borderRadius:13, fontSize:'1rem', fontWeight:900, cursor:'pointer', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity: (submitting || !items.length) ? 0.6 : 1 }}
               >
                 {submitting ? '⏳ Procesando...' : '✅ Confirmar pedido'}

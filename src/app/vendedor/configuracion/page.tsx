@@ -234,7 +234,7 @@ export default function ConfiguracionPage() {
             delivery_days: 4,
             free_shipping: false,
             cash_on_delivery: true,
-            transfer: true,
+            transfer: false,
           },
         ],
       };
@@ -573,12 +573,23 @@ export default function ConfiguracionPage() {
                         <input type="checkbox" checked={Boolean(item.free_shipping)} onChange={e => updateDeliveryCity(city, { free_shipping: e.target.checked, shipping_price: e.target.checked ? 0 : item.shipping_price || 25000 })} />
                         Envío gratis
                       </label>
+                      <label className="vnd-label" style={{ marginTop: 6, marginBottom: 0 }}>Método de pago</label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
-                        <input type="checkbox" checked={Boolean(item.cash_on_delivery)} onChange={e => updateDeliveryCity(city, { cash_on_delivery: e.target.checked })} />
+                        <input
+                          type="radio"
+                          name={`payment-method-${city}`}
+                          checked={Boolean(item.cash_on_delivery) && !item.transfer}
+                          onChange={() => updateDeliveryCity(city, { cash_on_delivery: true, transfer: false })}
+                        />
                         Contra entrega
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--vnd-text-primary)' }}>
-                        <input type="checkbox" checked={Boolean(item.transfer)} onChange={e => updateDeliveryCity(city, { transfer: e.target.checked })} />
+                        <input
+                          type="radio"
+                          name={`payment-method-${city}`}
+                          checked={Boolean(item.transfer) && !item.cash_on_delivery}
+                          onChange={() => updateDeliveryCity(city, { cash_on_delivery: false, transfer: true })}
+                        />
                         Transferencia
                       </label>
                     </div>

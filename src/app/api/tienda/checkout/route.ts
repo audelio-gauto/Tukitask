@@ -257,6 +257,27 @@ export async function POST(req: Request) {
     byVendor.get(key)!.push(item);
   }
 
+  // Costo de envío por vendedor, según su configuración de cobertura por ciudad
+  // (se recalcula en el servidor para no confiar en el precio enviado por el cliente).
+  type DeliveryCityRow = { city?: string; shipping_price?: number; free_shipping?: boolean };
+  const shippingByVendor = new Map<string, number>();
+  const vendorIdsInOrder = Array.from(new Set(resolvedItems.map((i) => i.vendorId).filter(Boolean)));
+  if (vendorIdsInOrder.length > 0 && delivery.ciudad) {
+    const { data: storeConfigsData } = await db
+      .from('store_configs')
+      .select('vendor_id, config')
+      .in('vendor_id', vendorIdsInOrder);
+
+    for (const cfgRow of (storeConfigsData ?? []) as Array<{ vendor_id: string; config: { deliveryCities?: DeliveryCityRow[] } }>) {
+      const cities = Array.isArray(cfgRow.config?.deliveryCities) ? cfgRow.config.deliveryCities : [];
+      const match = cities.find((c) => String(c?.city ?? '').trim() === delivery.ciudad);
+      if (match) {
+        const price = match.free_shipping ? 0 : (Number(match.shipping_price) || 0);
+        shippingByVendor.set(cfgRow.vendor_id, price);
+      }
+    }
+  }
+
   async function reserveStock(productId: string, qty: number): Promise<boolean> {
     // Optimistic CAS retries to avoid race-condition overselling.
     for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -301,8 +322,10 @@ export async function POST(req: Request) {
   }
 
   for (const [vendorEmail, vendorItems] of byVendor) {
-    const total = vendorItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const itemsTotal = vendorItems.reduce((sum, i) => sum + i.price * i.qty, 0);
     const vendorId = vendorItems[0]?.vendorId ?? null;
+    const shippingPrice = vendorId ? (shippingByVendor.get(vendorId) ?? 0) : 0;
+    const total = itemsTotal + shippingPrice;
     const negotiationIdsInOrder = Array.from(
       new Set(vendorItems.map((i) => i.negotiationId).filter(Boolean) as string[])
     );
@@ -339,6 +362,7 @@ export async function POST(req: Request) {
         image:     i.image ?? null,
       })),
       total,
+      shipping_price:  shippingPrice,
       address:       addressSummary,
       billing: {
         name:          billing.name,
