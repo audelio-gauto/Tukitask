@@ -17,6 +17,8 @@ interface MarketOrder {
   driver?: { name: string; phone?: string };
   address: string;
   negotiated: boolean;
+  paymentMethod?: string;
+  paymentProofUrl?: string | null;
 }
 
 /* ── Helpers ─────────────────────────────────────────────── */
@@ -68,6 +70,8 @@ function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
     status: (raw.status as OrderStatus) ?? 'pending',
     address: String(raw.address ?? ''),
     negotiated: Boolean(raw.negotiated),
+    paymentMethod: raw.payment_method ? String(raw.payment_method) : undefined,
+    paymentProofUrl: (raw.payment_proof_url as string | null) ?? null,
   };
 }
 
@@ -141,6 +145,7 @@ export default function PedidosPage() {
   const [busyId, setBusyId]         = useState<string | null>(null);
   const [expanded, setExpanded]     = useState<string | null>(null);
   const [search, setSearch]         = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -407,6 +412,24 @@ export default function PedidosPage() {
                                     🖨 Imprimir
                                   </button>
                                 </div>
+
+                                {order.paymentMethod === 'transferencia' && (
+                                  <div style={{ marginTop: 16 }}>
+                                    <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
+                                      Comprobante de pago
+                                    </p>
+                                    {order.paymentProofUrl ? (
+                                      <button
+                                        className="vnd-btn vnd-btn-secondary vnd-btn-sm"
+                                        onClick={() => setPreviewUrl(order.paymentProofUrl!)}
+                                      >
+                                        🖼 Ver comprobante
+                                      </button>
+                                    ) : (
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)' }}>Aún sin comprobante</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -424,6 +447,15 @@ export default function PedidosPage() {
       <p style={{ fontSize: '0.75rem', color: 'var(--vnd-text-muted)', marginTop: 12, textAlign: 'right' }}>
         Mostrando {filtered.length} de {orders.length} pedidos
       </p>
+
+      {previewUrl && (
+        <div
+          onClick={() => setPreviewUrl(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, cursor: 'pointer', padding: 20 }}
+        >
+          <img src={previewUrl} alt="Comprobante de pago" style={{ maxWidth: '90vw', maxHeight: '85vh', borderRadius: 12, objectFit: 'contain' }} onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

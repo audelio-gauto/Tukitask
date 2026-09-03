@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin, unauthorized } from '@/lib/apiAuth';
+import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
 
 export interface CheckoutItem {
   productId: string;
@@ -32,6 +33,8 @@ export interface CheckoutBody {
   };
   notes?: string;
   payment_method?: string;
+  payment_proof_base64?: string;
+  payment_proof_mime?: string;
 }
 
 type ProductRow = {
@@ -94,6 +97,37 @@ export async function POST(req: Request) {
 
   const db = sbAdmin();
   const createdOrders: string[] = [];
+
+  // Comprobante de pago (obligatorio para transferencia bancaria)
+  let paymentProofUrl: string | null = null;
+  if (payment_method === 'transferencia') {
+    if (!body.payment_proof_base64 || !body.payment_proof_mime) {
+      return NextResponse.json({ error: 'Debés adjuntar el comprobante de pago para continuar.' }, { status: 400 });
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(body.payment_proof_mime as never)) {
+      return NextResponse.json({ error: 'Formato de imagen no soportado' }, { status: 400 });
+    }
+    const proofBuffer = Buffer.from(body.payment_proof_base64, 'base64');
+    if (proofBuffer.length > MAX_FILE_SIZE_PHOTO) {
+      return NextResponse.json({ error: 'El comprobante es demasiado grande (máx 2MB)' }, { status: 400 });
+    }
+    if (!validateImageMagicBytes(proofBuffer, body.payment_proof_mime)) {
+      return NextResponse.json({ error: 'El comprobante no es una imagen válida' }, { status: 400 });
+    }
+    const ext = body.payment_proof_mime === 'image/png' ? 'png' : body.payment_proof_mime === 'image/webp' ? 'webp' : 'jpg';
+    const emailSafe = user.email!.replace(/[^a-z0-9]/g, '_');
+    const fileName = `market-checkout/${emailSafe}_${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await db.storage
+      .from('delivery-proofs')
+      .upload(fileName, proofBuffer, { contentType: body.payment_proof_mime, upsert: false });
+
+    if (uploadErr) {
+      return NextResponse.json({ error: 'Error al subir comprobante: ' + uploadErr.message }, { status: 500 });
+    }
+    const { data: urlData } = db.storage.from('delivery-proofs').getPublicUrl(fileName);
+    paymentProofUrl = urlData.publicUrl;
+  }
 
   const productIds = Array.from(new Set(items.map((i) => i.productId).filter(Boolean)));
   if (productIds.length === 0) {
@@ -323,6 +357,7 @@ export async function POST(req: Request) {
       },
       notes:   notes ?? null,
       payment_method: payment_method ?? 'contra_entrega',
+      payment_proof_url: paymentProofUrl,
       negotiation_id: negotiationIdsInOrder.length === 1 ? negotiationIdsInOrder[0] : null,
       negotiated: negotiationIdsInOrder.length > 0,
       status: 'pending',

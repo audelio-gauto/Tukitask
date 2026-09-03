@@ -82,6 +82,9 @@ function CheckoutInner() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('contra_entrega');
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [notes,     setNotes]     = useState('');
+  const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
+  const [paymentProofMime,   setPaymentProofMime]   = useState<string | null>(null);
+  const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [orderIds,   setOrderIds]   = useState<string[] | null>(null);
   const [error,      setError]      = useState<string | null>(null);
@@ -283,6 +286,25 @@ function CheckoutInner() {
   }, []);
 
   /* ── Submit ── */
+  function handleProofChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('El comprobante supera los 2 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const result = ev.target?.result as string;
+      const [header, b64] = result.split(',');
+      const mime = header.replace('data:', '').replace(';base64', '');
+      setPaymentProofBase64(b64);
+      setPaymentProofMime(mime);
+      setPaymentProofPreview(result);
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!items.length) { setError('No hay productos para comprar.'); return; }
@@ -316,6 +338,10 @@ function CheckoutInner() {
       setError('La ciudad seleccionada no acepta transferencia bancaria. Elegí otra opción de pago.');
       return;
     }
+    if (paymentMethod === 'transferencia' && !paymentProofBase64) {
+      setError('Adjuntá el comprobante de pago para continuar.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -331,7 +357,11 @@ function CheckoutInner() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ items, billing, delivery, notes, payment_method: paymentMethod }),
+        body: JSON.stringify({
+          items, billing, delivery, notes, payment_method: paymentMethod,
+          payment_proof_base64: paymentMethod === 'transferencia' ? paymentProofBase64 : null,
+          payment_proof_mime: paymentMethod === 'transferencia' ? paymentProofMime : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error ?? 'Error al procesar el pedido');
@@ -581,7 +611,7 @@ function CheckoutInner() {
                       <strong>Transferencia bancaria</strong>
                       <br />
                       <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
-                        Tigo Money, Personal Pay, billetera digital o transferencia bancaria.
+                        <strong>En esta ciudad, el pedido se procesa con pago anticipado para recibir tu producto.</strong>
                       </span>
                     </span>
                   </label>
@@ -615,8 +645,23 @@ function CheckoutInner() {
                         }
                       </div>
                       <p style={{ fontSize: '0.7rem', color: 'var(--tnd-text-muted)', marginTop: 10, lineHeight: 1.5 }}>
-                        Realizá la transferencia y adjuntá el comprobante en las notas del pedido.
+                        Realizá la transferencia y subí el comprobante abajo.
                       </p>
+
+                      <div style={{ marginTop: 12 }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--tnd-text-primary)', display: 'block', marginBottom: 6 }}>
+                          Comprobante de pago
+                        </label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 14px', background: 'var(--tnd-surface)', border: '1px solid var(--tnd-border)', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600, color: 'var(--tnd-text-primary)' }}>
+                          {paymentProofPreview ? '✓ Comprobante cargado — tocar para cambiar' : '📷 Subir comprobante de pago'}
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleProofChange} />
+                        </label>
+                        {paymentProofPreview && (
+                          <div style={{ marginTop: 10 }}>
+                            <img src={paymentProofPreview} alt="Comprobante" style={{ maxHeight: 160, borderRadius: 10, objectFit: 'contain', border: '1px solid var(--tnd-border)' }} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
@@ -693,7 +738,7 @@ function CheckoutInner() {
                   </p>
                   <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
                     {paymentMethod === 'transferencia'
-                      ? 'Realizá la transferencia y adjuntá el comprobante en las notas.'
+                      ? 'Realizá la transferencia y subí el comprobante.'
                       : 'Pagar al recibir el producto.'}
                   </p>
                 </div>

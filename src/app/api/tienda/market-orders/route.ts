@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   } else {
     let q = db
       .from('market_orders')
-      .select('id, client_name, client_email, items, total, status, address, negotiated, payment_method, created_at, updated_at')
+      .select('id, client_name, client_email, items, total, status, address, negotiated, payment_method, payment_proof_url, created_at, updated_at')
       .eq('vendor_email', user.email)
       .order('created_at', { ascending: false })
       .limit(limit);
