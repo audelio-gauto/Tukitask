@@ -804,7 +804,7 @@ export default function ProductDetailPage() {
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--tnd-text-muted)', lineHeight: 1.5 }}>
                           {shippingCityCheck.available
-                            ? `${shippingCityCheck.city}: ${shippingCityCheck.shipping_price === 0 ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}${shippingCityCheck.delivery_days ? ` · ${shippingCityCheck.delivery_days} días hábiles` : ''}`
+                            ? `${shippingCityCheck.city}: ${shippingCityCheck.shipping_price === 0 ? 'Envío gratis' : gs(shippingCityCheck.shipping_price)} · ${shippingCityCheck.methods.join(' · ') || 'Pago al confirmar'}${shippingCityCheck.delivery_days ? ` · Tu compra llega a vos en ${shippingCityCheck.delivery_days} días` : ''}`
                             : `No hay entrega en ${shippingCityCheck.city} para este vendedor en este momento.`}
                         </p>
                       </div>
@@ -837,12 +837,7 @@ export default function ProductDetailPage() {
                       </div>
                     </div>
 
-                    <div className="tnd-pdp2-info-row"><span>Modalidad</span><strong>A coordinar con el vendedor</strong></div>
                     <div className="tnd-pdp2-info-row"><span>Cobertura</span><strong>{vendorDeliveryCities.length > 0 ? `${vendorDeliveryCities.length} ciudades activas` : 'Depende del vendedor'}</strong></div>
-                    <div className="tnd-pdp2-info-row"><span>Tiempo estimado</span><strong>A confirmar al comprar</strong></div>
-                    <p style={{ margin: '14px 0 0', fontSize: '0.83rem', color: 'var(--tnd-text-muted)', lineHeight: 1.6 }}>
-                      <strong>{vendorAlias}</strong> coordina la entrega y el costo según la ciudad elegida una vez confirmado el pedido.
-                    </p>
                   </div>
                 </div>
               )}
