@@ -10,12 +10,16 @@ interface MarketOrder {
   number: string;
   createdAt: string;
   clientName: string;
+  clientEmail?: string;
   clientPhone?: string;
   items: { name: string; qty: number; price: number; image?: string | null }[];
   total: number;
   status: OrderStatus;
   driver?: { name: string; phone?: string };
   address: string;
+  barrio?: string;
+  ciudad?: string;
+  referencia?: string;
   negotiated: boolean;
   paymentMethod?: string;
   paymentProofUrl?: string | null;
@@ -54,12 +58,15 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus[]>> = {
  
 function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
   const rawItems = (raw.items as Array<Record<string, unknown>>) ?? [];
+  const billing  = (raw.billing as Record<string, unknown>) ?? {};
+  const delivery = (raw.delivery as Record<string, unknown>) ?? {};
   return {
     id: String(raw.id),
     number: '#' + String(raw.id).slice(0, 8).toUpperCase(),
     createdAt: String(raw.created_at ?? raw.createdAt ?? ''),
     clientName: String(raw.client_name ?? raw.clientName ?? ''),
-    clientPhone: undefined,
+    clientEmail: raw.client_email ? String(raw.client_email) : undefined,
+    clientPhone: billing.phone ? String(billing.phone) : undefined,
     items: rawItems.map(i => ({
       name:  String(i.name ?? ''),
       qty:   Number(i.qty ?? 1),
@@ -69,61 +76,62 @@ function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
     total: Number(raw.total ?? 0),
     status: (raw.status as OrderStatus) ?? 'pending',
     address: String(raw.address ?? ''),
+    barrio: delivery.barrio ? String(delivery.barrio) : undefined,
+    ciudad: delivery.ciudad ? String(delivery.ciudad) : undefined,
+    referencia: delivery.referencia ? String(delivery.referencia) : undefined,
     negotiated: Boolean(raw.negotiated),
     paymentMethod: raw.payment_method ? String(raw.payment_method) : undefined,
     paymentProofUrl: (raw.payment_proof_url as string | null) ?? null,
   };
 }
 
-/* ── Legacy mock data (kept for reference — not used) ──── */
-const MOCK_ORDERS: MarketOrder[] = [
-  {
-    id: '1', number: '#5959',
-    createdAt: new Date(Date.now() - 5 * 60e3).toISOString(),
-    clientName: 'María González', clientPhone: '0981-234567',
-    items: [{ name: 'Auricular JBL Tune 510', qty: 2, price: 180000 }],
-    total: 360000, status: 'pending', negotiated: true,
-    address: 'Av. Mcal. López 1234, Asunción',
-  },
-  {
-    id: '2', number: '#5958',
-    createdAt: new Date(Date.now() - 32 * 60e3).toISOString(),
-    clientName: 'Carlos Pérez',
-    items: [{ name: 'Cable USB-C 2m', qty: 1, price: 35000 }],
-    total: 35000, status: 'preparing', negotiated: false,
-    address: 'Calle Eligio Ayala 567, Asunción',
-    driver: { name: 'Diego R.', phone: '0991-456789' },
-  },
-  {
-    id: '3', number: '#5957',
-    createdAt: new Date(Date.now() - 2 * 3600e3).toISOString(),
-    clientName: 'Ana Rodríguez',
-    items: [
-      { name: 'Cargador 65W GaN', qty: 1, price: 120000 },
-      { name: 'Cable USB-C 2m', qty: 2, price: 35000 },
-    ],
-    total: 190000, status: 'delivered', negotiated: true,
-    address: 'Barrio San Antonio, Fernando de la Mora',
-    driver: { name: 'Luis M.' },
-  },
-  {
-    id: '4', number: '#5956',
-    createdAt: new Date(Date.now() - 5 * 3600e3).toISOString(),
-    clientName: 'Juan Martínez',
-    items: [{ name: 'Soporte Magnético Auto', qty: 1, price: 45000 }],
-    total: 45000, status: 'delivered', negotiated: false,
-    address: 'Av. España 890, Asunción',
-    driver: { name: 'Roberto C.' },
-  },
-  {
-    id: '5', number: '#5955',
-    createdAt: new Date(Date.now() - 8 * 3600e3).toISOString(),
-    clientName: 'Laura Benítez',
-    items: [{ name: 'Funda Samsung A55', qty: 1, price: 28000 }],
-    total: 28000, status: 'cancelled', negotiated: false,
-    address: 'Calle Palma 123, Asunción',
-  },
-];
+/* ── Escape helper — prevents HTML/script injection when building the print window ── */
+function escHtml(s: string) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+
+/* ── Build a wa.me link for the client's phone (Paraguay country code) ── */
+function buildWhatsAppLink(phone: string, orderNumber: string) {
+  const digits = phone.replace(/\D/g, '');
+  const withCountry = digits.startsWith('595') ? digits : `595${digits.replace(/^0/, '')}`;
+  const msg = encodeURIComponent(`Hola! Te escribo sobre tu pedido ${orderNumber}`);
+  return `https://wa.me/${withCountry}?text=${msg}`;
+}
+
+/* ── Open a print-friendly packing slip for one order ── */
+function printOrder(order: MarketOrder) {
+  const w = window.open('', '_blank', 'width=380,height=600');
+  if (!w) return;
+  const itemsHtml = order.items.map(it => `
+    <tr>
+      <td>${escHtml(it.name)}</td>
+      <td style="text-align:center">${it.qty}</td>
+      <td style="text-align:right">${escHtml(fmtGs(it.price * it.qty))}</td>
+    </tr>`).join('');
+  const addressLine = [order.barrio, order.ciudad].filter(Boolean).join(', ') || order.address;
+  w.document.write(`<!DOCTYPE html><html><head><title>Pedido ${escHtml(order.number)}</title><style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:18px;color:#111;max-width:360px}
+    h1{font-size:16px;margin:0 0 6px}
+    p{font-size:12px;margin:2px 0}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+    th,td{padding:5px 2px;border-bottom:1px solid #ddd;text-align:left}
+    .total{font-weight:bold;font-size:14px;margin-top:10px;text-align:right}
+    hr{border:none;border-top:1px dashed #999;margin:10px 0}
+  </style></head><body>
+    <h1>Pedido ${escHtml(order.number)}</h1>
+    <p>Fecha: ${escHtml(fmtDate(order.createdAt))}</p>
+    <p>Cliente: ${escHtml(order.clientName)}${order.clientPhone ? ' · ' + escHtml(order.clientPhone) : ''}</p>
+    <p>Dirección: ${escHtml(addressLine)}</p>
+    ${order.referencia ? `<p>Referencia: ${escHtml(order.referencia)}</p>` : ''}
+    <p>Pago: ${order.paymentMethod === 'contra_entrega' ? 'Contra entrega' : 'Transferencia bancaria'}</p>
+    <hr />
+    <table><thead><tr><th>Producto</th><th>Cant.</th><th>Subtotal</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+    <p class="total">Total: ${escHtml(fmtGs(order.total))}</p>
+  </body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
 
 type TabKey = 'all' | OrderStatus;
 
@@ -162,10 +170,17 @@ export default function PedidosPage() {
 
   const filtered = orders
     .filter(o => activeTab === 'all' || o.status === activeTab)
-    .filter(o =>
-      o.clientName.toLowerCase().includes(search.toLowerCase()) ||
-      o.number.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(o => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        o.clientName.toLowerCase().includes(q) ||
+        o.number.toLowerCase().includes(q) ||
+        o.address.toLowerCase().includes(q) ||
+        (o.clientEmail?.toLowerCase().includes(q) ?? false) ||
+        o.items.some(it => it.name.toLowerCase().includes(q))
+      );
+    });
 
   const countOf = (k: TabKey) =>
     k === 'all' ? orders.length : orders.filter(o => o.status === k).length;
@@ -184,6 +199,12 @@ export default function PedidosPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  function handleStatusClick(id: string, next: OrderStatus) {
+    if (next === 'cancelled' && !window.confirm('¿Seguro que deseas cancelar este pedido? Esta acción no se puede deshacer.')) return;
+    if (next === 'delivered' && !window.confirm('¿Confirmas que el pedido fue entregado? Se descontará la comisión automáticamente y no se puede deshacer.')) return;
+    void changeStatus(id, next);
   }
 
   return (
@@ -223,7 +244,7 @@ export default function PedidosPage() {
           </svg>
           <input
             className="vnd-search"
-            placeholder="Buscar pedido o cliente..."
+            placeholder="Buscar pedido, cliente o producto..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -356,7 +377,7 @@ export default function PedidosPage() {
                                   border:     next === 'cancelled' ? '1px solid transparent' : 'none',
                                   opacity: busyId === order.id ? 0.6 : 1,
                                 }}
-                                onClick={() => void changeStatus(order.id, next)}
+                                onClick={() => handleStatusClick(order.id, next)}
                               >
                                 {next === 'preparing'  && '▶ Preparar'}
                                 {next === 'ready'      && '✓ Listo'}
@@ -401,14 +422,33 @@ export default function PedidosPage() {
                                 <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 10 }}>
                                   Dirección de entrega
                                 </p>
-                                <p style={{ fontSize: '0.835rem', color: 'var(--vnd-text-primary)', marginBottom: 14 }}>
-                                  📍 {order.address}
+                                <p style={{ fontSize: '0.835rem', color: 'var(--vnd-text-primary)', marginBottom: 2 }}>
+                                  📍 {[order.barrio, order.ciudad].filter(Boolean).join(', ') || order.address}
                                 </p>
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                  <button className="vnd-btn vnd-btn-secondary vnd-btn-sm">
-                                    💬 Mensaje
-                                  </button>
-                                  <button className="vnd-btn vnd-btn-secondary vnd-btn-sm">
+                                {order.referencia && (
+                                  <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginBottom: 10 }}>
+                                    Referencia: {order.referencia}
+                                  </p>
+                                )}
+                                {order.clientEmail && (
+                                  <p style={{ fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginBottom: 14 }}>
+                                    ✉️ {order.clientEmail}
+                                  </p>
+                                )}
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  {order.clientPhone ? (
+                                    <a
+                                      href={buildWhatsAppLink(order.clientPhone, order.number)}
+                                      target="_blank" rel="noopener noreferrer"
+                                      className="vnd-btn vnd-btn-secondary vnd-btn-sm"
+                                      style={{ textDecoration: 'none' }}
+                                    >
+                                      💬 WhatsApp
+                                    </a>
+                                  ) : (
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>Sin teléfono de contacto</span>
+                                  )}
+                                  <button className="vnd-btn vnd-btn-secondary vnd-btn-sm" onClick={() => printOrder(order)}>
                                     🖨 Imprimir
                                   </button>
                                 </div>
