@@ -111,6 +111,7 @@ export default function VendedorSidebar() {
   const pathname = usePathname();
   const [storeName, setStoreName] = useState('Mi Tienda');
   const [initial, setInitial] = useState('T');
+  const [brandLogo, setBrandLogo] = useState('/api/logo');
   const analisisIcon = navItems.find(i => i.href === '/vendedor/analisis')?.icon;
   const configuracionIcon = navItems.find(i => i.href === '/vendedor/configuracion')?.icon;
 
@@ -122,6 +123,8 @@ export default function VendedorSidebar() {
         setInitial(name[0].toUpperCase());
       }
     });
+
+    setBrandLogo('/api/logo?ts=' + Date.now());
   }, []);
 
   function isActive(href: string) {
@@ -133,7 +136,14 @@ export default function VendedorSidebar() {
     <aside className="vnd-sidebar">
       {/* Brand */}
       <div className="vnd-sidebar-brand">
-        <div className="vnd-sidebar-logo">T</div>
+        <div className="vnd-sidebar-logo-wrap">
+          <img
+            src={brandLogo}
+            alt="TukiTask logo"
+            className="vnd-sidebar-logo-image"
+            onError={() => setBrandLogo('/icons/icon-192x192.png')}
+          />
+        </div>
         <div className="vnd-sidebar-brand-name">
           <span className="vnd-sidebar-brand-title">TukiTask</span>
           <span className="vnd-sidebar-brand-sub">TukiMarket</span>
