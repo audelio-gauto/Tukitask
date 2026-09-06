@@ -191,6 +191,12 @@ export default function ProductDetailPage() {
     delivery_days?: number;
   } | null>(null);
 
+  // Si el usuario cambia la cantidad, reseteamos el campo de oferta para
+  // evitar ambigüedad entre "oferta por unidad" y "oferta por el total".
+  useEffect(() => {
+    setOfferAmount('');
+  }, [quantity]);
+
   useEffect(() => {
     fetch('/api/tienda/neg-phrases')
       .then((r) => r.json())
@@ -397,8 +403,13 @@ export default function ProductDetailPage() {
 
   const isNegotiable = p.negotiable && p.floor_price < p.price * 0.92;
   const allImages    = (p.gallery && p.gallery.length > 0) ? p.gallery : (p.image ? [p.image] : []);
+  // Cuando cantidad > 1, el campo de oferta representa el TOTAL para el lote,
+  // no el precio por unidad. offerUnitNum siempre es el equivalente por unidad,
+  // que es el único valor que el backend de negociación conoce y valida
+  // (nunca se le envía un total, así no se rompe la lógica existente).
   const offerNum     = Number(offerAmount.replace(/\D/g, '')) || 0;
-  const dealStrength = mode === 'negotiate' ? getDealStrength(offerNum, p.price, p.floor_price) : null;
+  const offerUnitNum = quantity > 1 ? Math.round(offerNum / quantity) : offerNum;
+  const dealStrength = mode === 'negotiate' ? getDealStrength(offerUnitNum, p.price, p.floor_price) : null;
   const clampQty     = (v: number) => Math.max(1, Math.min(p.stock, v));
   const vendorEmail = p.vendor_email || 'tienda@tukimarket.local';
   const vendorAlias = vendorStoreName ?? (vendorEmail.split('@')[0] || 'Tienda');
@@ -491,8 +502,8 @@ export default function ProductDetailPage() {
 
   async function handleOffer(e: React.FormEvent) {
     e.preventDefault();
-    if (!p || !offerNum || offerNum <= 0) return;
-    const capturedOffer = offerNum;
+    if (!p || !offerNum || offerNum <= 0 || offerUnitNum <= 0) return;
+    const capturedOffer = offerUnitNum;
     setPendingResult(null);
     setAnimStep(0);
     setSubmitting(true);
@@ -1150,20 +1161,25 @@ export default function ProductDetailPage() {
                   ) : (
                     <form onSubmit={handleOffer} className="tnd-pdp2-neg-form">
                       <div className="tnd-pdp2-neg-field">
-                        <label htmlFor="offerAmt2">Tu oferta por unidad</label>
+                        <label htmlFor="offerAmt2">{quantity > 1 ? 'Tu oferta por cantidad' : 'Tu oferta por unidad'}</label>
                         <input
                           id="offerAmt2" type="text" inputMode="numeric"
                           className="tnd-pdp2-neg-input"
-                          placeholder={`Hasta ${gs(p.price)}`}
+                          placeholder={`Hasta ${gs(quantity > 1 ? p.price * quantity : p.price)}`}
                           value={offerAmount}
                           onChange={e => {
                             const digits = e.target.value.replace(/\D/g, '');
                             if (!digits) { setOfferAmount(''); return; }
-                            setOfferAmount(formatOfferGs(Math.min(Number(digits), p.price)));
+                            const maxOffer = quantity > 1 ? p.price * quantity : p.price;
+                            setOfferAmount(formatOfferGs(Math.min(Number(digits), maxOffer)));
                           }}
                           required autoFocus
                         />
-                        <span className="tnd-pdp2-neg-hint">Solo números · Ej: 25000</span>
+                        <span className="tnd-pdp2-neg-hint">
+                          {quantity > 1
+                            ? `Ingresá el total por las ${quantity} unidades · Ej: 450000`
+                            : 'Solo números · Ej: 25000'}
+                        </span>
                       </div>
                       {dealStrength && (
                         <div className="tnd-deal-meter">
@@ -1176,12 +1192,12 @@ export default function ProductDetailPage() {
                           </div>
                         </div>
                       )}
-                      {offerNum > 0 && (
+                      {offerNum > 0 && quantity > 1 && (
                         <div className="tnd-pdp2-neg-total">
-                          Total: <strong>{gs(offerNum * quantity)}</strong> ({quantity} × {gs(offerNum)})
+                          Total: <strong>{gs(offerNum)}</strong> ({quantity} × {gs(offerUnitNum)} c/u)
                         </div>
                       )}
-                      <button type="submit" className="tnd-pdp2-neg-submit" disabled={submitting || offerNum <= 0}>
+                      <button type="submit" className="tnd-pdp2-neg-submit" disabled={submitting || offerNum <= 0 || offerUnitNum <= 0}>
                         {submitting ? '⏳ Negociando...' : '🤝 Enviar oferta'}
                       </button>
                     </form>
