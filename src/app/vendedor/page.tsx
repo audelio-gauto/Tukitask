@@ -186,7 +186,7 @@ export default function VendedorDashboard() {
         const orderRows = ordersRes.data ?? [];
         const negRows = negRes.data ?? [];
 
-        const salesTotal = (orderRows as Array<{ total?: number | null }>).reduce((sum, row) => {
+        const salesTotal = (orderRows as Array<{ total?: number | null; status?: string | null }>).reduce((sum, row) => {
           const status = String(row.status ?? '');
           if (status === 'cancelled') return sum;
           return sum + Number(row.total ?? 0);
