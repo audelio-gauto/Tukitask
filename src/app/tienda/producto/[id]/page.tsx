@@ -843,8 +843,8 @@ export default function ProductDetailPage() {
               )}
               {openSection === 'garantias' && (
                 <div id="panel-garantias" role="tabpanel" aria-labelledby="tab-garantias">
-                  {p?.warranty_days != null && p.warranty_days > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1.5px solid #86efac', borderRadius: 14, marginBottom: 14 }}>
+                  {p?.warranty_days != null && p.warranty_days > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1.5px solid #86efac', borderRadius: 14 }}>
                       <span style={{ fontSize: '2rem', lineHeight: 1 }}>🛡️</span>
                       <div>
                         <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: '#15803d' }}>
@@ -855,19 +855,11 @@ export default function ProductDetailPage() {
                         </p>
                       </div>
                     </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--tnd-text-muted)' }}>
+                      Este producto no tiene garantía.
+                    </p>
                   )}
-                  <ul className="tnd-pdp2-warranty">
-                    {[
-                      'Comunicación directa con el vendedor ante cualquier inconveniente',
-                      `Garantía sujeta a la política de ${vendorAlias}`,
-                      'Devoluciones coordinadas directamente entre comprador y vendedor',
-                    ].map((item, i) => (
-                      <li key={i} className="tnd-pdp2-warranty-item">
-                        <span className="tnd-pdp2-warranty-icon">✓</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               )}
               {openSection === 'resenas' && (
