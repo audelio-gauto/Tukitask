@@ -8,9 +8,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'email required' }, { status: 400 });
   }
 
-  const { data, error } = await sbAdmin()
+  const db = sbAdmin();
+  const { data, error } = await db
     .from('market_orders')
-    .select('id, status, vendor_email, client_name, items, total, created_at, delivery')
+    .select('id, status, vendor_email, vendor_id, client_name, items, total, shipping_price, address, payment_method, created_at, delivery')
     .eq('client_email', email)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -19,5 +20,31 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data ?? []);
+  const orders = (data ?? []) as Array<Record<string, unknown> & { vendor_id?: string | null }>;
+
+  // Best-effort store branding lookup (name + logo) — never fails the main response.
+  const vendorIds = Array.from(new Set(orders.map((o) => o.vendor_id).filter((v): v is string => Boolean(v))));
+  const storeInfo = new Map<string, { name: string | null; logo: string | null }>();
+  if (vendorIds.length > 0) {
+    try {
+      const { data: stores } = await db
+        .from('store_configs')
+        .select('vendor_id, config')
+        .in('vendor_id', vendorIds);
+      for (const row of (stores ?? []) as Array<{ vendor_id: string; config: { storeName?: string; logoImage?: string } }>) {
+        storeInfo.set(row.vendor_id, {
+          name: row.config?.storeName?.trim() || null,
+          logo: row.config?.logoImage || null,
+        });
+      }
+    } catch { /* ignore — fall back to vendor_email on the client */ }
+  }
+
+  const enriched = orders.map((o) => ({
+    ...o,
+    store_name: (o.vendor_id && storeInfo.get(o.vendor_id)?.name) || null,
+    store_logo: (o.vendor_id && storeInfo.get(o.vendor_id)?.logo) || null,
+  }));
+
+  return NextResponse.json(enriched);
 }
