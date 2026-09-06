@@ -3,8 +3,35 @@ import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 
 // GET /api/tienda/reviews?product_id=<uuid>
 // Public — returns reviews for a product
+//
+// GET /api/tienda/reviews?mine=true&product_ids=<uuid>,<uuid>,...
+// Authenticated — returns which of the given product_ids the caller already reviewed
+// (used to hide "Calificar" buttons for products already rated).
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+
+  if (searchParams.get('mine') === 'true') {
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
+
+    const productIds = (searchParams.get('product_ids') || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (productIds.length === 0) return NextResponse.json({ reviewed: [] });
+
+    const db = sbAdmin();
+    const { data, error } = await db
+      .from('product_reviews')
+      .select('product_id')
+      .eq('buyer_email', user.email)
+      .in('product_id', productIds);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const reviewed = (data ?? []).map((r: { product_id: string }) => r.product_id);
+    return NextResponse.json({ reviewed });
+  }
+
   const productId = searchParams.get('product_id')?.trim();
   if (!productId) return NextResponse.json({ error: 'product_id requerido' }, { status: 400 });
 

@@ -382,7 +382,7 @@ export default function ClienteHistorialPage() {
                       const storeName = mo.store_name || mo.vendor_email.split('@')[0] || 'Tienda';
                       const addressLine = [mo.delivery?.barrio, mo.delivery?.ciudad].filter(Boolean).join(', ') || mo.address || null;
                       return (
-                        <div key={mo.id} className="tuki-card">
+                        <Link key={mo.id} href={`/cliente/pedidos/${mo.id}`} className="tuki-card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
                           <div className="tuki-card-body">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                               <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>#{mo.id.slice(0, 8).toUpperCase()}</span>
@@ -444,7 +444,7 @@ export default function ClienteHistorialPage() {
                               <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#F5C518' }}>{fmtGs(mo.total)}</span>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                     {marketOrders.length > paginatedMarketOrders.length && (
