@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function fmtGs(n: number) {
@@ -26,7 +27,6 @@ function WeekChart({ data, labels }: { data: number[]; labels: string[] }) {
       width="100%"
       style={{ overflow: 'visible', display: 'block' }}
     >
-      {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = 8 + H - ratio * H;
         return (
@@ -36,7 +36,6 @@ function WeekChart({ data, labels }: { data: number[]; labels: string[] }) {
         );
       })}
 
-      {/* Bars */}
       {data.map((val, i) => {
         const barH = Math.max((val / max) * H, val > 0 ? 6 : 0);
         const x    = PAD_L + i * (BAR_W + GAP);
@@ -47,21 +46,13 @@ function WeekChart({ data, labels }: { data: number[]; labels: string[] }) {
 
         return (
           <g key={i}>
-            {/* Shadow bar (full height, subtle) */}
-            <rect x={x} y={8} width={BAR_W} height={H} rx={6}
-              fill={fill} opacity={0.06}
-            />
-            {/* Actual bar */}
-            <rect x={x} y={y} width={BAR_W} height={barH} rx={6}
-              fill={fill} opacity={opacity}
-            />
-            {/* Today highlight ring */}
+            <rect x={x} y={8} width={BAR_W} height={H} rx={6} fill={fill} opacity={0.06} />
+            <rect x={x} y={y} width={BAR_W} height={barH} rx={6} fill={fill} opacity={opacity} />
             {isToday && (
               <rect x={x - 1} y={y - 1} width={BAR_W + 2} height={barH + 2} rx={7}
                 fill="none" stroke={fill} strokeWidth={1.5} opacity={0.5}
               />
             )}
-            {/* Value label above bar */}
             {val > 0 && (
               <text x={x + BAR_W / 2} y={y - 5}
                 textAnchor="middle" fontSize={9} fontWeight={700}
@@ -70,17 +61,13 @@ function WeekChart({ data, labels }: { data: number[]; labels: string[] }) {
                 {new Intl.NumberFormat('es-PY', { notation: 'compact', maximumFractionDigits: 0 }).format(val)}
               </text>
             )}
-            {/* Day label */}
             <text x={x + BAR_W / 2} y={H + 28}
               textAnchor="middle" fontSize={11} fontWeight={isToday ? 800 : 600}
               fill={isToday ? '#F5C518' : 'var(--vnd-text-muted)'}
             >
               {labels[i]}
             </text>
-            {/* Today dot */}
-            {isToday && (
-              <circle cx={x + BAR_W / 2} cy={H + 38} r={3} fill="#F5C518" />
-            )}
+            {isToday && <circle cx={x + BAR_W / 2} cy={H + 38} r={3} fill="#F5C518" />}
           </g>
         );
       })}
@@ -91,12 +78,13 @@ function WeekChart({ data, labels }: { data: number[]; labels: string[] }) {
 /* ── Order status badge ──────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
-    pending:    { cls: 'vnd-badge-amber',  label: 'En espera'  },
-    preparing:  { cls: 'vnd-badge-blue',   label: 'Preparando' },
-    ready:      { cls: 'vnd-badge-gold',   label: 'Listo'      },
-    in_transit: { cls: 'vnd-badge-purple', label: 'En camino'  },
-    delivered:  { cls: 'vnd-badge-green',  label: 'Entregado'  },
-    cancelled:  { cls: 'vnd-badge-red',    label: 'Cancelado'  },
+    pending:           { cls: 'vnd-badge-amber',  label: 'En espera' },
+    preparing:         { cls: 'vnd-badge-blue',   label: 'Preparando' },
+    ready:             { cls: 'vnd-badge-gold',   label: 'Listo' },
+    in_transit:        { cls: 'vnd-badge-purple', label: 'En camino' },
+    delivered:         { cls: 'vnd-badge-green',  label: 'Entregado' },
+    commission_charged:{ cls: 'vnd-badge-green',  label: 'Cobrado' },
+    cancelled:         { cls: 'vnd-badge-red',    label: 'Cancelado' },
   };
   const { cls, label } = map[status] ?? { cls: 'vnd-badge-gray', label: status };
   return <span className={`vnd-badge ${cls}`}>{label}</span>;
@@ -129,27 +117,116 @@ function StatCard({
   );
 }
 
-/* ══════════════════════════════════════════════════════════ */
+function getWeekdayDataRows(rows: Array<{ created_at?: string | null; total?: number | null }>) {
+  const weekData = Array(7).fill(0);
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - 6);
+
+  for (const row of rows) {
+    const createdAt = row.created_at ? new Date(row.created_at) : null;
+    if (!createdAt || Number.isNaN(createdAt.getTime())) continue;
+    if (createdAt < start) continue;
+    const idx = (createdAt.getDay() + 6) % 7;
+    weekData[idx] += Number(row.total ?? 0);
+  }
+
+  return weekData;
+}
+
 export default function VendedorDashboard() {
   const [loading, setLoading] = useState(true);
-
-  /* Mock data — will be replaced with real Supabase queries
-     once marketplace tables are migrated */
-  const weekData   = [0, 0, 0, 0, 0, 0, 0];
-  const weekLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-  const recentOrders = [
-    { id: '#5959', time: new Date().toISOString(), client: 'María G.', items: 2, total: 235000, status: 'pending'   },
-    { id: '#5958', time: new Date(Date.now() - 18e5).toISOString(), client: 'Carlos P.', items: 1, total: 85000,  status: 'preparing' },
-    { id: '#5957', time: new Date(Date.now() - 36e5).toISOString(), client: 'Ana R.',    items: 3, total: 420000, status: 'delivered' },
-    { id: '#5956', time: new Date(Date.now() - 72e5).toISOString(), client: 'Juan M.',   items: 1, total: 55000,  status: 'delivered' },
-  ];
+  const [stats, setStats] = useState({
+    salesTotal: 0,
+    ordersTotal: 0,
+    productsOnline: 0,
+    negotiations: 0,
+  });
+  const [recentOrders, setRecentOrders] = useState<Array<{
+    id: string;
+    time: string;
+    client: string;
+    items: number;
+    total: number;
+    status: string;
+  }>>([]);
+  const [weekData, setWeekData] = useState<number[]>(Array(7).fill(0));
 
   useEffect(() => {
-    /* TODO: fetch real data from Supabase marketplace tables */
-    const t = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(t);
+    let isMounted = true;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      try {
+        const [productsRes, ordersRes, negRes] = await Promise.all([
+          supabase
+            .from('products')
+            .select('id, status, vendor_id')
+            .eq('vendor_id', user.id),
+          supabase
+            .from('market_orders')
+            .select('id, total, status, client_name, items, created_at, vendor_id')
+            .eq('vendor_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('tukibot_negotiations')
+            .select('id, status, vendor_id, expires_at')
+            .eq('vendor_id', user.id)
+            .gt('expires_at', new Date().toISOString())
+        ]);
+
+        const productRows = productsRes.data ?? [];
+        const orderRows = ordersRes.data ?? [];
+        const negRows = negRes.data ?? [];
+
+        const salesTotal = (orderRows as Array<{ total?: number | null }>).reduce((sum, row) => {
+          const status = String(row.status ?? '');
+          if (status === 'cancelled') return sum;
+          return sum + Number(row.total ?? 0);
+        }, 0);
+
+        const productsOnline = productRows.filter((row) => String(row.status) === 'published').length;
+        const negotiations = negRows.length;
+
+        if (isMounted) {
+          setStats({
+            salesTotal,
+            ordersTotal: orderRows.length,
+            productsOnline,
+            negotiations,
+          });
+
+          setRecentOrders((orderRows as Array<{ id: string; created_at?: string | null; client_name?: string | null; items?: number | null; total?: number | null; status?: string | null }>).map((order) => ({
+            id: `#${String(order.id).slice(-4)}`,
+            time: order.created_at ?? new Date().toISOString(),
+            client: order.client_name || 'Cliente',
+            items: Number(order.items ?? 0),
+            total: Number(order.total ?? 0),
+            status: String(order.status ?? 'pending'),
+          })));
+
+          setWeekData(getWeekdayDataRows(orderRows as Array<{ created_at?: string | null; total?: number | null }>));
+        }
+      } catch (error) {
+        console.error('Vendor dashboard fetch failed:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const weekLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   if (loading) {
     return (
@@ -170,56 +247,55 @@ export default function VendedorDashboard() {
 
   return (
     <div>
-      {/* Page heading */}
       <h1 className="vnd-page-heading">Vista General</h1>
       <p className="vnd-page-sub">
         Bienvenido a TukiMarket · {new Date().toLocaleDateString('es-PY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       </p>
 
-      {/* Stat cards */}
       <div className="vnd-stats-grid">
         <StatCard
           label="Ventas Totales"
-          value={fmtGs(0)}
+          value={fmtGs(stats.salesTotal)}
           sub="Ingresos acumulados"
           icon="💰"
           accentColor="#F5C518"
           iconBg="rgba(245,197,24,0.12)"
-          trend="Sin datos aún"
+          trend={stats.salesTotal > 0 ? 'Actualizado' : 'Sin datos aún'}
+          trendUp={stats.salesTotal > 0}
         />
         <StatCard
           label="Pedidos Totales"
-          value="0"
+          value={String(stats.ordersTotal)}
           sub="Órdenes recibidas"
           icon="🛒"
           accentColor="#F58A07"
           iconBg="rgba(245,138,7,0.12)"
-          trend="Sin datos aún"
+          trend={stats.ordersTotal > 0 ? 'Pedidos activos' : 'Sin datos aún'}
+          trendUp={stats.ordersTotal > 0}
         />
         <StatCard
           label="Productos Online"
-          value="0"
+          value={String(stats.productsOnline)}
           sub="Activos en catálogo"
           icon="📦"
           accentColor="#10b981"
           iconBg="rgba(16,185,129,0.12)"
-          trend="Sin datos aún"
+          trend={stats.productsOnline > 0 ? 'Catálogo visible' : 'Sin datos aún'}
+          trendUp={stats.productsOnline > 0}
         />
         <StatCard
           label="Negociaciones"
-          value="0"
+          value={String(stats.negotiations)}
           sub="En proceso ahora"
           icon="🤝"
           accentColor="#8b5cf6"
           iconBg="rgba(139,92,246,0.12)"
-          trend="Sin datos aún"
+          trend={stats.negotiations > 0 ? 'Abiertas' : 'Sin datos aún'}
+          trendUp={stats.negotiations > 0}
         />
       </div>
 
-      {/* Charts + Recent orders */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20 }}>
-
-        {/* Weekly chart */}
         <div className="vnd-card">
           <div className="vnd-card-header">
             <span className="vnd-card-title">
@@ -246,7 +322,6 @@ export default function VendedorDashboard() {
           </div>
         </div>
 
-        {/* Recent orders */}
         <div className="vnd-card">
           <div className="vnd-card-header">
             <span className="vnd-card-title">
@@ -297,7 +372,6 @@ export default function VendedorDashboard() {
         </div>
       </div>
 
-      {/* Quick actions */}
       <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <Link href="/vendedor/productos" className="vnd-btn vnd-btn-primary">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
