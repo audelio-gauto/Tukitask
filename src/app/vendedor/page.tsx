@@ -135,6 +135,20 @@ function getWeekdayDataRows(rows: Array<{ created_at?: string | null; total?: nu
   return weekData;
 }
 
+function buildVendorMatchFilter(user: { id?: string | null; email?: string | null }) {
+  const userId = user.id ? String(user.id) : '';
+  const userEmail = user.email ? String(user.email).trim() : '';
+
+  if (userId && userEmail) {
+    return `vendor_id.eq.${userId},vendor_email.eq.${userEmail}`;
+  }
+
+  if (userId) return `vendor_id.eq.${userId}`;
+  if (userEmail) return `vendor_email.eq.${userEmail}`;
+
+  return '';
+}
+
 export default function VendedorDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -164,29 +178,53 @@ export default function VendedorDashboard() {
       }
 
       try {
-        const [productsRes, ordersRes, negRes] = await Promise.all([
-          supabase
-            .from('products')
-            .select('id, status, vendor_id')
-            .eq('vendor_id', user.id),
-          supabase
-            .from('market_orders')
-            .select('id, total, status, client_name, items, created_at, vendor_id')
-            .eq('vendor_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5),
+        const vendorMatch = buildVendorMatchFilter(user);
+
+        const [productsRes, recentOrdersRes, allOrdersRes, negRes] = await Promise.all([
+          vendorMatch
+            ? supabase
+                .from('products')
+                .select('id, status, vendor_id, vendor_email')
+                .or(vendorMatch)
+            : supabase
+                .from('products')
+                .select('id, status, vendor_id, vendor_email')
+                .eq('vendor_id', user.id),
+          vendorMatch
+            ? supabase
+                .from('market_orders')
+                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
+                .or(vendorMatch)
+                .order('created_at', { ascending: false })
+                .limit(5)
+            : supabase
+                .from('market_orders')
+                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
+                .eq('vendor_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(5),
+          vendorMatch
+            ? supabase
+                .from('market_orders')
+                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
+                .or(vendorMatch)
+            : supabase
+                .from('market_orders')
+                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
+                .eq('vendor_id', user.id),
           supabase
             .from('tukibot_negotiations')
-            .select('id, status, vendor_id, expires_at')
-            .eq('vendor_id', user.id)
+            .select('id, status, vendor_id, vendor_email, expires_at')
+            .or(vendorMatch || `vendor_id.eq.${user.id}`)
             .gt('expires_at', new Date().toISOString())
         ]);
 
         const productRows = productsRes.data ?? [];
-        const orderRows = ordersRes.data ?? [];
+        const recentOrderRows = recentOrdersRes.data ?? [];
+        const allOrderRows = allOrdersRes.data ?? [];
         const negRows = negRes.data ?? [];
 
-        const salesTotal = (orderRows as Array<{ total?: number | null; status?: string | null }>).reduce((sum, row) => {
+        const salesTotal = (allOrderRows as Array<{ total?: number | null; status?: string | null }>).reduce((sum, row) => {
           const status = String(row.status ?? '');
           if (status === 'cancelled') return sum;
           return sum + Number(row.total ?? 0);
@@ -198,12 +236,12 @@ export default function VendedorDashboard() {
         if (isMounted) {
           setStats({
             salesTotal,
-            ordersTotal: orderRows.length,
+            ordersTotal: allOrderRows.length,
             productsOnline,
             negotiations,
           });
 
-          setRecentOrders((orderRows as Array<{ id: string; created_at?: string | null; client_name?: string | null; items?: number | null; total?: number | null; status?: string | null }>).map((order) => ({
+          setRecentOrders((recentOrderRows as Array<{ id: string; created_at?: string | null; client_name?: string | null; items?: number | null; total?: number | null; status?: string | null }>).map((order) => ({
             id: `#${String(order.id).slice(-4)}`,
             time: order.created_at ?? new Date().toISOString(),
             client: order.client_name || 'Cliente',
@@ -212,7 +250,7 @@ export default function VendedorDashboard() {
             status: String(order.status ?? 'pending'),
           })));
 
-          setWeekData(getWeekdayDataRows(orderRows as Array<{ created_at?: string | null; total?: number | null }>));
+          setWeekData(getWeekdayDataRows(allOrderRows as Array<{ created_at?: string | null; total?: number | null }>));
         }
       } catch (error) {
         console.error('Vendor dashboard fetch failed:', error);
