@@ -234,7 +234,7 @@ export default function ClienteHistorialPage() {
       completado: { label: 'Completado', icon: 'check' },
       completed: { label: 'Completado', icon: 'check' },
       delivered: { label: 'Entregado', icon: 'check' },
-      cancelled: { label: 'Cancelado por cliente', icon: 'x' },
+      cancelled: { label: 'Cancelado', icon: 'x' },
       failed: { label: 'Entrega fallida', icon: 'exclamation' },
       return_rejected: { label: 'Devolucion rechazada', icon: 'package' },
       returning: { label: 'Devolviendo', icon: 'refresh' },
@@ -625,7 +625,7 @@ export default function ClienteHistorialPage() {
                           <Icon name="package" size={16} color="var(--text-primary)" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(item.data as Order).pickup_address || 'Envío'}</div>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mandaditos, Remis, Envios, Fletes</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                             {(item.data as Order).driver_name || 'Movilidad'}
                           </div>
