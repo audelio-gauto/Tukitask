@@ -17,6 +17,7 @@ interface Order {
   status: string;
   pickup_address: string | null;
   delivery_address: string | null;
+  order_type?: string | null;
   offer: number | null;
   suggested_price: number | null;
   driver_name: string | null;
@@ -70,6 +71,13 @@ const SERVICE_LABELS: Record<string, string> = {
   eventos: 'Eventos', cuidado_mascotas: 'Mascotas', cuidado_adultos: 'Adultos',
   aire_split: 'Aire Split', electrico: 'Electrico', plomeria: 'Plomeria',
   cerrajeria: 'Cerrajeria', gestor: 'Gestor', otros: 'Otros',
+};
+
+const ORDER_TYPE_LABELS: Record<string, string> = {
+  envio: 'Envios',
+  mandadito: 'Mandaditos',
+  flete: 'Fletes',
+  viaje: 'Remis',
 };
 
 const SERVICE_ICONS: Record<string, React.ComponentProps<typeof Icon>['name']> = {
@@ -625,7 +633,7 @@ export default function ClienteHistorialPage() {
                           <Icon name="package" size={16} color="var(--text-primary)" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mandaditos, Remis, Envios, Fletes</div>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ORDER_TYPE_LABELS[(item.data as Order).order_type || 'envio'] || 'Envios'}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                             {(item.data as Order).driver_name || 'Movilidad'}
                           </div>
