@@ -633,7 +633,7 @@ export default function ClienteHistorialPage() {
                       </div>
                       {/* Route A → stops → B — completed order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div className="tuki-address-box" style={{ marginBottom: 8, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)' }}>
+                        <div className="tuki-address-box" style={{ marginBottom: 8, background: 'transparent', border: 'none', padding: '0 0 0 2px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
