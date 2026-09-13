@@ -545,7 +545,7 @@ export default function ClienteHistorialPage() {
                           return chatOk ? (
                             <button
                               onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
-                              className="tuki-btn tuki-btn-info tuki-btn-block"
+                              className="tuki-btn tuki-btn-warning tuki-btn-block"
                               style={{ fontSize: '0.83rem', marginBottom: 6 }}
                             >
                               <Icon name="chat" size={14} />
@@ -557,7 +557,7 @@ export default function ClienteHistorialPage() {
                         {item.data.status === 'completado' && !item.data.tecnico_rating && (
                           <button
                             onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
-                            className="tuki-btn tuki-btn-primary tuki-btn-block"
+                            className="tuki-btn tuki-btn-warning tuki-btn-block"
                             style={{ fontSize: '0.83rem' }}
                           >
                             <Icon name="star" size={14} />
@@ -574,7 +574,7 @@ export default function ClienteHistorialPage() {
                         {item.data.status !== 'pending' && (
                           <button
                             onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
-                            className="tuki-btn tuki-btn-danger tuki-btn-sm"
+                            className="tuki-btn tuki-btn-warning tuki-btn-sm"
                             style={{ marginTop: 6, fontSize: '0.75rem' }}
                           >
                             <Icon name="flag" size={12} />
@@ -705,7 +705,7 @@ export default function ClienteHistorialPage() {
                         return chatOk ? (
                           <button
                             onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
-                            className="tuki-btn tuki-btn-info tuki-btn-block"
+                            className="tuki-btn tuki-btn-warning tuki-btn-block"
                             style={{ fontSize: '0.83rem', marginBottom: 6 }}
                           >
                             <Icon name="chat" size={14} />
@@ -722,7 +722,7 @@ export default function ClienteHistorialPage() {
                         ) : (
                           <button
                             onClick={() => setDriverRatingModal({ orderId: item.data.id, driverName: (item.data as Order).driver_name, driverPhoto: (item.data as Order).driver_photo })}
-                            className="tuki-btn tuki-btn-primary tuki-btn-block"
+                            className="tuki-btn tuki-btn-warning tuki-btn-block"
                             style={{ fontSize: '0.83rem', marginBottom: 6 }}
                           >
                             <Icon name="star" size={14} />
@@ -733,7 +733,7 @@ export default function ClienteHistorialPage() {
                       {(item.data as Order).driver_name && (
                         <button
                           onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
-                          className="tuki-btn tuki-btn-danger tuki-btn-sm"
+                          className="tuki-btn tuki-btn-warning tuki-btn-sm"
                           style={{ fontSize: '0.75rem' }}
                         >
                           <Icon name="flag" size={12} />
