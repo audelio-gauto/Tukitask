@@ -526,7 +526,7 @@ export default function ClienteHistorialPage() {
                         )}
 
                         {(item.data as Job).agreed_price != null && (
-                          <div style={{ marginBottom: 8, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 12, padding: 10 }}>
+                          <div style={{ marginBottom: 8, padding: '0 2px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 6 }}>
                               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
                               <span style={{ fontSize: '1rem', fontWeight: 800, color: '#F5C518' }}>{Number((item.data as Job).agreed_price).toLocaleString('es-PY')} Gs.</span>
@@ -545,22 +545,6 @@ export default function ClienteHistorialPage() {
                             )}
                           </div>
                         )}
-
-                        {item.data.tecnico_name && (() => {
-                          const refDate = item.data.completed_at ?? item.data.created_at;
-                          const chatDays = (item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 ? (item.data as Job).warranty_days! : 1;
-                          const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000 : false;
-                          return chatOk ? (
-                            <button
-                              onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
-                              className="tuki-btn tuki-btn-warning tuki-btn-block"
-                              style={{ fontSize: '0.83rem', marginBottom: 6 }}
-                            >
-                              <Icon name="chat" size={14} />
-                              Chat con el Tasker
-                            </button>
-                          ) : null;
-                        })()}
 
                         {item.data.status === 'completado' && !item.data.tecnico_rating && (
                           <button
