@@ -129,8 +129,11 @@ export default function ClienteHistorialPage() {
   const [chatModal, setChatModal] = useState<{ orderId?: string; jobId?: string; otherName: string | null; otherPhoto: string | null } | null>(null);
   const [orderStopsOpen, setOrderStopsOpen] = useState<Record<string, boolean>>({});
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const loadHistory = useCallback(async () => {
     if (!email) return;
+    setRefreshing(true);
     try {
       const [ordersRes, histJobsRes, activeJobsRes, mktOrdersRes] = await Promise.all([
         authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
@@ -155,6 +158,7 @@ export default function ClienteHistorialPage() {
       setJobs(unique);
       setLoading(false);
     } catch { setLoading(false); }
+    setRefreshing(false);
   }, [email]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
@@ -317,12 +321,15 @@ export default function ClienteHistorialPage() {
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Historial</h1>
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>Envíos y servicios</p>
         </div>
-        <button onClick={loadHistory} style={{
+        <button onClick={loadHistory} disabled={refreshing} aria-label="Actualizar" title="Actualizar" style={{
           width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(245,197,24,0.3)',
           background: 'rgba(245,197,24,0.15)', color: '#F5C518', fontSize: '1.1rem',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          cursor: refreshing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          opacity: refreshing ? 0.6 : 1,
         }}>
-          <Icon name="refresh" size={16} />
+          <span style={{ display: 'inline-flex', animation: refreshing ? 'spin 0.8s linear infinite' : 'none', transformOrigin: 'center' }}>
+            <Icon name="refresh" size={16} />
+          </span>
         </button>
       </div>
 
