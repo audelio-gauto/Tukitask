@@ -558,7 +558,7 @@ export default function ClienteHistorialPage() {
                           <button
                             onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
                             className="tuki-btn tuki-btn-warning tuki-btn-block"
-                            style={{ fontSize: '0.83rem' }}
+                            style={{ fontSize: '0.83rem', marginBottom: 8 }}
                           >
                             <Icon name="star" size={14} />
                             Calificar Tasker
@@ -566,20 +566,39 @@ export default function ClienteHistorialPage() {
                         )}
 
                         {item.data.tecnico_rating != null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8 }}>
                             Tu calificación: <StarRating rating={item.data.tecnico_rating} />
                           </div>
                         )}
 
-                        {item.data.status !== 'pending' && (
-                          <button
-                            onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
-                            className="tuki-btn tuki-btn-warning tuki-btn-sm"
-                            style={{ marginTop: 6, fontSize: '0.75rem' }}
-                          >
-                            <Icon name="flag" size={12} />
-                            Reportar
-                          </button>
+                        {(item.data.tecnico_name || item.data.status !== 'pending') && (
+                          <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(245,197,24,0.12)', paddingTop: 8 }}>
+                            {item.data.tecnico_name && (() => {
+                              const refDate = item.data.completed_at ?? item.data.created_at;
+                              const chatDays = (item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 ? (item.data as Job).warranty_days! : 1;
+                              const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000 : false;
+                              return chatOk ? (
+                                <button
+                                  onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
+                                  className="tuki-btn tuki-btn-warning"
+                                  style={{ flex: 1, fontSize: '0.8rem' }}
+                                >
+                                  <Icon name="chat" size={14} />
+                                  Chat con el Tasker
+                                </button>
+                              ) : null;
+                            })()}
+                            {item.data.status !== 'pending' && (
+                              <button
+                                onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
+                                className="tuki-btn tuki-btn-warning tuki-btn-sm"
+                                style={{ fontSize: '0.75rem', flexShrink: 0 }}
+                              >
+                                <Icon name="flag" size={12} />
+                                Reportar
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -593,24 +612,22 @@ export default function ClienteHistorialPage() {
                       }}
                     >
                       <div className="tuki-card-body">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                        <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
-                          <Icon name="package" size={16} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                          #{String(item.data.id).slice(0, 8).toUpperCase()}
                         </span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{(item.data as Order).pickup_address?.slice(0, 30) || 'Envío'}</div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: statusTone.color }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <Icon
-                                  name={getStatusInfo(item.data.status).icon}
-                                  size={12}
-                                  color={statusTone.color}
-                                />
-                                {getStatusInfo(item.data.status).label}
-                              </span>
-                            </span>
-                            {(item.data as Order).driver_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(item.data as Order).driver_name}</span>}
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: statusTone.color, background: 'rgba(245,197,24,0.12)', padding: '2px 8px', borderRadius: 20 }}>
+                          {getStatusInfo(item.data.status).label}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--ghost-btn)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                          <Icon name="package" size={16} color="var(--text-primary)" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(item.data as Order).pickup_address || 'Envío'}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                            {(item.data as Order).driver_name || 'Movilidad'}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -698,47 +715,48 @@ export default function ClienteHistorialPage() {
                           </div>
                         </div>
                       )}
-                      {/* Chat — solo disponible las primeras 24h tras completar */}
-                      {(item.data as Order).driver_name && (() => {
-                        const refDate = (item.data as Order).completed_at ?? item.data.created_at;
-                        const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000 : false;
-                        return chatOk ? (
-                          <button
-                            onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
-                            className="tuki-btn tuki-btn-warning tuki-btn-block"
-                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
-                          >
-                            <Icon name="chat" size={14} />
-                            Chat con el driver
-                          </button>
-                        ) : null;
-                      })()}
-                      {/* Driver rating */}
+                      {/* Chat + rating + report — compact toolbar */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_name && (
                         localDriverRatings[item.data.id] != null || (item.data as Order).driver_rating != null ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8 }}>
                             Tu calificación al driver: <StarRating rating={localDriverRatings[item.data.id] ?? (item.data as Order).driver_rating!} />
                           </div>
                         ) : (
                           <button
                             onClick={() => setDriverRatingModal({ orderId: item.data.id, driverName: (item.data as Order).driver_name, driverPhoto: (item.data as Order).driver_photo })}
                             className="tuki-btn tuki-btn-warning tuki-btn-block"
-                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                            style={{ fontSize: '0.83rem', marginBottom: 8 }}
                           >
                             <Icon name="star" size={14} />
                             Calificar driver
                           </button>
                         )
                       )}
-                      {(item.data as Order).driver_name && (
-                        <button
-                          onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
-                          className="tuki-btn tuki-btn-warning tuki-btn-sm"
-                          style={{ fontSize: '0.75rem' }}
-                        >
-                          <Icon name="flag" size={12} />
-                          Reportar
-                        </button>
+                      {((item.data as Order).driver_name) && (
+                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(245,197,24,0.12)', paddingTop: 8 }}>
+                          {(() => {
+                            const refDate = (item.data as Order).completed_at ?? item.data.created_at;
+                            const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000 : false;
+                            return chatOk ? (
+                              <button
+                                onClick={() => setChatModal({ orderId: item.data.id, otherName: (item.data as Order).driver_name, otherPhoto: (item.data as Order).driver_photo })}
+                                className="tuki-btn tuki-btn-warning"
+                                style={{ flex: 1, fontSize: '0.8rem' }}
+                              >
+                                <Icon name="chat" size={14} />
+                                Chat con el driver
+                              </button>
+                            ) : null;
+                          })()}
+                          <button
+                            onClick={() => setReportModal({ reportedEmail: (item.data as Order).driver_email || '', reportedRole: 'driver', reportedName: (item.data as Order).driver_name, referenceType: 'order', referenceId: item.data.id })}
+                            className="tuki-btn tuki-btn-warning tuki-btn-sm"
+                            style={{ fontSize: '0.75rem', flexShrink: 0 }}
+                          >
+                            <Icon name="flag" size={12} />
+                            Reportar
+                          </button>
+                        </div>
                       )}
                       {/* Tip + Favourite row */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_email && (
