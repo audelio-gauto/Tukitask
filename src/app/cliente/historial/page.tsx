@@ -336,16 +336,27 @@ export default function ClienteHistorialPage() {
             {(doneItems.length > 0 || marketOrders.length > 0) && (
               <div>
                 {/* 3-chip selector */}
-                <div className="vnd-tabs" style={{ marginBottom: 12, width: '100%' }}>
+                <div style={{
+                  display: 'flex', gap: 4, marginBottom: 12, width: '100%',
+                  background: 'var(--surface-2, rgba(0,0,0,0.04))', border: '1px solid rgba(245,197,24,0.18)',
+                  borderRadius: 10, padding: 4,
+                }}>
                   {(['movilidad', 'servicios', 'pedidos'] as const).map(tab => {
                     const labels = { movilidad: 'Movilidad', servicios: 'Servicios', pedidos: 'Pedidos' };
                     const active = doneTab === tab;
                     return (
                       <button
                         key={tab}
-                        className={`vnd-tab${active ? ' active' : ''}`}
                         onClick={() => { setDoneTab(tab); setDonePage(1); }}
-                        style={{ flex: 1, justifyContent: 'center' }}
+                        style={{
+                          flex: 1, textAlign: 'center', justifyContent: 'center',
+                          padding: '7px 10px', borderRadius: 7, fontSize: '0.8rem', fontWeight: 700,
+                          border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                          background: active ? 'var(--surface, #fff)' : 'transparent',
+                          color: active ? '#F5C518' : 'var(--text-muted)',
+                          boxShadow: active ? '0 1px 4px rgba(15,23,42,0.12)' : 'none',
+                          transition: 'background 0.15s, color 0.15s',
+                        }}
                       >
                         {labels[tab]}
                       </button>
