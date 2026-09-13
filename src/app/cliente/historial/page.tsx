@@ -336,21 +336,16 @@ export default function ClienteHistorialPage() {
             {(doneItems.length > 0 || marketOrders.length > 0) && (
               <div>
                 {/* 3-chip selector */}
-                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                <div className="vnd-tabs" style={{ marginBottom: 12, width: '100%' }}>
                   {(['movilidad', 'servicios', 'pedidos'] as const).map(tab => {
                     const labels = { movilidad: 'Movilidad', servicios: 'Servicios', pedidos: 'Pedidos' };
                     const active = doneTab === tab;
                     return (
                       <button
                         key={tab}
+                        className={`vnd-tab${active ? ' active' : ''}`}
                         onClick={() => { setDoneTab(tab); setDonePage(1); }}
-                        style={{
-                          flex: 1, padding: '6px 4px', borderRadius: 20, border: active ? '1.5px solid #F5C518' : '1px solid rgba(245,197,24,0.25)',
-                          background: active ? 'rgba(245,197,24,0.18)' : 'var(--ghost-btn)',
-                          color: active ? '#F5C518' : 'var(--text-muted)', fontWeight: active ? 800 : 500,
-                          fontSize: '0.72rem', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1,
-                          transition: 'all 0.15s',
-                        }}
+                        style={{ flex: 1, justifyContent: 'center' }}
                       >
                         {labels[tab]}
                       </button>
@@ -471,127 +466,119 @@ export default function ClienteHistorialPage() {
                       key={item.data.id}
                       className="tuki-card"
                       style={{
-                        ['--status-color' as never]: statusTone.color,
-                        ['--status-bg' as never]: statusTone.bg,
-                        ['--status-border' as never]: statusTone.border,
-                        ['--status-outline' as never]: statusTone.border,
+                        border: '1px solid rgba(245,197,24,0.16)',
+                        boxShadow: 'none',
                       }}
                     >
-                      <div className="tuki-card-body">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: item.data.status === 'completado' ? 10 : 0 }}>
-                        <span style={{ color: 'var(--text-muted)', display: 'inline-flex' }}>
-                          <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={16} />
-                        </span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ fontSize: '0.73rem', color: statusTone.color }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <Icon
-                                  name={item.data.status === 'completado' ? 'check' : item.data.status === 'cancelled' ? 'x' : 'exclamation'}
-                                  size={12}
-                                  color={statusTone.color}
-                                />
-                                {item.data.status === 'completado' ? 'Completado' : item.data.status === 'cancelled' ? 'Cancelado' : 'Incidente'}
-                              </span>
-                            </span>
-                            {item.data.tecnico_name && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.data.tecnico_name}</span>}
-                          </div>
+                      <div className="tuki-card-body" style={{ padding: '14px 14px 12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                            #{String(item.data.id).slice(0, 8).toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: statusTone.color, background: 'rgba(245,197,24,0.12)', padding: '2px 8px', borderRadius: 20 }}>
+                            {item.data.status === 'completado' ? 'Completado' : item.data.status === 'cancelled' ? 'Cancelado' : 'Incidente'}
+                          </span>
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          {item.data.total_price != null && (
-                            <div className="tuki-price" style={{ color: '#F5C518', fontSize: '0.92rem' }}>
-                              {fmtGs(item.data.total_price)}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--ghost-btn)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                            <Icon name={SERVICE_ICONS[item.data.service_type] || 'settings'} size={16} color="var(--text-primary)" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.3 }}>{SERVICE_LABELS[item.data.service_type] || item.data.service_type}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              {item.data.tecnico_name ? item.data.tecnico_name : 'Servicio'}
                             </div>
-                          )}
-                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
-                        </div>
-                      </div>
-                      {(item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', marginBottom: 6, fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
-                          🛡️ Garantía: {(item.data as Job).warranty_days} {(item.data as Job).warranty_days === 1 ? 'día' : 'días'}
-                        </div>
-                      )}
-                      {/* Bloque precio unificado */}
-                      {(item.data as Job).agreed_price != null && (
-                        <div style={{ marginBottom: 8, background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.22)', borderRadius: 14, overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px' }}>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(245,197,24,0.65)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
-                            <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#F5C518' }}>{Number((item.data as Job).agreed_price).toLocaleString('es-PY')} Gs.</span>
                           </div>
-                          {Array.isArray((item.data as Job).extra_items) && (item.data as Job).extra_items!.length > 0 && (
-                            <>
-                              <div style={{ height: 1, background: 'rgba(245,197,24,0.15)', margin: '0 14px' }} />
-                              {(item.data as Job).extra_items!.map((it, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
-                                  <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>{Number(it.amount).toLocaleString('es-PY')} Gs.</span>
-                                </div>
-                              ))}
-                              {item.data.total_price != null && (
-                                <>
-                                  <div style={{ height: 1, background: 'rgba(245,197,24,0.25)', margin: '0 14px' }} />
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: 'rgba(245,197,24,0.1)' }}>
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(245,197,24,0.75)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
-                                    <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#F5C518' }}>{Number(item.data.total_price).toLocaleString('es-PY')} Gs.</span>
-                                  </div>
-                                </>
-                              )}
-                            </>
-                          )}
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            {item.data.total_price != null && (
+                              <div className="tuki-price" style={{ color: '#F5C518', fontSize: '0.92rem' }}>
+                                {fmtGs(item.data.total_price)}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>{fmtDate(item.data.completed_at ?? item.data.created_at)}</div>
+                          </div>
                         </div>
-                      )}
-                      {item.data.tecnico_name && (() => {
-                        const refDate = item.data.completed_at ?? item.data.created_at;
-                        const chatDays = (item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 ? (item.data as Job).warranty_days! : 1;
-                        const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000 : false;
-                        return chatOk ? (
+
+                        {(item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 && (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 8, padding: '5px 10px', marginBottom: 8, fontSize: '0.8rem', fontWeight: 700, color: '#F5C518' }}>
+                            🛡️ Garantía: {(item.data as Job).warranty_days} {(item.data as Job).warranty_days === 1 ? 'día' : 'días'}
+                          </div>
+                        )}
+
+                        {(item.data as Job).agreed_price != null && (
+                          <div style={{ marginBottom: 8, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)', borderRadius: 12, padding: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 6 }}>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
+                              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#F5C518' }}>{Number((item.data as Job).agreed_price).toLocaleString('es-PY')} Gs.</span>
+                            </div>
+                            {(item.data as Job).extra_charge != null && Number((item.data as Job).extra_charge) > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid rgba(245,197,24,0.12)' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>➕ Ttg</span>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#F5C518' }}>{Number((item.data as Job).extra_charge).toLocaleString('es-PY')} Gs.</span>
+                              </div>
+                            )}
+                            {item.data.total_price != null && (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, marginTop: 6, borderTop: '1px solid rgba(245,197,24,0.12)' }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)' }}>Total</span>
+                                <span style={{ fontSize: '1rem', fontWeight: 900, color: '#F5C518' }}>{Number(item.data.total_price).toLocaleString('es-PY')} Gs.</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {item.data.tecnico_name && (() => {
+                          const refDate = item.data.completed_at ?? item.data.created_at;
+                          const chatDays = (item.data as Job).warranty_days != null && (item.data as Job).warranty_days! > 0 ? (item.data as Job).warranty_days! : 1;
+                          const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < chatDays * 24 * 60 * 60 * 1000 : false;
+                          return chatOk ? (
+                            <button
+                              onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
+                              className="tuki-btn tuki-btn-info tuki-btn-block"
+                              style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                            >
+                              <Icon name="chat" size={14} />
+                              Chat con el Tasker
+                            </button>
+                          ) : null;
+                        })()}
+
+                        {item.data.status === 'completado' && !item.data.tecnico_rating && (
                           <button
-                            onClick={() => setChatModal({ jobId: item.data.id, otherName: item.data.tecnico_name, otherPhoto: (item.data as Job).tecnico_photo })}
-                            className="tuki-btn tuki-btn-info tuki-btn-block"
-                            style={{ fontSize: '0.83rem', marginBottom: 6 }}
+                            onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
+                            className="tuki-btn tuki-btn-primary tuki-btn-block"
+                            style={{ fontSize: '0.83rem' }}
                           >
-                            <Icon name="chat" size={14} />
-                            Chat con el Tasker
+                            <Icon name="star" size={14} />
+                            Calificar Tasker
                           </button>
-                        ) : null;
-                      })()}
-                      {item.data.status === 'completado' && !item.data.tecnico_rating && (
-                        <button
-                          onClick={() => setRatingModal({ jobId: item.data.id, tecnicoName: item.data.tecnico_name, tecnicoPhoto: (item.data as Job).tecnico_photo })}
-                          className="tuki-btn tuki-btn-primary tuki-btn-block"
-                          style={{ fontSize: '0.83rem' }}
-                        >
-                          <Icon name="star" size={14} />
-                          Calificar Tasker
-                        </button>
-                      )}
-                      {item.data.tecnico_rating != null && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                          Tu calificación: <StarRating rating={item.data.tecnico_rating} />
-                        </div>
-                      )}
-                      {item.data.status !== 'pending' && (
-                        <button
-                          onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
-                          className="tuki-btn tuki-btn-danger tuki-btn-sm"
-                          style={{ marginTop: 6, fontSize: '0.75rem' }}
-                        >
-                          <Icon name="flag" size={12} />
-                          Reportar
-                        </button>
-                      )}
-                    </div>
+                        )}
+
+                        {item.data.tecnico_rating != null && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            Tu calificación: <StarRating rating={item.data.tecnico_rating} />
+                          </div>
+                        )}
+
+                        {item.data.status !== 'pending' && (
+                          <button
+                            onClick={() => setReportModal({ reportedEmail: (item.data as Job).tecnico_email || '', reportedRole: 'tecnico', reportedName: item.data.tecnico_name, referenceType: 'job', referenceId: item.data.id })}
+                            className="tuki-btn tuki-btn-danger tuki-btn-sm"
+                            style={{ marginTop: 6, fontSize: '0.75rem' }}
+                          >
+                            <Icon name="flag" size={12} />
+                            Reportar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div
                       key={item.data.id}
                       className="tuki-card"
                       style={{
-                        ['--status-color' as never]: statusTone.color,
-                        ['--status-bg' as never]: statusTone.bg,
-                        ['--status-border' as never]: statusTone.border,
-                        ['--status-outline' as never]: statusTone.border,
+                        border: '1px solid rgba(245,197,24,0.16)',
+                        boxShadow: 'none',
                       }}
                     >
                       <div className="tuki-card-body">
@@ -626,11 +613,11 @@ export default function ClienteHistorialPage() {
                       </div>
                       {/* Route A → stops → B — completed order */}
                       {((item.data as Order).pickup_address || (item.data as Order).delivery_address) && (
-                        <div className="tuki-address-box" style={{ marginBottom: 8 }}>
+                        <div className="tuki-address-box" style={{ marginBottom: 8, background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.18)' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                              <span style={{ width: 2, height: 18, background: 'var(--border-subtle)', display: 'block' }} />
+                              <span style={{ width: 2, height: 18, background: 'rgba(245,197,24,0.5)', display: 'block' }} />
                               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
                             </div>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
