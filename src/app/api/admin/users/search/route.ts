@@ -7,10 +7,12 @@ export async function GET(req: Request) {
   if (!admin) return unauthorized();
 
   const { searchParams } = new URL(req.url);
-  const q = (searchParams.get('q') || '').trim().slice(0, 80);
+  const rawQ = (searchParams.get('q') || '').trim().slice(0, 80);
+  // Escape PostgREST ilike wildcards/filter separators to prevent filter injection
+  const q = rawQ.replace(/[%_\\,.()]/g, '\\$&');
   const roles = (searchParams.get('roles') || 'driver,tecnico').split(',').map(r => r.trim()).filter(Boolean);
 
-  if (q.length < 2) return NextResponse.json([]);
+  if (rawQ.length < 2) return NextResponse.json([]);
 
   const db = sbAdmin() as any;
 

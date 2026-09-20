@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
+import { allowRequest } from '@/lib/rateLimit';
 
 /**
  * POST /api/upload-payment-proof
@@ -13,6 +14,10 @@ import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } fro
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 30 comprobantes por hora por usuario
+  const allowedUpload = await allowRequest(`rl:upload-payment-proof:${user.id}`, 30, 3600);
+  if (!allowedUpload) return NextResponse.json({ error: 'Demasiadas subidas. Intentá en unos minutos.' }, { status: 429 });
 
   try {
     const { order_id, base64, mimeType } = await req.json() as { order_id: string; base64: string; mimeType: string };

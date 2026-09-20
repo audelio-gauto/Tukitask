@@ -25,7 +25,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const type = (searchParams.get('type') ?? '').trim();
-  const q = (searchParams.get('q') ?? '').trim();
+  // Escape PostgREST ilike wildcards/filter separators to prevent filter injection
+  const q = (searchParams.get('q') ?? '').trim().replace(/[%_\\,.()]/g, '\\$&');
 
   if (!isValidType(type)) {
     return NextResponse.json({ error: 'type invalido' }, { status: 400 });

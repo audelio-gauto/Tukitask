@@ -2,10 +2,15 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { getAuthUser, unauthorized, sbAdmin } from '@/lib/apiAuth';
 import { ALLOWED_AUDIO_TYPES, MAX_FILE_SIZE_AUDIO } from '@/lib/constants';
+import { allowRequest } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 30 audios por hora por usuario
+  const allowedUpload = await allowRequest(`rl:upload-audio:${user.id}`, 30, 3600);
+  if (!allowedUpload) return NextResponse.json({ error: 'Demasiadas subidas. Intentá en unos minutos.' }, { status: 429 });
 
   try {
     const { base64, mimeType, fileName } = await req.json();

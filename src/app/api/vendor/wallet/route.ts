@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
+import { allowRequest } from '@/lib/rateLimit';
 
 // GET — saldo + últimas 50 transacciones + solicitudes de recarga del vendedor autenticado
 export async function GET(req: Request) {
@@ -44,6 +45,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 10 solicitudes de recarga por hora por vendedor
+  const allowed = await allowRequest(`rl:vendor-wallet:post:${user.email}`, 10, 3600);
+  if (!allowed) return NextResponse.json({ error: 'Demasiadas solicitudes en poco tiempo. Esperá un momento.' }, { status: 429 });
 
   const body = await req.json();
   const amount = Number(body.amount);

@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 // Lazy proxy — createClient is only called on first request, never at build time
 let _sb: SupabaseClient | null = null;
@@ -379,6 +380,10 @@ export async function POST(req: Request) {
     // All mutations require a valid session
     const user = await getAuthUser(req);
     if (!user) return unauthorized();
+
+    // Rate limit: 30 mutaciones por 5 minutos por usuario (crear trabajos, ofertas, cambios de estado, etc.)
+    const allowedMutation = await allowRequest(`rl:tecnico-jobs:post:${user.email}`, 30, 300);
+    if (!allowedMutation) return NextResponse.json({ error: 'Demasiadas solicitudes en poco tiempo. Esperá un momento.' }, { status: 429 });
 
     const now = new Date().toISOString();
 

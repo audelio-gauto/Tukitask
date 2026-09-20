@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 // GET /api/tienda/reviews?product_id=<uuid>
 // Public — returns reviews for a product
@@ -53,6 +54,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 10 reseñas por hora por usuario
+  const allowed = await allowRequest(`rl:reviews:post:${user.email}`, 10, 3600);
+  if (!allowed) return NextResponse.json({ error: 'Demasiadas reseñas en poco tiempo. Esperá un momento.' }, { status: 429 });
 
   let body: { product_id?: string; rating?: number; comment?: string };
   try { body = await req.json(); }

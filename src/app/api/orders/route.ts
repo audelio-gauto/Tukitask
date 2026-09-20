@@ -3,6 +3,7 @@ import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
+import { allowRequest } from '@/lib/rateLimit';
 
 // Saldo mínimo para poder ver pedidos disponibles.
 // 0 = solo bloquear si saldo negativo. Sube este valor para exigir depósito previo.
@@ -254,6 +255,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 15 pedidos por 5 minutos por usuario (evita flood del feed de drivers)
+  const allowed = await allowRequest(`rl:orders:post:${user.email}`, 15, 300);
+  if (!allowed) return NextResponse.json({ error: 'Demasiados pedidos en poco tiempo. Esperá un momento.' }, { status: 429 });
+
   const body = await req.json();
 
   // Validate price bounds (en Gs.) — configurable via env vars

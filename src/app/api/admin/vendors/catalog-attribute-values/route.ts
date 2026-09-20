@@ -17,7 +17,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const attributeId = Number(searchParams.get('attribute_id'));
-  const q = (searchParams.get('q') ?? '').trim();
+  // Escape PostgREST ilike wildcards/filter separators to prevent filter injection
+  const q = (searchParams.get('q') ?? '').trim().replace(/[%_\\,.()]/g, '\\$&');
 
   if (!Number.isFinite(attributeId) || attributeId <= 0) {
     return NextResponse.json({ error: 'attribute_id invalido' }, { status: 400 });

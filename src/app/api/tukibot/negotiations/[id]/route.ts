@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { forbidden, getAuthUser, sbAdmin, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 type PatchBody = {
   action?: 'accept_counter' | 'edit_counter';
@@ -10,6 +11,11 @@ type PatchBody = {
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  const allowed = await allowRequest(`rl:tukibot-negotiation:patch:${user.id}`, 30, 300);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Demasiadas solicitudes. Intenta de nuevo en unos minutos.' }, { status: 429 });
+  }
 
   const { id } = await params;
   const db = sbAdmin();

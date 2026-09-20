@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { forbidden, getAuthUser, sbAdmin, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 type NegotiationMeta = {
   last_buyer_read_at?: string;
@@ -50,6 +51,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 30 mensajes por minuto por usuario
+  const allowedMsg = await allowRequest(`rl:tukibot-msg:${user.id}`, 30, 60);
+  if (!allowedMsg) return NextResponse.json({ error: 'Demasiados mensajes. Esperá un momento.' }, { status: 429 });
 
   const { id } = await params;
   const db = sbAdmin();

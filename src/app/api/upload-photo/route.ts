@@ -2,10 +2,15 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
+import { allowRequest } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  // Rate limit: 20 subidas por hora por usuario
+  const allowedUpload = await allowRequest(`rl:upload-photo:${user.id}`, 20, 3600);
+  if (!allowedUpload) return NextResponse.json({ error: 'Demasiadas subidas. Intentá en unos minutos.' }, { status: 429 });
 
   try {
     const { email, base64, mimeType, role } = await req.json();
