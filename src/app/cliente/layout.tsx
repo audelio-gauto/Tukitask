@@ -26,7 +26,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
   const [totalRatings, setTotalRatings] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
-  usePushNotifications(email || undefined);
+  const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
@@ -135,6 +135,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         email={email}
         displayName={displayName}
         profilePhoto={profilePhoto}
+        onBeforeLogout={cleanupPushNotifications}
       />
       <NotificationBell userEmail={email} className="" />
       {email && <ChatBadge email={email} href="/cliente" scope="order" />}

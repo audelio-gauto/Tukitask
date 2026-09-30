@@ -29,16 +29,18 @@ interface ClientDrawerProps {
   email: string;
   displayName: string;
   profilePhoto?: string;
+  onBeforeLogout?: () => Promise<void>;
 }
 
-export function ClientDrawer({ open, onClose, email, displayName, profilePhoto }: ClientDrawerProps) {
+export function ClientDrawer({ open, onClose, email, displayName, profilePhoto, onBeforeLogout }: ClientDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
+    try { await onBeforeLogout?.(); } catch { /* keep logout available if push cleanup fails */ }
     await supabase.auth.signOut();
     router.replace('/auth');
-  }, [router]);
+  }, [onBeforeLogout, router]);
 
   return (
     <>

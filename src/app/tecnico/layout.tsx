@@ -38,7 +38,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [activeJobCount, setActiveJobCount] = useState(0);
-  usePushNotifications(email || undefined);
+  const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
@@ -241,6 +241,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         displayName={displayName}
         profilePhoto={profilePhoto}
         role={role}
+        onBeforeLogout={cleanupPushNotifications}
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/tecnico/citas" scope="job" />

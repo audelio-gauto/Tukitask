@@ -42,16 +42,18 @@ interface DriverDrawerProps {
   displayName: string;
   profilePhoto?: string;
   role?: string | null;
+  onBeforeLogout?: () => Promise<void>;
 }
 
-export function WorkerDrawer({ open, onClose, email, displayName, profilePhoto, role = null }: DriverDrawerProps) {
+export function WorkerDrawer({ open, onClose, email, displayName, profilePhoto, role = null, onBeforeLogout }: DriverDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
+    try { await onBeforeLogout?.(); } catch { /* keep logout available if push cleanup fails */ }
     await supabase.auth.signOut();
     router.replace('/auth');
-  }, [router]);
+  }, [onBeforeLogout, router]);
 
   return (
     <>

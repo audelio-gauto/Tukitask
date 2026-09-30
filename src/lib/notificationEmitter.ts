@@ -6,11 +6,27 @@
 import { sbAdmin } from '@/lib/apiAuth';
 import type { NotifType, NotifPriority } from '@/lib/notifications';
 import { NOTIF_PRIORITY, buildNotification } from '@/lib/notifications';
+import { dispatchPush } from '@/lib/pushService';
 
 export interface EmitOpts {
   priority?: NotifPriority;
   /** Group key for dedup. Same group_key + same user + unread → update instead of insert */
   groupKey?: string;
+}
+
+async function dispatchNotificationPush(
+  userEmail: string,
+  type: NotifType,
+  title: string,
+  body: string,
+  data: Record<string, unknown> | undefined,
+  priority: NotifPriority,
+): Promise<void> {
+  try {
+    await dispatchPush(userEmail, title, body, priority, { ...data, type });
+  } catch (error) {
+    console.error('[notif] Push dispatch failed:', error);
+  }
 }
 
 /**
@@ -31,7 +47,7 @@ export async function emitNotification(
 
   try {
     // Try the smart RPC first (business rules + dedup in DB)
-    const { error: rpcError } = await sbAdmin().rpc('safe_emit_notification', {
+    const { data: rpcResult, error: rpcError } = await sbAdmin().rpc('safe_emit_notification', {
       p_user_email: userEmail.toLowerCase(),
       p_type: type,
       p_title: title,
@@ -41,7 +57,12 @@ export async function emitNotification(
       p_data: data ?? {},
     });
 
-    if (!rpcError) return; // Success via RPC
+    if (!rpcError) {
+      if (rpcResult) {
+        await dispatchNotificationPush(userEmail, type, title, body, data, priority);
+      }
+      return;
+    }
 
     // RPC not deployed yet — fallback to raw insert
     if (rpcError.message.includes('function') || rpcError.code === '42883') {
@@ -50,6 +71,7 @@ export async function emitNotification(
         .from('notifications')
         .insert([row]);
       if (error) console.error('[notif] Fallback insert failed:', error.message);
+      else await dispatchNotificationPush(userEmail, type, title, body, data, priority);
       return;
     }
 

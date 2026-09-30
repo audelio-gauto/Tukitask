@@ -41,7 +41,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
-  usePushNotifications(email || undefined);
+  const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
@@ -264,6 +264,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         email={email}
         displayName={displayName}
         profilePhoto={profilePhoto}
+        onBeforeLogout={cleanupPushNotifications}
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/driver/activo" scope="order" />

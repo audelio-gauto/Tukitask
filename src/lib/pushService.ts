@@ -10,10 +10,12 @@
  *   FIREBASE_SERVICE_ACCOUNT_JSON — stringified service account JSON from Firebase Console
  */
 import { sbAdmin } from '@/lib/apiAuth';
-import type { NotifPriority, PushPlatform } from '@/lib/notifications';
+import type { NotifPriority } from '@/lib/notifications';
 import { getPushChannel } from '@/lib/notifications';
 import * as admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
+
+const ANDROID_PUSH_CHANNEL_ID = 'tukitask_alerts';
 
 // ── Firebase Admin singleton ─────────────────────────────────────────────────
 function getAdminApp(): admin.app.App | null {
@@ -99,7 +101,7 @@ async function sendFCM(tokens: string[], payload: PushPayload): Promise<number> 
         data: payload.data,
         android: {
           priority: payload.priority === 'high' ? 'high' : 'normal',
-          notification: { sound: 'default' },
+          notification: { sound: 'default', channelId: ANDROID_PUSH_CHANNEL_ID },
         },
         webpush: payload.priority === 'high'
           ? { headers: { Urgency: 'high' } }
