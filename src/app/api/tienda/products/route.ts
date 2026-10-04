@@ -36,22 +36,32 @@ export async function GET(req: Request) {
   const ratingsMap: Record<string, { avg: number; count: number }> = {};
 
   if (productIds.length > 0) {
-    const { data: ratingsData } = await db
-      .from('product_reviews')
-      .select('product_id, rating')
-      .in('product_id', productIds);
+    const { data: statsData, error: statsError } = await db
+      .rpc('product_review_stats', { p_product_ids: productIds });
 
-    if (ratingsData) {
-      const groups: Record<string, number[]> = {};
-      for (const r of ratingsData as { product_id: string; rating: number }[]) {
-        if (!groups[r.product_id]) groups[r.product_id] = [];
-        groups[r.product_id].push(r.rating);
+    if (!statsError && Array.isArray(statsData)) {
+      for (const s of statsData as { product_id: string; avg_rating: number | string; review_count: number | string }[]) {
+        ratingsMap[s.product_id] = { avg: Number(s.avg_rating), count: Number(s.review_count) };
       }
-      for (const [pid, ratings] of Object.entries(groups)) {
-        ratingsMap[pid] = {
-          avg: ratings.reduce((s, r) => s + r, 0) / ratings.length,
-          count: ratings.length,
-        };
+    } else {
+      // Fallback while migration 112 is not deployed.
+      const { data: ratingsData } = await db
+        .from('product_reviews')
+        .select('product_id, rating')
+        .in('product_id', productIds);
+
+      if (ratingsData) {
+        const groups: Record<string, number[]> = {};
+        for (const r of ratingsData as { product_id: string; rating: number }[]) {
+          if (!groups[r.product_id]) groups[r.product_id] = [];
+          groups[r.product_id].push(r.rating);
+        }
+        for (const [pid, ratings] of Object.entries(groups)) {
+          ratingsMap[pid] = {
+            avg: ratings.reduce((s, r) => s + r, 0) / ratings.length,
+            count: ratings.length,
+          };
+        }
       }
     }
   }

@@ -54,20 +54,44 @@ export async function GET(req: Request) {
     }
 
     // ── 3. Fetch summary stats (full count, not paginated) ───────────────────
-    let statsQuery = (db as any).from('recharge_requests').select('status, amount');
-    if (emailFilter) statsQuery = statsQuery.in('driver_email', emailFilter);
-    if (dateFrom) statsQuery = statsQuery.gte('created_at', `${dateFrom}T00:00:00`);
-    if (dateTo)   statsQuery = statsQuery.lte('created_at', `${dateTo}T23:59:59`);
-    if (search)   statsQuery = statsQuery.ilike('driver_email', `%${search}%`);
-    const { data: statsRows } = await statsQuery;
+    const emptyStats = { total: 0, pending: 0, approved: 0, rejected: 0, total_amount_approved: 0, total_amount_pending: 0 };
+    let stats: typeof emptyStats | null = null;
 
-    const stats = (statsRows || []).reduce((acc: any, r: any) => {
-      acc.total++;
-      if (r.status === 'approved') { acc.approved++; acc.total_amount_approved += Number(r.amount); }
-      else if (r.status === 'pending') { acc.pending++; acc.total_amount_pending += Number(r.amount); }
-      else if (r.status === 'rejected') acc.rejected++;
-      return acc;
-    }, { total: 0, pending: 0, approved: 0, rejected: 0, total_amount_approved: 0, total_amount_pending: 0 });
+    const { data: statsRpc, error: statsRpcErr } = await (db as any).rpc('recharge_request_stats', {
+      p_emails: emailFilter,
+      p_from:   dateFrom ? `${dateFrom}T00:00:00` : null,
+      p_to:     dateTo   ? `${dateTo}T23:59:59`   : null,
+      p_search: search || null,
+    });
+    const statsRow = Array.isArray(statsRpc) ? statsRpc[0] : null;
+    if (!statsRpcErr && statsRow) {
+      stats = {
+        total: Number(statsRow.total),
+        pending: Number(statsRow.pending),
+        approved: Number(statsRow.approved),
+        rejected: Number(statsRow.rejected),
+        total_amount_approved: Number(statsRow.total_amount_approved),
+        total_amount_pending: Number(statsRow.total_amount_pending),
+      };
+    }
+
+    if (!stats) {
+      // Fallback while migration 113 is not deployed.
+      let statsQuery = (db as any).from('recharge_requests').select('status, amount');
+      if (emailFilter) statsQuery = statsQuery.in('driver_email', emailFilter);
+      if (dateFrom) statsQuery = statsQuery.gte('created_at', `${dateFrom}T00:00:00`);
+      if (dateTo)   statsQuery = statsQuery.lte('created_at', `${dateTo}T23:59:59`);
+      if (search)   statsQuery = statsQuery.ilike('driver_email', `%${search}%`);
+      const { data: statsRows } = await statsQuery;
+
+      stats = (statsRows || []).reduce((acc: any, r: any) => {
+        acc.total++;
+        if (r.status === 'approved') { acc.approved++; acc.total_amount_approved += Number(r.amount); }
+        else if (r.status === 'pending') { acc.pending++; acc.total_amount_pending += Number(r.amount); }
+        else if (r.status === 'rejected') acc.rejected++;
+        return acc;
+      }, { ...emptyStats });
+    }
 
     // ── 4. Enrich with profile data ──────────────────────────────────────────
     const emails = [...new Set((requests as any[]).map((r: any) => r.driver_email.toLowerCase()))];
