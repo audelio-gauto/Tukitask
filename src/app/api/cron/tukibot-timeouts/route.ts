@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-// Lazy proxy — createClient is only called on first request, never at build time
-let _sb: SupabaseClient | null = null;
-const sb = new Proxy({} as SupabaseClient, {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  get(_t, p) { _sb ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!); return (_sb as any)[p]; },
-});
+function createSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+  );
+}
 
 function isAuthorized(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -22,6 +22,7 @@ export async function GET(req: Request) {
   }
 
   try {
+    const sb = createSupabaseClient();
     const [{ data, error }, { data: cleanupData, error: cleanupError }] = await Promise.all([
       sb.rpc('fn_tukibot_process_timeouts'),
       sb.rpc('fn_tukibot_cleanup_expired_negotiations'),

@@ -21,7 +21,7 @@ const TIMEOUT_STATUSES: TimeoutResultStatus[] = ['timeout_auto_counter', 'timeou
 const gs = (n: number | null | undefined) => `₲${(n ?? 0).toLocaleString('es-PY')}`;
 
 function timeoutStatusLabel(status: TimeoutResultStatus) {
-  if (status === 'timeout_auto_counter') return '🔁 Auto-contraoferta';
+  if (status === 'timeout_auto_counter') return '🔁 Auto-contra oferta';
   if (status === 'timeout_auto_accept') return '✅ Auto-aceptado';
   return '📢 Presión al cliente';
 }
