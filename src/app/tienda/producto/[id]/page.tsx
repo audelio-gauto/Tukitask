@@ -64,6 +64,8 @@ type Product = {
   warranty_days: number | null;
 };
 
+type RelatedProduct = Pick<Product, 'id' | 'name' | 'price' | 'floor_price' | 'stock' | 'image' | 'short_description'>;
+
 const DEFAULT_NEG_PHRASES = [
   'Dame 3 segundos…',
   'Le estoy convenciendo 😏',
@@ -154,6 +156,7 @@ export default function ProductDetailPage() {
   const { addItem } = useCart();
 
   const [p,           setP]           = useState<Product | null | undefined>(undefined); // undefined=loading
+  const [relatedProducts, setRelatedProducts] = useState<RelatedProduct[]>([]);
   const [galleryIdx,  setGalleryIdx]  = useState(0);
   const [mode,        setMode]        = useState<Mode>('idle');
   const [quantity,    setQuantity]    = useState(1);
@@ -248,6 +251,32 @@ export default function ProductDetailPage() {
       isActive = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!p?.id || !p.category) {
+      setRelatedProducts([]);
+      return;
+    }
+
+    let isActive = true;
+    const params = new URLSearchParams({ category: p.category, limit: '12' });
+
+    fetch(`/api/tienda/products?${params}`)
+      .then(response => response.json())
+      .then(({ products }: { products?: RelatedProduct[] }) => {
+        if (!isActive) return;
+        setRelatedProducts((products ?? [])
+          .filter(product => product.id !== p.id && product.stock > 0)
+          .slice(0, 4));
+      })
+      .catch(() => {
+        if (isActive) setRelatedProducts([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [p?.id, p?.category]);
 
   // Get session email once (shared across reviews + offer flow)
   useEffect(() => {
@@ -1254,6 +1283,36 @@ export default function ProductDetailPage() {
           </Link>
         </div>
       </div>
+      {relatedProducts.length > 0 && (
+        <section style={{ marginTop: 44 }} aria-labelledby="related-products-title">
+          <h2 id="related-products-title" className="tnd-section-title">Productos relacionados</h2>
+          <div className="tnd-products-grid">
+            {relatedProducts.map(product => (
+              <Link key={product.id} href={`/tienda/producto/${product.id}`} className="tnd-product-card">
+                <div
+                  className="tnd-product-img"
+                  style={{ background: 'linear-gradient(135deg, var(--tnd-surface-2), var(--tnd-surface))' }}
+                >
+                  {product.image
+                    ? <Image src={product.image} alt={product.name} fill style={{ objectFit: 'cover' }} unoptimized />
+                    : '📦'
+                  }
+                </div>
+                <div className="tnd-product-body">
+                  <div className="tnd-product-name">{product.name}</div>
+                  {product.short_description && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--tnd-text-muted)', lineHeight: 1.45, minHeight: 32, marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {product.short_description}
+                    </div>
+                  )}
+                  <div className="tnd-product-price">{gs(product.price)}</div>
+                  <div className="tnd-product-floor">Ofertá desde {gs(product.floor_price)}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
