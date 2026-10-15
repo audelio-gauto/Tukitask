@@ -9,6 +9,8 @@ import { gs } from './data';
 import { supabase } from '@/lib/supabaseClient';
 import type { DbProduct } from '@/types/market';
 
+const PRODUCT_PAGE_SIZE = 24;
+
 /* ── Component ─────────────────────────────────────────────── */
 function TiendaPageInner() {
   const searchParams  = useSearchParams();
@@ -18,6 +20,9 @@ function TiendaPageInner() {
 
   const [search, setSearch]           = useState(urlQ);
   const [activeCategory, setCategory] = useState('Todos');
+  const [page, setPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const storesRef    = useRef<HTMLDivElement>(null);
   const featuredRef  = useRef<HTMLDivElement>(null);
   const offersRef    = useRef<HTMLDivElement>(null);
@@ -56,10 +61,10 @@ function TiendaPageInner() {
   const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
 
   const [dbProducts, setDbProducts] = useState<DbProduct[]>([]);
+  const [featuredDbProducts, setFeaturedDbProducts] = useState<DbProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
-  const [blockedVendorIds, setBlockedVendorIds] = useState<Set<string>>(new Set());
   const [myOffers, setMyOffers] = useState<MarketNegotiation[]>([]);
   const [chatOffer, setChatOffer] = useState<MarketNegotiation | null>(null);
   const [chatMessages, setChatMessages] = useState<NegotiationMessage[]>([]);
@@ -106,16 +111,47 @@ function TiendaPageInner() {
     }
   }
 
-  /* fetch real published products */
+  /* Fetch the current catalog page with server-side filters. */
   useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      limit: String(PRODUCT_PAGE_SIZE),
+      page: String(page),
+      include_categories: '1',
+    });
+    if (search.trim()) params.set('q', search.trim());
+    if (activeCategory !== 'Todos') params.set('category', activeCategory);
+
     setProductsLoading(true);
-    fetch('/api/tienda/products?limit=100')
-      .then(r => r.json())
-      .then(({ products }) => {
-        if (products) setDbProducts(products);
-        setProductsLoading(false);
+    fetch(`/api/tienda/products?${params}`, { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('No se pudieron cargar los productos');
+        return response.json();
       })
-      .catch(() => setProductsLoading(false));
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setDbProducts(data.products ?? []);
+        setTotalProducts(data.pagination?.total ?? 0);
+        setAvailableCategories(data.categories ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setDbProducts([]);
+          setTotalProducts(0);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProductsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [search, activeCategory, page]);
+
+  useEffect(() => {
+    fetch('/api/tienda/products?limit=12')
+      .then(response => response.json())
+      .then(({ products }) => setFeaturedDbProducts(products ?? []))
+      .catch(() => setFeaturedDbProducts([]));
   }, []);
 
   useEffect(() => {
@@ -142,31 +178,11 @@ function TiendaPageInner() {
   useEffect(() => {
     const vendorIds = Array.from(new Set(dbProducts.map((p) => p.vendor_id))).filter(Boolean);
     if (vendorIds.length === 0) {
-      setBlockedVendorIds(new Set());
+      setVendorBotEnabledMap({});
       return;
     }
 
     let cancelled = false;
-    Promise.all(
-      vendorIds.map(async (id) => {
-        try {
-          const res = await fetch(`/api/tienda/vendor-verification?vendor_id=${encodeURIComponent(id)}`);
-          if (!res.ok) return { id, blocked: false };
-          const data = await res.json();
-          return { id, blocked: Boolean(data.blocked) };
-        } catch {
-          return { id, blocked: false };
-        }
-      })
-    ).then((results) => {
-      if (cancelled) return;
-      const blocked = new Set<string>();
-      results.forEach((item) => {
-        if (item.blocked) blocked.add(item.id);
-      });
-      setBlockedVendorIds(blocked);
-    });
-
     const controller = new AbortController();
     fetch(`/api/tienda/vendor-bot-config?vendorIds=${encodeURIComponent(vendorIds.join(','))}`, { signal: controller.signal })
       .then((r) => r.json())
@@ -213,7 +229,28 @@ function TiendaPageInner() {
           countMap[p.vendor_id] = (countMap[p.vendor_id] || 0) + 1;
           emailMap[p.vendor_id] = p.vendor_email;
         });
-        const ids = Object.keys(countMap).filter((id) => !blockedVendorIds.has(id));
+        const allVendorIds = Object.keys(countMap).sort();
+        const verificationChunks = Array.from({ length: Math.ceil(allVendorIds.length / 100) }, (_, index) =>
+          allVendorIds.slice(index * 100, (index + 1) * 100)
+        );
+        const verificationResults = await Promise.all(verificationChunks.map(async (chunk) => {
+          try {
+            const params = new URLSearchParams({ vendor_ids: chunk.join(',') });
+            const response = await fetch(`/api/tienda/vendor-verification?${params}`);
+            if (!response.ok) return {};
+            const data = await response.json();
+            return data.vendors ?? {};
+          } catch {
+            return {};
+          }
+        }));
+        const blockedIds = new Set<string>();
+        verificationResults.forEach((result) => {
+          Object.entries(result).forEach(([id, summary]) => {
+            if ((summary as { blocked?: boolean }).blocked) blockedIds.add(id);
+          });
+        });
+        const ids = allVendorIds.filter((id) => !blockedIds.has(id));
 
         let cfgMap = new Map<string, Record<string, unknown>>();
         try {
@@ -269,11 +306,12 @@ function TiendaPageInner() {
     };
 
     fetchVendors();
-  }, [blockedVendorIds]);
+  }, []);
 
   /* sync URL → local state */
   useEffect(() => {
     setSearch(urlQ);
+    setPage(1);
   }, [urlQ]);
 
   /* auto-scroll carousels */
@@ -330,7 +368,18 @@ function TiendaPageInner() {
     shortDescription: p.short_description, avgRating: p.avg_rating, reviewCount: p.review_count,
   }));
 
-  const allCategories = ['Todos', ...Array.from(new Set(dbProducts.map(p => p.category).filter(Boolean)))];
+  const featuredProducts: DisplayProduct[] = featuredDbProducts.map(p => ({
+    id: p.id, vendorName: vendorNames[p.vendor_id] || (p.vendor_email?.split('@')[0] || 'Tienda'),
+    vendorId: p.vendor_id, vendorEmail: p.vendor_email || '',
+    name: p.name, category: p.category,
+    emoji: '📦', image: p.image, price: p.price, floorPrice: p.floor_price, stock: p.stock,
+    shortDescription: p.short_description, avgRating: p.avg_rating, reviewCount: p.review_count,
+  }));
+
+  const allCategories = ['Todos', ...Array.from(new Set([
+    ...availableCategories,
+    ...dbProducts.map(p => p.category).filter(Boolean),
+  ]))];
 
   const handleAddToCart = (p: DisplayProduct) => {
     addItem({ id: p.id, name: p.name, price: p.price, emoji: p.emoji, image: p.image, vendorName: p.vendorName, vendorId: p.vendorId, vendorEmail: p.vendorEmail });
@@ -338,12 +387,8 @@ function TiendaPageInner() {
     setTimeout(() => setAdded(prev => ({ ...prev, [p.id]: false })), 1800);
   };
 
-  const filtered = allProducts.filter(p => {
-    const matchCat    = activeCategory === 'Todos' || p.category === activeCategory;
-    const q           = search.toLowerCase();
-    const matchSearch = !q || p.name.toLowerCase().includes(q) || p.vendorName.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
-    return matchCat && matchSearch;
-  });
+  const filtered = allProducts;
+  const totalPages = Math.max(1, Math.ceil(totalProducts / PRODUCT_PAGE_SIZE));
 
   return (
     <div className="tnd-page tnd-main-page">
@@ -471,7 +516,7 @@ function TiendaPageInner() {
         <div className="tnd-carousel-wrap">
           <button className="tnd-carousel-btn tnd-carousel-prev" onClick={() => featuredRef.current?.scrollBy({ left: -240, behavior: 'smooth' })} aria-label="Anterior">&#8249;</button>
           <div className="tnd-featured-carousel" ref={featuredRef}>
-            {allProducts.map(p => (
+            {featuredProducts.map(p => (
               <div key={p.id} className="tnd-product-card tnd-featured-card">
                 <Link href={`/tienda/producto/${p.id}`} style={{ textDecoration: 'none', display: 'contents' }}>
                   <div
@@ -516,7 +561,7 @@ function TiendaPageInner() {
         <div className="tnd-section-head">
           <h2 className="tnd-section-title">Explorar todos los productos</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--tnd-text-muted)' }}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            {totalProducts} resultado{totalProducts !== 1 ? 's' : ''}
           </span>
         </div>
 
@@ -526,7 +571,7 @@ function TiendaPageInner() {
             <button
               key={c}
               className={`tnd-cat${activeCategory === c ? ' active' : ''}`}
-              onClick={() => setCategory(c)}
+              onClick={() => { setCategory(c); setPage(1); }}
             >
               {c}
             </button>
@@ -612,6 +657,27 @@ function TiendaPageInner() {
               </Link>
             ))}
           </div>
+        )}
+        {!productsLoading && totalPages > 1 && (
+          <nav aria-label="Paginación de productos" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 24 }}>
+            <button
+              type="button"
+              onClick={() => setPage(current => Math.max(1, current - 1))}
+              disabled={page <= 1}
+              style={{ padding: '9px 14px', border: '1px solid var(--tnd-border)', borderRadius: 8, background: 'var(--tnd-surface)', color: 'var(--tnd-text-primary)', cursor: page <= 1 ? 'not-allowed' : 'pointer', opacity: page <= 1 ? 0.5 : 1 }}
+            >
+              Anterior
+            </button>
+            <span style={{ color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>Página {page} de {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setPage(current => Math.min(totalPages, current + 1))}
+              disabled={page >= totalPages}
+              style={{ padding: '9px 14px', border: '1px solid var(--tnd-border)', borderRadius: 8, background: 'var(--tnd-surface)', color: 'var(--tnd-text-primary)', cursor: page >= totalPages ? 'not-allowed' : 'pointer', opacity: page >= totalPages ? 0.5 : 1 }}
+            >
+              Siguiente
+            </button>
+          </nav>
         )}
       </div>
 

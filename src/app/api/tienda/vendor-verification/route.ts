@@ -1,10 +1,82 @@
 import { NextResponse } from 'next/server';
 import { sbAdmin } from '@/lib/apiAuth';
+import { cacheGet, cacheSet } from '@/lib/cache';
 
 const REQUIRED_VENDOR_DOCS = ['cedula_frente', 'ruc_documento', 'constancia_bancaria', 'registro_comercial'];
+const BULK_CACHE_TTL_SECONDS = 30;
+
+type VendorVerificationSummary = { blocked: boolean };
+type VendorVerificationMap = Record<string, VendorVerificationSummary>;
+
+async function getBulkVerification(vendorIds: string[]) {
+  const ids = Array.from(new Set(vendorIds)).sort();
+  const cacheKey = `tienda:vendor-verification:v1:${ids.join(',')}`;
+  const cached = await cacheGet<VendorVerificationMap>(cacheKey);
+  if (cached) return NextResponse.json({ vendors: cached });
+
+  const db = sbAdmin();
+  const { data: vendors, error: vendorError } = await db
+    .from('users')
+    .select('id, email, verification_status, is_active')
+    .in('id', ids);
+
+  if (vendorError) return NextResponse.json({ error: 'verification_lookup_failed' }, { status: 500 });
+
+  type VendorRow = { id: string; email: string | null; verification_status: string | null; is_active: boolean | null };
+  type VendorDocRow = { driver_email: string; doc_type: string; status?: string | null };
+  const vendorRows = (vendors ?? []) as VendorRow[];
+  const emails = vendorRows.map((vendor) => vendor.email).filter((email): email is string => Boolean(email));
+  const docsByEmail = new Map<string, VendorDocRow[]>();
+
+  if (emails.length > 0) {
+    const { data: docs, error: docsError } = await db
+      .from('driver_documents')
+      .select('driver_email, doc_type, status')
+      .eq('role', 'vendedor')
+      .in('driver_email', emails);
+
+    if (docsError) return NextResponse.json({ error: 'verification_lookup_failed' }, { status: 500 });
+    for (const doc of (docs ?? []) as VendorDocRow[]) {
+      const rows = docsByEmail.get(doc.driver_email) ?? [];
+      rows.push(doc);
+      docsByEmail.set(doc.driver_email, rows);
+    }
+  }
+
+  const vendorsById = new Map(vendorRows.map((vendor) => [vendor.id, vendor]));
+  const summaries: VendorVerificationMap = {};
+
+  for (const id of ids) {
+    const vendor = vendorsById.get(id);
+    if (!vendor?.email) {
+      summaries[id] = { blocked: true };
+      continue;
+    }
+
+    const docs = docsByEmail.get(vendor.email) ?? [];
+    const approvedMap = new Map(docs.map((doc) => [doc.doc_type, doc.status ?? null]));
+    const missingDocs = REQUIRED_VENDOR_DOCS.filter((doc) => approvedMap.get(doc) !== 'approved');
+    const isApprovedByFlag = vendor.verification_status === 'approved' || vendor.is_active === true;
+    const blockedByDocs = docs.length === 0 || missingDocs.length > 0 || docs.some((doc) => {
+      return REQUIRED_VENDOR_DOCS.includes(doc.doc_type) && doc.status !== 'approved';
+    });
+    summaries[id] = { blocked: !isApprovedByFlag && blockedByDocs };
+  }
+
+  await cacheSet(cacheKey, summaries, BULK_CACHE_TTL_SECONDS);
+  return NextResponse.json({ vendors: summaries });
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const vendorIds = (searchParams.get('vendor_ids') ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 100);
+
+  if (vendorIds.length > 0) return getBulkVerification(vendorIds);
+
   const vendorId = searchParams.get('vendor_id')?.trim();
 
   if (!vendorId) {
