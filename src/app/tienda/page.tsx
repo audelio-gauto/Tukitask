@@ -64,6 +64,8 @@ function TiendaPageInner() {
   const [featuredDbProducts, setFeaturedDbProducts] = useState<DbProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [vendorsLoading, setVendorsLoading] = useState(true);
+  const [vendorsLoadError, setVendorsLoadError] = useState(false);
+  const [vendorLoadAttempt, setVendorLoadAttempt] = useState(0);
   const [vendorBotEnabledMap, setVendorBotEnabledMap] = useState<Record<string, boolean>>({});
   const [myOffers, setMyOffers] = useState<MarketNegotiation[]>([]);
   const [chatOffer, setChatOffer] = useState<MarketNegotiation | null>(null);
@@ -207,19 +209,32 @@ function TiendaPageInner() {
 
   /* fetch real vendors with published products */
   useEffect(() => {
+    let cancelled = false;
+    let loadingTimeout: number | undefined;
+    const retryWhenOnline = () => setVendorLoadAttempt(attempt => attempt + 1);
+
     const fetchVendors = async () => {
       setVendorsLoading(true);
+      setVendorsLoadError(false);
+      loadingTimeout = window.setTimeout(() => {
+        if (!cancelled) {
+          setVendorsLoadError(true);
+          setVendorsLoading(false);
+        }
+      }, 12000);
 
       try {
-        const { data: prods } = await supabase
+        const { data: prods, error: productsError } = await supabase
           .from('products')
           .select('vendor_id, vendor_email')
           .eq('status', 'published');
+        if (productsError) throw productsError;
+        if (cancelled) return;
 
         if (!prods?.length) {
           setRealVendors([]);
           setVendorNames({});
-          setVendorsLoading(false);
+          setVendorsLoadError(false);
           return;
         }
 
@@ -244,6 +259,7 @@ function TiendaPageInner() {
             return {};
           }
         }));
+        if (cancelled) return;
         const blockedIds = new Set<string>();
         verificationResults.forEach((result) => {
           Object.entries(result).forEach(([id, summary]) => {
@@ -253,23 +269,17 @@ function TiendaPageInner() {
         const ids = allVendorIds.filter((id) => !blockedIds.has(id));
 
         let cfgMap = new Map<string, Record<string, unknown>>();
-        try {
-          const result = (await Promise.race([
-            supabase.from('store_configs').select('vendor_id, config').in('vendor_id', ids),
-            new Promise((resolve) => setTimeout(() => resolve({ data: null, error: null }), 600)),
-          ])) as {
-            data?: Array<{ vendor_id: string; config: Record<string, unknown> }> | null;
-            error?: unknown;
-          } | null;
-
-          const configs = result?.data ?? null;
-          if (configs && Array.isArray(configs)) {
-            cfgMap = new Map(configs.map((c: { vendor_id: string; config: Record<string, unknown> }) => [c.vendor_id, c.config]));
-          }
-        } catch {
-          cfgMap = new Map();
+        const { data: configs, error: configError } = await supabase
+          .from('store_configs')
+          .select('vendor_id, config')
+          .in('vendor_id', ids);
+        if (configError) throw configError;
+        if (cancelled) return;
+        if (Array.isArray(configs)) {
+          cfgMap = new Map(configs.map((c: { vendor_id: string; config: Record<string, unknown> }) => [c.vendor_id, c.config]));
         }
 
+        setVendorsLoadError(false);
         const nameMap: Record<string, string> = {};
         ids.forEach(id => {
           const cfg = cfgMap.get(id);
@@ -298,15 +308,24 @@ function TiendaPageInner() {
           })
         );
       } catch {
-        setRealVendors([]);
-        setVendorNames({});
+        if (!cancelled) {
+          setRealVendors([]);
+          setVendorNames({});
+          setVendorsLoadError(true);
+        }
       } finally {
-        setVendorsLoading(false);
+        window.clearTimeout(loadingTimeout);
+        if (!cancelled) setVendorsLoading(false);
       }
     };
 
-    fetchVendors();
-  }, []);
+    window.addEventListener('online', retryWhenOnline);
+    void fetchVendors();
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', retryWhenOnline);
+    };
+  }, [vendorLoadAttempt]);
 
   /* sync URL → local state */
   useEffect(() => {
@@ -474,7 +493,19 @@ function TiendaPageInner() {
                 Cargando tiendas...
               </div>
             )}
-            {!vendorsLoading && realVendors.length === 0 && (
+            {!vendorsLoading && vendorsLoadError && (
+              <div role="alert" style={{ padding: '2rem 1rem', color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>
+                No pudimos cargar las tiendas. Revisá tu conexión.
+                <button
+                  type="button"
+                  onClick={() => setVendorLoadAttempt(attempt => attempt + 1)}
+                  style={{ display: 'block', marginTop: 10, padding: '7px 12px', border: '1px solid var(--tnd-border)', borderRadius: 8, background: 'var(--tnd-surface)', color: 'var(--tnd-text-primary)', cursor: 'pointer' }}
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+            {!vendorsLoading && !vendorsLoadError && realVendors.length === 0 && (
               <div style={{ padding: '2rem 1rem', color: 'var(--tnd-text-muted)', fontSize: '0.85rem' }}>
                 No hay tiendas disponibles aún.
               </div>

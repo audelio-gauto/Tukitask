@@ -95,6 +95,8 @@ export default function VendorStorePage() {
 
   const [cfg,       setCfg]       = useState<StoreTemplateConfig | null>(null);
   const [loadingStore, setLoadingStore] = useState(true);
+  const [configLoadError, setConfigLoadError] = useState(false);
+  const [configRetry, setConfigRetry] = useState(0);
   const [vendorBotEnabled, setVendorBotEnabled] = useState(true);
   const [verificationBlocked, setVerificationBlocked] = useState(false);
   const [verificationMsg, setVerificationMsg] = useState('');
@@ -113,37 +115,47 @@ export default function VendorStorePage() {
   };
 
   useEffect(() => {
+    let isActive = true;
+    const retryWhenOnline = () => setConfigRetry(attempt => attempt + 1);
+
     const loadConfig = async () => {
       setLoadingStore(true);
+      setConfigLoadError(false);
 
       if (vendorId === 'mi-tienda') {
         try {
           const raw = localStorage.getItem('tukimarket_template_mi-tienda');
           if (raw) {
-            setCfg(JSON.parse(raw));
-            setLoadingStore(false);
+            if (isActive) {
+              setCfg(JSON.parse(raw));
+              setLoadingStore(false);
+            }
             return;
           }
         } catch { /* ignore */ }
 
-        setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
-        setLoadingStore(false);
+        if (isActive) {
+          setCfg({ ...DEFAULT_CFG, storeSlug: 'mi-tienda', storeName: 'Mi Tienda' });
+          setLoadingStore(false);
+        }
         return;
       }
 
       if (!IS_UUID) {
-        setCfg(null);
-        setLoadingStore(false);
+        if (isActive) {
+          setCfg(null);
+          setLoadingStore(false);
+        }
         return;
       }
 
-      const fallbackToDefault = () => {
-        setCfg(DEFAULT_CFG);
-        setLoadingStore(false);
-      };
-
-      let timeoutId: number | undefined;
-      timeoutId = window.setTimeout(fallbackToDefault, 700);
+      const loadTimeout = window.setTimeout(() => {
+        if (isActive) {
+          setCfg(null);
+          setConfigLoadError(true);
+          setLoadingStore(false);
+        }
+      }, 12000);
 
       try {
         const { data, error } = await supabase
@@ -152,28 +164,43 @@ export default function VendorStorePage() {
           .eq('vendor_id', vendorId)
           .maybeSingle();
 
-        if (timeoutId) window.clearTimeout(timeoutId);
+        if (!isActive) return;
 
-        if (!error && data?.config) {
+        if (error) {
+          setCfg(null);
+          setConfigLoadError(true);
+        } else {
+          setConfigLoadError(false);
           // Merge over DEFAULT_CFG so any missing field (e.g. categories saved from
           // configuracion page) falls back to a safe default instead of crashing.
-          setCfg({ ...DEFAULT_CFG, ...(data.config as StoreTemplateConfig) });
-          setLoadingStore(false);
-          return;
+          setCfg({ ...DEFAULT_CFG, ...((data?.config ?? {}) as StoreTemplateConfig) });
         }
-
-        setCfg(DEFAULT_CFG);
       } catch {
-        if (timeoutId) window.clearTimeout(timeoutId);
-        setCfg(DEFAULT_CFG);
+        if (isActive) {
+          setCfg(null);
+          setConfigLoadError(true);
+        }
       } finally {
-        setLoadingStore(false);
+        window.clearTimeout(loadTimeout);
+        if (isActive) setLoadingStore(false);
       }
     };
 
-    loadConfig().catch(() => setLoadingStore(false));
+    if (IS_UUID) window.addEventListener('online', retryWhenOnline);
+    loadConfig().catch(() => {
+      if (isActive) {
+        setCfg(null);
+        setConfigLoadError(true);
+        setLoadingStore(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+      window.removeEventListener('online', retryWhenOnline);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorId]);
+  }, [vendorId, configRetry]);
 
   useEffect(() => {
     if (!vendorId || !IS_UUID) return;
@@ -265,6 +292,19 @@ export default function VendorStorePage() {
   }
 
   if (!activeCfg) {
+    if (configLoadError) {
+      return (
+        <div className="tnd-page">
+          <div className="tnd-not-found">
+            <div style={{ fontSize: '2rem', marginBottom: 16 }}>📶</div>
+            <h2 style={{ color: 'var(--tnd-text-primary)', marginBottom: 8 }}>No pudimos cargar la tienda</h2>
+            <p style={{ color: 'var(--tnd-text-muted)', marginBottom: 24 }}>Revisá tu conexión e intentá nuevamente.</p>
+            <button type="button" className="tnd-back" onClick={() => setConfigRetry(attempt => attempt + 1)}>Reintentar</button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="tnd-page">
         <div className="tnd-not-found">
