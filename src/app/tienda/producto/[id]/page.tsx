@@ -64,7 +64,7 @@ type Product = {
   warranty_days: number | null;
 };
 
-type RelatedProduct = Pick<Product, 'id' | 'name' | 'price' | 'floor_price' | 'stock' | 'image' | 'short_description'>;
+type RelatedProduct = Pick<Product, 'id' | 'name' | 'price' | 'stock' | 'image' | 'short_description'>;
 
 const DEFAULT_NEG_PHRASES = [
   'Dame 3 segundos…',
@@ -1306,7 +1306,6 @@ export default function ProductDetailPage() {
                     </div>
                   )}
                   <div className="tnd-product-price">{gs(product.price)}</div>
-                  <div className="tnd-product-floor">Ofertá desde {gs(product.floor_price)}</div>
                 </div>
               </Link>
             ))}
