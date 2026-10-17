@@ -122,37 +122,33 @@ export default function QueueBoard({ mode }: { mode: QueueMode }) {
       setError('');
 
       if (mode === 'disputas') {
-        const { data, error: reportsError } = await supabase
-          .from('reports')
-          .select('id, reporter_email, reported_email, reference_type, reference_id, reason, status, admin_note, created_at')
-          .eq('reference_type', 'order')
-          .in('status', ['pending', 'reviewing'])
-          .order('created_at', { ascending: false })
-          .limit(200);
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers = { Authorization: `Bearer ${session?.access_token || ''}` };
+        const fetchByStatus = async (status: 'pending' | 'reviewing') => {
+          const res = await fetch(`/api/reports?status=${status}&limit=100`, { headers, cache: 'no-store' });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json.error || 'No se pudieron cargar las disputas');
+          return (json.reports ?? []) as ReportRow[];
+        };
 
-        if (!alive) return;
-        if (reportsError) {
-          setError(reportsError.message);
+        try {
+          const [pending, reviewing] = await Promise.all([fetchByStatus('pending'), fetchByStatus('reviewing')]);
+          if (!alive) return;
+          const merged = [...pending, ...reviewing]
+            .filter(r => r.reference_type === 'order')
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 200);
+          setReports(merged);
+        } catch (reportsError) {
+          if (!alive) return;
+          setError(reportsError instanceof Error ? reportsError.message : String(reportsError));
           setReports([]);
-        } else {
-          setReports((data ?? []) as ReportRow[]);
         }
       } else {
-        const { data, error: refundsError } = await supabase
-          .from('wallet_transactions')
-          .select('id, user_id, driver_email, amount, status, description, note, created_at')
-          .eq('type', 'refund')
-          .in('status', ['pending', 'approved', 'rejected'])
-          .order('created_at', { ascending: false })
-          .limit(200);
-
+        // La tabla wallet_transactions no registra estado de reembolso: el flujo aún no existe.
         if (!alive) return;
-        if (refundsError) {
-          setError(refundsError.message);
-          setRefunds([]);
-        } else {
-          setRefunds((data ?? []) as RefundRow[]);
-        }
+        setRefunds([]);
+        setError('El flujo de reembolsos todavía no está habilitado en la plataforma.');
       }
 
       if (alive) setLoading(false);

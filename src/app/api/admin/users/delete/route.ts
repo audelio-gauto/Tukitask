@@ -26,6 +26,9 @@ export async function POST(req: Request) {
     if (!userRow) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
+    if (String(userRow.email ?? '').toLowerCase() === admin.email) {
+      return NextResponse.json({ error: 'No podés eliminar tu propia cuenta' }, { status: 409 });
+    }
 
     // Delete from users table first
     const { error: deleteError } = await db

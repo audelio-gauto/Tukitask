@@ -14,24 +14,38 @@ interface KpiCard {
 
 export default function FinanzasDashboard() {
   const [totalComisiones, setTotalComisiones] = useState<number | null>(null);
-  const [retirosPendientes, setRetirosPendientes] = useState<number | null>(null);
+  const [pagosPendientes, setPagosPendientes] = useState<number | null>(null);
+  const [movimientosHoy, setMovimientosHoy] = useState<number | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const [
-        { data: comData },
-        { count: retiros },
-      ] = await Promise.all([
-        supabase.from('commissions').select('amount').limit(1000),
-        supabase.from('wallet_transactions').select('*', { count: 'exact', head: true })
-          .eq('type', 'withdrawal').eq('status', 'pending'),
-      ]);
-      const total = (comData ?? []).reduce((s: number, r: { amount: number }) => s + (r.amount ?? 0), 0);
-      setTotalComisiones(total);
-      setRetirosPendientes(retiros ?? 0);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/finanzas?section=summary', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (!res.ok) {
+          setError(json.error || 'No se pudieron cargar los datos financieros.');
+        } else {
+          setTotalComisiones(json.commissionsTotal ?? 0);
+          setPagosPendientes(json.pendingRecharges ?? 0);
+          setMovimientosHoy(json.movementsToday ?? 0);
+          setTruncated(Boolean(json.commissionsTruncated));
+        }
+      } catch {
+        if (active) setError('Error de conexión al cargar los datos financieros.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, []);
 
   const fmt = (n: number) =>
@@ -40,31 +54,31 @@ export default function FinanzasDashboard() {
   const kpis: KpiCard[] = [
     {
       label: 'Comisiones Totales',
-      value: loading ? '—' : `Gs ${fmt(totalComisiones ?? 0)}`,
-      sub: 'acumuladas',
+      value: loading || error ? '—' : `Gs ${fmt(totalComisiones ?? 0)}`,
+      sub: truncated ? 'acumuladas (parcial)' : 'acumuladas',
       gradient: 'from-emerald-400 to-emerald-500',
       href: '/admin/finanzas/comisiones',
       svgPath: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     },
     {
       label: 'Retiros Pendientes',
-      value: loading ? '—' : String(retirosPendientes ?? 0),
-      sub: 'sin procesar',
+      value: '—',
+      sub: 'aún no habilitado',
       gradient: 'from-amber-400 to-amber-500',
       href: '/admin/finanzas/retiros',
       svgPath: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
     },
     {
       label: 'Pagos Pendientes',
-      value: '—',
-      sub: 'por confirmar',
+      value: loading || error ? '—' : String(pagosPendientes ?? 0),
+      sub: 'recargas por aprobar',
       gradient: 'from-blue-400 to-blue-500',
       href: '/admin/finanzas/pagos-pendientes',
       svgPath: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
     },
     {
       label: 'Movimientos Hoy',
-      value: '—',
+      value: loading || error ? '—' : String(movimientosHoy ?? 0),
       sub: 'transacciones',
       gradient: 'from-purple-400 to-purple-500',
       href: '/admin/finanzas/movimientos',
@@ -119,6 +133,12 @@ export default function FinanzasDashboard() {
           Comisiones, retiros, pagos pendientes y movimientos financieros.
         </p>
       </div>
+
+      {error && (
+        <div role="alert" className="mb-5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {kpis.map(k => (

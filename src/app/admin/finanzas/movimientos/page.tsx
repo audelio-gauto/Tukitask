@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabaseClient';
 
 interface Movimiento {
   id: string;
-  user_id: string;
+  email: string;
+  role: 'driver' | 'vendor';
   type: string;
   amount: number;
-  status: string;
+  note: string | null;
   created_at: string;
-  description?: string;
 }
 
 const fmtDate = (s: string) =>
@@ -19,41 +19,67 @@ const fmtGs = (n: number) =>
   `Gs ${Math.abs(n).toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
 
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  deposit:    { label: 'Deposito',    color: 'bg-emerald-100 text-emerald-700' },
-  withdrawal: { label: 'Retiro',      color: 'bg-amber-100 text-amber-700' },
-  commission: { label: 'Comision',    color: 'bg-purple-100 text-purple-700' },
-  payment:    { label: 'Pago',        color: 'bg-blue-100 text-blue-700' },
-  refund:     { label: 'Reembolso',   color: 'bg-red-100 text-red-700' },
-  adjustment: { label: 'Ajuste',      color: 'bg-gray-100 text-gray-700' },
+  recharge:        { label: 'Recarga',          color: 'bg-emerald-100 text-emerald-700' },
+  commission:      { label: 'Comisión',         color: 'bg-purple-100 text-purple-700' },
+  sale_commission: { label: 'Comisión de venta', color: 'bg-purple-100 text-purple-700' },
+  access_fee:      { label: 'Acceso',           color: 'bg-blue-100 text-blue-700' },
+  admin_credit:    { label: 'Crédito admin',    color: 'bg-emerald-100 text-emerald-700' },
+  admin_debit:     { label: 'Débito admin',     color: 'bg-red-100 text-red-700' },
+  refund:          { label: 'Reembolso',        color: 'bg-red-100 text-red-700' },
+  bonus:           { label: 'Bonificación',     color: 'bg-amber-100 text-amber-700' },
+  adjustment:      { label: 'Ajuste',           color: 'bg-gray-100 text-gray-700' },
 };
 
-const ALL_TYPES = ['todos', ...Object.keys(TYPE_LABELS)] as const;
-type TypeFilter = typeof ALL_TYPES[number];
+const ALL_TYPES = ['todos', ...Object.keys(TYPE_LABELS)];
 
 export default function MovimientosPage() {
   const [rows, setRows] = useState<Movimiento[]>([]);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('todos');
+  const [typeFilter, setTypeFilter] = useState('todos');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(id);
+  }, [search]);
+
+  useEffect(() => {
+    let active = true;
     (async () => {
       setLoading(true);
-      let q = supabase
-        .from('wallet_transactions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (typeFilter !== 'todos') q = q.eq('type', typeFilter);
-      const { data } = await q;
-      setRows((data ?? []) as Movimiento[]);
-      setLoading(false);
+      setError('');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const params = new URLSearchParams({ section: 'movements' });
+        if (typeFilter !== 'todos') params.set('type', typeFilter);
+        if (debouncedSearch) params.set('q', debouncedSearch);
+        const res = await fetch(`/api/admin/finanzas?${params}`, {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (!res.ok) {
+          setError(json.error || 'No se pudieron cargar los movimientos.');
+          setRows([]);
+        } else {
+          setRows((json.rows ?? []) as Movimiento[]);
+        }
+      } catch {
+        if (active) {
+          setError('Error de conexión al cargar los movimientos.');
+          setRows([]);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
-  }, [typeFilter]);
+    return () => { active = false; };
+  }, [typeFilter, debouncedSearch]);
 
-  const filtered = search
-    ? rows.filter(r => r.user_id.includes(search) || (r.description ?? '').toLowerCase().includes(search.toLowerCase()))
-    : rows;
+  const filtered = rows;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -79,7 +105,7 @@ export default function MovimientosPage() {
         </div>
         <input
           type="text"
-          placeholder="Buscar por usuario o descripcion..."
+          placeholder="Buscar por usuario o descripción..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="sm:ml-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 w-full sm:w-64"
@@ -87,6 +113,11 @@ export default function MovimientosPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {error && (
+          <div role="alert" className="bg-red-50 border-b border-red-200 px-4 py-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Cargando...</div>
         ) : filtered.length === 0 ? (
@@ -103,8 +134,7 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Monto</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Descripcion</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Descripción</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
               </tr>
             </thead>
@@ -112,8 +142,11 @@ export default function MovimientosPage() {
               {filtered.map(r => {
                 const typeInfo = TYPE_LABELS[r.type] ?? { label: r.type, color: 'bg-gray-100 text-gray-600' };
                 return (
-                  <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-4 py-3 text-gray-700 text-xs font-mono">{r.user_id.slice(0, 8)}…</td>
+                  <tr key={`${r.role}-${r.id}`} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-4 py-3 text-gray-700 text-xs truncate max-w-[220px]">
+                      {r.email}
+                      <span className="ml-1 text-gray-400">({r.role === 'vendor' ? 'vendedor' : 'conductor/técnico'})</span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeInfo.color}`}>
                         {typeInfo.label}
@@ -122,14 +155,7 @@ export default function MovimientosPage() {
                     <td className={`px-4 py-3 text-right font-semibold ${r.amount >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                       {r.amount >= 0 ? '+' : '-'}{fmtGs(r.amount)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        r.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                        r.status === 'pending'   ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>{r.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[160px]">{r.description || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[220px]">{r.note || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{fmtDate(r.created_at)}</td>
                   </tr>
                 );

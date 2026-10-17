@@ -5,6 +5,28 @@ import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { Icon, type IconName } from '@/components/Icon';
 
+interface RecentUser {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
+
+interface DailyRevenue {
+  date: string;
+  label: string;
+  amount: number;
+}
+
+interface DashboardData {
+  stats: Stats;
+  orders: OrderMetrics;
+  marketplace: { total: number; pending: number; revenueLast30Days: number };
+  alerts: Alerts;
+  recentUsers: RecentUser[];
+  warnings: string[];
+}
+
 interface Stats {
   total: number;
   admins: number;
@@ -16,18 +38,21 @@ interface Stats {
 }
 
 interface OrderMetrics {
-  totalOrders: number;
-  pendingOrders: number;
-  deliveredOrders: number;
-  cancelledOrders: number;
-  totalRevenue: number;
+  total: number;
+  pending: number;
+  delivered: number;
+  cancelled: number;
   revenueToday: number;
+  revenueLast30Days: number;
+  daily: DailyRevenue[];
 }
 
 interface Alerts {
-  pendingRecharges: number;
+  pendingDriverRecharges: number;
+  pendingVendorRecharges: number;
   stalePendingOrders: number;
   unresolvedReports: number;
+  pendingProducts: number;
 }
 
 function fmtGs(n: number) {
@@ -35,107 +60,44 @@ function fmtGs(n: number) {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats>({ total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 });
-  const [orderMetrics, setOrderMetrics] = useState<OrderMetrics>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, cancelledOrders: 0, totalRevenue: 0, revenueToday: 0 });
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [dailyRevenue, setDailyRevenue] = useState<number[]>(Array(7).fill(0));
-  const [alerts, setAlerts] = useState<Alerts>({ pendingRecharges: 0, stalePendingOrders: 0, unresolvedReports: 0 });
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      // Use HEAD+count queries (zero rows transferred) instead of fetching entire tables.
-      // Safe at millions of users.
-      const [
-        { count: total },
-        { count: drivers },
-        { count: vendedores },
-        { count: servicios },
-        { count: hoteleria },
-        { count: clientes },
-        { count: admins },
-        { data: recentUsersData },
-        { count: totalOrders },
-        { count: pendingOrders },
-        { count: deliveredOrders },
-        { count: cancelledOrders },
-        { data: allOrders },
-        { count: pendingRecharges },
-        { count: stalePendingOrders },
-        { count: unresolvedReports },
-      ] = await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'driver'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'vendedor'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'servicio'),
-        supabase.from('users').select('*', { count: 'exact', head: true })
-          .in('role', ['hoteleria', 'tecnico']),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'cliente'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
-        supabase.from('users').select('id, email, role, created_at')
-          .order('created_at', { ascending: false }).limit(5),
-        // Counts exactos por estado — cero filas transferidas
-        supabase.from('orders').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pending', 'negotiating']),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned']),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).in('status', ['cancelled', 'failed', 'return_rejected']),
-        // Revenue: solo últimos 30 días y solo campo de precio (mínimo de datos)
-        supabase.from('orders')
-          .select('offer, suggested_price, created_at')
-          .in('status', ['delivered', 'commission_charged', 'client_confirmed', 'returned'])
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-          .limit(2000),
-        // Alertas operacionales
-        supabase.from('wallet_recharges').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('orders').select('*', { count: 'exact', head: true })
-          .in('status', ['pending', 'negotiating'])
-          .lte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-      ]);
-
-      setStats({
-        total:      total      ?? 0,
-        admins:     admins     ?? 0,
-        drivers:    drivers    ?? 0,
-        vendedores: vendedores ?? 0,
-        servicios:  servicios  ?? 0,
-        hoteleria:  hoteleria  ?? 0,
-        clientes:   clientes   ?? 0,
-      });
-
-      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const getPrice = (o: any) => Number(o.offer ?? o.suggested_price ?? 0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rev30: any[] = (allOrders as any) || [];
-      setOrderMetrics({
-        totalOrders:     (totalOrders     as number) ?? 0,
-        pendingOrders:   (pendingOrders   as number) ?? 0,
-        deliveredOrders: (deliveredOrders as number) ?? 0,
-        cancelledOrders: (cancelledOrders as number) ?? 0,
-        totalRevenue:    rev30.reduce((s, o) => s + getPrice(o), 0),
-        revenueToday:    rev30.filter(o => new Date(o.created_at) >= todayStart).reduce((s, o) => s + getPrice(o), 0),
-      });
-
-      // Build last-7-days daily revenue array
-      const daily = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-        const end   = start + 86400000;
-        return rev30.filter(o => { const t = new Date(o.created_at).getTime(); return t >= start && t < end; })
-                    .reduce((s, o) => s + getPrice(o), 0);
-      });
-      setDailyRevenue(daily);
-      setRecentUsers(recentUsersData || []);
-      setAlerts({
-        pendingRecharges:  (pendingRecharges  as number) ?? 0,
-        stalePendingOrders: (stalePendingOrders as number) ?? 0,
-        unresolvedReports: (unresolvedReports as number) ?? 0,
-      });
-      setLoading(false);
+      setLoading(true);
+      setLoadError('');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`/api/admin/dashboard${reloadKey > 0 ? '?refresh=1' : ''}`, {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (!res.ok) {
+          setLoadError(json.error || 'No se pudo cargar el resumen del sistema.');
+        } else {
+          setData(json as DashboardData);
+        }
+      } catch {
+        if (active) setLoadError('Error de conexión al cargar el resumen del sistema.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
-  }, []);
+    return () => { active = false; };
+  }, [reloadKey]);
+
+  const stats = data?.stats ?? { total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 };
+  const orderMetrics = data?.orders ?? { total: 0, pending: 0, delivered: 0, cancelled: 0, revenueToday: 0, revenueLast30Days: 0, daily: [] };
+  const marketplace = data?.marketplace ?? { total: 0, pending: 0, revenueLast30Days: 0 };
+  const alerts = data?.alerts ?? { pendingDriverRecharges: 0, pendingVendorRecharges: 0, stalePendingOrders: 0, unresolvedReports: 0, pendingProducts: 0 };
+  const recentUsers = data?.recentUsers ?? [];
+  const dailyRevenue = orderMetrics.daily;
 
   const statCards: Array<{ label: string; value: number; color: string; icon: IconName }> = [
     { label: 'Total Usuarios', value: stats.total,      color: 'bg-gradient-to-br from-[#F5C518] to-[#F58A07]', icon: 'user' },
@@ -146,7 +108,16 @@ export default function AdminDashboard() {
     { label: 'Clientes',      value: stats.clientes,   color: 'bg-rose-600',     icon: 'user' },
   ];
 
-  if (loading) {
+  const alertItems: Array<{ key: string; count: number; label: string; href: string; tone: string; badge: string; text: string }> = [
+    { key: 'driver-recharges', count: alerts.pendingDriverRecharges, label: 'Recargas de conductores pendientes', href: '/admin/wallets?tab=pending', tone: 'bg-amber-50 border-amber-200 hover:bg-amber-100', badge: 'bg-amber-400', text: 'text-amber-700' },
+    { key: 'vendor-recharges', count: alerts.pendingVendorRecharges, label: 'Recargas de vendedores pendientes', href: '/admin/billetera/vendedores', tone: 'bg-amber-50 border-amber-200 hover:bg-amber-100', badge: 'bg-amber-400', text: 'text-amber-700' },
+    { key: 'stale-orders', count: alerts.stalePendingOrders, label: 'Pedidos sin asignar >30 min', href: '/admin/orders', tone: 'bg-red-50 border-red-200 hover:bg-red-100', badge: 'bg-red-500', text: 'text-red-700' },
+    { key: 'reports', count: alerts.unresolvedReports, label: 'Reportes sin resolver', href: '/admin/reports', tone: 'bg-purple-50 border-purple-200 hover:bg-purple-100', badge: 'bg-purple-500', text: 'text-purple-700' },
+    { key: 'products', count: alerts.pendingProducts, label: 'Productos esperando aprobación', href: '/admin/vendors/productos/aprobar', tone: 'bg-sky-50 border-sky-200 hover:bg-sky-100', badge: 'bg-sky-500', text: 'text-sky-700' },
+  ];
+  const activeAlerts = alertItems.filter(a => a.count > 0);
+
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
@@ -157,32 +128,43 @@ export default function AdminDashboard() {
   return (
     <div>
       {/* Page title */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Resumen general del sistema</p>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Resumen general del sistema</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setReloadKey(k => k + 1)}
+          disabled={loading}
+          className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
+        >
+          {loading ? 'Actualizando...' : 'Actualizar'}
+        </button>
       </div>
 
+      {/* Load error / partial data warnings */}
+      {loadError && (
+        <div role="alert" className="mb-5 flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <span className="text-sm font-medium text-red-700">{loadError}</span>
+          <button type="button" onClick={() => setReloadKey(k => k + 1)} className="text-xs font-semibold text-red-700 underline">Reintentar</button>
+        </div>
+      )}
+      {!loadError && data && data.warnings.length > 0 && (
+        <div role="status" className="mb-5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+          Algunos datos no pudieron cargarse y pueden aparecer en 0 ({data.warnings.length} consulta{data.warnings.length !== 1 ? 's' : ''} con error). Pulsá Actualizar para reintentar.
+        </div>
+      )}
+
       {/* Alerts */}
-      {(alerts.pendingRecharges > 0 || alerts.stalePendingOrders > 0 || alerts.unresolvedReports > 0) && (
-        <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {alerts.pendingRecharges > 0 && (
-            <Link href="/admin/wallets" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 hover:bg-amber-100 transition-colors">
-              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-amber-400 text-white font-bold text-sm flex-shrink-0">{alerts.pendingRecharges}</span>
-              <span className="text-sm font-semibold text-amber-700">Recargas pendientes de aprobación</span>
+      {activeAlerts.length > 0 && (
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {activeAlerts.map(alert => (
+            <Link key={alert.key} href={alert.href} className={`flex items-center gap-3 border rounded-lg px-4 py-3 transition-colors ${alert.tone}`}>
+              <span className={`w-8 h-8 flex items-center justify-center rounded-full ${alert.badge} text-white font-bold text-sm flex-shrink-0`}>{alert.count}</span>
+              <span className={`text-sm font-semibold ${alert.text}`}>{alert.label}</span>
             </Link>
-          )}
-          {alerts.stalePendingOrders > 0 && (
-            <Link href="/admin/orders" className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 hover:bg-red-100 transition-colors">
-              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 text-white font-bold text-sm flex-shrink-0">{alerts.stalePendingOrders}</span>
-              <span className="text-sm font-semibold text-red-700">Pedidos sin asignar &gt;30 min</span>
-            </Link>
-          )}
-          {alerts.unresolvedReports > 0 && (
-            <Link href="/admin/reports" className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 hover:bg-purple-100 transition-colors">
-              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-500 text-white font-bold text-sm flex-shrink-0">{alerts.unresolvedReports}</span>
-              <span className="text-sm font-semibold text-purple-700">Reportes sin resolver</span>
-            </Link>
-          )}
+          ))}
         </div>
       )}
 
@@ -206,12 +188,12 @@ export default function AdminDashboard() {
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pedidos & Facturación</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {([
-            { label: 'Total Pedidos',  value: orderMetrics.totalOrders,     icon: 'package', color: 'text-blue-600' },
-            { label: 'Pendientes',     value: orderMetrics.pendingOrders,    icon: 'clock', color: 'text-amber-600' },
-            { label: 'Entregados',     value: orderMetrics.deliveredOrders,  icon: 'check', color: 'text-emerald-600' },
-            { label: 'Cancelados',     value: orderMetrics.cancelledOrders,  icon: 'x', color: 'text-red-600' },
-            { label: 'Ingresos Hoy',   value: `${fmtGs(orderMetrics.revenueToday)} Gs`, icon: 'money', color: 'text-yellow-600' },
-            { label: 'Ingresos Total', value: `${fmtGs(orderMetrics.totalRevenue)} Gs`, icon: 'credit-card', color: 'text-yellow-600' },
+            { label: 'Total Pedidos',        value: orderMetrics.total,     icon: 'package', color: 'text-blue-600' },
+            { label: 'Pendientes',           value: orderMetrics.pending,   icon: 'clock', color: 'text-amber-600' },
+            { label: 'Entregados',           value: orderMetrics.delivered, icon: 'check', color: 'text-emerald-600' },
+            { label: 'Cancelados / fallidos', value: orderMetrics.cancelled, icon: 'x', color: 'text-red-600' },
+            { label: 'Facturación hoy',      value: `${fmtGs(orderMetrics.revenueToday)} Gs`, icon: 'money', color: 'text-yellow-600' },
+            { label: 'Facturación 30 días',  value: `${fmtGs(orderMetrics.revenueLast30Days)} Gs`, icon: 'credit-card', color: 'text-yellow-600' },
           ] as Array<{ label: string; value: string | number; icon: IconName; color: string }>).map(card => (
             <div key={card.label} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:shadow-md transition-all">
               <div className="mb-1">
@@ -224,26 +206,45 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Marketplace */}
+      <div className="mb-6">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Marketplace</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {([
+            { label: 'Pedidos del Marketplace', value: marketplace.total, icon: 'package', color: 'text-blue-600', href: '/admin/vendors/pedidos' },
+            { label: 'Pendientes de confirmar', value: marketplace.pending, icon: 'clock', color: 'text-amber-600', href: '/admin/vendors/pedidos' },
+            { label: 'Ventas entregadas (30 días)', value: `${fmtGs(marketplace.revenueLast30Days)} Gs`, icon: 'money', color: 'text-yellow-600', href: '/admin/vendors' },
+          ] as Array<{ label: string; value: string | number; icon: IconName; color: string; href: string }>).map(card => (
+            <Link key={card.label} href={card.href} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:shadow-md transition-all">
+              <div className="mb-1">
+                <Icon name={card.icon} size={18} className={card.color} />
+              </div>
+              <div className={`font-bold text-base leading-tight ${card.color}`}>{card.value}</div>
+              <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Revenue mini-chart: last 7 days */}
       <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Ingresos — últimos 7 días</h2>
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Facturación de pedidos — últimos 7 días</h2>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 72 }}>
-          {dailyRevenue.map((amt, i) => {
-            const maxAmt = Math.max(...dailyRevenue, 1);
+          {dailyRevenue.map((day, i) => {
+            const amt = day.amount;
+            const maxAmt = Math.max(...dailyRevenue.map(d => d.amount), 1);
             const BAR_H = 60;
             const h = Math.max(4, Math.round((amt / maxAmt) * BAR_H));
-            const isToday = i === 6;
-            const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-            const d = new Date(); d.setDate(d.getDate() - (6 - i));
+            const isToday = i === dailyRevenue.length - 1;
             return (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+              <div key={day.date} title={`${day.date}: ${fmtGs(amt)} Gs`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
                 <div style={{
                   width: '100%', height: h, borderRadius: '4px 4px 0 0',
                   background: isToday ? '#F5C518' : amt > 0 ? 'rgba(245,197,24,0.35)' : '#f3f4f6',
                   transition: 'height 0.4s ease',
                 }} />
                 <span style={{ fontSize: '0.6rem', color: isToday ? '#d97706' : '#9ca3af', fontWeight: isToday ? 700 : 400 }}>
-                  {labels[d.getDay()]}
+                  {day.label}
                 </span>
               </div>
             );

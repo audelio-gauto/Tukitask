@@ -223,13 +223,10 @@ const menuItems: MenuItem[] = [
       { label: 'CATÁLOGO', isHeader: true },
       { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
       { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
-      { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
       // ── Pedidos y Reclamos ─────────────────────────────────
       { label: 'PEDIDOS Y RECLAMOS', isHeader: true },
       { label: 'Todos los Pedidos', href: '/admin/vendors/pedidos' },
       { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones' },
-      { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
-      { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
       // ── Riesgo y Calidad ───────────────────────────────────
       { label: 'RIESGO Y CALIDAD', isHeader: true },
       { label: 'Monitoreo de Ofertas', href: '/admin/vendors/negociaciones' },
@@ -333,48 +330,23 @@ export default function AdminSidebar() {
     let alive = true;
 
     const loadCriticalCounts = async () => {
-      const [
-        pendingProducts,
-        pendingRefunds,
-        pendingDisputesPending,
-        pendingDisputesReviewing,
-        pendingDisputesOpen,
-        pendingDisputesLegacy,
-        pendingPayments,
-      ] = await Promise.all([
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
-        supabase.from('wallet_transactions').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('type', 'refund'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'pending'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'reviewing'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('reference_type', 'order').eq('status', 'open'),
-        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'disputed'),
-        supabase.from('wallet_transactions').select('*', { count: 'exact', head: true }).eq('status', 'pending').neq('type', 'withdrawal'),
-      ]);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
 
-      if (!alive) return;
-
-      const disputesFromReports =
-        (pendingDisputesPending.count ?? 0)
-        + (pendingDisputesReviewing.count ?? 0)
-        + (pendingDisputesOpen.count ?? 0);
-      const disputesFromLegacyOrders = pendingDisputesLegacy.count ?? 0;
-
-      setCriticalCounts({
-        '/admin/vendors/productos/aprobar': pendingProducts.count ?? 0,
-        '/admin/vendors/pedidos/reembolsos': pendingRefunds.count ?? 0,
-        '/admin/vendors/pedidos/disputas': Math.max(disputesFromReports, disputesFromLegacyOrders),
-        '/admin/finanzas/pagos-pendientes': pendingPayments.count ?? 0,
+      const res = await fetch('/api/admin/badges', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
       });
+      if (!res.ok) return;
+      const json = await res.json() as { counts?: Record<string, number> };
+
+      if (alive && json.counts) setCriticalCounts(json.counts);
     };
 
-    loadCriticalCounts().catch(() => {
-      if (alive) setCriticalCounts({});
-    });
+    loadCriticalCounts().catch(() => undefined);
 
     const refreshId = window.setInterval(() => {
-      loadCriticalCounts().catch(() => {
-        if (alive) setCriticalCounts(prev => prev);
-      });
+      loadCriticalCounts().catch(() => undefined);
     }, 60000);
 
     return () => {

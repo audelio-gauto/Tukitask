@@ -5,8 +5,15 @@ import { supabase } from '@/lib/supabaseClient';
 const roles = ['admin', 'driver', 'vendedor', 'servicio', 'hoteleria', 'cliente'];
 const roleFilters = ['all', ...roles];
 
+interface UserRow {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -23,6 +30,7 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [roleNotice, setRoleNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Edit user
   const [editing, setEditing] = useState<string | null>(null);
@@ -125,13 +133,33 @@ export default function UsersPage() {
     }
   }
 
-  function startEdit(user: any) {
+  function startEdit(user: UserRow) {
     setEditing(user.id);
     setEditRole(user.role);
   }
 
   async function handleEdit(id: string) {
-    await supabase.from('users').update({ role: editRole }).eq('id', id);
+    setRoleNotice(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ id, role: editRole }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRoleNotice({ ok: false, text: json.error || 'No se pudo cambiar el rol' });
+        return;
+      }
+      setRoleNotice({ ok: true, text: 'Rol actualizado correctamente' });
+    } catch {
+      setRoleNotice({ ok: false, text: 'Error de conexión al cambiar el rol' });
+      return;
+    }
     setEditing(null);
     fetchUsers(page, query, filter);
   }
@@ -237,6 +265,15 @@ export default function UsersPage() {
         </div>
       )}
 
+      {roleNotice && (
+        <div
+          role={roleNotice.ok ? 'status' : 'alert'}
+          className={`mb-4 p-3 text-sm rounded-lg border ${roleNotice.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}
+        >
+          {roleNotice.text}
+        </div>
+      )}
+
       {/* Filters Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-5">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
@@ -283,7 +320,7 @@ export default function UsersPage() {
         
         {query && (
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-sm text-gray-500">Resultados para: <strong className="text-gray-800">"{query}"</strong></span>
+            <span className="text-sm text-gray-500">Resultados para: <strong className="text-gray-800">&quot;{query}&quot;</strong></span>
             <button onClick={() => {setSearch(''); setQuery(''); fetchUsers(1, '', filter);}} className="text-xs text-blue-600 hover:underline">Limpiar búsqueda</button>
           </div>
         )}

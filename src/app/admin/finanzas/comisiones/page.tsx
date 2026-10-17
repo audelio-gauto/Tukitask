@@ -4,14 +4,18 @@ import { supabase } from '@/lib/supabaseClient';
 
 interface Commission {
   id: string;
-  user_id: string;
+  email: string;
+  source: 'delivery' | 'service' | 'marketplace';
   amount: number;
-  percentage: number;
-  type: string;
-  status: string;
+  note: string | null;
   created_at: string;
-  user_email?: string;
 }
+
+const SOURCE_LABELS: Record<Commission['source'], { label: string; color: string }> = {
+  delivery:    { label: 'Envío',        color: 'bg-emerald-100 text-emerald-700' },
+  service:     { label: 'Servicio',    color: 'bg-sky-100 text-sky-700' },
+  marketplace: { label: 'Marketplace', color: 'bg-amber-100 text-amber-700' },
+};
 
 const fmtDate = (s: string) =>
   new Date(s).toLocaleDateString('es-PY', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -23,20 +27,34 @@ export default function ComisionesPage() {
   const [rows, setRows] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [truncated, setTruncated] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const { data } = await supabase
-        .from('commissions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      const list = (data ?? []) as Commission[];
-      setRows(list);
-      setTotal(list.reduce((s, r) => s + (r.amount ?? 0), 0));
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/finanzas?section=commissions', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (!res.ok) {
+          setError(json.error || 'No se pudieron cargar las comisiones.');
+        } else {
+          setRows((json.rows ?? []) as Commission[]);
+          setTotal(json.total ?? 0);
+          setTruncated(Boolean(json.truncated));
+        }
+      } catch {
+        if (active) setError('Error de conexión al cargar las comisiones.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, []);
 
   return (
@@ -44,15 +62,21 @@ export default function ComisionesPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Comisiones</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Registro de comisiones generadas en la plataforma.</p>
+          <p className="text-gray-500 text-sm mt-0.5">Registro de comisiones cobradas en la plataforma (últimas 100).</p>
         </div>
-        {!loading && (
+        {!loading && !error && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-right">
-            <div className="text-xs text-emerald-600 font-medium">Total acumulado</div>
+            <div className="text-xs text-emerald-600 font-medium">Total acumulado{truncated ? ' (parcial)' : ''}</div>
             <div className="text-lg font-bold text-emerald-700">{fmtGs(total)}</div>
           </div>
         )}
       </div>
+
+      {error && (
+        <div role="alert" className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
@@ -69,32 +93,27 @@ export default function ComisionesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Porcentaje</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Origen</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Detalle</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Monto</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {rows.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3 text-gray-700 text-xs font-mono">{r.user_id.slice(0, 8)}…</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs capitalize">{r.type || 'general'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-700">{r.percentage ?? '—'}%</td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmtGs(r.amount ?? 0)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      r.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                      r.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>{r.status || 'pendiente'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(r.created_at)}</td>
-                </tr>
-              ))}
+              {rows.map(r => {
+                const source = SOURCE_LABELS[r.source] ?? { label: r.source, color: 'bg-gray-100 text-gray-600' };
+                return (
+                  <tr key={`${r.source}-${r.id}`} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-4 py-3 text-gray-700 text-xs truncate max-w-[200px]">{r.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${source.color}`}>{source.label}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[260px]">{r.note || '—'}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmtGs(r.amount)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(r.created_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

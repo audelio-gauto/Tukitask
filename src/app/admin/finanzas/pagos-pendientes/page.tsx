@@ -1,15 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 interface Pago {
   id: string;
-  user_id: string;
+  email: string;
+  role: 'driver' | 'vendor';
   amount: number;
-  method: string;
-  status: string;
+  receipt_url: string | null;
   created_at: string;
-  description?: string;
 }
 
 const fmtDate = (s: string) =>
@@ -18,41 +18,53 @@ const fmtDate = (s: string) =>
 const fmtGs = (n: number) =>
   `Gs ${n.toLocaleString('es-PY', { minimumFractionDigits: 0 })}`;
 
-const METHOD_ICONS: Record<string, string> = {
-  transfer: 'Transferencia',
-  cash_on_delivery: 'Contra entrega',
-  wallet: 'Billetera',
+const ROLE_INFO: Record<Pago['role'], { label: string; reviewHref: string }> = {
+  driver: { label: 'Conductor / Técnico', reviewHref: '/admin/wallets?tab=pending' },
+  vendor: { label: 'Vendedor', reviewHref: '/admin/billetera/vendedores' },
 };
 
 export default function PagosPendientesPage() {
   const [rows, setRows] = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalGs, setTotalGs] = useState(0);
+  const [error, setError] = useState('');
+  const [truncated, setTruncated] = useState(false);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const { data } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('status', 'pending')
-        .neq('type', 'withdrawal')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      const list = (data ?? []) as Pago[];
-      setRows(list);
-      setTotalGs(list.reduce((s, r) => s + (r.amount ?? 0), 0));
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/finanzas?section=pending', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!active) return;
+        if (!res.ok) {
+          setError(json.error || 'No se pudieron cargar los pagos pendientes.');
+        } else {
+          setRows((json.rows ?? []) as Pago[]);
+          setTruncated(Boolean(json.truncated));
+        }
+      } catch {
+        if (active) setError('Error de conexión al cargar los pagos pendientes.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, []);
+
+  const totalGs = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
 
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Pagos Pendientes</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Pagos que aun no han sido confirmados o procesados.</p>
+          <p className="text-gray-500 text-sm mt-0.5">Recargas de saldo enviadas con comprobante que esperan aprobación{truncated ? ' (se muestran las 100 más recientes de cada tipo)' : ''}.</p>
         </div>
-        {!loading && rows.length > 0 && (
+        {!loading && !error && rows.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 text-right">
             <div className="text-xs text-blue-600 font-medium">Total pendiente</div>
             <div className="text-lg font-bold text-blue-700">{fmtGs(totalGs)}</div>
@@ -60,31 +72,23 @@ export default function PagosPendientesPage() {
         )}
       </div>
 
+      {error && (
+        <div role="alert" className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { label: 'Transferencia', method: 'transfer', color: 'blue' },
-          { label: 'Contra entrega', method: 'cash_on_delivery', color: 'amber' },
-          { label: 'Billetera', method: 'wallet', color: 'purple' },
-        ].map(m => {
-          const count = rows.filter(r => r.method === m.method).length;
-          const sum = rows.filter(r => r.method === m.method).reduce((s, r) => s + (r.amount ?? 0), 0);
-          const colors: Record<string, string> = {
-            blue: 'border-blue-200 bg-blue-50',
-            amber: 'border-amber-200 bg-amber-50',
-            purple: 'border-purple-200 bg-purple-50',
-          };
-          const textColors: Record<string, string> = {
-            blue: 'text-blue-700',
-            amber: 'text-amber-700',
-            purple: 'text-purple-700',
-          };
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {(Object.keys(ROLE_INFO) as Array<Pago['role']>).map(role => {
+          const group = rows.filter(r => r.role === role);
+          const sum = group.reduce((s, r) => s + (r.amount ?? 0), 0);
           return (
-            <div key={m.method} className={`rounded-xl border p-3 ${colors[m.color]}`}>
-              <div className="text-xs font-medium text-gray-500">{m.label}</div>
-              <div className={`text-lg font-bold ${textColors[m.color]}`}>{count}</div>
-              <div className="text-xs text-gray-500">{fmtGs(sum)}</div>
-            </div>
+            <Link key={role} href={ROLE_INFO[role].reviewHref} className={`rounded-xl border p-3 transition-colors ${role === 'driver' ? 'border-blue-200 bg-blue-50 hover:bg-blue-100' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'}`}>
+              <div className="text-xs font-medium text-gray-500">{ROLE_INFO[role].label}</div>
+              <div className={`text-lg font-bold ${role === 'driver' ? 'text-blue-700' : 'text-amber-700'}`}>{group.length}</div>
+              <div className="text-xs text-gray-500">{fmtGs(sum)} · Revisar →</div>
+            </Link>
           );
         })}
       </div>
@@ -104,24 +108,30 @@ export default function PagosPendientesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Metodo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Monto</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Descripcion</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Comprobante</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {rows.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3 text-gray-700 text-xs font-mono">{r.user_id.slice(0, 8)}…</td>
+                <tr key={`${r.role}-${r.id}`} className="hover:bg-gray-50/60 transition-colors">
+                  <td className="px-4 py-3 text-gray-700 text-xs truncate max-w-[220px]">{r.email}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs">
-                      {METHOD_ICONS[r.method] ?? r.method ?? '—'}
-                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs">{ROLE_INFO[r.role].label}</span>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-gray-900">{fmtGs(r.amount ?? 0)}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[180px]">{r.description || '—'}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {r.receipt_url
+                      ? <a href={r.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Ver comprobante</a>
+                      : <span className="text-gray-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(r.created_at)}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <Link href={ROLE_INFO[r.role].reviewHref} className="text-blue-600 hover:underline">Revisar</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

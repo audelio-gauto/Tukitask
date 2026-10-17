@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 import { initTheme } from '@/lib/useTheme';
+import { ADMIN_ROLES } from '@/lib/constants';
 import './admin.css';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           body: JSON.stringify({ email: session.user.email }),
         });
         const json = await res.json();
-        if (json?.role !== 'admin') { router.replace('/auth'); return; }
+        if (!ADMIN_ROLES.includes(json?.role)) { router.replace('/auth'); return; }
         setChecking(false);
       } catch {
         router.replace('/auth');
