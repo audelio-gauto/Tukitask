@@ -3,38 +3,41 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 
-interface KPI {
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: string;
-  icon: React.ReactNode;
-  href: string;
+interface VendorSummary {
+  total: number;
+  newThisWeek: number;
+  suspended: number;
+  activeOrders: number;
+  commissionsThisMonth: number;
 }
 
+const fmtGs = (amount: number) =>
+  new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(amount);
+
 export default function VendorsDashboard() {
-  const [totalVendors, setTotalVendors] = useState<number | null>(null);
-  const [newThisWeek, setNewThisWeek]   = useState<number | null>(null);
-  const [suspended, setSuspended]       = useState<number | null>(null);
+  const [summary, setSummary] = useState<VendorSummary | null>(null);
   const [loading, setLoading]           = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const [
-        { count: total },
-        { count: week },
-        { count: susp },
-      ] = await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'vendedor'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'vendedor').gte('created_at', weekAgo),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'vendedor').eq('is_suspended', true),
-      ]);
-      setTotalVendors(total ?? 0);
-      setNewThisWeek(week ?? 0);
-      setSuspended(susp ?? 0);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/vendors?summary=1', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || 'No se pudieron cargar las métricas de vendedores.');
+        if (active) setSummary(json as VendorSummary);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Error al cargar las métricas de vendedores.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, []);
 
   const sections = [
@@ -96,7 +99,7 @@ export default function VendorsDashboard() {
   const kpiCards = [
     {
       label: 'Total Vendedores',
-      value: loading ? '—' : (totalVendors ?? 0).toLocaleString('es-PY'),
+      value: loading ? '—' : (summary?.total.toLocaleString('es-PY') ?? '—'),
       sub: 'registrados',
       gradient: 'from-amber-400 to-amber-500',
       href: '/admin/vendors/lista',
@@ -104,7 +107,7 @@ export default function VendorsDashboard() {
     },
     {
       label: 'Nuevos esta semana',
-      value: loading ? '—' : (newThisWeek ?? 0).toLocaleString('es-PY'),
+      value: loading ? '—' : (summary?.newThisWeek.toLocaleString('es-PY') ?? '—'),
       sub: 'últimos 7 días',
       gradient: 'from-emerald-400 to-emerald-500',
       href: '/admin/vendors/lista',
@@ -112,7 +115,7 @@ export default function VendorsDashboard() {
     },
     {
       label: 'Suspendidos',
-      value: loading ? '—' : (suspended ?? 0).toLocaleString('es-PY'),
+      value: loading ? '—' : (summary?.suspended.toLocaleString('es-PY') ?? '—'),
       sub: 'requieren atención',
       gradient: 'from-red-400 to-red-500',
       href: '/admin/vendors/bloqueos',
@@ -120,15 +123,15 @@ export default function VendorsDashboard() {
     },
     {
       label: 'Pedidos Activos',
-      value: '—',
+      value: loading ? '—' : (summary?.activeOrders.toLocaleString('es-PY') ?? '—'),
       sub: 'en tiempo real',
       gradient: 'from-blue-400 to-blue-500',
       href: '/admin/vendors/pedidos',
       svgPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
     },
     {
-      label: 'Ingresos / Comisiones',
-      value: '—',
+      label: 'Comisiones este mes',
+      value: loading || !summary ? '—' : `${fmtGs(summary.commissionsThisMonth)} Gs`,
       sub: 'este mes',
       gradient: 'from-purple-400 to-purple-500',
       href: '/admin/vendors/pedidos',
@@ -144,6 +147,12 @@ export default function VendorsDashboard() {
           Métricas en tiempo real, gestión completa de vendedores, productos, pedidos y negociaciones.
         </p>
       </div>
+
+      {error && (
+        <div role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
