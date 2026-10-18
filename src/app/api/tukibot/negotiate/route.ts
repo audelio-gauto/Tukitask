@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthUser } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
+import { APPLIED_NEGOTIATION_LIMIT_IDS, NEGOTIATION_LIMIT_DEFAULTS, type NegotiationLimitKey } from '@/lib/negotiationLimits';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30; // segundos — da tiempo a Gemini de responder
@@ -428,51 +429,83 @@ export async function POST(req: Request) {
       || 'unknown';
     const body = (await req.json()) as NegotiateRequest;
     const buyerOffer = Number(body?.buyerOffer || 0);
-    const clientListedPrice = Number(body?.listedPrice || 0);
-    const clientFloorPrice  = Number(body?.floorPrice || 0);
-    const quantity = Math.max(1, Number(body?.quantity || 1));
-    const vendorId = body?.vendorId?.trim() || 'default-vendor';
+    const quantity = Number(body?.quantity ?? 1);
     const productId = body?.productId?.trim() || null;
     const productImage = body?.productImage?.trim() || null;
-    const productName = body?.productName?.trim() || 'este producto';
-    const vendorName = body?.vendorName?.trim() || 'la tienda';
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      return NextResponse.json({ error: 'Cantidad inválida' }, { status: 400 });
+    }
+    if (!productId) return NextResponse.json({ error: 'Producto requerido para negociar' }, { status: 400 });
 
-    // Fetch real product data from DB to prevent price manipulation and apply tier pricing
-    let listedPrice = clientListedPrice;
-    let floorPrice  = clientFloorPrice;
-    let baseListedPrice = clientListedPrice; // Track original price for savings display (never use tier price for ahorro)
+    // Prices and vendor identity come only from the published product record.
+    let product: {
+      vendor_id: string;
+      vendor_email: string;
+      name: string;
+      negotiable: boolean;
+      price: number | string;
+      floor_price: number | string;
+      stock: number | null;
+      pricing_tiers: unknown;
+    } | null;
+    try {
+      const { data, error } = await sb
+        .from('products')
+        .select('vendor_id, vendor_email, name, negotiable, price, floor_price, stock, pricing_tiers')
+        .eq('id', productId)
+        .eq('status', 'published')
+        .maybeSingle();
+      if (error) {
+        console.error('[tukibot/negotiate] product lookup:', error.message);
+        return NextResponse.json({ error: 'No se pudo verificar el producto. Intenta de nuevo.' }, { status: 503 });
+      }
+      product = data;
+    } catch (error) {
+      console.error('[tukibot/negotiate] product lookup:', error);
+      return NextResponse.json({ error: 'No se pudo verificar el producto. Intenta de nuevo.' }, { status: 503 });
+    }
+    if (!product) return NextResponse.json({ error: 'Producto no disponible para negociar' }, { status: 404 });
+    if (!product.negotiable) return NextResponse.json({ error: 'Este producto no está habilitado para negociar' }, { status: 409 });
+
+    const vendorId = product.vendor_id;
+    const productName = product.name || body?.productName?.trim() || 'este producto';
+    const vendorName = product.vendor_email || body?.vendorName?.trim() || 'la tienda';
+    let listedPrice = Number(product.price);
+    const baseListedPrice = listedPrice;
+    const productStock = typeof product.stock === 'number' ? product.stock : undefined;
+    let floorPrice = Number(product.floor_price);
     let isBulkOrder = false;
-    let productStock: number | undefined = undefined;
-    if (productId) {
-      try {
-        const { data: product } = await sb
-          .from('products')
-          .select('price, floor_price, stock, pricing_tiers')
-          .eq('id', productId)
-          .maybeSingle();
-        if (product) {
-          // Always use DB prices (never trust client-sent values)
-          listedPrice   = Number(product.price) || clientListedPrice;
-          baseListedPrice = listedPrice; // Save base price before any tier adjustments
-          floorPrice    = Number(product.floor_price) || clientFloorPrice;
-          productStock  = typeof product.stock === 'number' ? product.stock : undefined;
-          // Apply wholesale tier if applicable (only to negotiation logic, not display savings)
-          const tiers = (product.pricing_tiers as Array<{
-            minQty: number; maxQty: number | null;
-            listedPrice: number; floorPrice: number; autoAcceptFrom: number;
-          }> | null) || [];
-          if (tiers.length > 0) {
-            const tier = tiers.find(t =>
-              quantity >= t.minQty && (t.maxQty === null || quantity <= t.maxQty)
-            );
-            if (tier) {
-              listedPrice = tier.listedPrice;
-              floorPrice  = tier.floorPrice;
-              isBulkOrder = tier.minQty > 1 || quantity >= 5;
-            }
-          }
-        }
-      } catch { /* use client-sent prices as safe fallback */ }
+    let tierAutoAcceptFrom: number | null = null;
+    if (!Number.isFinite(buyerOffer) || buyerOffer <= 0 || !Number.isFinite(listedPrice) || listedPrice <= 0 ||
+        !Number.isFinite(floorPrice) || floorPrice <= 0 || floorPrice > listedPrice) {
+      return NextResponse.json({ error: 'Configuración de precios inválida' }, { status: 400 });
+    }
+    if (productStock !== undefined && quantity > productStock) {
+      return NextResponse.json({ error: 'La cantidad supera el stock disponible' }, { status: 400 });
+    }
+
+    const tiers = (product.pricing_tiers as Array<{
+      minQty: number; maxQty: number | null;
+      listedPrice: number; floorPrice: number; autoAcceptFrom: number;
+    }> | null) || [];
+    const tier = tiers.find((item) =>
+      Number.isFinite(item.minQty) && quantity >= item.minQty && (item.maxQty === null || quantity <= item.maxQty),
+    );
+    if (tier) {
+      const tierListedPrice = Number(tier.listedPrice);
+      const tierFloorPrice = Number(tier.floorPrice);
+      const tierAutoAcceptValue = Number(tier.autoAcceptFrom);
+      if (!Number.isFinite(tierListedPrice) || !Number.isFinite(tierFloorPrice) || !Number.isFinite(tierAutoAcceptValue) ||
+          tierFloorPrice <= 0 || tierFloorPrice > tierAutoAcceptValue || tierAutoAcceptValue > tierListedPrice) {
+        return NextResponse.json({ error: 'Configuración de precios por cantidad inválida' }, { status: 400 });
+      }
+      listedPrice = tierListedPrice;
+      floorPrice = tierFloorPrice;
+      tierAutoAcceptFrom = tierAutoAcceptValue;
+      isBulkOrder = tier.minQty > 1 || quantity >= 5;
+    }
+    if (buyerOffer > listedPrice) {
+      return NextResponse.json({ error: 'La oferta no puede superar el precio publicado para esta cantidad' }, { status: 400 });
     }
 
     // Fetch vendor bot config from DB — never trust client-sent tone/timeout values
@@ -554,9 +587,9 @@ export async function POST(req: Request) {
     }
 
     // autoAcceptFrom: prefer vendor DB config (% of listed price), fallback to floorPrice
-    const autoAcceptFrom = autoAcceptFromVendor
+    const autoAcceptFrom = tierAutoAcceptFrom ?? (autoAcceptFromVendor
       ? Math.round(listedPrice * autoAcceptFromVendor / 100)
-      : floorPrice;
+      : floorPrice);
 
     const normalizedAutoAccept = Math.min(listedPrice, Math.max(floorPrice, autoAcceptFrom));
 
@@ -599,51 +632,15 @@ export async function POST(req: Request) {
       }
     }
 
-    const limitIds = [
-      'counter_band_min_pct',
-      'counter_band_max_pct',
-      'lowball_threshold_pct',
-      'lowball_hardening_per_repeat_pct',
-      'lowball_hardening_severity_pct',
-      'round1_max_discount_pct',
-      'round2_max_discount_pct',
-      'round3_max_discount_pct',
-      'roundN_max_discount_pct',
-      'probing_guard_trigger_floor_pct',
-      'probing_guard_span_pct',
-      'offer_influence_low_pct',
-      'offer_influence_normal_pct',
-      'counter_jitter_step_gs',
-      'counter_jitter_min_steps',
-      'counter_jitter_max_steps',
-    ];
-
-    const limitDefaults = {
-      counter_band_min_pct: 58,
-      counter_band_max_pct: 78,
-      lowball_threshold_pct: 60,
-      lowball_hardening_per_repeat_pct: 3,
-      lowball_hardening_severity_pct: 6,
-      round1_max_discount_pct: 12,
-      round2_max_discount_pct: 18,
-      round3_max_discount_pct: 24,
-      roundN_max_discount_pct: 30,
-      probing_guard_trigger_floor_pct: 75,
-      probing_guard_span_pct: 25,
-      offer_influence_low_pct: 22,
-      offer_influence_normal_pct: 34,
-      counter_jitter_step_gs: 1000,
-      counter_jitter_min_steps: -1,
-      counter_jitter_max_steps: 2,
-    } as const;
-
     let limitRows: LimitRow[] = [];
     try {
-      const { data } = await sb
+      const { data, error } = await sb
         .from('negotiation_limits')
         .select('id, value, is_active')
-        .in('id', limitIds);
-      if (data?.length) {
+        .in('id', APPLIED_NEGOTIATION_LIMIT_IDS);
+      if (error) {
+        console.error('[tukibot/negotiate] negotiation_limits:', error.message);
+      } else if (data?.length) {
         limitRows = data as LimitRow[];
       }
     } catch {
@@ -651,13 +648,15 @@ export async function POST(req: Request) {
     }
 
     const limitMap = new Map(limitRows.map((r) => [r.id, r]));
-    const getLimitNumber = (id: keyof typeof limitDefaults) => {
+    const getLimitNumber = (id: NegotiationLimitKey) => {
       const row = limitMap.get(id);
-      if (!row || !row.is_active) return limitDefaults[id];
+      if (!row || !row.is_active) return NEGOTIATION_LIMIT_DEFAULTS[id];
       const n = Number(row.value);
-      return Number.isFinite(n) ? n : limitDefaults[id];
+      return Number.isFinite(n) ? n : NEGOTIATION_LIMIT_DEFAULTS[id];
     };
 
+    const maxDiscountPct = clamp(getLimitNumber('max_discount_pct') / 100, 0.01, 0.9);
+    const minimumAutoAcceptPrice = Math.max(floorPrice, listedPrice * (1 - maxDiscountPct));
     const counterBandMinPct = clamp(getLimitNumber('counter_band_min_pct'), 40, 90);
     const counterBandMaxPct = clamp(getLimitNumber('counter_band_max_pct'), counterBandMinPct, 95);
     const lowballThresholdPct = clamp(getLimitNumber('lowball_threshold_pct'), 20, 95);
@@ -732,7 +731,7 @@ export async function POST(req: Request) {
     const tunedCounterJitterMinSteps = Math.round(clamp(counterJitterMinSteps + profileTuning.jitterMinShiftSteps, -5, 0));
     const tunedCounterJitterMaxSteps = Math.round(clamp(counterJitterMaxSteps + profileTuning.jitterMaxShiftSteps, 0, 8));
 
-    if (buyerOffer >= normalizedAutoAccept) {
+    if (buyerOffer >= Math.max(normalizedAutoAccept, minimumAutoAcceptPrice)) {
       status = 'accepted';
       finalAmount = buyerOffer;
       payload = {
@@ -790,13 +789,14 @@ export async function POST(req: Request) {
         roundNumber === 1 ? tunedRound1MaxDiscountPct :
         roundNumber === 2 ? tunedRound2MaxDiscountPct :
         roundNumber === 3 ? tunedRound3MaxDiscountPct : tunedRoundNMaxDiscountPct;
-      const roundFloor = listedPrice * (1 - maxDiscountPctByRound);
+      const roundFloor = listedPrice * (1 - Math.min(maxDiscountPctByRound, maxDiscountPct));
 
       const probingGuard = buyerOffer <= floorPrice * tunedProbingGuardTriggerFloorPct
         ? listedPrice - (span * tunedProbingGuardSpanPct)
         : floorPrice;
 
-      let counterAmount = Math.max(bandAnchor, offerAnchor, roundFloor, probingGuard, floorPrice);
+      const minimumCounterPrice = Math.max(floorPrice, listedPrice * (1 - maxDiscountPct));
+      let counterAmount = Math.max(bandAnchor, offerAnchor, roundFloor, probingGuard, minimumCounterPrice);
 
       // Small controlled jitter prevents exact reverse-engineering by buyers.
       const jitterRange = Math.max(0, tunedCounterJitterMaxSteps - tunedCounterJitterMinSteps + 1);
@@ -806,10 +806,10 @@ export async function POST(req: Request) {
       const jitter = counterJitterStepGs > 0 ? (jitterSteps * counterJitterStepGs) : 0;
       counterAmount = roundToNearestThousand(counterAmount) + jitter;
 
-      counterAmount = clamp(counterAmount, floorPrice, listedPrice);
+      counterAmount = clamp(counterAmount, minimumCounterPrice, listedPrice);
 
       if (counterAmount <= buyerOffer) {
-        counterAmount = clamp(roundToNearestThousand(buyerOffer + 1000), floorPrice, listedPrice);
+        counterAmount = clamp(roundToNearestThousand(buyerOffer + 1000), minimumCounterPrice, listedPrice);
       }
 
       finalAmount = counterAmount;

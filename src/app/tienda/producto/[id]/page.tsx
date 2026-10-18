@@ -164,6 +164,7 @@ export default function ProductDetailPage() {
   const [submitting,    setSubmitting]    = useState(false);
   const [animStep,      setAnimStep]      = useState(-1);
   const [pendingResult, setPendingResult] = useState<PendingResult | null>(null);
+  const [negotiationError, setNegotiationError] = useState<string | null>(null);
   const [negPhrases,    setNegPhrases]    = useState<string[]>(DEFAULT_NEG_PHRASES);
   const [negClimax,     setNegClimax]     = useState(DEFAULT_NEG_CLIMAX);
   const [animMinSteps,  setAnimMinSteps]  = useState(13); // ≈40s ÷ 3s/paso
@@ -534,6 +535,7 @@ export default function ProductDetailPage() {
     if (!p || !offerNum || offerNum <= 0 || offerUnitNum <= 0) return;
     const capturedOffer = offerUnitNum;
     setPendingResult(null);
+    setNegotiationError(null);
     setAnimStep(0);
     setSubmitting(true);
 
@@ -580,22 +582,22 @@ export default function ProductDetailPage() {
           vendorName: p.vendor_email,
         }),
       });
-      if (!res.ok) throw new Error('Negociación fallida');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNegotiationError(data.error || 'No se pudo procesar la oferta. Intenta de nuevo.');
+        setAnimStep(-1);
+        setSubmitting(false);
+        return;
+      }
       if (data.status === 'accepted') {
         setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: data.acceptedAmount ?? capturedOffer, negotiationId: data.negotiationId, message: data.message ?? null });
       } else {
         setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount: data.counterAmount, negotiationId: data.negotiationId, message: data.message ?? null, timeoutAt: data.timeoutAt, timeoutAction: data.timeoutAction, timeoutMessage: data.timeoutMessage });
       }
     } catch {
-      // Fallback: keep animation running, resolve with local logic
-      if (capturedOffer >= p.floor_price) {
-        setPendingResult({ status: 'accepted', buyerOffer: capturedOffer, acceptedAmount: capturedOffer, message: `Perfecto, te confirmo ${gs(capturedOffer)} por unidad.` });
-      } else {
-        const counter = Math.round((p.floor_price + capturedOffer) / 2 / 1000) * 1000;
-        const counterAmount = Math.max(p.floor_price, counter);
-        setPendingResult({ status: 'countered', buyerOffer: capturedOffer, counterAmount, message: `Te puedo mejorar la oferta: ${gs(counterAmount)} por unidad.` });
-      }
+      setNegotiationError('No se pudo conectar con el negociador. Tu oferta no fue enviada; intenta de nuevo.');
+      setAnimStep(-1);
+      setSubmitting(false);
     }
     // setSubmitting(false) is handled by the animation useEffect at step 7
   }
@@ -1189,6 +1191,11 @@ export default function ProductDetailPage() {
                     </div>
                   ) : (
                     <form onSubmit={handleOffer} className="tnd-pdp2-neg-form">
+                      {negotiationError && (
+                        <p role="alert" style={{ color: '#b91c1c', fontSize: '0.82rem', margin: '0 0 10px' }}>
+                          {negotiationError}
+                        </p>
+                      )}
                       <div className="tnd-pdp2-neg-field">
                         <label htmlFor="offerAmt2">{quantity > 1 ? 'Tu oferta por cantidad' : 'Tu oferta por unidad'}</label>
                         <input

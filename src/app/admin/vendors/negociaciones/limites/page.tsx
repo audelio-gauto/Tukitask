@@ -6,34 +6,38 @@ import Link from 'next/link';
 interface Limite {
   id: string;
   name: string;
+  key: string;
   value: number;
+  effective_value: number;
   unit: string | null;
   is_active: boolean;
   description: string | null;
 }
 
-const FALLBACK: Limite[] = [
-  { id: 'max_discount_pct',       name: 'Descuento máximo',              value: 30,   unit: '%',           is_active: true,  description: null },
-  { id: 'max_offers_per_day',     name: 'Ofertas máximas por día',       value: 10,   unit: 'ofertas/día', is_active: true,  description: null },
-  { id: 'min_offer_time_minutes', name: 'Tiempo mínimo entre ofertas',   value: 5,    unit: 'minutos',     is_active: false, description: null },
-  { id: 'min_price_gs',           name: 'Precio mínimo permitido',       value: 1000, unit: 'Gs',          is_active: true,  description: null },
-  { id: 'max_negotiation_rounds', name: 'Rondas máximas de negociación', value: 5,    unit: 'rondas',      is_active: true,  description: null },
-  { id: 'offer_expiry_hours',     name: 'Expiración de oferta',          value: 24,   unit: 'horas',       is_active: true,  description: null },
-];
-
 export default function LimitesPage() {
-  const [limits, setLimits]   = useState<Limite[]>(FALLBACK);
+  const [limits, setLimits]   = useState<Limite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const { data } = await supabase
-        .from('negotiation_limits')
-        .select('id, name, value, unit, is_active, description')
-        .order('id');
-      if (data && data.length > 0) setLimits(data as Limite[]);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch('/api/admin/negotiation-limits', {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || 'No se pudieron cargar los límites.');
+        if (active) setLimits((json.limits ?? []) as Limite[]);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los límites.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, []);
 
   return (
@@ -63,6 +67,12 @@ export default function LimitesPage() {
         </div>
       </div>
 
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="space-y-3">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
@@ -79,13 +89,13 @@ export default function LimitesPage() {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   rule.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {rule.is_active ? 'Activo' : 'Inactivo'}
+                  {rule.is_active ? 'Activo' : 'Predeterminado'}
                 </span>
               </div>
               {rule.description && <p className="text-xs text-gray-400">{rule.description}</p>}
             </div>
             <span className="text-sm font-bold text-[#F5C518] bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg shrink-0">
-              {rule.value.toLocaleString('es-PY')} {rule.unit ?? ''}
+              {rule.effective_value.toLocaleString('es-PY')} {rule.unit ?? ''}
             </span>
           </div>
         ))}
