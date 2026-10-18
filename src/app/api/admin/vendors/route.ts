@@ -42,15 +42,54 @@ export async function GET(req: Request) {
         1,
       ) + 3 * 60 * 60 * 1000).toISOString();
 
-      const [vendors, newThisWeek, suspended, activeOrders] = await Promise.all([
+      const [vendors, vendorAccounts, newThisWeek, activeOrders] = await Promise.all([
         db.from('users').select('id', { count: 'exact', head: true }).eq('role', 'vendedor'),
+        db.from('users').select('email').eq('role', 'vendedor'),
         db.from('users').select('id', { count: 'exact', head: true }).eq('role', 'vendedor').gte('created_at', weekAgo),
-        db.from('users').select('id', { count: 'exact', head: true }).eq('role', 'vendedor').or('is_suspended.eq.true,is_blocked.eq.true'),
         db.from('market_orders').select('id', { count: 'exact', head: true }).in('status', ['pending', 'preparing', 'ready', 'in_transit']),
       ]);
 
-      const failedQuery = [vendors, newThisWeek, suspended, activeOrders].find((result) => result.error);
-      if (failedQuery) return NextResponse.json({ error: failedQuery.error.message }, { status: 500 });
+      const checks = [
+        { label: 'vendedores', result: vendors },
+        { label: 'correos_vendedores', result: vendorAccounts },
+        { label: 'nuevos_esta_semana', result: newThisWeek },
+        { label: 'pedidos_activos', result: activeOrders },
+      ];
+      const failedQuery = checks.find(({ result }) => result.error);
+      if (failedQuery) {
+        const { error } = failedQuery.result;
+        return NextResponse.json({
+          error: `Error en ${failedQuery.label}: ${error.message || error.code || 'consulta no disponible'}`,
+        }, { status: 500 });
+      }
+
+      const vendorEmails = new Set<string>(
+        (vendorAccounts.data ?? [])
+          .map((row: { email?: string | null }) => row.email?.toLowerCase())
+          .filter((email: string | undefined): email is string => Boolean(email)),
+      );
+      let suspendedCount = 0;
+      const authPageSize = 100;
+      for (let page = 1; page <= 20 && vendorEmails.size > 0; page++) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: authPageSize });
+        if (error) {
+          return NextResponse.json({ error: `Error en estado_de_suspension: ${error.message || 'consulta no disponible'}` }, { status: 500 });
+        }
+        for (const authUser of data.users as Array<{
+          email?: string;
+          banned_until?: string | null;
+          app_metadata?: Record<string, unknown>;
+        }>) {
+          if (!authUser.email || !vendorEmails.has(authUser.email.toLowerCase())) continue;
+          const bannedUntil = authUser.banned_until ? new Date(authUser.banned_until).getTime() : 0;
+          const metadata = authUser.app_metadata ?? {};
+          if (bannedUntil > now && (metadata.suspended || metadata.blocked)) suspendedCount++;
+        }
+        if (data.users.length < authPageSize) break;
+        if (page === 20) {
+          return NextResponse.json({ error: 'No se pudo completar la revisión de suspensiones.' }, { status: 500 });
+        }
+      }
 
       let commissionsThisMonth = 0;
       const pageSize = 1000;
@@ -63,7 +102,9 @@ export async function GET(req: Request) {
           .gte('created_at', monthStart)
           .order('created_at', { ascending: false })
           .range(page * pageSize, (page + 1) * pageSize - 1);
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+          return NextResponse.json({ error: `Error en comisiones_del_mes: ${error.message || 'consulta no disponible'}` }, { status: 500 });
+        }
 
         for (const row of rows ?? []) commissionsThisMonth += Math.abs(Number(row.amount) || 0);
         if ((rows ?? []).length < pageSize) break;
@@ -75,7 +116,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         total: vendors.count ?? 0,
         newThisWeek: newThisWeek.count ?? 0,
-        suspended: suspended.count ?? 0,
+        suspended: suspendedCount,
         activeOrders: activeOrders.count ?? 0,
         commissionsThisMonth,
       });
