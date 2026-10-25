@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const db = sbAdmin();
   const { data, error } = await db
     .from('market_orders')
-    .select('id, status, vendor_email, vendor_id, client_name, items, total, shipping_price, address, payment_method, created_at, delivery')
+    .select('id, status, vendor_email, vendor_id, client_name, items, total, shipping_price, address, payment_method, payment_status, payment_proof_url, created_at, delivery')
     .eq('client_email', email)
     .order('created_at', { ascending: false })
     .limit(100);
