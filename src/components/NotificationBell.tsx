@@ -21,6 +21,7 @@ function timeAgo(dateStr: string): string {
 // Map notification type → URL to navigate when tapped
 const typeUrl: Record<string, string> = {
   new_order:       '/driver/delivered',
+  new_market_order:'/vendedor/pedidos',
   new_offer:       '/cliente/mis-envios',
   offer_accepted:  '/driver/delivered',
   offer_rejected:  '/cliente/mis-envios',
@@ -35,6 +36,7 @@ const typeUrl: Record<string, string> = {
 };
 const typeStyle: Record<string, { icon: React.ComponentProps<typeof Icon>['name']; accent: string }> = {
   new_order:       { icon: 'package', accent: '#8b5cf6' },
+  new_market_order:{ icon: 'package', accent: '#F5C518' },
   new_offer:       { icon: 'money', accent: '#F5C518' },
   offer_accepted:  { icon: 'check', accent: '#22c55e' },
   offer_rejected:  { icon: 'x', accent: '#ef4444' },

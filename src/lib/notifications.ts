@@ -9,6 +9,7 @@ export type NotifPriority = 'urgent' | 'high' | 'normal' | 'silent';
 // ── Types ────────────────────────────────────────────────────────────────────
 export type NotifType =
   | 'new_order'
+  | 'new_market_order'
   | 'new_offer'
   | 'offer_accepted'
   | 'offer_rejected'
@@ -34,7 +35,8 @@ export const NOTIF_PRIORITY: Record<NotifType, NotifPriority> = {
   offer_rejected:  'high',
   status_change:   'high',
   job_status:      'high',
-  new_order:       'normal',
+  new_order:       'high',
+  new_market_order: 'high',
   new_job:         'normal',
   commission:      'normal',
   wallet:          'normal',

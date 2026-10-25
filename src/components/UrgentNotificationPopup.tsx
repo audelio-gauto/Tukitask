@@ -75,6 +75,7 @@ const typeConfig: Record<string, { icon: React.ComponentProps<typeof Icon>['name
   status_change:   { icon: 'refresh', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
   job_status:      { icon: 'clipboard', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
   new_order:       { icon: 'package', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  new_market_order:{ icon: 'package', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
   new_job:         { icon: 'tool', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
   commission:      { icon: 'money', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
   wallet:          { icon: 'tag', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
