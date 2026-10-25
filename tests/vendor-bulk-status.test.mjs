@@ -25,3 +25,10 @@ test('completed market orders count as delivered in vendor menu', async () => {
   assert.match(source, /commission_charged/i);
   assert.match(source, /DELIVERED_STATUSES|\['delivered',\s*'commission_charged'\]|\[\s*'delivered',\s*'commission_charged'\s*\]/i);
 });
+
+test('vendor dashboard resolves user session before loading zero-state metrics', async () => {
+  const source = await readFile(path.join(rootDir, 'src/app/vendedor/page.tsx'), 'utf8');
+
+  assert.match(source, /getSession\(\)/i);
+  assert.match(source, /resolveVendorUser/i);
+});

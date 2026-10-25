@@ -201,7 +201,15 @@ export default function VendedorDashboard() {
     let isMounted = true;
 
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const resolveVendorUser = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) return user;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.user ?? null;
+      };
+
+      const user = await resolveVendorUser();
       if (!user) {
         if (isMounted) setLoading(false);
         return;
