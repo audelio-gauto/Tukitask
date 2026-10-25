@@ -32,3 +32,11 @@ test('vendor dashboard resolves user session before loading zero-state metrics',
   assert.match(source, /getSession\(\)/i);
   assert.match(source, /resolveVendorUser/i);
 });
+
+test('vendor analytics page loads real vendor data instead of static zero values', async () => {
+  const source = await readFile(path.join(rootDir, 'src/app/vendedor/analisis/page.tsx'), 'utf8');
+
+  assert.match(source, /getSession\(\)/i);
+  assert.match(source, /from\('market_orders'\)|from\("market_orders"\)/i);
+  assert.match(source, /loadVendorAnalytics/i);
+});

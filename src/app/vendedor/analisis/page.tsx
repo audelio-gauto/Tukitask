@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function fmtGs(n: number) {
@@ -9,6 +10,15 @@ function today() { return new Date().toISOString().split('T')[0]; }
 function weekAgo() {
   const d = new Date(); d.setDate(d.getDate() - 7);
   return d.toISOString().split('T')[0];
+}
+
+function getDateRangeData(data: number[], labels: string[]) {
+  const max = Math.max(...data, 1);
+  return data.map((value, i) => ({
+    label: labels[i],
+    value,
+    height: Math.max(value === 0 ? 0 : 8, (value / max) * 100),
+  }));
 }
 
 /* ── Area sparkline (SVG) ────────────────────────────────── */
@@ -21,17 +31,16 @@ function AreaChart({ data, color = '#F5C518' }: { data: number[]; color?: string
     return `${x},${y}`;
   });
   const polyline = pts.join(' ');
-  const area     = `${PAD},${H - PAD} ` + polyline + ` ${W - PAD},${H - PAD}`;
+  const area = `${PAD},${H - PAD} ` + polyline + ` ${W - PAD},${H - PAD}`;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
       <defs>
         <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={color} stopOpacity={0.30} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.30} />
           <stop offset="100%" stopColor={color} stopOpacity={0.01} />
         </linearGradient>
       </defs>
-      {/* Grid */}
       {[0,1,2,3].map(i => (
         <line key={i}
           x1={PAD} y1={PAD + (i / 3) * (H - PAD * 2)}
@@ -39,22 +48,16 @@ function AreaChart({ data, color = '#F5C518' }: { data: number[]; color?: string
           stroke="var(--vnd-chart-grid)" strokeWidth={1} strokeDasharray="4 4" opacity={0.6}
         />
       ))}
-      {/* Area fill */}
       <polygon points={area} fill="url(#chartGrad)" />
-      {/* Line */}
       <polyline points={polyline} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      {/* Dots on each point */}
       {pts.map((pt, i) => {
         const [x, y] = pt.split(',').map(Number);
-        return data[i] > 0
-          ? <circle key={i} cx={x} cy={y} r={3.5} fill={color} />
-          : null;
+        return data[i] > 0 ? <circle key={i} cx={x} cy={y} r={3.5} fill={color} /> : null;
       })}
     </svg>
   );
 }
 
-/* ── Horizontal bar ──────────────────────────────────────── */
 function HBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
@@ -70,7 +73,6 @@ function HBar({ label, value, max, color }: { label: string; value: number; max:
   );
 }
 
-/* ── Donut chart (SVG) ───────────────────────────────────── */
 function Donut({ segments }: { segments: { label: string; value: number; color: string }[] }) {
   const total = segments.reduce((s, x) => s + x.value, 0);
   if (total === 0) {
@@ -83,11 +85,11 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
   const R = 50, CX = 70, CY = 70;
   let cumAngle = -90;
   const slices = segments.map(seg => {
-    const angle  = (seg.value / total) * 360;
-    const start  = cumAngle;
+    const angle = (seg.value / total) * 360;
+    const start = cumAngle;
     cumAngle += angle;
     const startRad = (start * Math.PI) / 180;
-    const endRad   = (cumAngle * Math.PI) / 180;
+    const endRad = (cumAngle * Math.PI) / 180;
     const x1 = CX + R * Math.cos(startRad);
     const y1 = CY + R * Math.sin(startRad);
     const x2 = CX + R * Math.cos(endRad);
@@ -112,7 +114,7 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
             <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
             <span style={{ fontSize: '0.8rem', color: 'var(--vnd-text-secondary)', flex: 1 }}>{s.label}</span>
             <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--vnd-text-primary)' }}>
-              {total > 0 ? Math.round(s.value / total * 100) : 0}%
+              {total > 0 ? Math.round((s.value / total) * 100) : 0}%
             </span>
           </div>
         ))}
@@ -124,36 +126,149 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
 /* ══════════════════════════════════════════════════════════ */
 export default function AnalisisPage() {
   const [dateFrom, setDateFrom] = useState(weekAgo());
-  const [dateTo,   setDateTo]   = useState(today());
+  const [dateTo, setDateTo] = useState(today());
+  const [loading, setLoading] = useState(true);
+  const [salesData, setSalesData] = useState<number[]>(Array(7).fill(0));
+  const [ordersData, setOrdersData] = useState<number[]>(Array(7).fill(0));
+  const [topProducts, setTopProducts] = useState<Array<{ name: string; sales: number }>>([]);
+  const [orderStatuses, setOrderStatuses] = useState<Array<{ label: string; value: number; color: string }>>([]);
+  const [totalSales, setTotalSales] = useState(0);
+  const [averageTicket, setAverageTicket] = useState(0);
+  const [bestProduct, setBestProduct] = useState<'—' | string>('—');
+  const [negotiationRate, setNegotiationRate] = useState(0);
 
-  /* Mock data — replace with real Supabase aggregation */
-  const salesData  = [0, 0, 0, 0, 0, 0, 0];
-  const ordersData = [0, 0, 0, 0, 0, 0, 0];
+  async function loadVendorAnalytics(from: string, to: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return null;
 
-  const topProducts = [
-    { name: 'Auricular JBL Tune 510', sales: 420000 },
-    { name: 'Cargador 65W GaN',       sales: 240000 },
-    { name: 'Cable USB-C 2m',         sales: 105000 },
-    { name: 'Soporte Magnético Auto', sales: 90000  },
-  ];
+    const fromIso = new Date(`${from}T00:00:00`).toISOString();
+    const toIso = new Date(`${to}T23:59:59`).toISOString();
+
+    const { data: rows, error } = await supabase
+      .from('market_orders')
+      .select('id, created_at, total, status, negotiated, items, vendor_email, vendor_id')
+      .or(`vendor_email.eq.${user.email},vendor_id.eq.${user.id}`)
+      .gte('created_at', fromIso)
+      .lte('created_at', toIso)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Vendor analytics fetch failed:', error.message);
+      return { salesData: Array(7).fill(0), ordersData: Array(7).fill(0), topProducts: [], orderStatuses: [], totalSales: 0, averageTicket: 0, bestProduct: '—', negotiationRate: 0 };
+    }
+
+    const orders = (rows ?? []) as Array<{
+      id: string;
+      created_at?: string | null;
+      total?: number | null;
+      status?: string | null;
+      negotiated?: boolean | null;
+      items?: Array<{ name?: string | null; qty?: number | null; price?: number | null }> | null;
+    }>;
+
+    const salesByDay = Array(7).fill(0);
+    const ordersByDay = Array(7).fill(0);
+    const productMap = new Map<string, number>();
+    const statusMap = new Map<string, number>();
+    let total = 0;
+    let deliveredCount = 0;
+    let negotiatedCount = 0;
+    let salesSum = 0;
+
+    orders.forEach((order) => {
+      const status = String(order.status ?? 'pending');
+      statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
+
+      const orderTotal = Number(order.total ?? 0) || 0;
+      if (['delivered', 'commission_charged', 'client_confirmed'].includes(status)) {
+        total += orderTotal;
+        deliveredCount += 1;
+        salesSum += orderTotal;
+      }
+
+      if (order.negotiated) negotiatedCount += 1;
+
+      const created = order.created_at ? new Date(order.created_at) : null;
+      if (created && !Number.isNaN(created.getTime())) {
+        const diffDays = Math.floor((new Date().getTime() - created.getTime()) / 86400000);
+        const idx = Math.max(0, Math.min(6, 6 - diffDays));
+        if (diffDays >= 0 && diffDays <= 6) {
+          salesByDay[idx] += orderTotal;
+          ordersByDay[idx] += 1;
+        }
+      }
+
+      const items = order.items ?? [];
+      items.forEach((item) => {
+        const name = String(item.name ?? '').trim();
+        if (!name) return;
+        const itemTotal = Number(item.price ?? 0) * Number(item.qty ?? 1);
+        productMap.set(name, (productMap.get(name) ?? 0) + itemTotal);
+      });
+    });
+
+    const topProducts = Array.from(productMap.entries())
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 4);
+
+    const bestProduct = topProducts[0]?.name ?? '—';
+    const statusList = [
+      { label: 'Entregados', value: statusMap.get('delivered') ?? 0, color: '#4ade80' },
+      { label: 'Cancelados', value: statusMap.get('cancelled') ?? 0, color: '#f87171' },
+      { label: 'En proceso', value: [statusMap.get('pending') ?? 0, statusMap.get('preparing') ?? 0, statusMap.get('ready') ?? 0, statusMap.get('in_transit') ?? 0].reduce((sum, item) => sum + item, 0), color: '#38bdf8' },
+    ];
+
+    return {
+      salesData: salesByDay,
+      ordersData: ordersByDay,
+      topProducts,
+      orderStatuses: statusList,
+      totalSales: total,
+      averageTicket: deliveredCount > 0 ? salesSum / deliveredCount : 0,
+      bestProduct,
+      negotiationRate: orders.length > 0 ? (negotiatedCount / orders.length) * 100 : 0,
+    };
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    const run = async () => {
+      const analytics = await loadVendorAnalytics(dateFrom, dateTo);
+      if (!active) return;
+      if (!analytics) {
+        setLoading(false);
+        return;
+      }
+
+      setSalesData(analytics.salesData);
+      setOrdersData(analytics.ordersData);
+      setTopProducts(analytics.topProducts);
+      setOrderStatuses(analytics.orderStatuses);
+      setTotalSales(analytics.totalSales);
+      setAverageTicket(analytics.averageTicket);
+      setBestProduct(analytics.bestProduct);
+      setNegotiationRate(analytics.negotiationRate);
+      setLoading(false);
+    };
+
+    void run();
+    return () => { active = false; };
+  }, [dateFrom, dateTo]);
+
   const topMax = topProducts[0]?.sales ?? 1;
-
-  const orderStatuses = [
-    { label: 'Entregados',  value: 12, color: '#4ade80' },
-    { label: 'Cancelados',  value: 2,  color: '#f87171' },
-    { label: 'En proceso',  value: 3,  color: '#38bdf8' },
-  ];
+  const weekLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   return (
     <div>
-      {/* Heading */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="vnd-page-heading">Análisis y Reportes</h1>
           <p className="vnd-page-sub">Métricas de rendimiento de tu tienda</p>
         </div>
 
-        {/* Date range */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div className="vnd-date-range">
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} style={{ color: 'var(--vnd-text-muted)' }}>
@@ -163,142 +278,132 @@ export default function AnalisisPage() {
             <span className="vnd-date-sep">→</span>
             <input type="date" className="vnd-date-input" value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>
-          <button className="vnd-btn vnd-btn-primary vnd-btn-sm">Aplicar</button>
-          <button className="vnd-btn vnd-btn-secondary vnd-btn-sm">
-            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Exportar CSV
-          </button>
+          <button className="vnd-btn vnd-btn-primary vnd-btn-sm" onClick={() => window.location.reload()}>Aplicar</button>
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="vnd-kpi-grid">
-        <div className="vnd-kpi-card" style={{ borderTop: '3px solid #F5C518' }}>
-          <span className="vnd-kpi-label">💰 Rendimiento de Ventas</span>
-          <span className="vnd-kpi-value">{fmtGs(0)}</span>
-          <span className="vnd-kpi-sub">
-            {dateFrom} → {dateTo}
-          </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
-            — Publicá productos para ver datos
-          </span>
+      {loading ? (
+        <div className="vnd-empty" style={{ padding: 32 }}>
+          <div className="vnd-empty-icon">📊</div>
+          <p className="vnd-empty-title">Cargando métricas…</p>
         </div>
-
-        <div className="vnd-kpi-card" style={{ borderTop: '3px solid #F58A07' }}>
-          <span className="vnd-kpi-label">🏆 Mejor Producto</span>
-          <span className="vnd-kpi-value" style={{ fontSize: '1.25rem' }}>—</span>
-          <span className="vnd-kpi-sub">Sin ventas en el período</span>
-        </div>
-
-        <div className="vnd-kpi-card" style={{ borderTop: '3px solid #10b981' }}>
-          <span className="vnd-kpi-label">🎯 Ticket Promedio</span>
-          <span className="vnd-kpi-value">{fmtGs(0)}</span>
-          <span className="vnd-kpi-sub">Por pedido en el período</span>
-        </div>
-      </div>
-
-      {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-        {/* Sales line chart */}
-        <div className="vnd-card">
-          <div className="vnd-card-header">
-            <span className="vnd-card-title">
-              <span className="vnd-card-title-dot" />
-              Ventas Diarias (Gs)
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>Últimos 7 días</span>
-          </div>
-          <div className="vnd-card-body">
-            <AreaChart data={salesData} color="#F5C518" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              {['L','M','X','J','V','S','D'].map((d, i) => (
-                <span key={i} style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', textAlign: 'center', flex: 1 }}>{d}</span>
-              ))}
+      ) : (
+        <>
+          <div className="vnd-kpi-grid">
+            <div className="vnd-kpi-card" style={{ borderTop: '3px solid #F5C518' }}>
+              <span className="vnd-kpi-label">💰 Rendimiento de Ventas</span>
+              <span className="vnd-kpi-value">{fmtGs(totalSales)}</span>
+              <span className="vnd-kpi-sub">{dateFrom} → {dateTo}</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--vnd-text-muted)', marginTop: 4 }}>
+                {totalSales > 0 ? 'Ventas reales del período' : 'Sin ventas en el período'}
+              </span>
             </div>
-            {salesData.every(v => v === 0) && (
-              <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginTop: 12 }}>
-                Sin ventas registradas en este período
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Orders line chart */}
-        <div className="vnd-card">
-          <div className="vnd-card-header">
-            <span className="vnd-card-title">
-              <span className="vnd-card-title-dot" style={{ background: '#F58A07' }} />
-              Pedidos por Día
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>Últimos 7 días</span>
-          </div>
-          <div className="vnd-card-body">
-            <AreaChart data={ordersData} color="#F58A07" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              {['L','M','X','J','V','S','D'].map((d, i) => (
-                <span key={i} style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', textAlign: 'center', flex: 1 }}>{d}</span>
-              ))}
+            <div className="vnd-kpi-card" style={{ borderTop: '3px solid #F58A07' }}>
+              <span className="vnd-kpi-label">🏆 Mejor Producto</span>
+              <span className="vnd-kpi-value" style={{ fontSize: '1.25rem' }}>{bestProduct}</span>
+              <span className="vnd-kpi-sub">{bestProduct === '—' ? 'Sin ventas en el período' : 'Más vendido en el rango'}</span>
+            </div>
+
+            <div className="vnd-kpi-card" style={{ borderTop: '3px solid #10b981' }}>
+              <span className="vnd-kpi-label">🎯 Ticket Promedio</span>
+              <span className="vnd-kpi-value">{fmtGs(averageTicket)}</span>
+              <span className="vnd-kpi-sub">Por pedido en el período</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
-        {/* Top products */}
-        <div className="vnd-card">
-          <div className="vnd-card-header">
-            <span className="vnd-card-title">
-              <span className="vnd-card-title-dot" style={{ background: '#10b981' }} />
-              Top Productos por Ventas
-            </span>
-          </div>
-          <div className="vnd-card-body">
-            {topProducts.map((p, i) => (
-              <HBar key={i} label={p.name} value={p.sales} max={topMax}
-                color={i === 0 ? '#F5C518' : i === 1 ? '#F58A07' : '#10b981'}
-              />
-            ))}
-            {topProducts.length === 0 && (
-              <div className="vnd-empty" style={{ padding: '20px 0' }}>
-                <div className="vnd-empty-icon">📊</div>
-                <p className="vnd-empty-title">Sin datos de ventas</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+            <div className="vnd-card">
+              <div className="vnd-card-header">
+                <span className="vnd-card-title">
+                  <span className="vnd-card-title-dot" />
+                  Ventas Diarias (Gs)
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>Últimos 7 días</span>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Order status donut */}
-        <div className="vnd-card">
-          <div className="vnd-card-header">
-            <span className="vnd-card-title">
-              <span className="vnd-card-title-dot" style={{ background: '#8b5cf6' }} />
-              Estado de Pedidos
-            </span>
-          </div>
-          <div className="vnd-card-body">
-            <Donut segments={orderStatuses} />
-
-            {/* Negotiation rate */}
-            <div style={{ marginTop: 20, padding: '14px 0', borderTop: '1px solid var(--vnd-border)' }}>
-              <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
-                Tasa de Negociación
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, height: 8, background: 'var(--vnd-surface-2)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: '35%', background: 'linear-gradient(90deg, #F5C518, #F58A07)', borderRadius: 99 }} />
+              <div className="vnd-card-body">
+                <AreaChart data={salesData} color="#F5C518" />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                  {weekLabels.map((d, i) => (
+                    <span key={i} style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', textAlign: 'center', flex: 1 }}>{d}</span>
+                  ))}
                 </div>
-                <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#F5C518', flexShrink: 0 }}>35%</span>
+                {salesData.every(v => v === 0) && (
+                  <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--vnd-text-muted)', marginTop: 12 }}>
+                    Sin ventas registradas en este período
+                  </p>
+                )}
               </div>
-              <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 6 }}>
-                de pedidos fueron negociados
-              </p>
+            </div>
+
+            <div className="vnd-card">
+              <div className="vnd-card-header">
+                <span className="vnd-card-title">
+                  <span className="vnd-card-title-dot" style={{ background: '#F58A07' }} />
+                  Pedidos por Día
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>Últimos 7 días</span>
+              </div>
+              <div className="vnd-card-body">
+                <AreaChart data={ordersData} color="#F58A07" />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                  {weekLabels.map((d, i) => (
+                    <span key={i} style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', textAlign: 'center', flex: 1 }}>{d}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+            <div className="vnd-card">
+              <div className="vnd-card-header">
+                <span className="vnd-card-title">
+                  <span className="vnd-card-title-dot" style={{ background: '#10b981' }} />
+                  Top Productos por Ventas
+                </span>
+              </div>
+              <div className="vnd-card-body">
+                {topProducts.length > 0 ? topProducts.map((p, i) => (
+                  <HBar key={i} label={p.name} value={p.sales} max={topMax} color={i === 0 ? '#F5C518' : i === 1 ? '#F58A07' : '#10b981'} />
+                )) : (
+                  <div className="vnd-empty" style={{ padding: '20px 0' }}>
+                    <div className="vnd-empty-icon">📊</div>
+                    <p className="vnd-empty-title">Sin datos de ventas</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="vnd-card">
+              <div className="vnd-card-header">
+                <span className="vnd-card-title">
+                  <span className="vnd-card-title-dot" style={{ background: '#8b5cf6' }} />
+                  Estado de Pedidos
+                </span>
+              </div>
+              <div className="vnd-card-body">
+                <Donut segments={orderStatuses.length > 0 ? orderStatuses : [{ label: 'Sin datos', value: 1, color: '#e5e7eb' }]} />
+
+                <div style={{ marginTop: 20, padding: '14px 0', borderTop: '1px solid var(--vnd-border)' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
+                    Tasa de Negociación
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, height: 8, background: 'var(--vnd-surface-2)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, negotiationRate))}%`, background: 'linear-gradient(90deg, #F5C518, #F58A07)', borderRadius: 99 }} />
+                    </div>
+                    <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#F5C518', flexShrink: 0 }}>{Math.round(negotiationRate)}%</span>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)', marginTop: 6 }}>
+                    de pedidos fueron negociados
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
