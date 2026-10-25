@@ -144,7 +144,7 @@ export default function TiendaMisPedidosPage() {
           const paymentPending = order.payment_method === 'transferencia' &&
             order.payment_status === 'awaiting_confirmation' && order.status !== 'cancelled';
           const s = paymentPending
-            ? { label: 'Confirmando el pago', color: '#b45309' }
+            ? { label: 'Confirmando pago', color: '#b45309' }
             : STATUS_MAP[order.status] ?? { label: order.status, color: '#64748b' };
           const date = new Date(order.created_at).toLocaleDateString('es-PY', {
             day: '2-digit', month: 'short', year: 'numeric',

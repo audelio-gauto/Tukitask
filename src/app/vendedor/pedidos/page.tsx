@@ -135,16 +135,17 @@ function printOrder(order: MarketOrder) {
   w.print();
 }
 
-type TabKey = 'all' | OrderStatus;
+type TabKey = 'all' | OrderStatus | 'awaiting_confirmation';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'all',        label: 'Todos'      },
-  { key: 'pending',    label: 'En espera'  },
-  { key: 'preparing',  label: 'Preparando' },
-  { key: 'ready',      label: 'Listos'     },
-  { key: 'in_transit', label: 'En camino'  },
-  { key: 'delivered',  label: 'Entregados' },
-  { key: 'cancelled',  label: 'Cancelados' },
+  { key: 'all',                  label: 'Todos'            },
+  { key: 'pending',             label: 'En espera'        },
+  { key: 'awaiting_confirmation', label: 'Confirmando pago' },
+  { key: 'preparing',           label: 'Preparando'       },
+  { key: 'ready',               label: 'Listos'           },
+  { key: 'in_transit',          label: 'En camino'        },
+  { key: 'delivered',           label: 'Entregados'       },
+  { key: 'cancelled',           label: 'Cancelados'       },
 ];
 
 /* ══════════════════════════════════════════════════════════ */
@@ -171,7 +172,13 @@ export default function PedidosPage() {
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
   const filtered = orders
-    .filter(o => activeTab === 'all' || o.status === activeTab)
+    .filter(o => {
+      if (activeTab === 'all') return true;
+      if (activeTab === 'awaiting_confirmation') {
+        return o.paymentMethod === 'transferencia' && o.paymentStatus === 'awaiting_confirmation' && o.status !== 'cancelled';
+      }
+      return o.status === activeTab;
+    })
     .filter(o => {
       const q = search.trim().toLowerCase();
       if (!q) return true;
@@ -184,8 +191,13 @@ export default function PedidosPage() {
       );
     });
 
-  const countOf = (k: TabKey) =>
-    k === 'all' ? orders.length : orders.filter(o => o.status === k).length;
+  const countOf = (k: TabKey) => {
+    if (k === 'all') return orders.length;
+    if (k === 'awaiting_confirmation') {
+      return orders.filter(o => o.paymentMethod === 'transferencia' && o.paymentStatus === 'awaiting_confirmation' && o.status !== 'cancelled').length;
+    }
+    return orders.filter(o => o.status === k).length;
+  };
 
   function getSelectableStatuses(order: MarketOrder): OrderStatus[] {
     if (order.status === 'cancelled') return ['cancelled'];
@@ -393,7 +405,7 @@ export default function PedidosPage() {
                                 }}
                               >
                                 <option value={paymentPending ? 'awaiting_confirmation' : order.status}>
-                                  {paymentPending ? 'Confirmando el pago' : cfg.label}
+                                  {paymentPending ? 'Confirmando pago' : cfg.label}
                                 </option>
                                 {paymentPending && <option value="confirm_transfer">Confirmar pago</option>}
                                 {nexts.map(next => (
