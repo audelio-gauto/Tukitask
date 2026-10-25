@@ -421,7 +421,7 @@ export default function PedidosPage() {
                                   </option>
                                 ))}
                               </select>
-                              {order.paymentMethod === 'transferencia' && order.paymentStatus === 'confirmed' && !['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
+                              {order.paymentMethod === 'transferencia' && order.paymentStatus === 'confirmed' && !['preparing', 'ready', 'in_transit', 'delivered', 'commission_charged'].includes(order.status) && (
                                 <span className="vnd-badge vnd-badge-green">Pago confirmado</span>
                               )}
                             </div>
@@ -514,7 +514,7 @@ export default function PedidosPage() {
 
                                 {order.paymentMethod === 'transferencia' && (
                                   <div style={{ marginTop: 16 }}>
-                                    {!['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
+                                    {!['preparing', 'ready', 'in_transit', 'delivered', 'commission_charged'].includes(order.status) && (
                                       <p style={{ fontSize: '0.78rem', fontWeight: 700, color: paymentPending ? '#b45309' : '#15803d', margin: '0 0 8px' }}>
                                         {paymentPending
                                           ? order.paymentProofUrl ? 'Comprobante enviado para verificación' : 'Esperando comprobante del cliente'

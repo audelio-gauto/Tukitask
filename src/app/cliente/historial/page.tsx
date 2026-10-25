@@ -448,7 +448,7 @@ export default function ClienteHistorialPage() {
 
                             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: 6 }}>
                               {mo.payment_method === 'contra_entrega' ? '💵 Contra entrega' : '🏦 Transferencia bancaria'}
-                              {mo.payment_method === 'transferencia' && !['preparing', 'ready', 'in_transit', 'delivered'].includes(mo.status) && (
+                              {mo.payment_method === 'transferencia' && !['preparing', 'ready', 'in_transit', 'delivered', 'commission_charged'].includes(mo.status) && (
                                 <div style={{ marginTop: 3, fontWeight: 700, color: mo.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
                                   {mo.payment_status === 'confirmed'
                                     ? 'Pago confirmado'
