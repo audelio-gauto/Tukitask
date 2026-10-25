@@ -134,5 +134,5 @@ export async function POST(req: Request) {
     if (result.error) console.error('[market-orders/payment-proof] notification error:', result.error.message);
   });
 
-  return NextResponse.json({ success: true, orderIds });
+  return NextResponse.json({ success: true, orderIds, payment_proof_url: urlData.publicUrl });
 }

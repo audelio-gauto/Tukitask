@@ -39,6 +39,13 @@ type MarketOrder = {
 
 type VendorStoreInfo = { name: string; logo: string | null };
 
+function formatRemainingTime(milliseconds: number): string {
+  const totalMinutes = Math.max(0, Math.ceil(milliseconds / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} h ${minutes} min`;
+}
+
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending:            { label: 'En espera',   color: '#f59e0b' },
   preparing:          { label: 'Preparando',  color: '#3b82f6' },
@@ -54,6 +61,15 @@ export default function TiendaMisPedidosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [vendorStores, setVendorStores] = useState<Record<string, VendorStoreInfo>>({});
+  const [now, setNow] = useState<number | null>(null);
+  const [uploadingOrderId, setUploadingOrderId] = useState<string | null>(null);
+  const [proofErrors, setProofErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setNow(Date.now());
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     authFetch('/api/tienda/market-orders?role=buyer&limit=50')
@@ -95,6 +111,52 @@ export default function TiendaMisPedidosPage() {
     return () => { isActive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
+
+  async function uploadMissingProof(orderId: string, file: File) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setProofErrors(current => ({ ...current, [orderId]: 'Subí una imagen JPG, PNG o WEBP.' }));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setProofErrors(current => ({ ...current, [orderId]: 'El comprobante no puede superar 2 MB.' }));
+      return;
+    }
+
+    setUploadingOrderId(orderId);
+    setProofErrors(current => ({ ...current, [orderId]: '' }));
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se pudo leer la imagen.'));
+        reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+        reader.readAsDataURL(file);
+      });
+      const [header, base64] = dataUrl.split(',');
+      const mime = header.match(/^data:(.*);base64$/)?.[1] ?? file.type;
+      const response = await authFetch('/api/tienda/market-orders/payment-proof', {
+        method: 'POST',
+        body: JSON.stringify({
+          orderIds: [orderId],
+          payment_proof_base64: base64,
+          payment_proof_mime: mime,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? 'No se pudo enviar el comprobante.');
+      }
+      setOrders(current => current.map(order => order.id === orderId
+        ? { ...order, payment_proof_url: result.payment_proof_url }
+        : order));
+    } catch (uploadError) {
+      setProofErrors(current => ({
+        ...current,
+        [orderId]: uploadError instanceof Error ? uploadError.message : 'No se pudo enviar el comprobante.',
+      }));
+    } finally {
+      setUploadingOrderId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -144,6 +206,9 @@ export default function TiendaMisPedidosPage() {
         {orders.map(order => {
           const paymentPending = order.payment_method === 'transferencia' &&
             order.payment_status === 'awaiting_confirmation' && order.status !== 'cancelled';
+          const proofDeadline = new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000;
+          const remainingTime = now === null ? 24 * 60 * 60 * 1000 : proofDeadline - now;
+          const needsPaymentProof = paymentPending && !order.payment_proof_url && order.status !== 'preparing';
           const s = paymentPending
             ? { label: order.payment_proof_url ? 'Comprobante en verificación' : 'Esperando comprobante', color: '#b45309' }
             : STATUS_MAP[order.status] ?? { label: order.status, color: '#64748b' };
@@ -246,6 +311,37 @@ export default function TiendaMisPedidosPage() {
                       : order.payment_proof_url
                         ? 'Comprobante en verificación'
                         : 'Esperando comprobante'}</span>
+                  </div>
+                )}
+                {needsPaymentProof && (
+                  <div style={{ marginTop: 8, padding: '12px 14px', border: '1px solid #f59e0b', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>
+                      {remainingTime > 0
+                        ? `Subí tu comprobante para recibir el pedido. Tiempo disponible: ${formatRemainingTime(remainingTime)}.`
+                        : 'El plazo para subir el comprobante venció. El pedido será cancelado automáticamente.'}
+                    </p>
+                    <p style={{ margin: '5px 0 10px', fontSize: '0.74rem', color: '#92400e', lineHeight: 1.45 }}>
+                      Si no lo enviás dentro de las 24 horas desde que generaste el pedido, se cancelará.
+                    </p>
+                    {remainingTime > 0 && (
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'var(--tnd-accent)', color: 'var(--tnd-accent-text)', fontSize: '0.78rem', fontWeight: 700, cursor: uploadingOrderId === order.id ? 'wait' : 'pointer', opacity: uploadingOrderId === order.id ? 0.65 : 1 }}>
+                        {uploadingOrderId === order.id ? 'Enviando comprobante...' : '📷 Subir comprobante'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={uploadingOrderId === order.id}
+                          onChange={event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (file) void uploadMissingProof(order.id, file);
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    )}
+                    {proofErrors[order.id] && (
+                      <p role="alert" style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>{proofErrors[order.id]}</p>
+                    )}
                   </div>
                 )}
               </div>
