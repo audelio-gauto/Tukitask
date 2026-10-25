@@ -18,3 +18,10 @@ test('vendedor pedidos support bulk selection and status updates', async () => {
   assert.match(source, /bulkStatus|applyBulkStatus/i);
   assert.match(source, /Seleccionar visibles|Cambiar estado|Aplicar/i);
 });
+
+test('completed market orders count as delivered in vendor menu', async () => {
+  const source = await readText('src/app/vendedor/pedidos/page.tsx');
+
+  assert.match(source, /commission_charged/i);
+  assert.match(source, /DELIVERED_STATUSES|\['delivered',\s*'commission_charged'\]|\[\s*'delivered',\s*'commission_charged'\s*\]/i);
+});

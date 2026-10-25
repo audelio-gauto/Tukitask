@@ -137,6 +137,7 @@ function printOrder(order: MarketOrder) {
 }
 
 type TabKey = 'all' | OrderStatus | 'awaiting_confirmation';
+const DELIVERED_STATUSES: OrderStatus[] = ['delivered', 'commission_charged'];
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'all',                  label: 'Todos'            },
@@ -190,6 +191,9 @@ export default function PedidosPage() {
       if (activeTab === 'awaiting_confirmation') {
         return o.paymentMethod === 'transferencia' && o.paymentStatus === 'awaiting_confirmation' && o.status !== 'cancelled';
       }
+      if (activeTab === 'delivered') {
+        return DELIVERED_STATUSES.includes(o.status);
+      }
       return o.status === activeTab;
     })
     .filter(o => {
@@ -228,6 +232,9 @@ export default function PedidosPage() {
     if (k === 'all') return orders.length;
     if (k === 'awaiting_confirmation') {
       return orders.filter(o => o.paymentMethod === 'transferencia' && o.paymentStatus === 'awaiting_confirmation' && o.status !== 'cancelled').length;
+    }
+    if (k === 'delivered') {
+      return orders.filter(o => DELIVERED_STATUSES.includes(o.status)).length;
     }
     return orders.filter(o => o.status === k).length;
   };
