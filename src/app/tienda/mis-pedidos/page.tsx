@@ -238,7 +238,7 @@ export default function TiendaMisPedidosPage() {
                   <span>{order.payment_method === 'contra_entrega' ? '💵' : '🏦'}</span>
                   <span>{order.payment_method === 'contra_entrega' ? 'Contra entrega' : 'Transferencia bancaria'}</span>
                 </div>
-                {order.payment_method === 'transferencia' && order.status !== 'cancelled' && order.status !== 'preparing' && (
+                {order.payment_method === 'transferencia' && order.status !== 'cancelled' && !['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
                   <div style={{ display: 'flex', gap: 6, fontSize: '0.78rem', fontWeight: 700, color: order.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
                     <span>Estado del pago:</span>
                     <span>{order.payment_status === 'confirmed'

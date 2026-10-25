@@ -421,7 +421,7 @@ export default function PedidosPage() {
                                   </option>
                                 ))}
                               </select>
-                              {order.paymentMethod === 'transferencia' && order.paymentStatus === 'confirmed' && (
+                              {order.paymentMethod === 'transferencia' && order.paymentStatus === 'confirmed' && !['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
                                 <span className="vnd-badge vnd-badge-green">Pago confirmado</span>
                               )}
                             </div>
@@ -514,11 +514,13 @@ export default function PedidosPage() {
 
                                 {order.paymentMethod === 'transferencia' && (
                                   <div style={{ marginTop: 16 }}>
-                                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: paymentPending ? '#b45309' : '#15803d', margin: '0 0 8px' }}>
-                                      {paymentPending
-                                        ? order.paymentProofUrl ? 'Comprobante enviado para verificación' : 'Esperando comprobante del cliente'
-                                        : order.paymentStatus === 'confirmed' ? 'Pago confirmado' : 'Estado de pago no disponible'}
-                                    </p>
+                                    {!['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
+                                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: paymentPending ? '#b45309' : '#15803d', margin: '0 0 8px' }}>
+                                        {paymentPending
+                                          ? order.paymentProofUrl ? 'Comprobante enviado para verificación' : 'Esperando comprobante del cliente'
+                                          : order.paymentStatus === 'confirmed' ? 'Pago confirmado' : 'Estado de pago no disponible'}
+                                      </p>
+                                    )}
                                     <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
                                       Comprobante de pago
                                     </p>

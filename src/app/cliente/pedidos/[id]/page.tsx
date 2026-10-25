@@ -294,7 +294,7 @@ export default function PedidoDetallePage() {
                 <div style={{ fontSize: '0.84rem', color: 'var(--text-primary)' }}>
                   {order.payment_method === 'contra_entrega' ? '💵 Contra entrega' : '🏦 Transferencia bancaria'}
                 </div>
-                {order.payment_method === 'transferencia' && (
+                {order.payment_method === 'transferencia' && !['preparing', 'ready', 'in_transit', 'delivered'].includes(order.status) && (
                   <p style={{ margin: '6px 0 0', fontSize: '0.78rem', fontWeight: 700, color: order.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
                     {order.payment_status === 'confirmed'
                       ? 'Pago confirmado'
