@@ -93,7 +93,15 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
   const handleNotifClick = (n: AppNotification) => {
     if (!n.read) markRead([n.id]);
     setOpen(false);
-    const url = typeUrl[n.type];
+
+    const orderId = typeof n.data?.order_id === 'string' || typeof n.data?.order_id === 'number'
+      ? String(n.data.order_id)
+      : null;
+
+    const url = orderId
+      ? `/vendedor/pedidos?order_id=${encodeURIComponent(orderId)}`
+      : (typeUrl[n.type] ?? '/vendedor/pedidos');
+
     if (url) router.push(url);
   };
 

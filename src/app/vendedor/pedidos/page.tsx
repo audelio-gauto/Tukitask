@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
 
 /* ── Types ───────────────────────────────────────────────── */
@@ -150,6 +151,7 @@ const TABS: { key: TabKey; label: string }[] = [
 
 /* ══════════════════════════════════════════════════════════ */
 export default function PedidosPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab]   = useState<TabKey>('all');
   const [orders, setOrders]         = useState<MarketOrder[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -157,6 +159,14 @@ export default function PedidosPage() {
   const [expanded, setExpanded]     = useState<string | null>(null);
   const [search, setSearch]         = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const orderId = searchParams.get('order_id');
+    if (!orderId) return;
+
+    setExpanded(orderId);
+    setActiveTab('all');
+  }, [searchParams]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
