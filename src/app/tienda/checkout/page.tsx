@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -82,6 +82,7 @@ function CheckoutInner() {
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('contra_entrega');
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [showTransferStep, setShowTransferStep] = useState(false);
   const [notes,     setNotes]     = useState('');
   const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
   const [paymentProofMime,   setPaymentProofMime]   = useState<string | null>(null);
@@ -91,6 +92,13 @@ function CheckoutInner() {
   const [error,      setError]      = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [vendorDeliveryCities, setVendorDeliveryCities] = useState<VendorDeliveryCity[]>([]);
+  const transferStepRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showTransferStep) {
+      transferStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showTransferStep]);
 
   const availableDeliveryCities = vendorDeliveryCities.length > 0
     ? vendorDeliveryCities.map(item => item.city)
@@ -308,6 +316,15 @@ function CheckoutInner() {
     reader.readAsDataURL(file);
   }
 
+  function handlePaymentMethodChange(method: PaymentMethod) {
+    setPaymentMethod(method);
+    setShowTransferStep(false);
+    setPaymentProofBase64(null);
+    setPaymentProofMime(null);
+    setPaymentProofPreview(null);
+    setError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!items.length) { setError('No hay productos para comprar.'); return; }
@@ -339,6 +356,11 @@ function CheckoutInner() {
     }
     if (paymentMethod === 'transferencia' && !cityAvailability.transfer) {
       setError('La ciudad seleccionada no acepta transferencia bancaria. Elegí otra opción de pago.');
+      return;
+    }
+    if (paymentMethod === 'transferencia' && !showTransferStep) {
+      setError(null);
+      setShowTransferStep(true);
       return;
     }
     if (paymentMethod === 'transferencia' && !paymentProofBase64) {
@@ -510,7 +532,14 @@ function CheckoutInner() {
                   <select
                     className="tnd-checkout-input"
                     value={delivery.ciudad}
-                    onChange={e => setDelivery(d => ({ ...d, ciudad: e.target.value }))}
+                    onChange={e => {
+                      setDelivery(d => ({ ...d, ciudad: e.target.value }));
+                      setShowTransferStep(false);
+                      setPaymentProofBase64(null);
+                      setPaymentProofMime(null);
+                      setPaymentProofPreview(null);
+                      setError(null);
+                    }}
                     required
                   >
                     {availableDeliveryCities.map(c => <option key={c} value={c}>{c}</option>)}
@@ -588,7 +617,7 @@ function CheckoutInner() {
                     type="radio"
                     name="payment_method"
                     checked={paymentMethod === 'contra_entrega'}
-                    onChange={() => setPaymentMethod('contra_entrega')}
+                    onChange={() => handlePaymentMethodChange('contra_entrega')}
                     style={{ marginTop: 4 }}
                   />
                   <span>
@@ -609,7 +638,7 @@ function CheckoutInner() {
                       type="radio"
                       name="payment_method"
                       checked={paymentMethod === 'transferencia'}
-                      onChange={() => setPaymentMethod('transferencia')}
+                      onChange={() => handlePaymentMethodChange('transferencia')}
                       style={{ marginTop: 4 }}
                     />
                     <span>
@@ -622,8 +651,8 @@ function CheckoutInner() {
                   </label>
 
                   {/* Datos bancarios cuando se selecciona transferencia */}
-                  {paymentMethod === 'transferencia' && paymentInfo?.transfer?.bank_data && (
-                    <div style={{ marginTop: 12, padding: '14px 16px', background: 'var(--tnd-surface-2)', border: '1px solid var(--tnd-border)', borderRadius: 12 }}>
+                  {paymentMethod === 'transferencia' && showTransferStep && paymentInfo?.transfer?.bank_data && (
+                    <div ref={transferStepRef} style={{ marginTop: 12, padding: '14px 16px', background: 'var(--tnd-surface-2)', border: '1px solid var(--tnd-border)', borderRadius: 12 }}>
                       <p style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--tnd-text-primary)', marginBottom: 10 }}>
                         🏦 Datos para la transferencia
                       </p>
@@ -755,7 +784,9 @@ function CheckoutInner() {
                   </p>
                   <p style={{ margin:'4px 0 0', color:'var(--tnd-text-muted)', fontSize:'0.78rem', lineHeight:1.5 }}>
                     {paymentMethod === 'transferencia'
-                      ? 'Realizá la transferencia y subí el comprobante.'
+                      ? showTransferStep
+                        ? 'Realizá la transferencia y subí el comprobante.'
+                        : 'Al confirmar, verás los datos para transferir y cargar el comprobante.'
                       : 'Pagar al recibir el producto.'}
                   </p>
                 </div>
@@ -772,7 +803,11 @@ function CheckoutInner() {
                 disabled={submitting || !items.length || (!cashAllowedForCity && !transferAllowedForCity)}
                 style={{ width:'100%', height:50, background:'var(--tnd-accent)', color:'var(--tnd-accent-text)', border:'none', borderRadius:13, fontSize:'1rem', fontWeight:900, cursor:'pointer', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity: (submitting || !items.length) ? 0.6 : 1 }}
               >
-                {submitting ? '⏳ Procesando...' : '✅ Confirmar pedido'}
+                {submitting
+                  ? '⏳ Procesando...'
+                  : paymentMethod === 'transferencia' && !showTransferStep
+                    ? 'Continuar con transferencia'
+                    : '✅ Confirmar pedido'}
               </button>
 
               <p style={{ fontSize:'0.72rem', color:'var(--tnd-text-muted)', textAlign:'center', marginTop:10, lineHeight:1.5 }}>
