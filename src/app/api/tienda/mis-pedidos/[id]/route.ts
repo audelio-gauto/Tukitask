@@ -17,7 +17,7 @@ export async function GET(
   const db = sbAdmin();
   const { data: order, error } = await db
     .from('market_orders')
-    .select('id, status, vendor_email, vendor_id, client_name, client_email, items, total, shipping_price, address, payment_method, payment_proof_url, negotiated, notes, billing, delivery, created_at, updated_at, accepted_at, completed_at, cancelled_at')
+    .select('id, status, vendor_email, vendor_id, client_name, client_email, items, total, shipping_price, address, payment_method, payment_status, payment_proof_url, negotiated, notes, billing, delivery, created_at, updated_at, accepted_at, completed_at, cancelled_at')
     .eq('id', id)
     .maybeSingle();
 

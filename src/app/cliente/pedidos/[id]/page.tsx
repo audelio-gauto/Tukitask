@@ -17,6 +17,7 @@ interface OrderDetail {
   shipping_price?: number | null;
   address?: string | null;
   payment_method?: string | null;
+  payment_status?: 'not_required' | 'awaiting_confirmation' | 'confirmed';
   payment_proof_url?: string | null;
   negotiated?: boolean;
   notes?: string | null;
@@ -51,6 +52,15 @@ export default function PedidoDetallePage() {
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [ratingTarget, setRatingTarget] = useState<{ productId: string; name: string; image?: string | null } | null>(null);
   const [ratingSaved, setRatingSaved] = useState<Set<string>>(new Set());
+  const [now, setNow] = useState<number | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofError, setProofError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const load = useCallback(async () => {
     if (!orderId) return;
@@ -96,6 +106,59 @@ export default function PedidoDetallePage() {
 
   const fmtGs = (n: number | null | undefined) => `${Number(n || 0).toLocaleString('es-PY')} Gs`;
   const fmtDate = (s: string) => new Date(s).toLocaleDateString('es-PY', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatRemainingTime = (milliseconds: number) => {
+    const totalMinutes = Math.max(0, Math.ceil(milliseconds / 60_000));
+    return `${Math.floor(totalMinutes / 60)} h ${totalMinutes % 60} min`;
+  };
+  const proofDeadline = order ? new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000 : 0;
+  const remainingProofTime = now === null ? 24 * 60 * 60 * 1000 : proofDeadline - now;
+  const needsPaymentProof = Boolean(order
+    && order.payment_method === 'transferencia'
+    && order.payment_status === 'awaiting_confirmation'
+    && !order.payment_proof_url
+    && !['cancelled', 'preparing'].includes(order.status));
+
+  const handlePaymentProofUpload = async (file: File) => {
+    if (!order) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setProofError('Subí una imagen JPG, PNG o WEBP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setProofError('El comprobante no puede superar 2 MB.');
+      return;
+    }
+
+    setUploadingProof(true);
+    setProofError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se pudo leer la imagen.'));
+        reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+        reader.readAsDataURL(file);
+      });
+      const [header, base64] = dataUrl.split(',');
+      const mime = header.match(/^data:(.*);base64$/)?.[1] ?? file.type;
+      const response = await authFetch('/api/tienda/market-orders/payment-proof', {
+        method: 'POST',
+        body: JSON.stringify({
+          orderIds: [order.id],
+          payment_proof_base64: base64,
+          payment_proof_mime: mime,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? 'No se pudo enviar el comprobante.');
+      }
+      setOrder(current => current ? { ...current, payment_proof_url: result.payment_proof_url } : current);
+    } catch (uploadError) {
+      setProofError(uploadError instanceof Error ? uploadError.message : 'No se pudo enviar el comprobante.');
+    } finally {
+      setUploadingProof(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--surface-1)', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
@@ -231,6 +294,42 @@ export default function PedidoDetallePage() {
                 <div style={{ fontSize: '0.84rem', color: 'var(--text-primary)' }}>
                   {order.payment_method === 'contra_entrega' ? '💵 Contra entrega' : '🏦 Transferencia bancaria'}
                 </div>
+                {order.payment_method === 'transferencia' && (
+                  <p style={{ margin: '6px 0 0', fontSize: '0.78rem', fontWeight: 700, color: order.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
+                    {order.payment_status === 'confirmed'
+                      ? 'Pago confirmado'
+                      : order.payment_proof_url ? 'Comprobante en verificación' : 'Esperando comprobante'}
+                  </p>
+                )}
+                {needsPaymentProof && (
+                  <div style={{ marginTop: 12, padding: '12px 14px', border: '1px solid #f59e0b', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>
+                      {remainingProofTime > 0
+                        ? `Subí tu comprobante para recibir el pedido. Tiempo disponible: ${formatRemainingTime(remainingProofTime)}.`
+                        : 'El plazo para subir el comprobante venció. El pedido será cancelado automáticamente.'}
+                    </p>
+                    <p style={{ margin: '5px 0 10px', fontSize: '0.74rem', color: '#92400e', lineHeight: 1.45 }}>
+                      Si no lo enviás dentro de las 24 horas desde que generaste el pedido, se cancelará.
+                    </p>
+                    {remainingProofTime > 0 && (
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 8, background: '#F5C518', color: '#111827', fontSize: '0.78rem', fontWeight: 700, cursor: uploadingProof ? 'wait' : 'pointer', opacity: uploadingProof ? 0.65 : 1 }}>
+                        {uploadingProof ? 'Enviando comprobante...' : '📷 Subir comprobante'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={uploadingProof}
+                          onChange={event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (file) void handlePaymentProofUpload(file);
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    )}
+                    {proofError && <p role="alert" style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>{proofError}</p>}
+                  </div>
+                )}
                 {order.payment_proof_url && (
                   <a href={order.payment_proof_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 8 }}>
                     <img src={order.payment_proof_url} alt="Comprobante" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-subtle)' }} />

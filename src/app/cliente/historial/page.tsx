@@ -97,13 +97,6 @@ const SERVICE_ICONS: Record<string, React.ComponentProps<typeof Icon>['name']> =
   otros: 'settings',
 };
 
-function formatRemainingTime(milliseconds: number): string {
-  const totalMinutes = Math.max(0, Math.ceil(milliseconds / 60_000));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${hours} h ${minutes} min`;
-}
-
 function StarRating({ rating }: { rating: number }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -139,15 +132,6 @@ export default function ClienteHistorialPage() {
   const [orderStopsOpen, setOrderStopsOpen] = useState<Record<string, boolean>>({});
 
   const [refreshing, setRefreshing] = useState(false);
-  const [now, setNow] = useState<number | null>(null);
-  const [uploadingProofId, setUploadingProofId] = useState<string | null>(null);
-  const [proofErrors, setProofErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    setNow(Date.now());
-    const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   const loadHistory = useCallback(async () => {
     if (!email) return;
@@ -180,52 +164,6 @@ export default function ClienteHistorialPage() {
   }, [email]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
-
-  const uploadMarketOrderProof = async (order: MarketOrder, file: File) => {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setProofErrors(prev => ({ ...prev, [order.id]: 'Subí una imagen JPG, PNG o WEBP.' }));
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setProofErrors(prev => ({ ...prev, [order.id]: 'El comprobante no puede superar 2 MB.' }));
-      return;
-    }
-
-    setUploadingProofId(order.id);
-    setProofErrors(prev => ({ ...prev, [order.id]: '' }));
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('No se pudo leer la imagen.'));
-        reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
-        reader.readAsDataURL(file);
-      });
-      const [header, base64] = dataUrl.split(',');
-      const mime = header.match(/^data:(.*);base64$/)?.[1] ?? file.type;
-      const response = await authFetch('/api/tienda/market-orders/payment-proof', {
-        method: 'POST',
-        body: JSON.stringify({
-          orderIds: [order.id],
-          payment_proof_base64: base64,
-          payment_proof_mime: mime,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.error ?? 'No se pudo enviar el comprobante.');
-      }
-      setMarketOrders(prev => prev.map(item => item.id === order.id
-        ? { ...item, payment_proof_url: result.payment_proof_url }
-        : item));
-    } catch (uploadError) {
-      setProofErrors(prev => ({
-        ...prev,
-        [order.id]: uploadError instanceof Error ? uploadError.message : 'No se pudo enviar el comprobante.',
-      }));
-    } finally {
-      setUploadingProofId(null);
-    }
-  };
 
   // Load favourites
   useEffect(() => {
@@ -466,14 +404,8 @@ export default function ClienteHistorialPage() {
                       const shippingPrice = Number(mo.shipping_price ?? 0) || 0;
                       const storeName = mo.store_name || mo.vendor_email.split('@')[0] || 'Tienda';
                       const addressLine = [mo.delivery?.barrio, mo.delivery?.ciudad].filter(Boolean).join(', ') || mo.address || null;
-                      const transferPending = mo.payment_method === 'transferencia'
-                        && mo.payment_status === 'awaiting_confirmation'
-                        && mo.status !== 'cancelled';
-                      const proofDeadline = new Date(mo.created_at).getTime() + 24 * 60 * 60 * 1000;
-                      const remainingTime = now === null ? 24 * 60 * 60 * 1000 : proofDeadline - now;
-                      const needsProof = transferPending && !mo.payment_proof_url && mo.status !== 'preparing';
                       return (
-                        <div key={mo.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div key={mo.id}>
                           <Link href={`/cliente/pedidos/${mo.id}`} className="tuki-card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
                             <div className="tuki-card-body">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -544,37 +476,6 @@ export default function ClienteHistorialPage() {
                             </div>
                             </div>
                           </Link>
-                          {needsProof && (
-                            <div style={{ padding: '12px 14px', border: '1px solid #f59e0b', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)' }}>
-                              <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>
-                                {remainingTime > 0
-                                  ? `Subí tu comprobante para recibir el pedido. Tiempo disponible: ${formatRemainingTime(remainingTime)}.`
-                                  : 'El plazo para subir el comprobante venció. El pedido será cancelado automáticamente.'}
-                              </p>
-                              <p style={{ margin: '5px 0 10px', fontSize: '0.74rem', color: '#92400e', lineHeight: 1.45 }}>
-                                Si no lo enviás dentro de las 24 horas desde que generaste el pedido, se cancelará.
-                              </p>
-                              {remainingTime > 0 && (
-                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 8, background: '#F5C518', color: '#111827', fontSize: '0.78rem', fontWeight: 700, cursor: uploadingProofId === mo.id ? 'wait' : 'pointer', opacity: uploadingProofId === mo.id ? 0.65 : 1 }}>
-                                  {uploadingProofId === mo.id ? 'Enviando comprobante...' : '📷 Subir comprobante'}
-                                  <input
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    disabled={uploadingProofId === mo.id}
-                                    onChange={event => {
-                                      const file = event.target.files?.[0];
-                                      event.target.value = '';
-                                      if (file) void uploadMarketOrderProof(mo, file);
-                                    }}
-                                    style={{ display: 'none' }}
-                                  />
-                                </label>
-                              )}
-                              {proofErrors[mo.id] && (
-                                <p role="alert" style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>{proofErrors[mo.id]}</p>
-                              )}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
