@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   if (role === 'buyer') {
     let q = db
       .from('market_orders')
-      .select('id, items, total, shipping_price, status, address, billing, delivery, payment_method, created_at, updated_at, vendor_email, vendor_id')
+      .select('id, items, total, shipping_price, status, address, billing, delivery, payment_method, payment_status, created_at, updated_at, vendor_email, vendor_id')
       .eq('client_email', user.email)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   } else {
     let q = db
       .from('market_orders')
-      .select('id, client_name, client_email, items, total, status, address, billing, delivery, negotiated, payment_method, payment_proof_url, created_at, updated_at')
+      .select('id, client_name, client_email, items, total, status, address, billing, delivery, negotiated, payment_method, payment_status, payment_proof_url, created_at, updated_at')
       .eq('vendor_email', user.email)
       .order('created_at', { ascending: false })
       .limit(limit);

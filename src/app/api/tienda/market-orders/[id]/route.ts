@@ -12,11 +12,18 @@ export async function PATCH(
   if (!user) return unauthorized();
 
   const { id } = await params;
-  const body = await req.json();
-  const { status } = body as { status: string };
+  let body: { status?: string; payment_action?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+  }
+  const status = typeof body.status === 'string' ? body.status : '';
+  const paymentAction = body.payment_action;
+  const confirmingTransfer = paymentAction === 'confirm_transfer';
 
   const ALLOWED_STATUSES = ['preparing', 'ready', 'in_transit', 'delivered', 'cancelled'];
-  if (!status || !ALLOWED_STATUSES.includes(status)) {
+  if ((paymentAction && !confirmingTransfer) || (confirmingTransfer && status) || (!confirmingTransfer && (!status || !ALLOWED_STATUSES.includes(status)))) {
     return NextResponse.json({ error: 'Estado inválido' }, { status: 400 });
   }
 
@@ -25,13 +32,57 @@ export async function PATCH(
   // Verify order belongs to this vendor
   const { data: order, error: fetchErr } = await db
     .from('market_orders')
-    .select('id, vendor_email, client_email, client_name, total, status, items')
+    .select('id, vendor_email, client_email, client_name, total, status, items, payment_method, payment_status, payment_proof_url')
     .eq('id', id)
     .eq('vendor_email', user.email)
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
   if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
+
+  if (confirmingTransfer) {
+    if (order.payment_method !== 'transferencia') {
+      return NextResponse.json({ error: 'Este pedido no requiere confirmación de transferencia' }, { status: 409 });
+    }
+    if (order.payment_status !== 'awaiting_confirmation' || !order.payment_proof_url || order.status === 'cancelled') {
+      return NextResponse.json({ error: 'El pago ya no está pendiente o falta el comprobante' }, { status: 409 });
+    }
+
+    const confirmedAt = new Date().toISOString();
+    const { data: confirmedOrder, error: confirmError } = await db
+      .from('market_orders')
+      .update({
+        payment_status: 'confirmed',
+        payment_confirmed_at: confirmedAt,
+        payment_confirmed_by: user.email,
+        updated_at: confirmedAt,
+      })
+      .eq('id', id)
+      .eq('vendor_email', user.email)
+      .eq('payment_status', 'awaiting_confirmation')
+      .select('id')
+      .maybeSingle();
+
+    if (confirmError) return NextResponse.json({ error: confirmError.message }, { status: 500 });
+    if (!confirmedOrder) return NextResponse.json({ error: 'El pago ya fue confirmado por otro proceso' }, { status: 409 });
+
+    if (order.client_email) {
+      emitNotification(
+        order.client_email,
+        'status_change',
+        '✅ Transferencia confirmada',
+        `El vendedor confirmó el pago de tu pedido #${String(id).slice(0, 8).toUpperCase()}.`,
+        { order_id: id, payment_status: 'confirmed' },
+        { groupKey: `market_order_payment_confirmed_${id}` },
+      );
+    }
+
+    return NextResponse.json({ success: true, payment_status: 'confirmed', payment_confirmed_at: confirmedAt });
+  }
+
+  if (order.payment_method === 'transferencia' && order.payment_status !== 'confirmed' && status !== 'cancelled') {
+    return NextResponse.json({ error: 'Confirma primero el pago por transferencia antes de preparar el pedido' }, { status: 409 });
+  }
 
   // Cannot modify a completed or already commission-charged order
   if (['commission_charged', 'cancelled'].includes(order.status)) {

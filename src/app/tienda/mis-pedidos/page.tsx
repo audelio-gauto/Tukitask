@@ -27,6 +27,7 @@ type MarketOrder = {
   shipping_price?: number | null;
   status: string;
   payment_method: string;
+  payment_status?: 'not_required' | 'awaiting_confirmation' | 'confirmed';
   address?: string | null;
   delivery?: MarketOrderDelivery | null;
   created_at: string;
@@ -140,7 +141,11 @@ export default function TiendaMisPedidosPage() {
       {/* ── Orders list ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {orders.map(order => {
-          const s    = STATUS_MAP[order.status] ?? { label: order.status, color: '#64748b' };
+          const paymentPending = order.payment_method === 'transferencia' &&
+            order.payment_status === 'awaiting_confirmation' && order.status !== 'cancelled';
+          const s = paymentPending
+            ? { label: 'Confirmando el pago', color: '#b45309' }
+            : STATUS_MAP[order.status] ?? { label: order.status, color: '#64748b' };
           const date = new Date(order.created_at).toLocaleDateString('es-PY', {
             day: '2-digit', month: 'short', year: 'numeric',
           });
@@ -232,6 +237,12 @@ export default function TiendaMisPedidosPage() {
                   <span>{order.payment_method === 'contra_entrega' ? '💵' : '🏦'}</span>
                   <span>{order.payment_method === 'contra_entrega' ? 'Contra entrega' : 'Transferencia bancaria'}</span>
                 </div>
+                {order.payment_method === 'transferencia' && order.status !== 'cancelled' && (
+                  <div style={{ display: 'flex', gap: 6, fontSize: '0.78rem', fontWeight: 700, color: order.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
+                    <span>Estado del pago:</span>
+                    <span>{order.payment_status === 'confirmed' ? 'Pago confirmado' : 'Confirmando el pago'}</span>
+                  </div>
+                )}
               </div>
 
               {/* Totals */}

@@ -22,6 +22,7 @@ interface MarketOrder {
   referencia?: string;
   negotiated: boolean;
   paymentMethod?: string;
+  paymentStatus?: 'not_required' | 'awaiting_confirmation' | 'confirmed';
   paymentProofUrl?: string | null;
 }
 
@@ -81,6 +82,7 @@ function toMarketOrder(raw: Record<string, unknown>): MarketOrder {
     referencia: delivery.referencia ? String(delivery.referencia) : undefined,
     negotiated: Boolean(raw.negotiated),
     paymentMethod: raw.payment_method ? String(raw.payment_method) : undefined,
+    paymentStatus: raw.payment_status as MarketOrder['paymentStatus'],
     paymentProofUrl: (raw.payment_proof_url as string | null) ?? null,
   };
 }
@@ -185,6 +187,14 @@ export default function PedidosPage() {
   const countOf = (k: TabKey) =>
     k === 'all' ? orders.length : orders.filter(o => o.status === k).length;
 
+  function getSelectableStatuses(order: MarketOrder): OrderStatus[] {
+    if (order.status === 'cancelled') return ['cancelled'];
+    if (order.paymentMethod === 'transferencia' && order.paymentStatus === 'awaiting_confirmation') {
+      return ['cancelled'];
+    }
+    return NEXT_STATUS[order.status] ?? [];
+  }
+
   async function changeStatus(id: string, newStatus: OrderStatus) {
     setBusyId(id);
     try {
@@ -196,6 +206,24 @@ export default function PedidosPage() {
       if (!res.ok) { alert(data.error || 'Error al actualizar pedido'); return; }
       const finalStatus: OrderStatus = data.status ?? newStatus;
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status: finalStatus } : o));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function confirmTransfer(id: string) {
+    if (!window.confirm('¿Confirmas que recibiste el pago por transferencia?')) return;
+    setBusyId(id);
+    try {
+      const res = await authFetch(`/api/tienda/market-orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ payment_action: 'confirm_transfer' }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'No se pudo confirmar el pago'); return; }
+      setOrders(prev => prev.map(order => order.id === id
+        ? { ...order, paymentStatus: 'confirmed' }
+        : order));
     } finally {
       setBusyId(null);
     }
@@ -276,13 +304,16 @@ export default function PedidosPage() {
                   <th style={{ textAlign: 'right' }}>Total</th>
                   <th>Estado</th>
                   <th>Driver Asignado</th>
-                  <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(order => {
                   const cfg     = S[order.status];
-                  const nexts   = NEXT_STATUS[order.status] ?? [];
+                  const paymentPending = order.paymentMethod === 'transferencia' &&
+                    order.paymentStatus === 'awaiting_confirmation' && order.status !== 'cancelled';
+                  const nexts   = paymentPending
+                    ? (NEXT_STATUS[order.status] ?? []).filter(next => next === 'cancelled')
+                    : NEXT_STATUS[order.status] ?? [];
                   const isOpen  = expanded === order.id;
 
                   return (
@@ -340,10 +371,51 @@ export default function PedidosPage() {
 
                         {/* Status */}
                         <td onClick={e => e.stopPropagation()}>
-                          <span className={`vnd-badge ${cfg.cls}`}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, flexShrink: 0 }} />
-                            {cfg.label}
-                          </span>
+                          {paymentPending || nexts.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+                              <select
+                                aria-label={`Cambiar estado del pedido ${order.number}`}
+                                className="vnd-btn vnd-btn-sm"
+                                value={paymentPending ? 'awaiting_confirmation' : order.status}
+                                disabled={busyId === order.id}
+                                onChange={event => {
+                                  const selected = event.target.value;
+                                  if (selected === 'confirm_transfer') void confirmTransfer(order.id);
+                                  else if (nexts.includes(selected as OrderStatus)) handleStatusClick(order.id, selected as OrderStatus);
+                                }}
+                                style={{
+                                  maxWidth: 190,
+                                  background: paymentPending ? 'var(--vnd-warning-bg)' : cfg.bg,
+                                  color: paymentPending ? 'var(--vnd-warning)' : 'var(--vnd-text-primary)',
+                                  border: '1px solid var(--vnd-border)',
+                                  opacity: busyId === order.id ? 0.6 : 1,
+                                  cursor: busyId === order.id ? 'wait' : 'pointer',
+                                }}
+                              >
+                                <option value={paymentPending ? 'awaiting_confirmation' : order.status}>
+                                  {paymentPending ? 'Confirmando el pago' : cfg.label}
+                                </option>
+                                {paymentPending && <option value="confirm_transfer">Confirmar pago</option>}
+                                {nexts.map(next => (
+                                  <option key={next} value={next}>
+                                    {next === 'preparing' ? 'Preparando'
+                                      : next === 'ready' ? 'Listo'
+                                      : next === 'in_transit' ? 'En camino'
+                                      : next === 'delivered' ? 'Entregado'
+                                      : 'Cancelar pedido'}
+                                  </option>
+                                ))}
+                              </select>
+                              {order.paymentMethod === 'transferencia' && order.paymentStatus === 'confirmed' && (
+                                <span className="vnd-badge vnd-badge-green">Pago confirmado</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className={`vnd-badge ${cfg.cls}`}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, flexShrink: 0 }} />
+                              {cfg.label}
+                            </span>
+                          )}
                         </td>
 
                         {/* Driver */}
@@ -363,40 +435,12 @@ export default function PedidosPage() {
                           )}
                         </td>
 
-                        {/* Actions */}
-                        <td onClick={e => e.stopPropagation()}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {nexts.map(next => (
-                              <button
-                                key={next}
-                                className="vnd-btn vnd-btn-sm"
-                                disabled={busyId === order.id}
-                                style={{
-                                  background: next === 'cancelled' ? 'var(--vnd-danger-bg)' : next === 'delivered' ? 'rgba(34,197,94,0.18)' : '#F5C518',
-                                  color:      next === 'cancelled' ? 'var(--vnd-danger)' : next === 'delivered' ? '#4ade80' : '#0b1220',
-                                  border:     next === 'cancelled' ? '1px solid transparent' : 'none',
-                                  opacity: busyId === order.id ? 0.6 : 1,
-                                }}
-                                onClick={() => handleStatusClick(order.id, next)}
-                              >
-                                {next === 'preparing'  && '▶ Preparar'}
-                                {next === 'ready'      && '✓ Listo'}
-                                {next === 'in_transit' && '🚗 Despachar'}
-                                {next === 'delivered'  && '✅ Marcar entregado'}
-                                {next === 'cancelled'  && '✕ Cancelar'}
-                              </button>
-                            ))}
-                            {nexts.length === 0 && (
-                              <span style={{ fontSize: '0.72rem', color: 'var(--vnd-text-muted)' }}>—</span>
-                            )}
-                          </div>
-                        </td>
                       </tr>
 
                       {/* Expanded detail row */}
                       {isOpen && (
                         <tr key={`${order.id}-detail`}>
-                          <td colSpan={8} style={{ padding: 0, background: 'var(--vnd-surface-2)' }}>
+                          <td colSpan={7} style={{ padding: 0, background: 'var(--vnd-surface-2)' }}>
                             <div style={{ padding: '16px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                               {/* Items list */}
                               <div>
@@ -455,6 +499,9 @@ export default function PedidosPage() {
 
                                 {order.paymentMethod === 'transferencia' && (
                                   <div style={{ marginTop: 16 }}>
+                                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: paymentPending ? '#b45309' : '#15803d', margin: '0 0 8px' }}>
+                                      {paymentPending ? 'Confirmando pago' : order.paymentStatus === 'confirmed' ? 'Pago confirmado' : 'Estado de pago no disponible'}
+                                    </p>
                                     <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
                                       Comprobante de pago
                                     </p>
