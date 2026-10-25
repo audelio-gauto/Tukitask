@@ -156,6 +156,9 @@ export default function PedidosPage() {
   const [orders, setOrders]         = useState<MarketOrder[]>([]);
   const [loading, setLoading]       = useState(true);
   const [busyId, setBusyId]         = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy]     = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<OrderStatus | ''>('');
   const [expanded, setExpanded]     = useState<string | null>(null);
   const [search, setSearch]         = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -201,6 +204,26 @@ export default function PedidosPage() {
       );
     });
 
+  const selectedOrders = orders.filter(order => selectedIds.includes(order.id));
+  const bulkOptions = Array.from(new Set(selectedOrders.flatMap(order => getSelectableStatuses(order))));
+  const allVisibleSelected = filtered.length > 0 && filtered.every(order => selectedIds.includes(order.id));
+  const someVisibleSelected = filtered.some(order => selectedIds.includes(order.id));
+
+  function toggleOrderSelection(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  }
+
+  function toggleSelectVisible() {
+    setSelectedIds(prev => {
+      const visibleIds = filtered.map(order => order.id);
+      const containsAll = visibleIds.every(id => prev.includes(id));
+      if (containsAll) {
+        return prev.filter(id => !visibleIds.includes(id));
+      }
+      return Array.from(new Set([...prev, ...visibleIds]));
+    });
+  }
+
   const countOf = (k: TabKey) => {
     if (k === 'all') return orders.length;
     if (k === 'awaiting_confirmation') {
@@ -230,6 +253,53 @@ export default function PedidosPage() {
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status: finalStatus } : o));
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function applyBulkStatus() {
+    if (!bulkStatus || selectedIds.length === 0) return;
+    if (bulkStatus === 'cancelled' && !window.confirm('¿Seguro que deseas cancelar los pedidos seleccionados?')) return;
+    if (bulkStatus === 'delivered' && !window.confirm('¿Confirmas que los pedidos seleccionados fueron entregados?')) return;
+
+    setBulkBusy(true);
+    try {
+      const results = await Promise.allSettled(selectedIds.map(async (id) => {
+        const current = orders.find(order => order.id === id);
+        if (!current) return null;
+        if (current.status === 'cancelled') return null;
+
+        const res = await authFetch(`/api/tienda/market-orders/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: bulkStatus }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'No se pudo actualizar el pedido');
+        }
+        return { id, status: (data.status ?? bulkStatus) as OrderStatus };
+      }));
+
+      const updated = results
+        .filter((result): result is PromiseFulfilledResult<{ id: string; status: OrderStatus } | null> => result.status === 'fulfilled' && result.value !== null)
+        .map(result => result.value as { id: string; status: OrderStatus });
+
+      if (updated.length > 0) {
+        setOrders(prev => prev.map(order => {
+          const match = updated.find(item => item.id === order.id);
+          return match ? { ...order, status: match.status } : order;
+        }));
+      }
+
+      if (results.some(result => result.status === 'rejected')) {
+        const failed = results.filter(result => result.status === 'rejected');
+        const message = failed[0]?.reason && typeof failed[0].reason === 'object' && 'message' in failed[0].reason ? String(failed[0].reason.message) : 'No se pudo actualizar uno o más pedidos';
+        alert(message);
+      }
+
+      setSelectedIds([]);
+      setBulkStatus('');
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -301,6 +371,46 @@ export default function PedidosPage() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap', padding: 12, borderRadius: 12, background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.28)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, color: 'var(--vnd-text-primary)' }}>{selectedIds.length} seleccionados</span>
+            <button
+              className="vnd-btn vnd-btn-secondary vnd-btn-sm"
+              onClick={toggleSelectVisible}
+              style={{ opacity: filtered.length === 0 ? 0.5 : 1 }}
+              disabled={filtered.length === 0}
+            >
+              {allVisibleSelected ? 'Quitar visibles' : 'Seleccionar visibles'}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <select
+              value={bulkStatus}
+              onChange={event => setBulkStatus(event.target.value as OrderStatus | '')}
+              className="vnd-btn vnd-btn-sm"
+              style={{ background: 'var(--vnd-surface-2)', color: 'var(--vnd-text-primary)', border: '1px solid var(--vnd-border)', minWidth: 170 }}
+              disabled={bulkBusy || bulkOptions.length === 0}
+            >
+              <option value="">Cambiar estado</option>
+              {bulkOptions.map(option => (
+                <option key={option} value={option}>
+                  {option === 'preparing' ? 'Preparando' : option === 'ready' ? 'Listo' : option === 'in_transit' ? 'En camino' : option === 'delivered' ? 'Entregado' : 'Cancelar pedido'}
+                </option>
+              ))}
+            </select>
+            <button
+              className="vnd-btn vnd-btn-primary vnd-btn-sm"
+              onClick={() => void applyBulkStatus()}
+              disabled={bulkBusy || !bulkStatus || bulkOptions.length === 0}
+            >
+              {bulkBusy ? 'Aplicando...' : 'Aplicar'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="vnd-card">
         {loading ? (
@@ -319,7 +429,16 @@ export default function PedidosPage() {
             <table className="vnd-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: 22 }}>Pedido</th>
+                  <th style={{ width: 36, paddingLeft: 16 }}>
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && allVisibleSelected}
+                      onChange={toggleSelectVisible}
+                      aria-label="Seleccionar todos los pedidos visibles"
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                  </th>
+                  <th style={{ paddingLeft: 8 }}>Pedido</th>
                   <th>Fecha</th>
                   <th>Cliente</th>
                   <th>Artículos</th>
@@ -338,14 +457,25 @@ export default function PedidosPage() {
                     ? (NEXT_STATUS[order.status] ?? []).filter(next => next === 'cancelled')
                     : NEXT_STATUS[order.status] ?? [];
                   const isOpen  = expanded === order.id;
+                  const isSelected = selectedIds.includes(order.id);
 
                   return (
                     <>
                       <tr key={order.id} style={{ cursor: 'pointer' }}
                         onClick={() => setExpanded(isOpen ? null : order.id)}>
 
+                        <td style={{ width: 36, paddingLeft: 16 }} onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOrderSelection(order.id)}
+                            aria-label={`Seleccionar pedido ${order.number}`}
+                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                          />
+                        </td>
+
                         {/* Number */}
-                        <td style={{ paddingLeft: 22 }}>
+                        <td style={{ paddingLeft: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
                               style={{ color: 'var(--vnd-text-muted)', flexShrink: 0,
@@ -465,7 +595,7 @@ export default function PedidosPage() {
                       {/* Expanded detail row */}
                       {isOpen && (
                         <tr key={`${order.id}-detail`}>
-                          <td colSpan={7} style={{ padding: 0, background: 'var(--vnd-surface-2)' }}>
+                          <td colSpan={8} style={{ padding: 0, background: 'var(--vnd-surface-2)' }}>
                             <div style={{ padding: '16px 22px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                               {/* Items list */}
                               <div>
