@@ -358,11 +358,6 @@ function CheckoutInner() {
       setError('La ciudad seleccionada no acepta transferencia bancaria. Elegí otra opción de pago.');
       return;
     }
-    if (paymentMethod === 'transferencia' && !showTransferStep) {
-      setError(null);
-      setShowTransferStep(true);
-      return;
-    }
     if (paymentMethod === 'transferencia' && !paymentProofBase64) {
       setError('Adjuntá el comprobante de pago para continuar.');
       return;
@@ -611,12 +606,13 @@ function CheckoutInner() {
               <h2 className="tnd-checkout-section-title">Método de pago</h2>
 
               {/* Contra entrega */}
-              {cashAllowedForCity && (
+              {
                 <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12, marginBottom: transferAllowedForCity ? 12 : 0 }}>
                   <input
                     type="radio"
                     name="payment_method"
                     checked={paymentMethod === 'contra_entrega'}
+                    disabled={!cashAllowedForCity}
                     onChange={() => handlePaymentMethodChange('contra_entrega')}
                     style={{ marginTop: 4 }}
                   />
@@ -624,20 +620,21 @@ function CheckoutInner() {
                     <strong>Contra entrega</strong>
                     <br />
                     <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
-                      Pagás cuando recibís el producto.
+                      {cashAllowedForCity ? 'Pagás cuando recibís el producto.' : 'No disponible en esta ciudad.'}
                     </span>
                   </span>
                 </label>
-              )}
+              }
 
               {/* Transferencia — solo si hay datos bancarios disponibles */}
-              {transferAllowedForCity && (
+              {
                 <>
                   <label className="tnd-checkout-checkbox-row" style={{ alignItems:'flex-start', gap:12 }}>
                     <input
                       type="radio"
                       name="payment_method"
                       checked={paymentMethod === 'transferencia'}
+                      disabled={!transferAllowedForCity}
                       onChange={() => handlePaymentMethodChange('transferencia')}
                       style={{ marginTop: 4 }}
                     />
@@ -645,7 +642,9 @@ function CheckoutInner() {
                       <strong>Transferencia bancaria</strong>
                       <br />
                       <span style={{ color:'var(--tnd-text-muted)', fontSize:'0.78rem' }}>
-                        <strong>En esta ciudad, el pedido se procesa con pago anticipado para recibir tu producto.</strong>
+                        {transferAllowedForCity
+                          ? <strong>En esta ciudad, el pedido se procesa con pago anticipado para recibir tu producto.</strong>
+                          : 'No disponible en esta ciudad.'}
                       </span>
                     </span>
                   </label>
@@ -699,9 +698,9 @@ function CheckoutInner() {
                     </div>
                   )}
                 </>
-              )}
+              }
 
-              {!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available && (
+              {!cashAllowedForCity && !transferAllowedForCity && (
                 <div style={{ marginTop: 4, padding: '12px 14px', borderRadius: 12, background: 'var(--tnd-danger-bg)', border: '1px solid var(--tnd-danger)' }}>
                   <p style={{ margin: 0, color: 'var(--tnd-danger)', fontSize: '0.8rem', lineHeight: 1.5 }}>
                     No hay métodos de pago disponibles para este pedido en este momento.
@@ -799,15 +798,19 @@ function CheckoutInner() {
               )}
 
               <button
-                type="submit"
+                type={paymentMethod === 'transferencia' && !showTransferStep ? 'button' : 'submit'}
+                onClick={paymentMethod === 'transferencia' && !showTransferStep
+                  ? () => {
+                      setError(null);
+                      setShowTransferStep(true);
+                    }
+                  : undefined}
                 disabled={submitting || !items.length || (!cashAllowedForCity && !transferAllowedForCity)}
                 style={{ width:'100%', height:50, background:'var(--tnd-accent)', color:'var(--tnd-accent-text)', border:'none', borderRadius:13, fontSize:'1rem', fontWeight:900, cursor:'pointer', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity: (submitting || !items.length) ? 0.6 : 1 }}
               >
                 {submitting
                   ? '⏳ Procesando...'
-                  : paymentMethod === 'transferencia' && !showTransferStep
-                    ? 'Continuar con transferencia'
-                    : '✅ Confirmar pedido'}
+                  : '✅ Confirmar pedido'}
               </button>
 
               <p style={{ fontSize:'0.72rem', color:'var(--tnd-text-muted)', textAlign:'center', marginTop:10, lineHeight:1.5 }}>
