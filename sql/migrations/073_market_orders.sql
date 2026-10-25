@@ -46,11 +46,11 @@ ALTER TABLE market_orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "market_orders vendor select" ON market_orders;
 CREATE POLICY "market_orders vendor select"
   ON market_orders FOR SELECT TO authenticated
-  USING (vendor_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+  USING (vendor_email = (auth.jwt() ->> 'email'));
 
 DROP POLICY IF EXISTS "market_orders client select" ON market_orders;
 CREATE POLICY "market_orders client select"
   ON market_orders FOR SELECT TO authenticated
-  USING (client_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+  USING (client_email = (auth.jwt() ->> 'email'));
 
 COMMENT ON TABLE market_orders IS 'Vendor-to-client marketplace purchase orders';

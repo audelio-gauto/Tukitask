@@ -10,7 +10,7 @@ ALTER TABLE market_orders
 DROP POLICY IF EXISTS "market_orders client insert" ON market_orders;
 CREATE POLICY "market_orders client insert"
   ON market_orders FOR INSERT TO authenticated
-  WITH CHECK (client_email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+  WITH CHECK (client_email = (auth.jwt() ->> 'email'));
 
 COMMENT ON COLUMN market_orders.billing  IS 'JSON: { name, email, phone, cedula, wants_invoice }';
 COMMENT ON COLUMN market_orders.delivery IS 'JSON: { ciudad, barrio, referencia, nombre, lat, lng }';
