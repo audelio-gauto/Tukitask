@@ -135,18 +135,48 @@ function getWeekdayDataRows(rows: Array<{ created_at?: string | null; total?: nu
   return weekData;
 }
 
-function buildVendorMatchFilter(user: { id?: string | null; email?: string | null }) {
-  const userId = user.id ? String(user.id) : '';
-  const userEmail = user.email ? String(user.email).trim() : '';
+async function fetchVendorRows<T>(
+  table: 'products' | 'market_orders' | 'tukibot_negotiations',
+  select: string,
+  user: { id?: string | null; email?: string | null },
+  opts?: { orderBy?: { column: string; ascending?: boolean }; limit?: number; extra?: string },
+): Promise<T[]> {
+  const vendorId = user.id ? String(user.id) : '';
+  const vendorEmail = user.email ? String(user.email).trim() : '';
 
-  if (userId && userEmail) {
-    return `vendor_id.eq.${userId},vendor_email.eq.${userEmail}`;
+  const runQuery = async (field: 'vendor_id' | 'vendor_email') => {
+    let query = supabase.from(table).select(select);
+
+    if (field === 'vendor_id' && vendorId) query = query.eq('vendor_id', vendorId);
+    if (field === 'vendor_email' && vendorEmail) query = query.eq('vendor_email', vendorEmail);
+
+    if (opts?.orderBy) {
+      query = query.order(opts.orderBy.column, { ascending: opts.orderBy.ascending ?? false });
+    }
+    if (opts?.limit) {
+      query = query.limit(opts.limit);
+    }
+    if (opts?.extra) {
+      query = query.gt('expires_at', new Date().toISOString());
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn(`Vendor dashboard query failed for ${table} on ${field}:`, error.message);
+      return [] as T[];
+    }
+    return (data ?? []) as T[];
+  };
+
+  const primary = vendorId ? await runQuery('vendor_id') : [];
+  if (primary.length > 0) return primary;
+
+  if (vendorEmail) {
+    const fallback = await runQuery('vendor_email');
+    if (fallback.length > 0) return fallback;
   }
 
-  if (userId) return `vendor_id.eq.${userId}`;
-  if (userEmail) return `vendor_email.eq.${userEmail}`;
-
-  return '';
+  return [];
 }
 
 export default function VendedorDashboard() {
@@ -178,51 +208,26 @@ export default function VendedorDashboard() {
       }
 
       try {
-        const vendorMatch = buildVendorMatchFilter(user);
-
-        const [productsRes, recentOrdersRes, allOrdersRes, negRes] = await Promise.all([
-          vendorMatch
-            ? supabase
-                .from('products')
-                .select('id, status, vendor_id, vendor_email')
-                .or(vendorMatch)
-            : supabase
-                .from('products')
-                .select('id, status, vendor_id, vendor_email')
-                .eq('vendor_id', user.id),
-          vendorMatch
-            ? supabase
-                .from('market_orders')
-                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
-                .or(vendorMatch)
-                .order('created_at', { ascending: false })
-                .limit(5)
-            : supabase
-                .from('market_orders')
-                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
-                .eq('vendor_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(5),
-          vendorMatch
-            ? supabase
-                .from('market_orders')
-                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
-                .or(vendorMatch)
-            : supabase
-                .from('market_orders')
-                .select('id, total, status, client_name, items, created_at, vendor_id, vendor_email')
-                .eq('vendor_id', user.id),
-          supabase
-            .from('tukibot_negotiations')
-            .select('id, status, vendor_id, vendor_email, expires_at')
-            .or(vendorMatch || `vendor_id.eq.${user.id}`)
-            .gt('expires_at', new Date().toISOString())
+        const [productRows, recentOrderRows, allOrderRows, negRows] = await Promise.all([
+          fetchVendorRows<{ status?: string | null }>('products', 'id, status, vendor_id, vendor_email', user),
+          fetchVendorRows<{ id: string; total?: number | null; status?: string | null; client_name?: string | null; items?: number | null; created_at?: string | null }>(
+            'market_orders',
+            'id, total, status, client_name, items, created_at, vendor_id, vendor_email',
+            user,
+            { orderBy: { column: 'created_at', ascending: false }, limit: 5 },
+          ),
+          fetchVendorRows<{ id: string; total?: number | null; status?: string | null; client_name?: string | null; items?: number | null; created_at?: string | null }>(
+            'market_orders',
+            'id, total, status, client_name, items, created_at, vendor_id, vendor_email',
+            user,
+          ),
+          fetchVendorRows<{ id: string; status?: string | null; vendor_id?: string | null; vendor_email?: string | null; expires_at?: string | null }>(
+            'tukibot_negotiations',
+            'id, status, vendor_id, vendor_email, expires_at',
+            user,
+            { extra: 'expires_at' },
+          ),
         ]);
-
-        const productRows = productsRes.data ?? [];
-        const recentOrderRows = recentOrdersRes.data ?? [];
-        const allOrderRows = allOrdersRes.data ?? [];
-        const negRows = negRes.data ?? [];
 
         const salesTotal = (allOrderRows as Array<{ total?: number | null; status?: string | null }>).reduce((sum, row) => {
           const status = String(row.status ?? '');
