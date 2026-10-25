@@ -323,6 +323,7 @@ export default function PedidosPage() {
                   const cfg     = S[order.status];
                   const paymentPending = order.paymentMethod === 'transferencia' &&
                     order.paymentStatus === 'awaiting_confirmation' && order.status !== 'cancelled';
+                  const hasPaymentProof = Boolean(order.paymentProofUrl);
                   const nexts   = paymentPending
                     ? (NEXT_STATUS[order.status] ?? []).filter(next => next === 'cancelled')
                     : NEXT_STATUS[order.status] ?? [];
@@ -405,9 +406,11 @@ export default function PedidosPage() {
                                 }}
                               >
                                 <option value={paymentPending ? 'awaiting_confirmation' : order.status}>
-                                  {paymentPending ? 'Confirmando pago' : cfg.label}
+                                  {paymentPending
+                                    ? hasPaymentProof ? 'Comprobante en verificación' : 'Esperando comprobante'
+                                    : cfg.label}
                                 </option>
-                                {paymentPending && <option value="confirm_transfer">Confirmar pago</option>}
+                                {paymentPending && hasPaymentProof && <option value="confirm_transfer">Confirmar pago</option>}
                                 {nexts.map(next => (
                                   <option key={next} value={next}>
                                     {next === 'preparing' ? 'Preparando'
@@ -512,7 +515,9 @@ export default function PedidosPage() {
                                 {order.paymentMethod === 'transferencia' && (
                                   <div style={{ marginTop: 16 }}>
                                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color: paymentPending ? '#b45309' : '#15803d', margin: '0 0 8px' }}>
-                                      {paymentPending ? 'Confirmando pago' : order.paymentStatus === 'confirmed' ? 'Pago confirmado' : 'Estado de pago no disponible'}
+                                      {paymentPending
+                                        ? order.paymentProofUrl ? 'Comprobante enviado para verificación' : 'Esperando comprobante del cliente'
+                                        : order.paymentStatus === 'confirmed' ? 'Pago confirmado' : 'Estado de pago no disponible'}
                                     </p>
                                     <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--vnd-text-muted)', marginBottom: 8 }}>
                                       Comprobante de pago

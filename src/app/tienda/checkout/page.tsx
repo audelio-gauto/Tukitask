@@ -13,6 +13,7 @@ const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false, loading: ()
     Cargando mapa...
   </div>
 ) });
+const PENDING_TRANSFER_KEY = 'tukitask:pending-transfer-checkout';
 
 interface BillingForm {
   name: string;
@@ -48,7 +49,6 @@ interface PaymentInfo {
   transfer: {
     available: boolean;
     source: 'global' | 'vendor' | null;
-    bank_data: BankInfo | null;
   };
 }
 
@@ -83,10 +83,14 @@ function CheckoutInner() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('contra_entrega');
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [showTransferStep, setShowTransferStep] = useState(false);
+  const [transferOrderIds, setTransferOrderIds] = useState<string[] | null>(null);
+  const [transferBankData, setTransferBankData] = useState<BankInfo | null>(null);
+  const [transferBankSource, setTransferBankSource] = useState<'global' | 'vendor' | null>(null);
   const [notes,     setNotes]     = useState('');
   const [paymentProofBase64, setPaymentProofBase64] = useState<string | null>(null);
   const [paymentProofMime,   setPaymentProofMime]   = useState<string | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
+  const [transferProofSubmitted, setTransferProofSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderIds,   setOrderIds]   = useState<string[] | null>(null);
   const [error,      setError]      = useState<string | null>(null);
@@ -99,6 +103,73 @@ function CheckoutInner() {
       transferStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [showTransferStep]);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(PENDING_TRANSFER_KEY);
+    if (!stored) return;
+
+    let pending: {
+      orderIds?: string[];
+      productId?: string | null;
+      cartProductIds?: string[];
+      items?: CheckoutItem[];
+      billing?: BillingForm;
+      delivery?: DeliveryForm;
+      notes?: string;
+    };
+    try {
+      pending = JSON.parse(stored);
+    } catch {
+      sessionStorage.removeItem(PENDING_TRANSFER_KEY);
+      return;
+    }
+
+    const currentCartProductIds = cartItems.map(item => item.id).sort();
+    if (!productId && currentCartProductIds.length === 0 && (pending.cartProductIds?.length ?? 0) > 0) return;
+    const sameCheckout = productId
+      ? pending.productId === productId
+      : !pending.productId && JSON.stringify(pending.cartProductIds ?? []) === JSON.stringify(currentCartProductIds);
+    if (!sameCheckout || !pending.orderIds?.length) {
+      sessionStorage.removeItem(PENDING_TRANSFER_KEY);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || cancelled) return;
+      try {
+        const response = await fetch('/api/tienda/market-orders/bank-details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ orderIds: pending.orderIds }),
+        });
+        const data = await response.json();
+        if (cancelled) return;
+        if (!response.ok || !data.bank_data) {
+          sessionStorage.removeItem(PENDING_TRANSFER_KEY);
+          setError(data.error ?? 'La orden pendiente ya no está disponible.');
+          return;
+        }
+        setItems(pending.items ?? []);
+        if (pending.billing) setBilling(pending.billing);
+        if (pending.delivery) setDelivery(pending.delivery);
+        setNotes(pending.notes ?? '');
+        setPaymentMethod('transferencia');
+        setTransferOrderIds(pending.orderIds ?? []);
+        setTransferBankData(data.bank_data as BankInfo);
+        setTransferBankSource(data.bank_data_source === 'vendor' ? 'vendor' : 'global');
+        setShowTransferStep(true);
+      } catch {
+        if (!cancelled) setError('No se pudo recuperar la orden pendiente.');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [cartItems, productId]);
 
   const availableDeliveryCities = vendorDeliveryCities.length > 0
     ? vendorDeliveryCities.map(item => item.city)
@@ -317,6 +388,7 @@ function CheckoutInner() {
   }
 
   function handlePaymentMethodChange(method: PaymentMethod) {
+    if (transferOrderIds) return;
     setPaymentMethod(method);
     setShowTransferStep(false);
     setPaymentProofBase64(null);
@@ -325,8 +397,8 @@ function CheckoutInner() {
     setError(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!items.length) { setError('No hay productos para comprar.'); return; }
     if (!paymentInfo?.cash_on_delivery?.available && !paymentInfo?.transfer?.available) {
       setError('No hay métodos de pago disponibles para este pedido.');
@@ -358,7 +430,7 @@ function CheckoutInner() {
       setError('La ciudad seleccionada no acepta transferencia bancaria. Elegí otra opción de pago.');
       return;
     }
-    if (paymentMethod === 'transferencia' && !paymentProofBase64) {
+    if (paymentMethod === 'transferencia' && transferOrderIds && !paymentProofBase64) {
       setError('Adjuntá el comprobante de pago para continuar.');
       return;
     }
@@ -371,6 +443,65 @@ function CheckoutInner() {
         setSubmitting(false);
         return;
       }
+
+      if (paymentMethod === 'transferencia' && !transferOrderIds) {
+        const createResponse = await fetch('/api/tienda/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ items, billing, delivery, notes, payment_method: paymentMethod }),
+        });
+        const created = await createResponse.json();
+        if (!createResponse.ok || !created.success) {
+          throw new Error(created.error ?? 'No se pudo generar el pedido');
+        }
+        if (!Array.isArray(created.orderIds) || created.orderIds.length === 0 || !created.bank_data) {
+          throw new Error('El pedido se generó, pero no se pudieron cargar los datos bancarios. Contactá al soporte antes de volver a generar otro pedido.');
+        }
+
+        setTransferOrderIds(created.orderIds as string[]);
+        setTransferBankData(created.bank_data as BankInfo);
+        setTransferBankSource(created.bank_data_source === 'vendor' ? 'vendor' : 'global');
+        sessionStorage.setItem(PENDING_TRANSFER_KEY, JSON.stringify({
+          orderIds: created.orderIds,
+          productId,
+          cartProductIds: productId ? [] : items.map(item => item.productId).sort(),
+          items,
+          billing,
+          delivery,
+          notes,
+        }));
+        setShowTransferStep(true);
+        return;
+      }
+
+      if (paymentMethod === 'transferencia' && transferOrderIds) {
+        const proofResponse = await fetch('/api/tienda/market-orders/payment-proof', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            orderIds: transferOrderIds,
+            payment_proof_base64: paymentProofBase64,
+            payment_proof_mime: paymentProofMime,
+          }),
+        });
+        const proofResult = await proofResponse.json();
+        if (!proofResponse.ok || !proofResult.success) {
+          throw new Error(proofResult.error ?? 'No se pudo enviar el comprobante');
+        }
+
+        clearCart();
+        sessionStorage.removeItem(PENDING_TRANSFER_KEY);
+        setTransferProofSubmitted(true);
+        setOrderIds(transferOrderIds);
+        return;
+      }
+
       const res = await fetch('/api/tienda/checkout', {
         method: 'POST',
         headers: {
@@ -409,11 +540,12 @@ function CheckoutInner() {
       <div className="tnd-page" style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
         <div style={{ fontSize: '4rem', marginBottom: 16 }}>🎉</div>
         <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--tnd-text-primary)', marginBottom: 8 }}>
-          ¡Pedido confirmado!
+          {transferProofSubmitted ? 'Comprobante enviado para verificación' : '¡Pedido confirmado!'}
         </h2>
         <p style={{ color: 'var(--tnd-text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
-          Tu pedido fue procesado exitosamente.<br />
-          El vendedor recibirá tu solicitud y se pondrá en contacto.
+          {transferProofSubmitted
+            ? 'El vendedor revisará el comprobante. El pedido se preparará cuando confirme el pago.'
+            : 'Tu pedido fue procesado exitosamente. El vendedor recibirá tu solicitud y se pondrá en contacto.'}
         </p>
         <div style={{ background: 'var(--tnd-success-bg)', border: '1px solid var(--tnd-success)', borderRadius: 12, padding: '14px 18px', marginBottom: 28 }}>
           <p style={{ color: 'var(--tnd-success)', fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>
@@ -527,12 +659,14 @@ function CheckoutInner() {
                   <select
                     className="tnd-checkout-input"
                     value={delivery.ciudad}
+                    disabled={Boolean(transferOrderIds)}
                     onChange={e => {
                       setDelivery(d => ({ ...d, ciudad: e.target.value }));
                       setShowTransferStep(false);
                       setPaymentProofBase64(null);
                       setPaymentProofMime(null);
                       setPaymentProofPreview(null);
+                      setTransferProofSubmitted(false);
                       setError(null);
                     }}
                     required
@@ -612,7 +746,7 @@ function CheckoutInner() {
                     type="radio"
                     name="payment_method"
                     checked={paymentMethod === 'contra_entrega'}
-                    disabled={!cashAllowedForCity}
+                    disabled={!cashAllowedForCity || Boolean(transferOrderIds)}
                     onChange={() => handlePaymentMethodChange('contra_entrega')}
                     style={{ marginTop: 4 }}
                   />
@@ -634,7 +768,7 @@ function CheckoutInner() {
                       type="radio"
                       name="payment_method"
                       checked={paymentMethod === 'transferencia'}
-                      disabled={!transferAllowedForCity}
+                      disabled={!transferAllowedForCity || Boolean(transferOrderIds)}
                       onChange={() => handlePaymentMethodChange('transferencia')}
                       style={{ marginTop: 4 }}
                     />
@@ -650,23 +784,23 @@ function CheckoutInner() {
                   </label>
 
                   {/* Datos bancarios cuando se selecciona transferencia */}
-                  {paymentMethod === 'transferencia' && showTransferStep && paymentInfo?.transfer?.bank_data && (
+                  {paymentMethod === 'transferencia' && showTransferStep && transferBankData && (
                     <div ref={transferStepRef} style={{ marginTop: 12, padding: '14px 16px', background: 'var(--tnd-surface-2)', border: '1px solid var(--tnd-border)', borderRadius: 12 }}>
                       <p style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--tnd-text-primary)', marginBottom: 10 }}>
                         🏦 Datos para la transferencia
                       </p>
-                      {paymentInfo?.transfer?.source === 'vendor' && (
+                      {transferBankSource === 'vendor' && (
                         <p style={{ fontSize: '0.72rem', color: 'var(--tnd-text-muted)', marginBottom: 8, fontStyle: 'italic' }}>
                           Datos bancarios del vendedor
                         </p>
                       )}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {([
-                          ['Banco',           paymentInfo?.transfer?.bank_data?.banco],
-                          ['Titular',         paymentInfo?.transfer?.bank_data?.titular],
-                          ['Cuenta',          paymentInfo?.transfer?.bank_data?.cuenta],
-                          ['Alias / CBU',     paymentInfo?.transfer?.bank_data?.alias],
-                          ['Tipo de cuenta',  paymentInfo?.transfer?.bank_data?.tipo_cuenta],
+                          ['Banco',           transferBankData.banco],
+                          ['Titular',         transferBankData.titular],
+                          ['Cuenta',          transferBankData.cuenta],
+                          ['Alias / CBU',     transferBankData.alias],
+                          ['Tipo de cuenta',  transferBankData.tipo_cuenta],
                         ] as [string, string | undefined][])
                           .filter(([, v]) => v)
                           .map(([label, value]) => (
@@ -798,19 +932,20 @@ function CheckoutInner() {
               )}
 
               <button
-                type={paymentMethod === 'transferencia' && !showTransferStep ? 'button' : 'submit'}
-                onClick={paymentMethod === 'transferencia' && !showTransferStep
-                  ? () => {
-                      setError(null);
-                      setShowTransferStep(true);
-                    }
+                type={paymentMethod === 'transferencia' && !transferOrderIds ? 'button' : 'submit'}
+                onClick={paymentMethod === 'transferencia' && !transferOrderIds
+                  ? () => void handleSubmit()
                   : undefined}
                 disabled={submitting || !items.length || (!cashAllowedForCity && !transferAllowedForCity)}
                 style={{ width:'100%', height:50, background:'var(--tnd-accent)', color:'var(--tnd-accent-text)', border:'none', borderRadius:13, fontSize:'1rem', fontWeight:900, cursor:'pointer', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity: (submitting || !items.length) ? 0.6 : 1 }}
               >
                 {submitting
                   ? '⏳ Procesando...'
-                  : '✅ Confirmar pedido'}
+                  : paymentMethod === 'transferencia'
+                    ? transferOrderIds
+                      ? 'Enviar comprobante para verificación'
+                      : 'Generar orden y ver datos bancarios'
+                    : '✅ Confirmar pedido'}
               </button>
 
               <p style={{ fontSize:'0.72rem', color:'var(--tnd-text-muted)', textAlign:'center', marginTop:10, lineHeight:1.5 }}>

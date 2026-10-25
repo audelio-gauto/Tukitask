@@ -28,6 +28,7 @@ type MarketOrder = {
   status: string;
   payment_method: string;
   payment_status?: 'not_required' | 'awaiting_confirmation' | 'confirmed';
+  payment_proof_url?: string | null;
   address?: string | null;
   delivery?: MarketOrderDelivery | null;
   created_at: string;
@@ -144,7 +145,7 @@ export default function TiendaMisPedidosPage() {
           const paymentPending = order.payment_method === 'transferencia' &&
             order.payment_status === 'awaiting_confirmation' && order.status !== 'cancelled';
           const s = paymentPending
-            ? { label: 'Confirmando pago', color: '#b45309' }
+            ? { label: order.payment_proof_url ? 'Comprobante en verificación' : 'Esperando comprobante', color: '#b45309' }
             : STATUS_MAP[order.status] ?? { label: order.status, color: '#64748b' };
           const date = new Date(order.created_at).toLocaleDateString('es-PY', {
             day: '2-digit', month: 'short', year: 'numeric',
@@ -240,7 +241,11 @@ export default function TiendaMisPedidosPage() {
                 {order.payment_method === 'transferencia' && order.status !== 'cancelled' && order.status !== 'preparing' && (
                   <div style={{ display: 'flex', gap: 6, fontSize: '0.78rem', fontWeight: 700, color: order.payment_status === 'confirmed' ? '#16a34a' : '#b45309' }}>
                     <span>Estado del pago:</span>
-                    <span>{order.payment_status === 'confirmed' ? 'Pago confirmado' : 'Confirmando el pago'}</span>
+                    <span>{order.payment_status === 'confirmed'
+                      ? 'Pago confirmado'
+                      : order.payment_proof_url
+                        ? 'Comprobante en verificación'
+                        : 'Esperando comprobante'}</span>
                   </div>
                 )}
               </div>

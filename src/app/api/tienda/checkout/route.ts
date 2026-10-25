@@ -103,11 +103,11 @@ export async function POST(req: Request) {
   const db = sbAdmin();
   const createdOrders: string[] = [];
 
-  // Comprobante de pago (obligatorio para transferencia bancaria)
+  // El comprobante puede adjuntarse en un segundo paso después de crear la orden.
   let paymentProofUrl: string | null = null;
-  if (payment_method === 'transferencia') {
+  if (payment_method === 'transferencia' && (body.payment_proof_base64 || body.payment_proof_mime)) {
     if (!body.payment_proof_base64 || !body.payment_proof_mime) {
-      return NextResponse.json({ error: 'Debés adjuntar el comprobante de pago para continuar.' }, { status: 400 });
+      return NextResponse.json({ error: 'Datos del comprobante incompletos' }, { status: 400 });
     }
     if (!ALLOWED_IMAGE_TYPES.includes(body.payment_proof_mime as never)) {
       return NextResponse.json({ error: 'Formato de imagen no soportado' }, { status: 400 });
@@ -262,6 +262,40 @@ export async function POST(req: Request) {
     byVendor.get(key)!.push(item);
   }
 
+  let transferBankData: Record<string, string> | null = null;
+  let transferBankSource: 'global' | 'vendor' | null = null;
+  if (payment_method === 'transferencia') {
+    const { data: transferConfig, error: transferConfigError } = await db
+      .from('payment_methods_config')
+      .select('is_active, vendor_allowed, bank_data')
+      .eq('key', 'transfer')
+      .maybeSingle();
+
+    if (transferConfigError) return serverError(transferConfigError);
+
+    if (transferConfig?.is_active && transferConfig.bank_data) {
+      transferBankData = transferConfig.bank_data as Record<string, string>;
+      transferBankSource = 'global';
+    } else if (transferConfig?.vendor_allowed) {
+      const firstVendorEmail = resolvedItems[0]?.vendorEmail;
+      const { data: vendorBank, error: vendorBankError } = await db
+        .from('vendor_bank_data')
+        .select('banco, cuenta, alias, titular, tipo_cuenta')
+        .eq('vendor_email', firstVendorEmail)
+        .maybeSingle();
+
+      if (vendorBankError) return serverError(vendorBankError);
+      if (vendorBank && Object.values(vendorBank).some(Boolean)) {
+        transferBankData = vendorBank as Record<string, string>;
+        transferBankSource = 'vendor';
+      }
+    }
+
+    if (!transferBankData || !Object.values(transferBankData).some(Boolean)) {
+      return NextResponse.json({ error: 'No hay datos bancarios configurados para esta compra.' }, { status: 409 });
+    }
+  }
+
   // Costo de envío por vendedor, según su configuración de cobertura por ciudad
   // (se recalcula en el servidor para no confiar en el precio enviado por el cliente).
   type DeliveryCityRow = { city?: string; shipping_price?: number; free_shipping?: boolean };
@@ -365,6 +399,7 @@ export async function POST(req: Request) {
         price:     i.price,
         qty:       i.qty,
         image:     i.image ?? null,
+        negotiationId: i.negotiationId,
       })),
       total,
       shipping_price:  shippingPrice,
@@ -405,7 +440,29 @@ export async function POST(req: Request) {
     }
     createdOrders.push(data.id);
 
-    if (negotiationIdsInOrder.length > 0) {
+    if (negotiationIdsInOrder.length > 0 && payment_method === 'transferencia' && !paymentProofUrl) {
+      const { data: lockedNegotiations, error: lockError } = await db
+        .from('tukibot_negotiations')
+        .update({ status: 'pending_payment', market_order_id: data.id })
+        .in('id', negotiationIdsInOrder)
+        .eq('buyer_id', user.id)
+        .eq('status', 'accepted_pending_payment')
+        .select('id');
+
+      if (lockError || !lockedNegotiations || lockedNegotiations.length !== negotiationIdsInOrder.length) {
+        await db
+          .from('tukibot_negotiations')
+          .update({ status: 'accepted_pending_payment', market_order_id: null })
+          .in('id', negotiationIdsInOrder)
+          .eq('buyer_id', user.id)
+          .eq('market_order_id', data.id);
+        await db.from('market_orders').update({ status: 'cancelled', cancelled_at: new Date().toISOString() }).eq('id', data.id);
+        await Promise.all(reserved.map((r) => releaseStock(r.productId, r.qty)));
+        return NextResponse.json({ error: lockError?.message ?? 'La negociación ya no está disponible para generar el pedido' }, { status: lockError ? 500 : 409 });
+      }
+    }
+
+    if (negotiationIdsInOrder.length > 0 && (payment_method !== 'transferencia' || paymentProofUrl)) {
       const totalByNegotiation = new Map<string, number>();
       for (const item of vendorItems) {
         if (!item.negotiationId) continue;
@@ -441,5 +498,12 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ success: true, orderIds: createdOrders });
+  return NextResponse.json({
+    success: true,
+    orderIds: createdOrders,
+    ...(payment_method === 'transferencia' ? {
+      bank_data: transferBankData,
+      bank_data_source: transferBankSource,
+    } : {}),
+  });
 }

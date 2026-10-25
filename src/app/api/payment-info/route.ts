@@ -70,7 +70,6 @@ export async function GET(req: Request) {
     transfer: {
       available:   activeTransferEnabled,
       source:      bankDataSource,
-      bank_data:   bankData,
     },
     cash_on_delivery: {
       available: cashActive,
