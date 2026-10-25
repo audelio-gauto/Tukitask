@@ -54,8 +54,9 @@ export async function POST(req: Request) {
     }
 
     // Resize to exact size using sharp (installed as dep of Next.js)
-    const sharp = require('sharp') as typeof import('sharp');
-    const pngBuffer = await sharp(inputBuffer)
+    const sharpModule = (await import('sharp')) as any;
+    const sharpFactory = sharpModule.default ?? sharpModule;
+    const pngBuffer = await sharpFactory(inputBuffer)
       .resize(size, size, {
         fit: 'contain',
         background: { r: 15, g: 15, b: 26, alpha: 1 }, // #0f0f1a brand dark bg
