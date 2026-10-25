@@ -72,56 +72,6 @@ type ResolvedItem = {
   image: string | null;
 };
 
-async function looksLikeBankTransferProof(buffer: Buffer): Promise<boolean> {
-  try {
-    const sharpModule = (await import('sharp')) as any;
-    const sharpFactory = sharpModule.default ?? sharpModule;
-    const metadata = await sharpFactory(buffer).metadata();
-    const width = metadata.width ?? 0;
-    const height = metadata.height ?? 0;
-    if (!width || !height || width < 640 || height < 420) return false;
-
-    const ratio = width / height;
-    if (ratio < 0.6 || ratio > 2.2) return false;
-
-    const { data, info } = await sharpFactory(buffer)
-      .rotate()
-      .greyscale()
-      .normalize()
-      .resize({ width: 180, height: 180, fit: 'inside', withoutEnlargement: true })
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    const pixelCount = info.width * info.height;
-    let darkPixels = 0;
-    let edgePixels = 0;
-
-    for (let i = 0; i < data.length; i += info.channels) {
-      const lum = data[i];
-      if (lum < 200) darkPixels += 1;
-    }
-
-    for (let y = 0; y < info.height; y += 1) {
-      for (let x = 0; x < info.width; x += 1) {
-        const idx = (y * info.width + x) * info.channels;
-        const current = data[idx];
-        const right = x + 1 < info.width ? data[(y * info.width + (x + 1)) * info.channels] : current;
-        const down = y + 1 < info.height ? data[((y + 1) * info.width + x) * info.channels] : current;
-        if (Math.abs(current - right) > 25 || Math.abs(current - down) > 25) {
-          edgePixels += 1;
-        }
-      }
-    }
-
-    const darkRatio = darkPixels / Math.max(pixelCount, 1);
-    const edgeRatio = edgePixels / Math.max(pixelCount, 1);
-
-    return darkRatio > 0.08 && darkRatio < 0.8 && edgeRatio > 0.08;
-  } catch {
-    return false;
-  }
-}
-
 /** POST /api/tienda/checkout — crea una market_order por cada vendedor */
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
@@ -168,10 +118,6 @@ export async function POST(req: Request) {
     }
     if (!validateImageMagicBytes(proofBuffer, body.payment_proof_mime)) {
       return NextResponse.json({ error: 'El comprobante no es una imagen válida' }, { status: 400 });
-    }
-    const looksLikeProof = await looksLikeBankTransferProof(proofBuffer);
-    if (!looksLikeProof) {
-      return NextResponse.json({ error: 'El comprobante debe corresponder a una transferencia bancaria clara y legible.' }, { status: 400 });
     }
     const ext = body.payment_proof_mime === 'image/png' ? 'png' : body.payment_proof_mime === 'image/webp' ? 'webp' : 'jpg';
     const emailSafe = user.email!.replace(/[^a-z0-9]/g, '_');
