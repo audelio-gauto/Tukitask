@@ -559,7 +559,7 @@ export default function EnviarPaquetePage() {
     envio:     { title: '¡Envío registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu envío.',     newLabel: 'Nuevo Envío' },
     mandadito: { title: '¡Mandadito registrado!', sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu mandadito.', newLabel: 'Nuevo Mandadito' },
     flete:     { title: '¡Flete registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu flete.',     newLabel: 'Nuevo Flete' },
-    viaje:     { title: '¡Viaje registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu viaje.',     newLabel: 'Nuevo Viaje' },
+    viaje:     { title: '¡Remis solicitado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu viaje.',     newLabel: 'Nuevo Remis' },
   };
   const svcLabel = SERVICE_LABELS[orderType] ?? SERVICE_LABELS.envio;
 
@@ -651,7 +651,7 @@ export default function EnviarPaquetePage() {
           <h1 className="enviar-page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name={ORDER_TYPE_ICONS[orderType]} size={18} />
             <span>
-              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : orderType === 'viaje' ? 'Nuevo Viaje' : 'Nuevo Envio'}
+              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : orderType === 'viaje' ? 'Nuevo Remis' : 'Nuevo Envío'}
             </span>
           </h1>
         </div>
@@ -659,12 +659,19 @@ export default function EnviarPaquetePage() {
         <div className="enviar-page-body">
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
+            <>
+            <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+              <div>
+                <div className="enviar-step-title-main">¿Qué servicio necesitás?</div>
+                <div className="enviar-step-title-sub">Elegí una opción y completá el recorrido.</div>
+              </div>
+            </div>
             <div className="enviar-order-toggle">
                 {([
                   { key: 'mandadito', icon: 'shopping-cart' as const, label: 'Mandaditos', sub: 'Ir a comprar' },
-                  { key: 'viaje',     icon: 'car'     as const, label: 'Remis',      sub: 'Pasajero' },
-                  { key: 'envio',     icon: 'package' as const, label: 'Envío',      sub: 'Paquetes' },
-                  { key: 'flete',     icon: 'truck'   as const, label: 'Fletes',     sub: 'Carga grande' },
+                  { key: 'viaje',     icon: 'car'     as const, label: 'Remis',      sub: 'Traslado de personas' },
+                  { key: 'envio',     icon: 'package' as const, label: 'Envío',      sub: 'Paquetes y objetos' },
+                  { key: 'flete',     icon: 'truck'   as const, label: 'Flete',      sub: 'Carga y mudanzas' },
                 ] as const).map(tab => (
                 <button
                   key={tab.key}
@@ -699,12 +706,13 @@ export default function EnviarPaquetePage() {
                 </button>
               ))}
             </div>
+            </>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span className={`enviar-step-pill ${orderType}`}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name={ORDER_TYPE_ICONS[orderType]} size={12} />
-                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Fletes' : orderType === 'viaje' ? 'Viaje' : 'Envio'}
+                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Flete' : orderType === 'viaje' ? 'Remis' : 'Envío'}
                 </span>
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--client-text-secondary)' }}>Paso {step} de 3</span>
@@ -730,13 +738,27 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 1: ADDRESSES ── */}
             {step === 1 && (
               <>
+                <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+                  <div>
+                    <div className="enviar-step-title-main">
+                      {orderType === 'viaje' ? '¿De dónde salís y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
+                    </div>
+                    <div className="enviar-step-title-sub">
+                      {orderType === 'flete'
+                        ? 'Indicá el origen y destino de la carga.'
+                        : orderType === 'viaje'
+                          ? 'Marcá el punto de salida y tu destino.'
+                          : 'Marcá el punto de retiro y el destino.'}
+                    </div>
+                  </div>
+                </div>
                 <div className="enviar-address-section">
                   {/* Pickup */}
                   <div className="enviar-address-row">
                     <span className="enviar-dot green" />
                     <input
                       className="enviar-address-input"
-                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacen / Tienda donde comprar' : orderType === 'viaje' ? 'Tu ubicación (punto de salida)' : 'Punto de recogida'}
+                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacén o tienda' : orderType === 'viaje' ? 'Punto de salida' : 'Punto de recogida'}
                       value={form.pickupAddress}
                       onClick={() => { if (!pickupLoading) openSearch('pickup'); }}
                       readOnly
@@ -770,7 +792,7 @@ export default function EnviarPaquetePage() {
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                             <input
                               className="enviar-address-input"
-                              placeholder={orderType === 'viaje' ? '¿A dónde vas?' : `Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
+                              placeholder={orderType === 'viaje' ? 'Destino' : `Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
                               value={stop.address}
                               onClick={() => openSearch(`stop_${idx}`)}
                               readOnly
@@ -803,7 +825,7 @@ export default function EnviarPaquetePage() {
                       className="enviar-add-stop-btn"
                     >
                       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      Agregar parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : ''}
+                      Agregar otra parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : '(opcional)'}
                     </button>
                   )}
 
@@ -931,6 +953,12 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
             {step === 2 && (
               <>
+                <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+                  <div>
+                    <div className="enviar-step-title-main">Elegí el vehículo y tu precio</div>
+                    <div className="enviar-step-title-sub">El conductor puede aceptar o proponerte otro monto.</div>
+                  </div>
+                </div>
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
@@ -1101,8 +1129,8 @@ export default function EnviarPaquetePage() {
               <>
                 <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
-                    <div className="enviar-step-title-main" style={{ fontSize: 13 }}>{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmar datos del remitente'}</div>
-                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El Tasker verá tu nombre y contacto' : 'Revisá tu nombre y teléfono'}</div>
+                    <div className="enviar-step-title-main" style={{ fontSize: 13 }}>{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmá tus datos de contacto'}</div>
+                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El conductor los usará para coordinar el viaje.' : 'El conductor los usará para coordinar el servicio.'}</div>
                   </div>
                 </div>
 
@@ -1137,13 +1165,54 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
+                {orderType !== 'viaje' && stops.map((stop, idx) => (
+                  <div key={stop.id} className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
+                    <div className="enviar-contact-header">
+                      <span className="enviar-dot" style={{ width: 10, height: 10, background: 'var(--client-danger)' }} />
+                      {stops.length > 1 ? `Recibe en destino ${idx + 1}` : 'Datos de quien recibe'}
+                      <span style={{ fontWeight: 400, color: 'var(--client-text-secondary)', marginLeft: 4 }}>(opcional)</span>
+                    </div>
+                    <div className="enviar-field-row">
+                      <div className="enviar-field">
+                        <label className="enviar-field-label">Nombre</label>
+                        <input
+                          className="enviar-field-input"
+                          placeholder="Nombre de quien recibe"
+                          value={stop.receiverContact}
+                          onChange={e => updateStop(idx, 'receiverContact', e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="enviar-field">
+                        <label className="enviar-field-label">Teléfono</label>
+                        <input
+                          className="enviar-field-input"
+                          type="tel"
+                          placeholder="0981 000 000"
+                          value={stop.receiverPhone}
+                          onChange={e => updateStop(idx, 'receiverPhone', e.target.value)}
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
 
                 <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: 'var(--client-action-active)' }}>
                   <div className="enviar-field">
-                    <label className="enviar-field-label">Indicaciones para el Tasker <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}>(opcional)</span></label>
+                    <label className="enviar-field-label">
+                      {orderType === 'viaje' ? 'Detalles del viaje' : orderType === 'flete' ? 'Detalles de la carga' : 'Detalles del envío'}
+                      <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--client-text-secondary)' }}> (opcional)</span>
+                    </label>
                     <textarea
                       className="enviar-field-textarea"
-                      placeholder={orderType === 'viaje' ? 'Ej: Viajo con mascota, llevo equipaje, u otras condiciones' : 'Ej: Dejar en portería, tocar timbre 2 veces, es frágil...'}
+                      placeholder={
+                        orderType === 'viaje'
+                          ? 'Ej.: cantidad de pasajeros, equipaje o si viajás con mascota'
+                          : orderType === 'flete'
+                            ? 'Ej.: muebles, cantidad aproximada, tamaño o ayuda para cargar'
+                            : 'Ej.: qué contiene, tamaño aproximado o dónde entregar el paquete'
+                      }
                       value={form.instructions}
                       onChange={e => update('instructions', e.target.value)}
                       rows={2}

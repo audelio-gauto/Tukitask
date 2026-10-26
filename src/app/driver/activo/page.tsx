@@ -27,9 +27,9 @@ const STATUS_LABEL: Record<ActiveStatus, { label: string; icon: ComponentProps<t
 };
 
 const PROGRESS_ACTION: Record<'accepted' | 'picking_up' | 'at_pickup', { label: string; nextStatus: string }> = {
-  accepted:   { label: 'Ir a recoger',    nextStatus: 'picking_up' },
-  picking_up: { label: 'Ya llegué',       nextStatus: 'at_pickup'  },
-  at_pickup:  { label: 'Iniciar entrega', nextStatus: 'in_transit' },
+  accepted:   { label: 'Voy hacia la recogida',      nextStatus: 'picking_up' },
+  picking_up: { label: 'Confirmar llegada',          nextStatus: 'at_pickup'  },
+  at_pickup:  { label: 'Iniciar recorrido',          nextStatus: 'in_transit' },
 };
 
 const BRAND = '#F5C518';
@@ -815,9 +815,6 @@ export default function ActivoPage() {
                   ? sortedStops.find((s: any) => s.status === 'pending') ?? null
                   : null;
                 const deliveryTarget = currentStop ?? null;
-                const deliveryLabel = deliveryTarget
-                  ? `Ir a Entrega ${deliveryTarget.sequence}`
-                  : 'Ir a Entrega';
                 const deliveryAddr = deliveryTarget?.address ?? order.delivery_address;
                 return (
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -827,7 +824,7 @@ export default function ActivoPage() {
                         className="tuki-btn tuki-btn-warning tuki-btn-sm"
                         style={{ flex: 1 }}
                       >
-                        <Icon name="map" size={14} /> Ir a Recogida
+                        <Icon name="map" size={14} /> Navegar a recogida
                       </button>
                     )}
                     {showDelivery && deliveryAddr && (
@@ -836,7 +833,7 @@ export default function ActivoPage() {
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
                         style={{ flex: 1 }}
                       >
-                        <Icon name="map" size={14} /> {deliveryLabel}
+                        <Icon name="map" size={14} /> Navegar a {deliveryTarget ? `entrega ${deliveryTarget.sequence}` : 'destino'}
                       </button>
                     )}
                   </div>
@@ -1317,7 +1314,15 @@ export default function ActivoPage() {
                   transition: 'all 0.2s',
                 }}
               >
-                {isActingProgress ? 'Actualizando...' : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
+                {isActingProgress
+                  ? 'Actualizando...'
+                  : status === 'at_pickup'
+                    ? order.order_type === 'viaje'
+                      ? 'Iniciar viaje'
+                      : order.order_type === 'flete'
+                        ? 'Iniciar flete'
+                        : 'Iniciar envío'
+                    : PROGRESS_ACTION[status as 'accepted' | 'picking_up' | 'at_pickup'].label}
               </button>
 
               {/* Cancel button — only for picking_up (En camino) and at_pickup (Recogida) */}

@@ -523,11 +523,14 @@ export default function DriverDashboard() {
       clientRating: o.client_avg_rating,
       clientVerified: Boolean(o.client_is_verified),
       instructions: o.instructions,
+      description: Array.isArray(o.order_stops) && o.order_stops.length > 0
+        ? null
+        : o.description ?? null,
       dateScheduled: o.date_scheduled ?? null,
       shoppingList: o.shopping_list ?? null,
       maxBudget: o.max_budget ?? null,
       stops: Array.isArray(o.order_stops) && o.order_stops.length > 0
-        ? o.order_stops.map((s: any) => ({ sequence: s.sequence, address: s.address }))
+        ? o.order_stops.map((s: any) => ({ sequence: s.sequence, address: s.address, description: s.description ?? null }))
         : null,
       clientTotalOrders: o.client_total_orders ?? null,
     }));

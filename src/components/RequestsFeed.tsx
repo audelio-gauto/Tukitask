@@ -83,10 +83,10 @@ const SERVICE_LABELS: Record<string, string> = {
 };
 
 const VIAJE_VEHICLE_LABELS: Record<string, string> = {
-  moto:      'Viaje Moto',
-  auto:      'Viaje Auto',
-  motocarro: 'Viaje Moto Carro',
-  camion2t:  'Viaje Camión',
+  moto:      'Remis Moto',
+  auto:      'Remis Auto',
+  motocarro: 'Remis Moto Carro',
+  camion2t:  'Remis Camión',
 };
 
 export type FeedItem = {
@@ -107,11 +107,12 @@ export type FeedItem = {
   clientRating?: number | null;
   clientVerified?: boolean;
   instructions?: string | null;
+  description?: string | null;
   dateScheduled?: string | null;
   photos?: string[] | null;
   shoppingList?: string | null;
   maxBudget?: number | null;
-  stops?: Array<{ sequence: number; address: string }> | null;
+  stops?: Array<{ sequence: number; address: string; description?: string | null }> | null;
   clientTotalOrders?: number | null;
 };
 
@@ -294,7 +295,7 @@ export default memo(function RequestsFeed({
   const rateLabel = rateColor === '#22c55e' ? 'Buena oferta' : rateColor === '#f59e0b' ? 'Oferta Aceptable' : 'Oferta baja';
 
   const label = item.orderType === 'viaje'
-    ? (VIAJE_VEHICLE_LABELS[item.title] || `Viaje ${item.title}`)
+    ? (VIAJE_VEHICLE_LABELS[item.title] || `Remis ${item.title}`)
     : (labels[item.title] || item.title);
   const stopCount = item.stops?.length ?? 0;
   const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
@@ -596,7 +597,10 @@ export default memo(function RequestsFeed({
                             fontSize: '0.58rem', fontWeight: 900, color: '#fbbf24', marginTop: 1 }}>
                             {s.sequence}
                           </div>
-                          <span style={{ flex: 1, fontSize: '0.72rem', color: '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
+                          <span style={{ flex: 1, fontSize: '0.72rem', color: '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                            {s.address}
+                            {s.description && <span style={{ display: 'block', marginTop: 2, color: 'var(--text-secondary)' }}>{s.description}</span>}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -607,6 +611,17 @@ export default memo(function RequestsFeed({
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 999, background: '#ef4444', flexShrink: 0, marginTop: 5 }} />
                   <span style={{ lineHeight: 1.4 }}>{item.to}</span>
+                </div>
+              )}
+              {item.description && (
+                <div style={{
+                  display: 'flex', gap: 7, alignItems: 'flex-start',
+                  padding: '7px 9px', borderRadius: 9,
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.4,
+                }}>
+                  <Icon name="package" size={13} />
+                  <span><strong style={{ color: 'var(--text-primary)' }}>Carga:</strong> {item.description}</span>
                 </div>
               )}
               {item.location && (
@@ -697,78 +712,66 @@ export default memo(function RequestsFeed({
                   {isSending && offerSentForThis ? 'Enviando…' : `Aceptar · ₲${clientPrice.toLocaleString()}`}
                 </button>
 
-                {/* Counter-offers section */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>
-                    o propone tu tarifa
-                  </span>
-                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-                </div>
-
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
-                    <button
-                      key={pct}
-                      onClick={() => onAccept(item.id, amount, offerNote, distKm)}
-                      disabled={isSending}
-                      style={{
-                        flex: 1, padding: '8px 0',
-                        border: 'none',
-                        borderRadius: 12,
-                        background: `linear-gradient(135deg,${BRAND},#F58A07)`,
-                        color: '#1C1C2E', fontWeight: 800,
-                        fontSize: '0.74rem', cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                        boxShadow: `0 2px 8px ${BRAND_SHADOW}`,
-                      }}
-                    >
-                      <span style={{ fontSize: '0.76rem', fontWeight: 900 }}>₲{amount.toLocaleString()}</span>
-                      <span style={{ fontSize: '0.6rem', color: 'rgba(28,28,46,0.65)', fontWeight: 700 }}>{pct}</span>
-                    </button>
-                  ))}
-                  {/* Custom price */}
-                  <button
-                    onClick={() => setCustomOpen(o => !o)}
-                    disabled={isSending}
-                    style={{
-                      width: 46, flexShrink: 0, padding: '8px 0', borderRadius: 12,
-                      border: `1px solid ${customOpen ? '#818cf8' : 'rgba(255,255,255,0.10)'}`,
-                      background: customOpen ? 'rgba(129,140,248,0.14)' : 'rgba(255,255,255,0.04)',
-                      color: customOpen ? '#818cf8' : 'var(--text-muted)', fontWeight: 700,
-                      cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', gap: 2,
-                    }}
-                    title="Precio personalizado"
-                  >
-                    <Icon name="pencil" size={14} color={customOpen ? '#818cf8' : undefined} />
-                    <span style={{ fontSize: '0.52rem', color: 'var(--text-muted)' }}>Libre</span>
-                  </button>
-                </div>
-
+                <button
+                  type="button"
+                  onClick={() => setCustomOpen(o => !o)}
+                  disabled={isSending}
+                  aria-expanded={customOpen}
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 12,
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--surface-2)', color: 'var(--text-secondary)',
+                    fontSize: '0.85rem', fontWeight: 700, cursor: isSending ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  }}
+                >
+                  <Icon name="pencil" size={14} />
+                  {customOpen ? 'Cerrar propuesta de precio' : 'Proponer otro precio'}
+                </button>
                 {customOpen && (
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
-                    <input
-                      type="text" inputMode="numeric" placeholder="Ej: 50000"
-                      value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
-                      onChange={e => setCustomPrice(e.target.value.replace(/\D/g, ''))}
-                      style={{ flex: 1, padding: '9px 12px', borderRadius: 12,
-                        border: '1px solid #818cf8', background: 'var(--input-bg)',
-                        color: 'var(--input-text)', fontSize: '0.9rem', fontWeight: 700,
-                        outline: 'none', boxSizing: 'border-box' }}
-                    />
-                    <button
-                      onClick={() => { const a = parseInt(customPrice || '0'); if (a > 0) onAccept(item.id, a, offerNote, distKm); }}
-                      disabled={isSending || !customPrice || parseInt(customPrice || '0') <= 0}
-                      style={{ padding: '9px 14px', borderRadius: 12, border: 'none',
-                        background: '#818cf8', color: '#fff', fontWeight: 800,
-                        fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
-                        opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.4 : 1 }}
-                    >
-                      Enviar
-                    </button>
-                  </div>
+                  <>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([{ amount: qo_15, pct: '+15%' }, { amount: qo_30, pct: '+30%' }, { amount: qo_50, pct: '+50%' }] as const).map(({ amount, pct }) => (
+                        <button
+                          type="button"
+                          key={pct}
+                          onClick={() => onAccept(item.id, amount, offerNote, distKm)}
+                          disabled={isSending}
+                          style={{
+                            flex: 1, padding: '8px 0', border: '1px solid var(--border-subtle)',
+                            borderRadius: 10, background: 'var(--surface-2)', color: 'var(--text-primary)',
+                            fontSize: '0.72rem', fontWeight: 800, cursor: isSending ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          ₲{amount.toLocaleString()} <span style={{ color: 'var(--text-muted)' }}>{pct}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
+                      <input
+                        type="text" inputMode="numeric" placeholder="Escribí tu monto"
+                        aria-label="Monto de tu contraoferta"
+                        value={customPrice ? Number(customPrice).toLocaleString('es-PY') : ''}
+                        onChange={e => setCustomPrice(e.target.value.replace(/\D/g, ''))}
+                        style={{ flex: 1, padding: '9px 12px', borderRadius: 12,
+                          border: '1px solid var(--border-strong)', background: 'var(--input-bg)',
+                          color: 'var(--input-text)', fontSize: '0.9rem', fontWeight: 700,
+                          outline: 'none', boxSizing: 'border-box' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { const a = parseInt(customPrice || '0'); if (a > 0) onAccept(item.id, a, offerNote, distKm); }}
+                        disabled={isSending || !customPrice || parseInt(customPrice || '0') <= 0}
+                        style={{ padding: '9px 14px', borderRadius: 12, border: 'none',
+                          background: '#818cf8', color: '#fff', fontWeight: 800,
+                          fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
+                          opacity: (!customPrice || parseInt(customPrice || '0') <= 0) ? 0.4 : 1 }}
+                      >
+                        Enviar oferta
+                      </button>
+                    </div>
+                  </>
                 )}
               </>
             ) : (
