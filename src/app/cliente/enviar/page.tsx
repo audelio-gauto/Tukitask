@@ -735,9 +735,23 @@ export default function EnviarPaquetePage() {
 
           <form id="enviar-form" onSubmit={handleSubmit}>
 
-            {/* ── STEP 1: ADDRESSES ── */}
-            {step === 1 && (
+            {/* ── STEP 1: ADDRESSES / BOLT-STYLE CONTINUOUS REMIS ── */}
+            {(step === 1 || orderType === 'viaje') && (
               <>
+                {orderType === 'viaje' && (
+                  <div className="enviar-bolt-map-shell">
+                    <RoutePreviewMap
+                      pickup={{
+                        lat: isFinite(parseFloat(form.pickupLat)) ? parseFloat(form.pickupLat) : -27.451,
+                        lng: isFinite(parseFloat(form.pickupLng)) ? parseFloat(form.pickupLng) : -58.986,
+                      }}
+                      stops={stops
+                        .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
+                        .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
+                      routeCoords={routeCoords}
+                    />
+                  </div>
+                )}
                 <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
                     <div className="enviar-step-title-main">
@@ -852,8 +866,8 @@ export default function EnviarPaquetePage() {
                   )}
                 </div>
 
-                {/* Route preview map — shown when both pickup + at least one stop are set */}
-                {isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
+                {/* Route preview map: other services keep the existing conditional preview */}
+                {orderType !== 'viaje' && isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
                   <RoutePreviewMap
                     pickup={{ lat: parseFloat(form.pickupLat), lng: parseFloat(form.pickupLng) }}
                     stops={stops

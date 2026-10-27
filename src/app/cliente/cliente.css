@@ -842,8 +842,37 @@
 /* Bolt-style continuous layout for Remis */
 .enviar-page-bolt .enviar-page-body {
   max-width: 620px;
-  padding-top: 12px;
-  padding-bottom: 92px;
+  padding: 0 16px 92px;
+}
+.enviar-page-bolt .enviar-bolt-map-shell {
+  width: calc(100% + 32px);
+  height: clamp(260px, 38vh, 360px);
+  margin: 0 -16px 16px;
+  overflow: hidden;
+  background: var(--client-action-active);
+}
+.enviar-page-bolt .enviar-bolt-map-shell .enviar-map-preview {
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+}
+.enviar-page-bolt .enviar-bolt-map-shell .enviar-map-preview-canvas {
+  height: 100%;
+}
+.enviar-page-bolt .enviar-address-section {
+  position: relative;
+  z-index: 2;
+  margin-top: -4px;
+  overflow: visible;
+  border-radius: 18px;
+}
+.enviar-page-bolt .enviar-address-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
 }
 .enviar-page-bolt .enviar-step-title {
   background: transparent;
@@ -856,7 +885,24 @@
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 .enviar-page-bolt .enviar-vehicle-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(155px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(155px, 1fr);
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.enviar-page-bolt .enviar-vehicle-grid::-webkit-scrollbar { display: none; }
+.enviar-page-bolt .enviar-vehicle-card {
+  min-height: 154px;
+  border-radius: 18px;
+  background: var(--client-surface);
+}
+.enviar-page-bolt .enviar-vehicle-icon img {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
 }
 .enviar-page-bolt .enviar-step-actions:has(.enviar-submit-final) {
   position: fixed;
