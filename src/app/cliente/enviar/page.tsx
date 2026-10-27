@@ -641,7 +641,7 @@ export default function EnviarPaquetePage() {
       )}
 
       {/* Clean form page */}
-      <div className="enviar-page">
+      <div className={`enviar-page ${orderType === 'viaje' ? 'enviar-page-bolt' : ''}`}>
         <div className="enviar-page-header">
           <button type="button" className="enviar-page-menu" onClick={openDrawer} aria-label="Menú">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -719,8 +719,8 @@ export default function EnviarPaquetePage() {
             </div>
           )}
 
-          {/* Step indicator */}
-          <div className="enviar-step-indicator">
+          {/* Step indicator: Remis uses the continuous Bolt-style layout */}
+          {orderType !== 'viaje' && <div className="enviar-step-indicator">
             {[1, 2, 3].map((s) => (
               <div key={s} className="enviar-step-item">
                 <div className={`enviar-step-circle ${step === s ? 'active' : step > s ? 'done' : ''}`}>
@@ -731,7 +731,7 @@ export default function EnviarPaquetePage() {
                 {s < 3 && <div className={`enviar-step-line ${step > s ? 'done' : ''}`} />}
               </div>
             ))}
-          </div>
+          </div>}
 
           <form id="enviar-form" onSubmit={handleSubmit}>
 
@@ -938,7 +938,7 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
 
-                <button
+                {orderType !== 'viaje' && <button
                   type="button"
                   className="enviar-next-btn"
                   disabled={!form.pickupLat || !firstStop.lat || (orderType === 'mandadito' && !shoppingList.trim())}
@@ -946,12 +946,12 @@ export default function EnviarPaquetePage() {
                 >
                   Continuar
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
+                </button>}
               </>
             )}
 
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
-            {step === 2 && (
+            {(step === 2 || orderType === 'viaje') && (
               <>
                 <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
@@ -1106,7 +1106,7 @@ export default function EnviarPaquetePage() {
                   ))}
                 </div>
 
-                <div className="enviar-step-actions">
+                {orderType !== 'viaje' && <div className="enviar-step-actions">
                   <button type="button" className="enviar-back-btn" onClick={() => setStep(1)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                   </button>
@@ -1120,12 +1120,12 @@ export default function EnviarPaquetePage() {
                     Continuar
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
-                </div>
+                </div>}
               </>
             )}
 
             {/* ── STEP 3: CONTACTS ── */}
-            {step === 3 && (
+            {(step === 3 || orderType === 'viaje') && (
               <>
                 <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
@@ -1405,9 +1405,9 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
                 <div className="enviar-step-actions">
-                  <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
+                  {orderType !== 'viaje' && <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                  </button>
+                  </button>}
                   <button
                     type="submit"
                     form="enviar-form"
