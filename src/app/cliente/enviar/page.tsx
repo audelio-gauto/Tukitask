@@ -664,6 +664,7 @@ export default function EnviarPaquetePage() {
           {step === 1 ? (
             <>
           {showServicePicker ? (
+          <div className="enviar-service-picker-section">
           <>
           <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
               <div>
@@ -713,6 +714,7 @@ export default function EnviarPaquetePage() {
               ))}
             </div>
             </>
+            </div>
             ) : (
             <div className="enviar-service-selected-view">
               <div className="enviar-selected-service-row">
@@ -814,7 +816,7 @@ export default function EnviarPaquetePage() {
                     />
                   </div>
                 )}
-                <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+                <div className={`enviar-step-title enviar-location-title ${orderType === 'viaje' ? 'enviar-remis-location-title' : ''}`} style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
                     <div className="enviar-step-title-main">
                       {orderType === 'viaje' ? '¿De dónde salís y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
