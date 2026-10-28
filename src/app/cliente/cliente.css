@@ -840,6 +840,9 @@
 }
 
 /* Bolt-style continuous layout for Remis */
+.enviar-page-bolt .enviar-remis-vehicle-selection { display: none; }
+.enviar-page-bolt .enviar-inline-vehicle-title { padding: 4px 0 8px !important; margin-bottom: 4px; border: 0; background: transparent; }
+.enviar-page-bolt .enviar-selected-service-row { margin-bottom: 4px; }
 .route-map-summary {
   position: absolute;
   left: 50%;
