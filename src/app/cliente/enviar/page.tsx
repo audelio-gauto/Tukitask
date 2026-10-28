@@ -68,6 +68,9 @@ export default function EnviarPaquetePage() {
   const [searchMode, setSearchMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
   // Location picker (map pin) state
   const [pickerMode, setPickerMode] = useState<null | 'pickup' | 'delivery' | `stop_${number}`>(null);
+  const [showServicePicker, setShowServicePicker] = useState(true);
+  const [offerSheetOpen, setOfferSheetOpen] = useState(false);
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
 
   // Escape key to dismiss address overlay
   useEffect(() => {
@@ -660,7 +663,9 @@ export default function EnviarPaquetePage() {
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
             <>
-            <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+          {showServicePicker ? (
+          <>
+          <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
               <div>
                 <div className="enviar-step-title-main">¿Qué servicio necesitás?</div>
                 <div className="enviar-step-title-sub">Elegí una opción y completá el recorrido.</div>
@@ -678,6 +683,7 @@ export default function EnviarPaquetePage() {
                   type="button"
                   onClick={() => {
                     setOrderType(tab.key);
+                    setShowServicePicker(false);
                     if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
                     if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
                     if (tab.key === 'viaje') update('vehicleType', 'auto');
@@ -706,6 +712,39 @@ export default function EnviarPaquetePage() {
                 </button>
               ))}
             </div>
+            </>
+            ) : (
+            <div className="enviar-service-selected-view">
+              <div className="enviar-selected-service-row">
+                <div className="enviar-selected-service-name">
+                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Flete' : orderType === 'viaje' ? 'Remis' : 'Envío'}
+                </div>
+                <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Volver y cambiar</button>
+              </div>
+              <div className="enviar-vehicle-grid enviar-service-vehicles">
+                {vehicleTypes.filter(v => orderType === 'flete'
+                  ? ['motocarro', 'camion2t'].includes(v.value)
+                  : ['moto', 'auto'].includes(v.value)).map(v => (
+                  <button
+                    key={v.value}
+                    type="button"
+                    className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
+                    onClick={() => update('vehicleType', v.value)}
+                  >
+                    <span className="enviar-vehicle-icon">
+                      {pricing[v.value]?.image_url
+                        ? <img src={pricing[v.value].image_url!} alt={v.label} width={72} height={72} />
+                        : <Icon name={v.icon as import('@/components/Icon').IconName} size={32} />}
+                    </span>
+                    <span className="enviar-vehicle-info">
+                      <span className="enviar-vehicle-name">{v.label}</span>
+                      <span className="enviar-vehicle-sub">{v.sub}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            )}
             </>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -749,6 +788,7 @@ export default function EnviarPaquetePage() {
                         .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
                         .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
                       routeCoords={routeCoords}
+                      routeSummary={routeDistanceMeters || distanceKm > 0 ? `${routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km · ${routeDurationSec ? Math.max(1, Math.round(routeDurationSec / 60)) : Math.max(1, Math.round((distanceKm / 30) * 60))} min` : undefined}
                     />
                   </div>
                 )}
@@ -878,7 +918,7 @@ export default function EnviarPaquetePage() {
                 )}
 
                 {/* Route info pill */}
-                {(routeDistanceMeters || distanceKm > 0) && (
+                {orderType !== 'viaje' && (routeDistanceMeters || distanceKm > 0) && (
                   <div className="enviar-route-info">
                     <div className="enviar-route-stat">
                       <span className="enviar-route-icon" style={{ background: '#f97316' }}>
@@ -1419,6 +1459,16 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
                 <div className="enviar-step-actions">
+                  {orderType === 'viaje' && (
+                    <div className="enviar-bolt-inline-actions">
+                      <button type="button" className="enviar-bolt-option-btn" onClick={() => setOfferSheetOpen(true)}>
+                        <span>Tu oferta</span><strong>{offerPrice.toLocaleString('es-PY')} Gs</strong>
+                      </button>
+                      <button type="button" className="enviar-bolt-option-btn" onClick={() => setPaymentSheetOpen(true)}>
+                        <span>Pago</span><strong>{paymentMethods.find(pm => pm.value === form.paymentMethod)?.label}</strong>
+                      </button>
+                    </div>
+                  )}
                   {orderType !== 'viaje' && <button type="button" className="enviar-back-btn" onClick={() => setStep(2)}>
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                   </button>}
@@ -1450,6 +1500,42 @@ export default function EnviarPaquetePage() {
 
                 <div style={{ height: '1rem' }} />
               </>
+            )}
+
+            {orderType === 'viaje' && offerSheetOpen && (
+              <div className="enviar-sheet-backdrop" role="presentation" onMouseDown={() => setOfferSheetOpen(false)}>
+                <div className="enviar-sheet" role="dialog" aria-modal="true" aria-label="Tu oferta al Tasker" onMouseDown={e => e.stopPropagation()}>
+                  <div className="enviar-sheet-grip" />
+                  <div className="enviar-sheet-title">Tu oferta al Tasker</div>
+                  <div className="enviar-price-control">
+                    <button type="button" className="enviar-price-btn minus" onClick={() => setOfferPrice(p => Math.max(0, p - 5000))}>−</button>
+                    <div className="enviar-price-display">
+                      <input className="enviar-price-input" inputMode="numeric" value={offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} onChange={e => setOfferPrice(Math.max(0, parseInt(e.target.value.replace(/\D/g, '')) || 0))} />
+                      <span className="enviar-price-currency">Gs</span>
+                    </div>
+                    <button type="button" className="enviar-price-btn plus" onClick={() => setOfferPrice(p => p + 5000)}>+</button>
+                  </div>
+                  <button type="button" className="enviar-sheet-confirm" onClick={() => setOfferSheetOpen(false)}>Confirmar oferta</button>
+                </div>
+              </div>
+            )}
+
+            {orderType === 'viaje' && paymentSheetOpen && (
+              <div className="enviar-sheet-backdrop" role="presentation" onMouseDown={() => setPaymentSheetOpen(false)}>
+                <div className="enviar-sheet" role="dialog" aria-modal="true" aria-label="Forma de pago" onMouseDown={e => e.stopPropagation()}>
+                  <div className="enviar-sheet-grip" />
+                  <div className="enviar-sheet-title">Forma de pago</div>
+                  <div className="enviar-payment-pills enviar-sheet-payment">
+                    {paymentMethods.map(pm => (
+                      <button key={pm.value} type="button" className={`enviar-pay-pill ${form.paymentMethod === pm.value ? 'active' : ''}`} onClick={() => update('paymentMethod', pm.value)}>
+                        <span className="enviar-pay-pill-icon"><Icon name={pm.icon as import('@/components/Icon').IconName} size={14} /></span>
+                        <span>{pm.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="enviar-sheet-confirm" onClick={() => setPaymentSheetOpen(false)}>Confirmar pago</button>
+                </div>
+              </div>
             )}
 
           </form>

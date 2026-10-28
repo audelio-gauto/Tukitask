@@ -7,6 +7,7 @@ interface RoutePreviewMapProps {
   pickup: { lat: number; lng: number };
   stops: Array<{ lat: number; lng: number }>;
   routeCoords?: Array<{ lat: number; lng: number }>;
+  routeSummary?: string;
 }
 
 function useDarkMode() {
@@ -25,7 +26,7 @@ function useDarkMode() {
   return dark;
 }
 
-export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: RoutePreviewMapProps) {
+export default function RoutePreviewMap({ pickup, stops, routeCoords = [], routeSummary }: RoutePreviewMapProps) {
   const dark = useDarkMode();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -172,7 +173,14 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
     const validStops = stops.filter(s => isFinite(s.lat) && isFinite(s.lng));
     validStops.forEach((stop, i) => {
       const label = validStops.length === 1 ? 'B' : String(i + 1);
-      const m = new mapboxgl.Marker({ element: makePin('#ef4444', label), anchor: 'bottom' })
+      const stopPin = makePin('#ef4444', label);
+      if (i === validStops.length - 1 && routeSummary) {
+        const summary = document.createElement('div');
+        summary.className = 'route-map-summary';
+        summary.textContent = routeSummary;
+        stopPin.appendChild(summary);
+      }
+      const m = new mapboxgl.Marker({ element: stopPin, anchor: 'bottom' })
         .setLngLat([stop.lng, stop.lat])
         .addTo(map);
       markersRef.current.push(m);
@@ -234,7 +242,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [] }: Rou
       });
     }
    
-  }, [ready, styleVersion, pickup.lat, pickup.lng, stops, routeCoords]);
+  }, [ready, styleVersion, pickup.lat, pickup.lng, stops, routeCoords, routeSummary]);
 
 
 
