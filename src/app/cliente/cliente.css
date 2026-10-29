@@ -863,7 +863,8 @@
 .enviar-page-bolt .enviar-bolt-map-shell { position: fixed; inset: 0; width: 100%; height: 100dvh; margin: 0; z-index: 0; }
 .enviar-page-bolt form { position: relative; z-index: 10; height: 100%; overflow-y: auto; padding-top: 230px; padding-bottom: 190px; }
 .enviar-page-bolt .enviar-step-title { display: none; }
-.enviar-page-bolt .enviar-address-section { position: absolute; top: 78px; left: 16px; right: 16px; margin: 0; max-width: 588px; }
+.enviar-page-bolt .enviar-address-section { position: fixed; z-index: 20; top: 78px; left: 16px; right: 16px; margin: 0; max-width: 588px; }
+@media (min-width: 620px) { .enviar-page-bolt .enviar-address-section { left: 50%; right: auto; transform: translateX(-50%); width: min(calc(100% - 32px), 588px); } }
 .enviar-page-bolt .enviar-selected-service-row {
   position: fixed; z-index: 40; left: 50%; bottom: 82px; transform: translateX(-50%);
   width: min(calc(100% - 24px), 588px); margin: 0; padding: 8px 8px 8px 10px;
