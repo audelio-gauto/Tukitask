@@ -644,7 +644,7 @@ export default function EnviarPaquetePage() {
       )}
 
       {/* Clean form page */}
-      <div className={`enviar-page ${orderType === 'viaje' ? 'enviar-page-bolt' : ''}`}>
+      <div className={`enviar-page ${!showServicePicker ? 'enviar-page-bolt' : ''} ${orderType === 'viaje' ? 'enviar-page-remis' : ''}`}>
         <div className="enviar-page-header">
           <button type="button" className="enviar-page-menu" onClick={openDrawer} aria-label="Menú">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -792,7 +792,7 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 1: ADDRESSES / BOLT-STYLE CONTINUOUS REMIS ── */}
             {(step === 1 || orderType === 'viaje') && (
               <>
-                {orderType === 'viaje' && (
+                {!showServicePicker && (
                   <div className="enviar-bolt-map-shell">
                     <RoutePreviewMap
                       pickup={{
@@ -920,17 +920,6 @@ export default function EnviarPaquetePage() {
                     </button>
                   )}
                 </div>
-
-                {/* Route preview map: other services keep the existing conditional preview */}
-                {orderType !== 'viaje' && isFinite(parseFloat(form.pickupLat)) && stops.some(s => isFinite(parseFloat(s.lat))) && (
-                  <RoutePreviewMap
-                    pickup={{ lat: parseFloat(form.pickupLat), lng: parseFloat(form.pickupLng) }}
-                    stops={stops
-                      .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
-                      .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
-                    routeCoords={routeCoords}
-                  />
-                )}
 
                 {/* Route info pill */}
                 {orderType !== 'viaje' && (routeDistanceMeters || distanceKm > 0) && (

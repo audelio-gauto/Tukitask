@@ -857,6 +857,9 @@
   box-shadow: 0 3px 12px rgba(15, 23, 42, 0.25);
 }
 .enviar-service-selected-view { margin-bottom: 16px; }
+.enviar-page-bolt .enviar-page-body { display: flex; flex-direction: column; }
+.enviar-page-bolt form { order: 1; }
+.enviar-page-bolt .enviar-service-selected-view { order: 2; }
 .enviar-selected-service-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .enviar-selected-service-name { font-size: 1rem; font-weight: 800; color: var(--client-text); }
 .enviar-selected-service-sub { margin-top: 3px; color: var(--client-text-secondary); font-size: 0.78rem; line-height: 1.35; }
@@ -932,9 +935,9 @@
   height: 74px;
   object-fit: contain;
 }
-.enviar-page-bolt form > .enviar-price-section,
-.enviar-page-bolt form > .enviar-price-warning,
-.enviar-page-bolt form > .enviar-payment-pills { display: none; }
+.enviar-page-bolt.enviar-page-remis form > .enviar-price-section,
+.enviar-page-bolt.enviar-page-remis form > .enviar-price-warning,
+.enviar-page-bolt.enviar-page-remis form > .enviar-payment-pills { display: none; }
 .enviar-bolt-inline-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .enviar-bolt-option-btn { min-width: 0; min-height: 48px; border: 1px solid var(--client-border); border-radius: 12px; background: var(--client-surface); color: var(--client-text); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 6px 10px; cursor: pointer; }
 .enviar-bolt-option-btn span { font-size: 0.68rem; color: var(--client-text-secondary); }
