@@ -857,7 +857,21 @@
   box-shadow: 0 3px 12px rgba(15, 23, 42, 0.25);
 }
 .enviar-service-selected-view { margin-bottom: 16px; }
-.enviar-page-bolt .enviar-page-body { display: flex; flex-direction: column; }
+.enviar-page-bolt { position: relative; height: 100dvh; overflow: hidden; }
+.enviar-page-bolt .enviar-page-header { position: absolute; top: 0; left: 0; right: 0; z-index: 30; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,0)); }
+.enviar-page-bolt .enviar-page-body { position: relative; height: 100dvh; max-width: none; padding: 0; overflow: hidden; }
+.enviar-page-bolt .enviar-bolt-map-shell { position: fixed; inset: 0; width: 100%; height: 100dvh; margin: 0; z-index: 0; }
+.enviar-page-bolt form { position: relative; z-index: 10; height: 100%; overflow-y: auto; padding-top: 230px; padding-bottom: 190px; }
+.enviar-page-bolt .enviar-step-title { display: none; }
+.enviar-page-bolt .enviar-address-section { position: absolute; top: 78px; left: 16px; right: 16px; margin: 0; max-width: 588px; }
+.enviar-page-bolt .enviar-selected-service-row {
+  position: fixed; z-index: 40; left: 50%; bottom: 82px; transform: translateX(-50%);
+  width: min(calc(100% - 24px), 588px); margin: 0; padding: 8px 8px 8px 10px;
+  border-radius: 18px; background: var(--client-surface); box-shadow: 0 12px 36px rgba(15,23,42,.22);
+}
+.enviar-page-bolt .enviar-selected-services { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.enviar-page-bolt .enviar-selected-service-tab { flex: 1 0 auto; min-width: 72px; min-height: 38px; border: 0; border-radius: 12px; background: var(--client-action-active); color: var(--client-text-secondary); font-weight: 700; cursor: pointer; }
+.enviar-page-bolt .enviar-selected-service-tab.active { background: var(--client-primary); color: var(--client-primary-text); }
 .enviar-page-bolt .enviar-step-indicator { display: none; }
 .enviar-page-bolt .enviar-next-btn { display: none; }
 .enviar-page-bolt .enviar-back-btn { display: none; }

@@ -715,10 +715,28 @@ export default function EnviarPaquetePage() {
             </>
             ) : (
             <div className="enviar-selected-service-row">
-              <div className="enviar-selected-service-name">
-                {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Flete' : orderType === 'viaje' ? 'Remis' : 'Envío'}
+              <div className="enviar-selected-services">
+                {([
+                  { key: 'mandadito', label: 'Mandaditos' },
+                  { key: 'viaje', label: 'Remis' },
+                  { key: 'envio', label: 'Envío' },
+                  { key: 'flete', label: 'Flete' },
+                ] as const).map(service => (
+                  <button
+                    key={service.key}
+                    type="button"
+                    className={`enviar-selected-service-tab ${orderType === service.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setOrderType(service.key);
+                      setStep(1);
+                      if (service.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
+                      if (service.key === 'viaje' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'auto');
+                      if (service.key === 'envio' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
+                    }}
+                  >{service.label}</button>
+                ))}
               </div>
-              <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Cambiar servicio</button>
+              <button type="button" className="enviar-change-service" aria-label="Mostrar todos los servicios" onClick={() => setShowServicePicker(true)}>•••</button>
             </div>
             )}
             </>
