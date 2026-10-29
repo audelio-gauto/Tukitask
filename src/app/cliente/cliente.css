@@ -840,16 +840,6 @@
 }
 
 /* Bolt-style continuous layout for Remis */
-.enviar-page-bolt .enviar-page-body { display: flex; flex-direction: column; }
-.enviar-page-bolt form { display: contents; }
-.enviar-page-bolt .enviar-bolt-map-shell { order: 0; }
-.enviar-page-bolt .enviar-location-title { order: 1; }
-.enviar-page-bolt .enviar-address-section { order: 2; }
-.enviar-page-bolt .enviar-service-picker-section,
-.enviar-page-bolt .enviar-service-selected-view { order: 3; }
-.enviar-page-bolt .enviar-remis-vehicle-selection { display: none; }
-.enviar-page-bolt .enviar-inline-vehicle-title { padding: 4px 0 8px !important; margin-bottom: 4px; border: 0; background: transparent; }
-.enviar-page-bolt .enviar-selected-service-row { margin-bottom: 4px; }
 .route-map-summary {
   position: absolute;
   left: 50%;
@@ -869,6 +859,7 @@
 .enviar-service-selected-view { margin-bottom: 16px; }
 .enviar-selected-service-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .enviar-selected-service-name { font-size: 1rem; font-weight: 800; color: var(--client-text); }
+.enviar-selected-service-sub { margin-top: 3px; color: var(--client-text-secondary); font-size: 0.78rem; line-height: 1.35; }
 .enviar-change-service { border: 0; background: transparent; color: var(--client-primary); font-weight: 700; cursor: pointer; }
 .enviar-service-vehicles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .enviar-sheet-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(3px); }

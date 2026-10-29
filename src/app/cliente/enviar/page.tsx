@@ -664,7 +664,6 @@ export default function EnviarPaquetePage() {
           {step === 1 ? (
             <>
           {showServicePicker ? (
-          <div className="enviar-service-picker-section">
           <>
           <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
               <div>
@@ -714,58 +713,50 @@ export default function EnviarPaquetePage() {
               ))}
             </div>
             </>
-            </div>
             ) : (
             <div className="enviar-service-selected-view">
               <div className="enviar-selected-service-row">
-                <div className="enviar-selected-service-name">
-                  {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Flete' : orderType === 'viaje' ? 'Remis' : 'Envío'}
+                <div>
+                  <div className="enviar-selected-service-name">Elegí el vehículo y tu precio</div>
+                  <div className="enviar-selected-service-sub">El conductor puede aceptar o proponerte otro monto.</div>
                 </div>
-                <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Volver y cambiar</button>
+                <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Cambiar</button>
               </div>
-              {(orderType === 'viaje' || orderType === 'mandadito' || orderType === 'flete') && (
-                <div className="enviar-step-title enviar-inline-vehicle-title">
-                  <div>
-                    <div className="enviar-step-title-main">Elegí el vehículo y tu precio</div>
-                    <div className="enviar-step-title-sub">El conductor puede aceptar o proponerte otro monto.</div>
-                  </div>
-                </div>
-              )}
               <div className="enviar-vehicle-grid enviar-service-vehicles">
                 {vehicleTypes.filter(v => orderType === 'flete'
                   ? ['motocarro', 'camion2t'].includes(v.value)
                   : ['moto', 'auto'].includes(v.value)).map(v => {
-                    const vehiclePrice = pricing[v.value];
-                    const distance = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
-                    let estimatedPrice = vehiclePrice?.base_price || 0;
-                    if (vehiclePrice?.price_per_km && distance > 0) estimatedPrice += vehiclePrice.price_per_km * distance;
-                    const minimum = pricingSettings['min_shipping_price'] ?? 0;
-                    if (minimum && estimatedPrice < minimum) estimatedPrice = minimum;
-                    return (
-                      <button
-                        key={v.value}
-                        type="button"
-                        className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
-                        onClick={() => update('vehicleType', v.value)}
-                      >
-                        <span className="enviar-vehicle-icon">
-                          {pricing[v.value]?.image_url
-                            ? <img src={pricing[v.value].image_url!} alt={v.label} width={72} height={72} />
-                            : <Icon name={v.icon as import('@/components/Icon').IconName} size={32} />}
-                        </span>
-                        <span className="enviar-vehicle-info">
-                          <span className="enviar-vehicle-name">{v.label}</span>
-                          <span className="enviar-vehicle-sub">{orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 persona' : orderType === 'viaje' && v.value === 'auto' ? 'Capacidad hasta 3 personas' : v.sub}</span>
-                        </span>
-                        {!loadingPricing && estimatedPrice > 0 && (
-                          <span className="enviar-vehicle-price"><span>{Math.round(estimatedPrice).toLocaleString('es-PY')} <small>Gs</small></span></span>
-                        )}
-                        {form.vehicleType === v.value && (
-                          <span className="enviar-vehicle-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5"><polyline points="20 6 9 17 4 12" /></svg></span>
-                        )}
-                      </button>
-                    );
-                  })}
+                  const vp = pricing[v.value];
+                  const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
+                  let estimatedPrice = vp?.base_price ? Number(vp.base_price) : 0;
+                  if (vp?.price_per_km && dist > 0) estimatedPrice += Number(vp.price_per_km) * dist;
+                  const globalMin = pricingSettings['min_shipping_price'] ?? 0;
+                  if (globalMin && estimatedPrice < globalMin) estimatedPrice = globalMin;
+                  return (
+                    <button
+                      key={v.value}
+                      type="button"
+                      className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
+                      onClick={() => update('vehicleType', v.value)}
+                    >
+                      <span className="enviar-vehicle-icon">
+                        {pricing[v.value]?.image_url
+                          ? <img src={pricing[v.value].image_url!} alt={v.label} width={72} height={72} />
+                          : <Icon name={v.icon as import('@/components/Icon').IconName} size={32} />}
+                      </span>
+                      <span className="enviar-vehicle-info">
+                        <span className="enviar-vehicle-name">{v.label}</span>
+                        <span className="enviar-vehicle-sub">{orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 persona' : orderType === 'viaje' && v.value === 'auto' ? 'Hasta 3 personas' : v.sub}</span>
+                      </span>
+                      <span className="enviar-vehicle-price">
+                        {!loadingPricing && estimatedPrice > 0
+                          ? <>{Math.round(estimatedPrice).toLocaleString('es-PY')} <small>Gs</small></>
+                          : <span className="enviar-vehicle-hint">Calculando precio</span>}
+                      </span>
+                      {form.vehicleType === v.value && <span className="enviar-vehicle-check">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             )}
@@ -816,7 +807,7 @@ export default function EnviarPaquetePage() {
                     />
                   </div>
                 )}
-                <div className={`enviar-step-title enviar-location-title ${orderType === 'viaje' ? 'enviar-remis-location-title' : ''}`} style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+                <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
                     <div className="enviar-step-title-main">
                       {orderType === 'viaje' ? '¿De dónde salís y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
@@ -1031,13 +1022,12 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
             {(step === 2 || orderType === 'viaje') && (
               <>
-                <div className="enviar-remis-vehicle-selection">
-                  <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
-                    <div>
-                      <div className="enviar-step-title-main">Elegí el vehículo y tu precio</div>
-                      <div className="enviar-step-title-sub">El conductor puede aceptar o proponerte otro monto.</div>
-                    </div>
+                <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
+                  <div>
+                    <div className="enviar-step-title-main">Elegí el vehículo y tu precio</div>
+                    <div className="enviar-step-title-sub">El conductor puede aceptar o proponerte otro monto.</div>
                   </div>
+                </div>
                 {/* Vehicle cards */}
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
@@ -1093,7 +1083,6 @@ export default function EnviarPaquetePage() {
                       </button>
                     );
                   })}
-                </div>
                 </div>
 
                 {/* Price control */}
