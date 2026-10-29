@@ -858,6 +858,9 @@
 }
 .enviar-service-selected-view { margin-bottom: 16px; }
 .enviar-page-bolt .enviar-page-body { display: flex; flex-direction: column; }
+.enviar-page-bolt .enviar-step-indicator { display: none; }
+.enviar-page-bolt .enviar-next-btn { display: none; }
+.enviar-page-bolt .enviar-back-btn { display: none; }
 .enviar-page-bolt form { order: 1; }
 .enviar-page-bolt .enviar-service-selected-view { order: 2; }
 .enviar-selected-service-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }

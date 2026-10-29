@@ -714,50 +714,11 @@ export default function EnviarPaquetePage() {
             </div>
             </>
             ) : (
-            <div className="enviar-service-selected-view">
-              <div className="enviar-selected-service-row">
-                <div>
-                  <div className="enviar-selected-service-name">Elegí el vehículo y tu precio</div>
-                  <div className="enviar-selected-service-sub">El conductor puede aceptar o proponerte otro monto.</div>
-                </div>
-                <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Cambiar</button>
+            <div className="enviar-selected-service-row">
+              <div className="enviar-selected-service-name">
+                {orderType === 'mandadito' ? 'Mandaditos' : orderType === 'flete' ? 'Flete' : orderType === 'viaje' ? 'Remis' : 'Envío'}
               </div>
-              <div className="enviar-vehicle-grid enviar-service-vehicles">
-                {vehicleTypes.filter(v => orderType === 'flete'
-                  ? ['motocarro', 'camion2t'].includes(v.value)
-                  : ['moto', 'auto'].includes(v.value)).map(v => {
-                  const vp = pricing[v.value];
-                  const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
-                  let estimatedPrice = vp?.base_price ? Number(vp.base_price) : 0;
-                  if (vp?.price_per_km && dist > 0) estimatedPrice += Number(vp.price_per_km) * dist;
-                  const globalMin = pricingSettings['min_shipping_price'] ?? 0;
-                  if (globalMin && estimatedPrice < globalMin) estimatedPrice = globalMin;
-                  return (
-                    <button
-                      key={v.value}
-                      type="button"
-                      className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
-                      onClick={() => update('vehicleType', v.value)}
-                    >
-                      <span className="enviar-vehicle-icon">
-                        {pricing[v.value]?.image_url
-                          ? <img src={pricing[v.value].image_url!} alt={v.label} width={72} height={72} />
-                          : <Icon name={v.icon as import('@/components/Icon').IconName} size={32} />}
-                      </span>
-                      <span className="enviar-vehicle-info">
-                        <span className="enviar-vehicle-name">{v.label}</span>
-                        <span className="enviar-vehicle-sub">{orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 persona' : orderType === 'viaje' && v.value === 'auto' ? 'Hasta 3 personas' : v.sub}</span>
-                      </span>
-                      <span className="enviar-vehicle-price">
-                        {!loadingPricing && estimatedPrice > 0
-                          ? <>{Math.round(estimatedPrice).toLocaleString('es-PY')} <small>Gs</small></>
-                          : <span className="enviar-vehicle-hint">Calculando precio</span>}
-                      </span>
-                      {form.vehicleType === v.value && <span className="enviar-vehicle-check">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
+              <button type="button" className="enviar-change-service" onClick={() => setShowServicePicker(true)}>← Cambiar servicio</button>
             </div>
             )}
             </>
@@ -774,7 +735,7 @@ export default function EnviarPaquetePage() {
           )}
 
           {/* Step indicator: Remis uses the continuous Bolt-style layout */}
-          {orderType !== 'viaje' && <div className="enviar-step-indicator">
+          {showServicePicker && step > 1 && orderType !== 'viaje' && <div className="enviar-step-indicator">
             {[1, 2, 3].map((s) => (
               <div key={s} className="enviar-step-item">
                 <div className={`enviar-step-circle ${step === s ? 'active' : step > s ? 'done' : ''}`}>
@@ -790,7 +751,7 @@ export default function EnviarPaquetePage() {
           <form id="enviar-form" onSubmit={handleSubmit}>
 
             {/* ── STEP 1: ADDRESSES / BOLT-STYLE CONTINUOUS REMIS ── */}
-            {(step === 1 || orderType === 'viaje') && (
+            {(step === 1 || !showServicePicker) && (
               <>
                 {!showServicePicker && (
                   <div className="enviar-bolt-map-shell">
@@ -1009,7 +970,7 @@ export default function EnviarPaquetePage() {
             )}
 
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
-            {(step === 2 || orderType === 'viaje') && (
+            {(step === 2 || !showServicePicker) && (
               <>
                 <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
@@ -1183,7 +1144,7 @@ export default function EnviarPaquetePage() {
             )}
 
             {/* ── STEP 3: CONTACTS ── */}
-            {(step === 3 || orderType === 'viaje') && (
+            {(step === 3 || !showServicePicker) && (
               <>
                 <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
@@ -1463,7 +1424,7 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
                 <div className="enviar-step-actions">
-                  {orderType === 'viaje' && (
+                  {!showServicePicker && (
                     <div className="enviar-bolt-inline-actions">
                       <button type="button" className="enviar-bolt-option-btn" onClick={() => setOfferSheetOpen(true)}>
                         <span>Tu oferta</span><strong>{offerPrice.toLocaleString('es-PY')} Gs</strong>
@@ -1506,7 +1467,7 @@ export default function EnviarPaquetePage() {
               </>
             )}
 
-            {orderType === 'viaje' && offerSheetOpen && (
+            {!showServicePicker && offerSheetOpen && (
               <div className="enviar-sheet-backdrop" role="presentation" onMouseDown={() => setOfferSheetOpen(false)}>
                 <div className="enviar-sheet" role="dialog" aria-modal="true" aria-label="Tu oferta al Tasker" onMouseDown={e => e.stopPropagation()}>
                   <div className="enviar-sheet-grip" />
@@ -1524,7 +1485,7 @@ export default function EnviarPaquetePage() {
               </div>
             )}
 
-            {orderType === 'viaje' && paymentSheetOpen && (
+            {!showServicePicker && paymentSheetOpen && (
               <div className="enviar-sheet-backdrop" role="presentation" onMouseDown={() => setPaymentSheetOpen(false)}>
                 <div className="enviar-sheet" role="dialog" aria-modal="true" aria-label="Forma de pago" onMouseDown={e => e.stopPropagation()}>
                   <div className="enviar-sheet-grip" />
