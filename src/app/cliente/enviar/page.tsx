@@ -71,6 +71,14 @@ export default function EnviarPaquetePage() {
   const [showServicePicker, setShowServicePicker] = useState(true);
   const [offerSheetOpen, setOfferSheetOpen] = useState(false);
   const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  type SavedPlace = { address: string; lat: string; lng: string };
+  const [savedPlaces, setSavedPlaces] = useState<Record<'casa' | 'trabajo', SavedPlace | null>>({ casa: null, trabajo: null });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('tukitask_saved_places');
+      if (raw) setSavedPlaces(prev => ({ ...prev, ...JSON.parse(raw) }));
+    } catch {}
+  }, []);
 
   // Escape key to dismiss address overlay
   useEffect(() => {
@@ -887,6 +895,41 @@ export default function EnviarPaquetePage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Destinos rápidos (guardados en este dispositivo) */}
+                  <div className="enviar-quick-places">
+                    {([['casa', '🏠', 'Casa'], ['trabajo', '💼', 'Trabajo']] as const).map(([key, emoji, label]) => {
+                      const saved = savedPlaces[key];
+                      const first = stops[0];
+                      const canSave = !!first && first.address && isFinite(parseFloat(first.lat)) && isFinite(parseFloat(first.lng));
+                      const save = () => {
+                        if (!canSave) return;
+                        const next = { ...savedPlaces, [key]: { address: first.address, lat: first.lat, lng: first.lng } };
+                        setSavedPlaces(next);
+                        try { localStorage.setItem('tukitask_saved_places', JSON.stringify(next)); } catch {}
+                      };
+                      return (
+                        <span key={key} className="enviar-quick-chip">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (saved) {
+                                updateStop(0, 'address', saved.address);
+                                updateStop(0, 'lat', saved.lat);
+                                updateStop(0, 'lng', saved.lng);
+                              } else if (canSave) save();
+                              else openSearch('stop_0');
+                            }}
+                          >
+                            {emoji} {label}{saved ? '' : canSave ? ' · guardar destino' : ' · agregar'}
+                          </button>
+                          {saved && canSave && (first.address !== saved.address) && (
+                            <button type="button" className="enviar-quick-save" onClick={save} aria-label={`Guardar destino actual como ${label}`}>✎</button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
 
                   {/* Add stop button */}
                   {stops.length < MAX_STOPS && (
