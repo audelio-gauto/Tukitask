@@ -257,6 +257,46 @@ export default function EnviarPaquetePage() {
   const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(null);
   const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
 
+  // ── Nearby drivers (read-only, display only) ──────────────────────────────
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ vehicle_type: string; lat: number; lng: number }>>([]);
+  useEffect(() => {
+    const lat = parseFloat(form.pickupLat);
+    const lng = parseFloat(form.pickupLng);
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    let cancelled = false;
+    const load = async () => {
+      if (document.hidden) return;
+      try {
+        const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.drivers)) setNearbyDrivers(json.drivers);
+      } catch { /* map keeps previous drivers */ }
+    };
+    load();
+    const t = setInterval(load, 20000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [form.pickupLat, form.pickupLng]);
+
+  const nearbyEta = useMemo(() => {
+    const lat = parseFloat(form.pickupLat);
+    const lng = parseFloat(form.pickupLng);
+    const result: Record<string, number | null> = {};
+    if (!isFinite(lat) || !isFinite(lng)) return result;
+    for (const d of nearbyDrivers) {
+      const km = haversineKm(lat, lng, d.lat, d.lng);
+      const speed = d.vehicle_type === 'moto' ? 30 : 25;
+      const min = Math.max(1, Math.round((km / speed) * 60));
+      if (result[d.vehicle_type] == null || min < (result[d.vehicle_type] as number)) result[d.vehicle_type] = min;
+    }
+    return result;
+  }, [nearbyDrivers, form.pickupLat, form.pickupLng]);
+
+  const visibleNearbyDrivers = useMemo(() => {
+    if (showServicePicker) return nearbyDrivers;
+    const allowed = orderType === 'flete' ? ['motocarro', 'camion2t'] : ['moto', 'auto'];
+    return nearbyDrivers.filter(d => allowed.includes(d.vehicle_type));
+  }, [nearbyDrivers, showServicePicker, orderType]);
   const suggestedPrice = useMemo(() => {
     const key = form.vehicleType || '';
     const v = pricing[key];
@@ -764,6 +804,7 @@ export default function EnviarPaquetePage() {
                         .filter(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
                         .map(s => ({ lat: parseFloat(s.lat), lng: parseFloat(s.lng) }))}
                       routeCoords={routeCoords}
+                      drivers={visibleNearbyDrivers}
                       routeSummary={routeDistanceMeters || distanceKm > 0 ? `${routeDistanceMeters ? (routeDistanceMeters / 1000).toFixed(1) : distanceKm.toFixed(1)} km · ${routeDurationSec ? Math.max(1, Math.round(routeDurationSec / 60)) : Math.max(1, Math.round((distanceKm / 30) * 60))} min` : undefined}
                     />
                   </div>
@@ -1016,6 +1057,7 @@ export default function EnviarPaquetePage() {
                             {orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 Persona' :
                              orderType === 'viaje' && v.value === 'auto' ? 'Capacidad hasta 3 personas' :
                              v.sub}
+                            {nearbyEta[v.value] ? ` · ${nearbyEta[v.value]} min` : ''}
                           </span>
                         </div>
                         <div className="enviar-vehicle-price">
