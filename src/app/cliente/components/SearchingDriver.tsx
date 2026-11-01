@@ -122,6 +122,15 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
     } finally { setCancelling(false); }
   };
 
+  // Etiquetas solo visuales; requieren al menos 2 ofertas para comparar
+  const bestAmount = offers.length >= 2 ? Math.min(...offers.map(o => o.amount)) : null;
+  const ratings = offers.map(o => Number(o.driver_avg_rating ?? 0));
+  const bestRating = offers.length >= 2 && Math.max(...ratings) > 0 ? Math.max(...ratings) : null;
+  const tagStyle = (bg: string, color: string): React.CSSProperties => ({
+    display: 'inline-block', padding: '2px 9px', borderRadius: 99, fontSize: '0.68rem',
+    fontWeight: 800, background: bg, color, marginRight: 6,
+  });
+
   const mm = String(Math.floor(seconds / 60)).padStart(1, '0');
   const ss = String(seconds % 60).padStart(2, '0');
 
@@ -141,6 +150,12 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
       <div className="searching-offers">
         {offers.map(o => (
           <div key={o.id} className="searching-offer">
+            {(o.amount === bestAmount || (bestRating != null && Number(o.driver_avg_rating ?? 0) === bestRating)) && (
+              <div style={{ marginBottom: 8 }}>
+                {o.amount === bestAmount && <span style={tagStyle('rgba(34,197,94,0.16)', '#16a34a')}>💰 Mejor precio</span>}
+                {bestRating != null && Number(o.driver_avg_rating ?? 0) === bestRating && <span style={tagStyle('rgba(245,197,24,0.2)', '#b8860b')}>⭐ Mejor calificado</span>}
+              </div>
+            )}
             <div className="searching-offer-head">
               {o.driver_photo
                 // eslint-disable-next-line @next/next/no-img-element
