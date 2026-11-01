@@ -523,7 +523,8 @@ export default function DriverDashboard() {
       }
 
       // Rango de entrega: distancia del conductor al punto B
-      if (o.delivery_lat != null && o.delivery_lng != null) {
+      // Los fletes suelen ir lejos: no se limitan por rango de entrega
+      if (o.order_type !== 'flete' && o.delivery_lat != null && o.delivery_lng != null) {
         const distDelivery = haversineKm(dLat, dLng, Number(o.delivery_lat), Number(o.delivery_lng));
         if (distDelivery > deliveryRangeKm) return false;
       }

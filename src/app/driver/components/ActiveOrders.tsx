@@ -587,6 +587,17 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
     const isCancelOpen = cancelOpen.has(order.id);
     const cancelReasonText = cancelReason[order.id] ?? '';
     const isActingCancel = acting === order.id + 'driver_cancelled';
+    const clientRating = Number(order.client_avg_rating ?? 0);
+    const tripKm = (order.pickup_lat != null && order.pickup_lng != null && order.delivery_lat != null && order.delivery_lng != null)
+      ? haversineKm(Number(order.pickup_lat), Number(order.pickup_lng), Number(order.delivery_lat), Number(order.delivery_lng))
+      : null;
+    // Cancelar: discreto y separado del botón de acción para evitar toques por error
+    const cancelBtnStyle = {
+      width: '100%', padding: '9px', marginTop: 18, borderRadius: 12,
+      border: '1px dashed rgba(239,68,68,0.35)', background: 'transparent',
+      color: '#f87171', fontWeight: 600, fontSize: '0.8rem',
+      cursor: acting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+    } as const;
 
     return (
       <div
@@ -661,7 +672,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             <div
               className="tuki-avatar"
               style={{
-                width: 58, height: 58, fontSize: '1.45rem', flexShrink: 0,
+                width: mode === 'nav' ? 44 : 58, height: mode === 'nav' ? 44 : 58, fontSize: mode === 'nav' ? '1.1rem' : '1.45rem', flexShrink: 0,
                 background: clientPhoto
                   ? `url(${clientPhoto}) center/cover no-repeat`
                   : `linear-gradient(135deg, ${BRAND}, #F58A07)`,
@@ -674,6 +685,20 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
+              {(clientRating > 0 || tripKm != null) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
+                  {clientRating > 0 && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.78rem', fontWeight: 800, color: '#F5C518' }}>
+                      ★ {clientRating.toFixed(1)}
+                    </span>
+                  )}
+                  {tripKm != null && (
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                      Viaje {tripKm.toFixed(1)} km
+                    </span>
+                  )}
+                </div>
+              )}
               {phone && mode !== 'nav' && (
                 <a href={`tel:${phone}`} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Icon name="device-mobile" size={12} color="#60a5fa" /> {phone}
@@ -1300,13 +1325,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
               <button
                 disabled={!!acting}
                 onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
-                style={{
-                  width: '100%', padding: '11px', borderRadius: 12,
-                  border: '1.5px solid rgba(239,68,68,0.4)',
-                  background: 'rgba(239,68,68,0.08)',
-                  color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
-                  cursor: acting ? 'not-allowed' : 'pointer',
-                }}
+                style={cancelBtnStyle}
               >
                 <Icon name="x" size={14} color="#f87171" /> Cancelar
               </button>
@@ -1333,13 +1352,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
               <button
                 disabled={!!acting}
                 onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
-                style={{
-                  width: '100%', padding: '11px', borderRadius: 12,
-                  border: '1.5px solid rgba(239,68,68,0.4)',
-                  background: 'rgba(239,68,68,0.08)',
-                  color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
-                  cursor: acting ? 'not-allowed' : 'pointer',
-                }}
+                style={cancelBtnStyle}
               >
                 <Icon name="x" size={14} color="#f87171" /> Cancelar
               </button>
@@ -1388,14 +1401,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
                 <button
                   disabled={!!acting}
                   onClick={() => setCancelOpen(prev => new Set([...prev, order.id]))}
-                  style={{
-                    width: '100%', padding: '11px', borderRadius: 12,
-                    border: '1.5px solid rgba(239,68,68,0.4)',
-                    background: 'rgba(239,68,68,0.08)',
-                    color: '#f87171', fontWeight: 700, fontSize: '0.88rem',
-                    cursor: acting ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
+                  style={cancelBtnStyle}
                 >
                   <Icon name="x" size={14} color="#f87171" /> Cancelar
                 </button>
