@@ -156,8 +156,7 @@ export async function GET(req: Request) {
       .from('driver_feed')
       .select('order_id')
       .eq('driver_email', user.email)
-      .order('matched_at', { ascending: false })
-      .limit(100);
+      .limit(500);
     if (feedErr) return serverError(feedErr);
 
     const feedIds = (feedRows ?? []).map((r: { order_id: string }) => r.order_id).filter(Boolean);

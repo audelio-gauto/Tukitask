@@ -497,6 +497,20 @@ export default function DriverDashboard() {
     camion_fletes: 'camion',
   };
 
+  // Cualquier forma de cerrar el panel guarda el rango/filtros: el servidor arma la bandeja con el valor guardado
+  const closeFilters = () => {
+    setFilterOpen(false);
+    authFetch('/api/driver-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        pickup_range: pickupRangeKm,
+        service_filters: serviceFilters,
+      }),
+    }).then(() => loadWithRefresh()).catch(() => {});
+  };
+
   const filteredFeedItems: FeedItem[] = pendingOrders
     .filter(o => {
       // ── Filtro 1: tipo de vehículo ──────────────────────────────────────
@@ -647,11 +661,11 @@ export default function DriverDashboard() {
       {/* Service Filter Modal */}
       {filterOpen && (
         <>
-          <div className="driver-filter-overlay" onClick={() => setFilterOpen(false)} />
+          <div className="driver-filter-overlay" onClick={closeFilters} />
           <div className="driver-filter-modal">
             <div className="driver-filter-header">
               <h3>Filtrar solicitudes</h3>
-              <button className="driver-filter-close" onClick={() => setFilterOpen(false)} aria-label="Cerrar">
+              <button className="driver-filter-close" onClick={closeFilters} aria-label="Cerrar">
                 <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
@@ -705,19 +719,7 @@ export default function DriverDashboard() {
               </div>
             </div>
 
-            <button className="driver-filter-done" onClick={() => {
-              setFilterOpen(false);
-              // Persist to DB so settings survive refresh
-              authFetch('/api/driver-profile', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  email,
-                  pickup_range: pickupRangeKm,
-                  service_filters: serviceFilters,
-                }),
-              }).catch(() => {});
-            }}>
+            <button className="driver-filter-done" onClick={closeFilters}>
               Aplicar filtros
             </button>
           </div>
