@@ -221,6 +221,12 @@ export default function DriverDashboard() {
         setSendingOfferId(null);
         return;
       }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        showToast(body.error || 'No se pudo enviar la oferta');
+        setSendingOfferId(null);
+        return;
+      }
       setDismissedHome(prev => new Set([...prev, orderId]));
     } catch {
       showToast('Error al enviar oferta. Intenta de nuevo.');

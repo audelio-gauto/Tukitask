@@ -132,6 +132,7 @@ async function driverHasActiveService(email: string): Promise<boolean> {
     .eq('accepted_by', email)
     .in('status', ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'awaiting_payment', 'payment_confirmed'])
     .is('date_scheduled', null)
+    .neq('order_type', 'mandadito') // servicio eliminado: no debe bloquear al driver
     .limit(1);
   return !!data?.length;
 }
