@@ -966,10 +966,22 @@ export default function SeguimientoPage() {
               </div>
             )}
           </div>
+          {type === 'delivery' && ['accepted', 'picking_up', 'in_transit', 'returning', 'driver_returning', 'delivered', 'commission_charged'].includes(order.status) && (() => {
+            const steps = ['Asignado', 'En camino', 'En viaje', 'Entregado'];
+            const idx = order.status === 'accepted' ? 0 : order.status === 'picking_up' ? 1 : (order.status === 'delivered' || order.status === 'commission_charged') ? 3 : 2;
+            return (
+              <div style={{ display: 'flex', alignItems: 'flex-start', margin: '4px 0 6px' }}>
+                {steps.map((label, i) => (
+                  <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                    {i > 0 && <div style={{ position: 'absolute', top: 6, right: '50%', width: '100%', height: 3, background: i <= idx ? '#22c55e' : 'var(--border-strong)', opacity: i <= idx ? 1 : 0.4 }} />}
+                    <div style={{ position: 'relative', width: 15, height: 15, borderRadius: '50%', background: i <= idx ? '#22c55e' : 'var(--sheet-bg)', border: `2px solid ${i <= idx ? '#22c55e' : 'var(--border-strong)'}` }} />
+                    <span style={{ marginTop: 4, fontSize: '0.62rem', fontWeight: i === idx ? 800 : 600, color: i <= idx ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
-
-
-          {/* Address row A → stops → B (delivery only) */}
           {type === 'delivery' && (order.pickup_address || order.delivery_address) && (
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
               {order.pickup_address && (
