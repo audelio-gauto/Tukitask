@@ -21,16 +21,19 @@ function CountdownBar({ createdAt }: { createdAt: string }) {
     return () => clearInterval(iv);
   }, [createdAt]);
   const pct = (seconds / CARD_TIMER) * 100;
-  const c = '#F5C518';
+  const c = seconds <= 10 ? '#ef4444' : seconds <= 20 ? '#f59e0b' : '#F5C518';
   return (
-    <div style={{ width: '100%', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
-      <div style={{
-        height: '100%', width: `${pct}%`,
-        background: `linear-gradient(90deg,${c}cc,${c})`,
-        borderRadius: 6,
-        transition: 'width 1s linear',
-        boxShadow: seconds <= 15 ? `0 0 6px ${c}88` : 'none',
-      }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`,
+          background: `linear-gradient(90deg,${c}cc,${c})`,
+          borderRadius: 8,
+          transition: 'width 1s linear, background 0.3s',
+          boxShadow: seconds <= 20 ? `0 0 8px ${c}99` : 'none',
+        }} />
+      </div>
+      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: c, minWidth: 26, textAlign: 'right' }}>{seconds}s</span>
     </div>
   );
 }
@@ -526,7 +529,20 @@ export default memo(function RequestsFeed({
           )}
 
           {/* ── Info zone ── */}
-          <div style={{ padding: '12px 14px 10px' }}>
+          <div style={{ padding: '12px 14px 10px', position: 'relative' }}>
+
+            {/* Omitir: esquina pequeña, lejos de los botones de acción */}
+            <button
+              onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
+              style={{
+                position: 'absolute', top: 8, right: 8, zIndex: 2,
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                color: 'var(--text-muted)', borderRadius: 99,
+                width: 26, height: 26, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, padding: 0,
+              }}
+              aria-label="Omitir solicitud"
+            >✕</button>
 
             {/* Row 1: avatar + info + price/timer/close */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
@@ -551,8 +567,7 @@ export default memo(function RequestsFeed({
               </div>
 
               {/* Name + service + meta */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Client name — PRIMARY, large */}
+              <div style={{ flex: 1, minWidth: 0, paddingRight: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
                   <div style={{
                     fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem',
@@ -600,64 +615,37 @@ export default memo(function RequestsFeed({
                 </div>
               </div>
 
-              {/* Centre: Gs/km profitability badge */}
-              {showRateBadge && (
-                <div style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, marginInline: 4,
-                }}>
-                  <div style={{
-                    background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
-                    borderRadius: 9, padding: '3px 7px', textAlign: 'center',
-                  }}>
-                    <div style={{ fontSize: '0.52rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
-                      {gsPerKm!.toLocaleString('es-PY')}
-                    </div>
-                    <div style={{ fontSize: '0.5rem', fontWeight: 700, color: rateColor! }}>Gs/km</div>
+            </div>
+
+            {/* ── Precio protagonista + rentabilidad ── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
+              {mode === 'driver' || clientPrice > 0 ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 900, color: BRAND, fontSize: '2rem', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                    {clientPrice.toLocaleString('es-PY')} <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>Gs</span>
                   </div>
+                  {pricePerStop && <div style={{ fontSize: '0.64rem', color: '#f59e0b', fontWeight: 700, marginTop: 3 }}>≈{pricePerStop.toLocaleString()}/parada</div>}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '1.1rem', lineHeight: 1.2 }}>A cotizar</div>
+                  <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Ponés tu precio</div>
                 </div>
               )}
-
-              {/* Price block + timer + dismiss */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                {/* Price pill — en modo tecnico solo se muestra si el cliente puso precio (backward compat) */}
-                {mode === 'driver' || clientPrice > 0 ? (
-                  <div style={{
-                    background: 'rgba(245,197,24,0.10)',
-                    border: `1px solid rgba(245,197,24,0.28)`,
-                    borderRadius: 12, padding: '5px 10px', textAlign: 'right',
-                  }}>
-                    <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.3rem', lineHeight: 1 }}>
-                      {clientPrice.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Guaraníes</div>
-                    {pricePerStop && <div style={{ fontSize: '0.58rem', color: '#f59e0b', fontWeight: 700, marginTop: 1 }}>≈{pricePerStop.toLocaleString()}/stop</div>}
+              {showRateBadge && (
+                <div style={{
+                  background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
+                  borderRadius: 10, padding: '4px 9px', textAlign: 'center', flexShrink: 0,
+                }}>
+                  <div style={{ fontSize: '0.52rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
+                    {gsPerKm!.toLocaleString('es-PY')}
                   </div>
-                ) : (
-                  <div style={{
-                    background: 'rgba(99,102,241,0.10)',
-                    border: '1px solid rgba(99,102,241,0.28)',
-                    borderRadius: 12, padding: '5px 10px', textAlign: 'right',
-                  }}>
-                    <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '0.78rem', lineHeight: 1.3 }}>A cotizar</div>
-                    <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>Ponés tu precio</div>
-                  </div>
-                )}
-
-                {/* Dismiss button — sin cronómetro, la barra de progreso ya lo muestra */}
-                <button
-                  onClick={() => { onDismiss(item.id); if (safeIdx > 0) setCardIdx(safeIdx - 1); }}
-                  style={{
-                    background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)',
-                    color: 'var(--text-secondary)', borderRadius: 99,
-                    width: 42, height: 42, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', cursor: 'pointer', fontSize: '1.15rem', fontWeight: 700,
-                  }}
-                  aria-label="Omitir solicitud"
-                >✕</button>
-              </div>
+                  <div style={{ fontSize: '0.5rem', fontWeight: 700, color: rateColor! }}>Gs/km</div>
+                </div>
+              )}
             </div>
+
 
 
 
@@ -679,7 +667,7 @@ export default memo(function RequestsFeed({
                   <span style={{ width: 12, height: 12, borderRadius: 999, background: '#10b981', border: '3px solid #0f2f25', boxShadow: '0 0 0 2px #10b981', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
-                      Recogida{distKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· a {distKm.toFixed(1)} km de ti</span>}
+                      Recogida{distKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· {distKm.toFixed(1)} km · {Math.max(1, Math.round(distKm * 2.5))} min</span>}
                     </div>
                     <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.from}</div>
                   </div>
@@ -725,7 +713,7 @@ export default memo(function RequestsFeed({
                   <span style={{ width: 12, height: 12, borderRadius: 3, background: '#ef4444', border: '3px solid #3a1414', boxShadow: '0 0 0 2px #ef4444', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
-                      Destino{routeKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· viaje de {routeKm.toFixed(1)} km</span>}
+                      Destino{routeKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· {routeKm.toFixed(1)} km · {Math.max(1, Math.round(routeKm * 2.5))} min</span>}
                     </div>
                     <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.to}</div>
                   </div>
