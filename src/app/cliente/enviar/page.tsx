@@ -279,6 +279,7 @@ export default function EnviarPaquetePage() {
 
   // ── Nearby drivers (read-only, display only) ──────────────────────────────
   const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ vehicle_type: string; lat: number; lng: number }>>([]);
+  const [driversLoaded, setDriversLoaded] = useState(false);
   useEffect(() => {
     const lat = parseFloat(form.pickupLat);
     const lng = parseFloat(form.pickupLng);
@@ -290,7 +291,7 @@ export default function EnviarPaquetePage() {
         const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}`);
         if (!res.ok || cancelled) return;
         const json = await res.json();
-        if (!cancelled && Array.isArray(json.drivers)) setNearbyDrivers(json.drivers);
+        if (!cancelled && Array.isArray(json.drivers)) { setNearbyDrivers(json.drivers); setDriversLoaded(true); }
       } catch { /* map keeps previous drivers */ }
     };
     load();
@@ -1547,7 +1548,7 @@ export default function EnviarPaquetePage() {
                     type="submit"
                     form="enviar-form"
                     className="enviar-submit-final"
-                    disabled={sending || offerPrice <= 0}
+                    disabled={sending || offerPrice <= 0 || (driversLoaded && !nearbyEta[form.vehicleType])}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
@@ -1563,6 +1564,8 @@ export default function EnviarPaquetePage() {
                         <span style={{ textDecoration: 'line-through', opacity: 0.6, fontSize: '0.85em' }}>{offerPrice.toLocaleString('es-PY')} Gs</span>
                         <span style={{ color: '#bbf7d0', fontWeight: 800 }}>{Math.max(0, offerPrice - promoResult.discount_amount).toLocaleString('es-PY')} Gs</span>
                       </span>
+                    ) : driversLoaded && !nearbyEta[form.vehicleType] ? (
+                      <>Sin conductores disponibles</>
                     ) : (
                       <>{ctaLabel} · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
                     )}

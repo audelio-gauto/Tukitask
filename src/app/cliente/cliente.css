@@ -888,7 +888,7 @@
 .enviar-sheet-payment { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .enviar-page-bolt .enviar-page-body {
   max-width: 620px;
-  padding: 0 16px 92px;
+  padding: 0 16px 240px;
 }
 .enviar-page-bolt .enviar-bolt-map-shell {
   width: calc(100% + 32px);
