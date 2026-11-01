@@ -306,7 +306,7 @@ export default function EnviarPaquetePage() {
       } catch { /* map keeps previous drivers */ }
     };
     load();
-    const t = setInterval(load, 8000);
+    const t = setInterval(load, 4000);
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { cancelled = true; clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
