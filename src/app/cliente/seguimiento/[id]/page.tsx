@@ -1186,12 +1186,6 @@ export default function SeguimientoPage() {
                 📞 Llamar
               </a>
             )}
-            <Link
-              href="/cliente"
-              style={{ flex: 1, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}
-            >
-              ← Volver al inicio
-            </Link>
           </div>
           {type === 'delivery' && order && ['accepted', 'picking_up'].includes(order.status) && (
             <button
