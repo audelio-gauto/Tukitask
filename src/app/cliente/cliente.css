@@ -992,6 +992,8 @@
 .enviar-page-bolt .enviar-page-body > *:not(.enviar-bolt-map-shell):not(.enviar-sheet-backdrop):not(.enviar-step-actions),
 .enviar-page-bolt .enviar-page-body form > *:not(.enviar-bolt-map-shell):not(.enviar-sheet-backdrop):not(.enviar-step-actions) { position: relative; z-index: 2; }
 .enviar-page-bolt .enviar-address-section { margin-top: 18px !important; }
+.enviar-map-recenter { position: absolute; right: 12px; bottom: 38px; z-index: 3; width: 42px; height: 42px; border-radius: 50%; border: 0; background: #fff; color: #172033; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 12px rgba(15, 23, 42, 0.3); cursor: pointer; }
+.enviar-map-recenter:active { transform: scale(0.94); }
 .enviar-bolt-inline-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .enviar-bolt-option-btn { min-width: 0; min-height: 48px; border: 1px solid var(--client-border); border-radius: 12px; background: var(--client-surface); color: var(--client-text); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 6px 10px; cursor: pointer; }
 .enviar-bolt-option-btn span { font-size: 0.68rem; color: var(--client-text-secondary); }

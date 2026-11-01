@@ -300,8 +300,29 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
     );
   }
 
+  const recenter = () => {
+    const map = mapRef.current;
+    const mapboxgl = mbRef.current;
+    if (!map || !mapboxgl) return;
+    const validStops = stops.filter(s => isFinite(s.lat) && isFinite(s.lng));
+    if (validStops.length === 0) {
+      map.easeTo({ center: [pickup.lng, pickup.lat], zoom: 15, duration: 500 });
+      return;
+    }
+    const bounds = [[pickup.lng, pickup.lat], ...validStops.map(s => [s.lng, s.lat])].reduce(
+      (b: any, c: any) => b.extend(c),
+      new mapboxgl.LngLatBounds([pickup.lng, pickup.lat], [pickup.lng, pickup.lat]),
+    );
+    map.fitBounds(bounds, { padding: 40, maxZoom: 16, duration: 500 });
+  };
+
   return (
     <div className="enviar-map-preview">
+      {ready && (
+        <button type="button" className="enviar-map-recenter" onClick={recenter} aria-label="Centrar en mi ubicación">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg>
+        </button>
+      )}
       {!ready && (
         <div className="enviar-map-preview-skeleton">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="enviar-map-preview-skeleton-icon">
