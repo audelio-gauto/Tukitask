@@ -1177,6 +1177,15 @@ export default function SeguimientoPage() {
                 )}
               </button>
             )}
+            {isActive && vehicle?.phone && (
+              <a
+                href={`tel:${vehicle.phone}`}
+                aria-label="Llamar"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, background: 'var(--glass-card)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', flexShrink: 0 }}
+              >
+                📞 Llamar
+              </a>
+            )}
             <Link
               href="/cliente"
               style={{ flex: 1, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}
@@ -1184,6 +1193,25 @@ export default function SeguimientoPage() {
               ← Volver al inicio
             </Link>
           </div>
+          {type === 'delivery' && order && ['accepted', 'picking_up'].includes(order.status) && (
+            <button
+              onClick={async () => {
+                if (!window.confirm('¿Cancelar este pedido? El conductor será notificado.')) return;
+                try {
+                  const res = await authFetch('/api/orders', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: id, status: 'cancelled' }),
+                  });
+                  if (res.ok) router.replace('/cliente');
+                  else window.alert('No se pudo cancelar el pedido.');
+                } catch { window.alert('No se pudo cancelar el pedido.'); }
+              }}
+              style={{ width: '100%', marginTop: 12, padding: '12px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              Cancelar pedido
+            </button>
+          )}
         </div>
       ) : null}
 
