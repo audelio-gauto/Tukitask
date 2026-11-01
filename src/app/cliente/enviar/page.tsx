@@ -670,7 +670,6 @@ export default function EnviarPaquetePage() {
       <SearchingDriver
         orderId={createdOrderId}
         serviceLabel={svcLabel.newLabel.replace('Nuevo ', '')}
-        onNewOrder={() => { setSuccess(false); setCreatedOrderId(null); setStep(1); setForm(f => ({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: f.senderContact, senderPhone: f.senderPhone, instructions: '', paymentMethod: 'efectivo', offer: '' })); setStops([emptyStop()]); }}
       />
     );
   }

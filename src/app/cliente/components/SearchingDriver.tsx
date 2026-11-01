@@ -19,7 +19,6 @@ interface Offer {
 interface Props {
   orderId: string;
   serviceLabel: string;
-  onNewOrder: () => void;
 }
 
 const POLL_MS = 4000;
@@ -28,10 +27,9 @@ const POLL_MS = 4000;
  * Pantalla "Buscando conductor" estilo Bolt/InDrive.
  * Solo lee estado y usa los mismos endpoints de aceptar/rechazar/cancelar que ya usa el panel del cliente.
  */
-export default function SearchingDriver({ orderId, serviceLabel, onNewOrder }: Props) {
+export default function SearchingDriver({ orderId, serviceLabel }: Props) {
   const router = useRouter();
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [cancelled, setCancelled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -46,7 +44,7 @@ export default function SearchingDriver({ orderId, serviceLabel, onNewOrder }: P
       ]);
       if (orderRes.ok) {
         const order = await orderRes.json();
-        if (order.status === 'cancelled') { doneRef.current = true; setCancelled(true); return; }
+        if (order.status === 'cancelled') { doneRef.current = true; router.replace('/cliente'); return; }
         if (order.status !== 'pending' && order.status !== 'negotiating') {
           doneRef.current = true;
           router.push(`/cliente/seguimiento/${orderId}`);
@@ -110,23 +108,12 @@ export default function SearchingDriver({ orderId, serviceLabel, onNewOrder }: P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId, status: 'cancelled' }),
       });
-      if (res.ok) { doneRef.current = true; setCancelled(true); }
+      if (res.ok) { doneRef.current = true; router.replace('/cliente'); return; }
     } finally { setCancelling(false); }
   };
 
   const mm = String(Math.floor(seconds / 60)).padStart(1, '0');
   const ss = String(seconds % 60).padStart(2, '0');
-
-  if (cancelled) {
-    return (
-      <div className="searching-screen">
-        <div className="searching-title">Pedido cancelado</div>
-        <p className="searching-sub">Podés hacer un nuevo pedido cuando quieras.</p>
-        <button type="button" className="searching-btn primary" onClick={onNewOrder}>Nuevo pedido</button>
-        <button type="button" className="searching-btn" onClick={() => router.push('/cliente')}>Ir al panel</button>
-      </div>
-    );
-  }
 
   return (
     <div className="searching-screen">
@@ -170,7 +157,6 @@ export default function SearchingDriver({ orderId, serviceLabel, onNewOrder }: P
 
       <div className="searching-footer">
         <button type="button" className="searching-btn" disabled={cancelling} onClick={cancelOrder}>Cancelar pedido</button>
-        <button type="button" className="searching-link" onClick={() => router.push('/cliente')}>Seguir en el panel</button>
       </div>
     </div>
   );
