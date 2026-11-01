@@ -123,6 +123,18 @@ export async function GET(req: Request) {
 // POST — driver envía oferta; driver_email se fuerza desde el token
 import { emitNotification } from '@/lib/notificationEmitter';
 import { cacheDel } from '@/lib/cache';
+
+// Un servicio inmediato a la vez por conductor (los programados aceptados no bloquean)
+async function driverHasActiveService(email: string): Promise<boolean> {
+  const { data } = await supabaseServer
+    .from('orders')
+    .select('id')
+    .eq('accepted_by', email)
+    .in('status', ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'awaiting_payment', 'payment_confirmed'])
+    .is('date_scheduled', null)
+    .limit(1);
+  return !!data?.length;
+}
 export async function POST(req: Request) {
 
   // Rate limit por IP+endpoint — 30 ofertas por minuto por IP (negociación activa puede enviar varias)
@@ -132,6 +144,10 @@ export async function POST(req: Request) {
 
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
+
+  if (await driverHasActiveService(user.email)) {
+    return NextResponse.json({ error: 'Ya tenés un servicio en curso. Terminalo para recibir otro.' }, { status: 409 });
+  }
 
   // E-1: Verificar saldo mínimo de billetera antes de permitir oferta
   // Previene que drivers con saldo insuficiente participen en el mercado.
@@ -314,6 +330,14 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'accept') {
+    // El conductor de la oferta no puede tener otro servicio inmediato en curso
+    const { data: offerRow } = await supabaseServer.from('driver_offers').select('driver_email, order_id').eq('id', offer_id).maybeSingle();
+    if (offerRow?.driver_email) {
+      const { data: ord } = await supabaseServer.from('orders').select('date_scheduled').eq('id', offerRow.order_id).maybeSingle();
+      if (!ord?.date_scheduled && await driverHasActiveService(String(offerRow.driver_email))) {
+        return NextResponse.json({ error: 'El conductor ya está en otro servicio. Elegí otra oferta.' }, { status: 409 });
+      }
+    }
     // Single atomic RPC — prevents double-acceptance race conditions via FOR UPDATE lock
     const { data, error } = await supabaseServer.rpc('accept_offer', {
       p_offer_id:    offer_id,
