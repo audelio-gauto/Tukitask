@@ -149,6 +149,7 @@ export default function SeguimientoPage() {
   const initRef  = useRef(false);
   const tileRef  = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
+  const glideRef = useRef<number>(0);
   const destMarkerRef   = useRef<any>(null);
   const pickupMarkerRef = useRef<any>(null);
   const routeLineRef    = useRef<any>(null);
@@ -462,8 +463,25 @@ export default function SeguimientoPage() {
       });
 
       if (driverMarkerRef.current) {
-        driverMarkerRef.current.setLatLng([dLat, dLng]);
-        driverMarkerRef.current.setIcon(driverIcon);
+        const marker = driverMarkerRef.current;
+        const from = marker.getLatLng();
+        const dist = Math.abs(from.lat - dLat) + Math.abs(from.lng - dLng);
+        marker.setIcon(driverIcon);
+        if (glideRef.current) cancelAnimationFrame(glideRef.current);
+        // Saltos muy grandes (primer fix o GPS recuperado) no se animan
+        if (dist < 0.0003 || dist > 0.05) {
+          marker.setLatLng([dLat, dLng]);
+        } else {
+          const t0 = performance.now();
+          const DURATION = 1200;
+          const step = (now: number) => {
+            const k = Math.min(1, (now - t0) / DURATION);
+            const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+            marker.setLatLng([from.lat + (dLat - from.lat) * e, from.lng + (dLng - from.lng) * e]);
+            if (k < 1) glideRef.current = requestAnimationFrame(step);
+          };
+          glideRef.current = requestAnimationFrame(step);
+        }
       } else {
         driverMarkerRef.current = L.marker([dLat, dLng], { icon: driverIcon })
           .addTo(map)
