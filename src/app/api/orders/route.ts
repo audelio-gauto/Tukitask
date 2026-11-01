@@ -248,6 +248,10 @@ export async function GET(req: Request) {
     return NextResponse.json(enriched);
   }
 
+  // Mandaditos retirados: los que quedaron en curso no se muestran al driver
+  if (driverEmail && Array.isArray(data)) {
+    return NextResponse.json((data as Record<string, unknown>[]).filter(o => o.order_type !== 'mandadito'));
+  }
   return NextResponse.json(data);
 }
 
