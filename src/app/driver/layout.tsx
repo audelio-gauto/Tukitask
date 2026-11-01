@@ -234,7 +234,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     const openNavForNew = (orders: any[]) => {
       try {
         const seen: string[] = JSON.parse(localStorage.getItem('tuki_nav_seen') || '[]');
-        const fresh = orders.find(o => o.status === 'accepted' && !seen.includes(o.id));
+        const fresh = orders.find(o => o.status === 'accepted' && !o.date_scheduled && !seen.includes(o.id));
         if (!fresh) return;
         localStorage.setItem('tuki_nav_seen', JSON.stringify([...seen, fresh.id].slice(-50)));
         if (!window.location.pathname.startsWith('/driver/navegar')) router.push(`/driver/navegar/${fresh.id}`);

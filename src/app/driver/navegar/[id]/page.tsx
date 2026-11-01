@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { useWorkerContext } from '../../context';
+import ActiveOrders from '../../components/ActiveOrders';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -37,8 +38,6 @@ export default function DriverNavegarPage() {
 
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [route, setRoute] = useState<{ distKm: number; etaMin: number } | null>(null);
 
   const mapDivRef = useRef<HTMLDivElement>(null);
@@ -58,9 +57,9 @@ export default function DriverNavegarPage() {
       if (!res.ok) return;
       const data = await res.json();
       const found = Array.isArray(data) ? data.find((o: any) => o.id === id) : null;
-      // Pedido ya no es del conductor o terminó: volver al panel activo
+      // Pedido ya no es del conductor o terminó: volver al inicio
       if (!found || ['cancelled', 'driver_cancelled', 'delivered', 'failed', 'returned'].includes(found.status)) {
-        router.replace('/driver/activo');
+        router.replace('/driver');
         return;
       }
       setOrder(found);
@@ -184,41 +183,8 @@ export default function DriverNavegarPage() {
     if (map && driverPos) map.setView([driverPos.lat, driverPos.lng], 17);
   };
 
-  const advance = async (nextStatus: string) => {
-    setActing(true);
-    setError(null);
-    try {
-      const res = await authFetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: id, status: nextStatus, driver_email: email }),
-      });
-      if (res.ok) await fetchOrder();
-      else {
-        const err = await res.json().catch(() => ({}));
-        setError(err?.error || 'No se pudo actualizar el estado');
-      }
-    } catch {
-      setError('Error de conexión');
-    } finally {
-      setActing(false);
-    }
-  };
-
-  const isMandadito = order?.order_type === 'mandadito';
   const clientName = order?.client_name || order?.client_email?.split('@')[0] || 'Cliente';
-  const phone = order?.client_phone || order?.sender_phone || null;
   const price = Number(order?.offer ?? order?.suggested_price ?? 0);
-
-  let cta: { label: string; onClick: () => void } | null = null;
-  if (order) {
-    if (status === 'accepted' && !isMandadito) cta = { label: 'Ir a recoger', onClick: () => advance('picking_up') };
-    else if (status === 'picking_up' && !isMandadito) {
-      cta = { label: 'Ya llegué', onClick: () => { if (window.confirm('¿Confirmás que ya llegaste al punto de recogida?')) advance('at_pickup'); } };
-    } else cta = { label: status === 'in_transit' ? 'Finalizar entrega' : 'Continuar', onClick: () => router.push('/driver/activo') };
-  }
-
-  const btnStyle = { flex: 1, padding: '10px', borderRadius: 12, border: '1px solid var(--border-strong, #e5e7eb)', background: 'var(--glass-card, #f3f4f6)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' as const, textDecoration: 'none' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--background)', zIndex: 50 }}>
@@ -227,7 +193,7 @@ export default function DriverNavegarPage() {
 
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-start', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 12px 0', pointerEvents: 'none' }}>
           <button
-            onClick={() => router.push('/driver/activo')}
+            onClick={() => router.push('/driver')}
             aria-label="Volver"
             style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: '#fff', color: '#111', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.1rem', flexShrink: 0 }}
           >←</button>
@@ -254,7 +220,7 @@ export default function DriverNavegarPage() {
         )}
       </div>
 
-      <div style={{ flexShrink: 0, background: 'var(--sheet-bg, #fff)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', padding: '8px 14px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      <div style={{ flexShrink: 0, background: 'var(--sheet-bg, #fff)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', maxHeight: '60dvh', overflowY: 'auto', padding: '8px 14px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--border-strong, #d1d5db)', margin: '0 auto 12px' }} />
 
         {loading ? (
@@ -275,27 +241,18 @@ export default function DriverNavegarPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              {target && (
-                <button onClick={() => openExternal(navApp, target)} style={btnStyle}>
-                  🧭 {navApp === 'waze' ? 'Waze' : 'Google Maps'}
-                </button>
-              )}
-              {phone && <a href={`tel:${phone}`} style={btnStyle}>📞 Llamar</a>}
-              <button onClick={() => router.push('/driver/activo')} style={btnStyle}>💬 Detalle</button>
-            </div>
-
-            {error && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginBottom: 8, textAlign: 'center' }}>{error}</div>}
-
-            {cta && (
+            {target && (
               <button
-                onClick={cta.onClick}
-                disabled={acting}
-                style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#22c55e', color: '#fff', fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer', opacity: acting ? 0.6 : 1 }}
+                onClick={() => openExternal(navApp, target)}
+                style={{ width: '100%', padding: '10px', borderRadius: 12, border: '1px solid var(--border-strong, #e5e7eb)', background: 'var(--glass-card, #f3f4f6)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', marginBottom: 10 }}
               >
-                {acting ? 'Actualizando…' : cta.label}
+                🧭 Abrir en {navApp === 'waze' ? 'Waze' : 'Google Maps'}
               </button>
             )}
+
+            <Suspense fallback={null}>
+              <ActiveOrders mode="nav" orderId={id} />
+            </Suspense>
           </>
         )}
       </div>
