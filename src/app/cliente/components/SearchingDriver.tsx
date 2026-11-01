@@ -10,6 +10,7 @@ interface Offer {
   driver_name: string | null;
   driver_photo: string | null;
   driver_avg_rating: number | null;
+  driver_total_ratings?: number | null;
   driver_vehicle_brand: string | null;
   driver_vehicle_model: string | null;
   distance_km: number | null;
@@ -140,6 +141,7 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
                 <strong>{o.driver_name || 'Conductor'}</strong>
                 <span>
                   {o.driver_avg_rating ? `★ ${Number(o.driver_avg_rating).toFixed(1)}` : 'Nuevo'}
+                  {o.driver_total_ratings ? ` · ${o.driver_total_ratings} ${o.driver_total_ratings === 1 ? 'viaje' : 'viajes'}` : ''}
                   {o.driver_vehicle_brand ? ` · ${o.driver_vehicle_brand} ${o.driver_vehicle_model ?? ''}` : ''}
                   {o.distance_km != null ? ` · ${Number(o.distance_km).toFixed(1)} km` : ''}
                 </span>

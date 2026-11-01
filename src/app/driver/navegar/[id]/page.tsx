@@ -6,6 +6,7 @@ import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { useWorkerContext } from '../../context';
 import ActiveOrders from '../../components/ActiveOrders';
+import RatingModal from '@/components/RatingModal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -37,6 +38,7 @@ export default function DriverNavegarPage() {
   const { email, navApp, driverPos } = useWorkerContext();
 
   const [order, setOrder] = useState<any>(null);
+  const [rateOrder, setRateOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [route, setRoute] = useState<{ distKm: number; etaMin: number } | null>(null);
 
@@ -57,12 +59,18 @@ export default function DriverNavegarPage() {
       if (!res.ok) return;
       const data = await res.json();
       const found = Array.isArray(data) ? data.find((o: any) => o.id === id) : null;
-      // Pedido ya no es del conductor o terminó: volver al inicio
-      if (!found || ['cancelled', 'driver_cancelled', 'delivered', 'failed', 'returned'].includes(found.status)) {
-        router.replace('/driver');
+      if (found && !['cancelled', 'driver_cancelled', 'delivered', 'failed', 'returned'].includes(found.status)) {
+        setOrder(found);
         return;
       }
-      setOrder(found);
+      // Terminó: si fue entregado y aún no calificó al cliente, se pide la calificación antes de volver
+      const one = await authFetch(`/api/orders?id=${encodeURIComponent(id)}`);
+      const done = one.ok ? await one.json() : null;
+      if (done && ['delivered', 'commission_charged', 'client_confirmed'].includes(done.status) && done.client_rating == null) {
+        setRateOrder(done);
+        return;
+      }
+      router.replace('/driver');
     } catch { /* se reintenta */ } finally {
       setLoading(false);
     }
@@ -70,9 +78,9 @@ export default function DriverNavegarPage() {
 
   useEffect(() => {
     fetchOrder();
-    const t = setInterval(fetchOrder, 8000);
+    const t = setInterval(() => { if (!rateOrder) fetchOrder(); }, 5000);
     return () => clearInterval(t);
-  }, [fetchOrder]);
+  }, [fetchOrder, rateOrder]);
 
   // Mapa Leaflet (sin WebGL), igual que el seguimiento del cliente
   useEffect(() => {
@@ -241,6 +249,25 @@ export default function DriverNavegarPage() {
           </>
         )}
       </div>
+
+      {rateOrder && (
+        <RatingModal
+          title="Calificá al cliente"
+          subtitle={rateOrder.client_name || rateOrder.client_email?.split('@')[0] || 'Cliente'}
+          avatarUrl={rateOrder.client_photo || undefined}
+          avatarName={rateOrder.client_name || rateOrder.client_email?.split('@')[0]}
+          onSubmit={async (rating, note) => {
+            const res = await authFetch('/api/orders/rate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: rateOrder.id, rated_by: 'driver', rating, note }),
+            });
+            if (!res.ok && res.status !== 409) throw new Error('rate');
+            router.replace('/driver');
+          }}
+          onClose={() => router.replace('/driver')}
+        />
+      )}
     </div>
   );
 }

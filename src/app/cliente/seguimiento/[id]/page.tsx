@@ -12,6 +12,7 @@ import { haversineKm } from '@/lib/geo';
 import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import ChatModal from '@/components/ChatModal';
+import RatingModal from '@/components/RatingModal';
 import { playMessageAlert } from '@/lib/audio';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ interface OrderDetail {
   driver_name: string | null;
   driver_photo: string | null;
   driver_avg_rating: number | null;
+  driver_rating?: number | null;
   offer: number | null;
   created_at: string;
   type: 'delivery' | 'service';
@@ -176,6 +178,7 @@ export default function SeguimientoPage() {
   const [myName,   setMyName]   = useState<string | null>(null);
   const [chatToast, setChatToast] = useState<{ text: string; from: string | null } | null>(null);
   const [chatUnread, setChatUnread] = useState(0);
+  const [ratingDone, setRatingDone] = useState(false);
   const chatToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Mandadito: payment proof upload state
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -1240,6 +1243,27 @@ export default function SeguimientoPage() {
             style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.5)', borderRadius: '50%', width: 28, height: 28, fontSize: '0.8rem', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >✕</button>
         </div>
+      )}
+
+      {/* ── Calificar al conductor al terminar el servicio ── */}
+      {order && type === 'delivery' && !ratingDone && order.driver_rating == null && order.accepted_by
+        && ['delivered', 'commission_charged', 'client_confirmed'].includes(order.status) && (
+        <RatingModal
+          title="¿Cómo fue tu servicio?"
+          subtitle={workerName}
+          avatarUrl={workerPhoto ?? undefined}
+          avatarName={workerName}
+          onSubmit={async (rating, note) => {
+            const res = await authFetch('/api/orders/rate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: order.id, rated_by: 'client', rating, note }),
+            });
+            if (!res.ok && res.status !== 409) throw new Error('rate');
+            setRatingDone(true);
+          }}
+          onClose={() => setRatingDone(true)}
+        />
       )}
 
       {/* ── Chat Modal ── */}
