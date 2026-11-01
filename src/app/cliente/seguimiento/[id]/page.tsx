@@ -792,32 +792,23 @@ export default function SeguimientoPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden', position: 'relative' }}>
 
-      {/* ── Top bar ── */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)' }}>
+      {/* ── Top bar (flotante sobre el mapa) ── */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 12px 0', pointerEvents: 'none' }}>
         <button
           onClick={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--ghost-btn)', color: 'var(--ghost-btn-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          aria-label="Volver"
+          style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'var(--sheet-bg)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.1rem' }}
         >
           ←
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem' }}>
+        <div style={{ pointerEvents: 'auto', minWidth: 0, background: 'var(--sheet-bg)', borderRadius: 22, padding: '7px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {type === 'service' ? 'Seguimiento del técnico' : 'Seguimiento del envío'}
+            {order && <span style={{ color: 'var(--text-muted)', fontWeight: 600, marginLeft: 8, fontSize: '0.72rem' }}>#{id.slice(0, 8).toUpperCase()}</span>}
           </div>
-          {order && (
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 1 }}>
-              #{id.slice(0, 8).toUpperCase()}
-            </div>
-          )}
         </div>
-        {st && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: '4px 10px', flexShrink: 0 }}>
-            <Icon name={st.icon} size={12} color={st.color} />
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: st.color }}>{st.text}</span>
-          </div>
-        )}
       </div>
 
       {/* ── Map ── */}
@@ -825,7 +816,7 @@ export default function SeguimientoPage() {
         <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
 
         {/* style switcher */}
-        <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 1000, display: 'flex', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 66px)', right: 12, zIndex: 1000, display: 'flex', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)' }}>
           {(['Map', 'Satelite', 'Noche'] as MapStyle[]).map(s => (
             <button key={s} onClick={() => setMapStyle(s)} style={{
               padding: '6px 10px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700,
@@ -910,7 +901,8 @@ export default function SeguimientoPage() {
           {error} — <Link href="/cliente" style={{ color: '#0ea5e9' }}>Volver al inicio</Link>
         </div>
       ) : order ? (
-        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', padding: '14px 14px 18px' }}>
+        <div style={{ flexShrink: 0, background: 'var(--sheet-bg)', borderTop: '1px solid var(--border-subtle)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', maxHeight: '62dvh', overflowY: 'auto', padding: '8px 14px 18px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--border-strong)', opacity: 0.6, margin: '0 auto 12px' }} />
 
           {/* ── Status pill + price row ── */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
