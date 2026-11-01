@@ -89,6 +89,9 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
   const [finalizeOpen, setFinalizeOpen] = useState<Set<string>>(new Set());
   // Confirmation step before marking as delivered
   const [confirmDelivery, setConfirmDelivery] = useState<Set<string>>(new Set());
+  const [farOrderId, setFarOrderId] = useState<string | null>(null);
+  const [farDistM, setFarDistM] = useState<number | null>(null);
+  const [farBusy, setFarBusy] = useState(false);
   // Delivery proof photo per order { orderId → { file, previewUrl } }
   const [deliveryPhotos, setDeliveryPhotos] = useState<Record<string, { file: File; previewUrl: string }>>({});
   // Fail reason text per order
@@ -381,7 +384,10 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        if (err?.error === 'pin_invalid') {
+        if (err?.error === 'far_from_destination') {
+          setFarDistM(typeof err.distance_m === 'number' ? err.distance_m : null);
+          setFarOrderId(orderId);
+        } else if (err?.error === 'pin_invalid') {
           if (newStatus === 'in_transit') {
             const attempts = (pickupPinAttempts[orderId] || 0) + 1;
             setPickupPinAttempts(prev => ({ ...prev, [orderId]: attempts }));
@@ -1766,6 +1772,81 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
         </div>
         );
       })}
+
+      {/* Remis: finalizar lejos del destino con confirmación del cliente */}
+      {farOrderId && (() => {
+        const fo = orders.find(o => o.id === farOrderId);
+        if (!fo) return null;
+        const st: string | undefined = fo.finish_request_status;
+        const amt = Number(fo.finish_request_amount ?? 0);
+        const orig = Number(fo.original_offer ?? fo.offer ?? 0);
+        const kindTxt = fo.finish_request_kind === 'extended' ? 'pasaste el destino' : 'todavía no llegaste al destino';
+        const requestFinish = async () => {
+          setFarBusy(true);
+          try {
+            const r = await authFetch('/api/orders/finish-request', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: farOrderId }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) showToast('❌ ' + (d?.error || 'No se pudo enviar la solicitud'));
+            else fetchActive();
+          } catch { showToast('❌ Error de conexión. Intentá de nuevo.'); }
+          setFarBusy(false);
+        };
+        const box: React.CSSProperties = { background: 'var(--surface-1)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, border: '1.5px solid var(--border-strong)' };
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+            <div style={box}>
+              {st === 'requested' && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: 6 }}>Esperando al cliente…</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    Le pedimos confirmar el cierre del viaje por ₲{amt.toLocaleString('es-PY')}. Si no responde, el viaje continúa.
+                  </div>
+                  <button onClick={() => setFarOrderId(null)} style={{ width: '100%', padding: 13, borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>Seguir viaje</button>
+                </>
+              )}
+              {st === 'accepted' && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#4ade80', marginBottom: 6 }}>✅ El cliente confirmó</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    Monto final: <strong>₲{amt.toLocaleString('es-PY')}</strong>{orig && orig !== amt ? ` (acordado ₲${orig.toLocaleString('es-PY')})` : ''}
+                  </div>
+                  <button
+                    disabled={!!acting}
+                    onClick={async () => { await updateStatus(farOrderId, 'delivered'); setFarOrderId(null); }}
+                    style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 800, cursor: acting ? 'not-allowed' : 'pointer' }}
+                  >{acting ? '...' : 'Finalizar viaje'}</button>
+                </>
+              )}
+              {st === 'rejected' && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f87171', marginBottom: 6 }}>El cliente no aceptó</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 14 }}>Continuá hasta el destino acordado o volvé a pedir confirmación.</div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setFarOrderId(null)} style={{ flex: 1, padding: 13, borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>Seguir viaje</button>
+                    <button disabled={farBusy} onClick={requestFinish} style={{ flex: 1, padding: 13, borderRadius: 12, border: 'none', background: BRAND, color: '#1C1C2E', fontWeight: 800, cursor: 'pointer' }}>Volver a pedir</button>
+                  </div>
+                </>
+              )}
+              {st !== 'requested' && st !== 'accepted' && st !== 'rejected' && (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: 6 }}>Todavía no llegaste al destino</div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    Estás a {farDistM != null ? `${farDistM.toLocaleString('es-PY')} m` : 'más de 300 m'} del destino acordado. Para finalizar acá, el cliente debe confirmar el monto ({kindTxt === 'pasaste el destino' ? 'se ajusta por el recorrido' : 'se ajusta por lo recorrido'}).
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setFarOrderId(null)} style={{ flex: 1, padding: 13, borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}>Seguir viaje</button>
+                    <button disabled={farBusy} onClick={requestFinish} style={{ flex: 1, padding: 13, borderRadius: 12, border: 'none', background: BRAND, color: '#1C1C2E', fontWeight: 800, cursor: farBusy ? 'not-allowed' : 'pointer' }}>{farBusy ? '...' : 'Pedir confirmación'}</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Cancel reason dialog */}
       {/* Arrived Confirmation Modal */}

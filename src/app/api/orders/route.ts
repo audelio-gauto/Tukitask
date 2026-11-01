@@ -4,6 +4,7 @@ import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 import { allowRequest } from '@/lib/rateLimit';
+import { FINISH_TOLERANCE_M, FINISH_REQUEST_TIMEOUT_MS, haversineKm } from '@/lib/tripFinish';
 
 // Saldo mínimo para poder ver pedidos disponibles.
 // 0 = solo bloquear si saldo negativo. Sube este valor para exigir depósito previo.
@@ -612,8 +613,31 @@ export async function PATCH(req: Request) {
     }
   }
 
+  // ── Remis: no se finaliza lejos del destino sin confirmación del cliente ──
+  // Solo aplica si la migración 120 está corrida y hay GPS reciente del driver; si no, se mantiene el comportamiento anterior.
+  let flagFarFinish = false;
+  if (status === 'delivered' && order.order_type === 'viaje' && 'finish_request_status' in order
+      && order.finish_request_status !== 'accepted'
+      && order.delivery_lat != null && order.delivery_lng != null) {
+    const { data: loc } = await db.from('driver_locations').select('lat, lng, updated_at').eq('driver_email', user.email).maybeSingle();
+    const fresh = loc?.updated_at && Date.now() - new Date(loc.updated_at).getTime() < 5 * 60_000;
+    if (loc && fresh) {
+      const distM = Math.round(haversineKm(loc.lat, loc.lng, order.delivery_lat, order.delivery_lng) * 1000);
+      if (distM > FINISH_TOLERANCE_M) {
+        const askedAt = order.finish_request_at ? new Date(order.finish_request_at).getTime() : 0;
+        const timedOut = order.finish_request_status === 'requested' && Date.now() - askedAt > FINISH_REQUEST_TIMEOUT_MS;
+        if (!timedOut) {
+          return NextResponse.json({ error: 'far_from_destination', distance_m: distM }, { status: 409 });
+        }
+        // El cliente no respondió: se permite cerrar con el monto original y se marca para revisión del admin
+        flagFarFinish = true;
+      }
+    }
+  }
+
   const { error } = await db.from('orders').update({ status }).eq('id', order_id);
   if (error) return serverError(error);
+  if (flagFarFinish) await db.from('orders').update({ delivery_flagged: true }).eq('id', order_id);
 
   // Invalidate available-orders cache when an order leaves the public feed
   if (['accepted', 'cancelled', 'delivered', 'failed'].includes(status)) {

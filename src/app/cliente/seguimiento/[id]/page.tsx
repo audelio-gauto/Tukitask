@@ -73,6 +73,12 @@ interface OrderDetail {
   max_budget?: number | null;
   payment_proof_url?: string | null;
   actual_amount?: number | null;
+  // remis: solicitud de finalizar lejos del destino
+  finish_request_status?: string | null;
+  finish_request_kind?: string | null;
+  finish_request_amount?: number | null;
+  finish_request_dist_m?: number | null;
+  original_offer?: number | null;
 }
 
 interface DriverLoc {
@@ -176,6 +182,7 @@ export default function SeguimientoPage() {
   const [error,    setError]    = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [finishBusy, setFinishBusy] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [myEmail,  setMyEmail]  = useState('');
   const [pinsOpen, setPinsOpen] = useState(false);
@@ -1261,6 +1268,50 @@ export default function SeguimientoPage() {
           )}
         </div>
       ) : null}
+
+      {order && order.status === 'in_transit' && order.finish_request_status === 'requested' && order.finish_request_amount != null && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10002, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 480, background: 'var(--sheet-bg)', borderRadius: '20px 20px 0 0', padding: '20px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: 4 }}>
+              {order.finish_request_kind === 'extended' ? 'El viaje pasó el destino' : 'El conductor quiere finalizar aquí'}
+            </div>
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+              {order.finish_request_dist_m != null ? `Está a ${Number(order.finish_request_dist_m).toLocaleString('es-PY')} m del destino acordado. ` : ''}
+              {order.finish_request_kind === 'extended' ? 'Se suma el tramo extra recorrido.' : 'Se ajusta el monto por lo recorrido.'}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '12px 14px', borderRadius: 12, background: 'var(--glass-card)', border: '1px solid var(--border-strong)', marginBottom: 14 }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Acordado ₲{Number(order.offer ?? 0).toLocaleString('es-PY')}
+              </span>
+              <strong style={{ fontSize: '1.3rem', color: 'var(--text-primary)' }}>₲{Number(order.finish_request_amount).toLocaleString('es-PY')}</strong>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {(['reject', 'accept'] as const).map(act => (
+                <button
+                  key={act}
+                  disabled={finishBusy}
+                  onClick={async () => {
+                    setFinishBusy(true);
+                    try {
+                      const res = await authFetch('/api/orders/finish-request', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: id, action: act }),
+                      });
+                      if (!res.ok) window.alert('No se pudo enviar tu respuesta. Intentá de nuevo.');
+                      await fetchOrder();
+                    } catch { window.alert('No se pudo enviar tu respuesta. Intentá de nuevo.'); }
+                    setFinishBusy(false);
+                  }}
+                  style={act === 'accept'
+                    ? { flex: 1, padding: 14, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 800, cursor: 'pointer' }
+                    : { flex: 1, padding: 14, borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+                >{act === 'accept' ? 'Aceptar' : 'Seguir al destino'}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancelOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => !cancelling && setCancelOpen(false)}>
