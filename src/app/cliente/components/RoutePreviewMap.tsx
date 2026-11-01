@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { routePinElement, PIN_A_COLOR, PIN_B_COLOR } from '@/lib/mapPins';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -146,33 +147,10 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
     markersRef.current = [];
 
     // Helper: create a styled pin element
-    const makePin = (color: string, label: string) => {
-      const el = document.createElement('div');
-      el.style.cssText = [
-        `width:28px`,
-        `height:28px`,
-        `background:${color}`,
-        `color:#fff`,
-        `border-radius:50% 50% 50% 0`,
-        `transform:rotate(-45deg)`,
-        `border:2px solid #fff`,
-        `box-shadow:0 2px 8px rgba(0,0,0,0.4)`,
-        `display:flex`,
-        `align-items:center`,
-        `justify-content:center`,
-        `font-weight:800`,
-        `font-size:11px`,
-        `cursor:default`,
-      ].join(';');
-      const inner = document.createElement('div');
-      inner.style.cssText = `transform:rotate(45deg);line-height:1;`;
-      inner.textContent = label;
-      el.appendChild(inner);
-      return el;
-    };
+    const makePin = (color: string, label: string) => routePinElement(label, color);
 
     // Pickup marker (green)
-    const pickupMarker = new mapboxgl.Marker({ element: makePin('#22c55e', 'A'), anchor: 'bottom' })
+    const pickupMarker = new mapboxgl.Marker({ element: makePin(PIN_A_COLOR, 'A'), anchor: 'bottom' })
       .setLngLat([pickup.lng, pickup.lat])
       .addTo(map);
     markersRef.current.push(pickupMarker);
@@ -181,7 +159,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
     const validStops = stops.filter(s => isFinite(s.lat) && isFinite(s.lng));
     validStops.forEach((stop, i) => {
       const label = validStops.length === 1 ? 'B' : String(i + 1);
-      const stopPin = makePin('#ef4444', label);
+      const stopPin = makePin(PIN_B_COLOR, label);
       if (i === validStops.length - 1 && routeSummary) {
         const summary = document.createElement('div');
         summary.className = 'route-map-summary';
@@ -222,14 +200,14 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
         type: 'line',
         source: SOURCE_ID,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#fff', 'line-width': 7, 'line-opacity': 0.6 },
+        paint: { 'line-color': '#fff', 'line-width': 9, 'line-opacity': 0.95 },
       });
       map.addLayer({
         id: LAYER_ID,
         type: 'line',
         source: SOURCE_ID,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#3b82f6', 'line-width': 4 },
+        paint: { 'line-color': '#2563eb', 'line-width': 5.5 },
       });
     }
 

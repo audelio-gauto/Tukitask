@@ -7,6 +7,7 @@ import { haversineKm } from '@/lib/geo';
 import { useWorkerContext } from '../../context';
 import ActiveOrders from '../../components/ActiveOrders';
 import RatingModal from '@/components/RatingModal';
+import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -138,7 +139,11 @@ export default function DriverNavegarPage() {
     }
     const tgt = targetKey ? { lat: Number(targetKey.split(',')[0]), lng: Number(targetKey.split(',')[1]) } : null;
     if (tgt) {
-      const icon = dot(toPickup ? '📍' : '🏁', toPickup ? '#f59e0b' : '#22c55e');
+      const icon = L.divIcon({
+        className: '',
+        html: routePinHtml(toPickup ? 'A' : 'B', toPickup ? PIN_A_COLOR : PIN_B_COLOR),
+        iconSize: [PIN_W, PIN_H], iconAnchor: [PIN_W / 2, PIN_H],
+      });
       if (!targetMarker.current) targetMarker.current = L.marker([tgt.lat, tgt.lng], { icon }).addTo(map);
       else { targetMarker.current.setLatLng([tgt.lat, tgt.lng]); targetMarker.current.setIcon(icon); }
     }
@@ -175,7 +180,10 @@ export default function DriverNavegarPage() {
         setRoute({ distKm: d, etaMin: Math.max(1, Math.round(d * 2.5)) });
       }
       if (lineRef.current) map.removeLayer(lineRef.current);
-      lineRef.current = L.polyline(coords, { color: '#2563eb', weight: ok ? 6 : 3, opacity: 0.9, dashArray: ok ? undefined : '8 6', lineJoin: 'round' }).addTo(map);
+      lineRef.current = L.layerGroup([
+        L.polyline(coords, { color: '#fff', weight: ok ? 11 : 5, opacity: ok ? 0.95 : 0.6, lineJoin: 'round', lineCap: 'round' }),
+        L.polyline(coords, { color: '#2563eb', weight: ok ? 7 : 3, opacity: 1, dashArray: ok ? undefined : '8 6', lineJoin: 'round', lineCap: 'round' }),
+      ]).addTo(map);
       if (!fittedRef.current) {
         map.fitBounds(L.latLngBounds(coords), { padding: [70, 70], maxZoom: 17 });
         fittedRef.current = true;

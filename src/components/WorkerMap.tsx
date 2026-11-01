@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { routePinElement, PIN_A_COLOR, PIN_B_COLOR } from '@/lib/mapPins';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 const DEFAULT_CENTER = { lat: -25.2637, lng: -57.5759 };
@@ -26,47 +27,7 @@ function staticMapUrl(center: { lat: number; lng: number }, zoom: number, w: num
 }
 
 function createMarkerEl(label: string, color: string, badge?: string | null) {
-  // Container sized to pin (36×50) + optional badge above
-  const el = document.createElement('div');
-  el.style.cssText = 'position:relative;width:36px;height:50px;cursor:default;';
-
-  // SVG teardrop pin — tip at bottom center, circle face at top
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('width', '36');
-  svg.setAttribute('height', '50');
-  svg.setAttribute('viewBox', '0 0 36 50');
-  svg.style.cssText = 'display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.55));';
-
-  // Teardrop body
-  const path = document.createElementNS(ns, 'path');
-  path.setAttribute('d', 'M18 1C10.268 1 4 7.268 4 15c0 11.25 14 34 14 34s14-22.75 14-34C32 7.268 25.732 1 18 1z');
-  path.setAttribute('fill', color);
-  path.setAttribute('stroke', 'rgba(255,255,255,0.6)');
-  path.setAttribute('stroke-width', '1.5');
-  svg.appendChild(path);
-
-  // Inner white circle highlight
-  const circle = document.createElementNS(ns, 'circle');
-  circle.setAttribute('cx', '18');
-  circle.setAttribute('cy', '15');
-  circle.setAttribute('r', '8');
-  circle.setAttribute('fill', 'rgba(255,255,255,0.22)');
-  svg.appendChild(circle);
-
-  // Letter label
-  const text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', '18');
-  text.setAttribute('y', '20');
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('fill', '#fff');
-  text.setAttribute('font-size', '14');
-  text.setAttribute('font-weight', '900');
-  text.setAttribute('font-family', 'system-ui,-apple-system,sans-serif');
-  text.textContent = label;
-  svg.appendChild(text);
-
-  el.appendChild(svg);
+  const el = routePinElement(label, color);
 
   // Badge tooltip above the pin
   if (badge) {
@@ -244,13 +205,13 @@ export default function WorkerMap({
 
     // Pickup marker A (green — standard pickup colour)
     if (pickup && isFinite(pickup.lat) && isFinite(pickup.lng)) {
-      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', '#10b981', pickupBadge), anchor: 'bottom' })
+      pickupMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('A', PIN_A_COLOR, pickupBadge), anchor: 'bottom' })
         .setLngLat([pickup.lng, pickup.lat]).addTo(map);
     }
 
     // Delivery marker B (red — standard delivery colour)
     if (delivery && isFinite(delivery.lat) && isFinite(delivery.lng)) {
-      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', '#ef4444', deliveryBadge), anchor: 'bottom' })
+      deliveryMarkerRef.current = new mapboxgl.Marker({ element: createMarkerEl('B', PIN_B_COLOR, deliveryBadge), anchor: 'bottom' })
         .setLngLat([delivery.lng, delivery.lat]).addTo(map);
     }
 
@@ -269,10 +230,10 @@ export default function WorkerMap({
         } else {
           map.addSource(srcId, { type: 'geojson', data: geojson });
           map.addLayer({ id: casingId, type: 'line', source: srcId,
-            paint: { 'line-color': '#fff', 'line-width': 7, 'line-opacity': 0.5 },
+            paint: { 'line-color': '#fff', 'line-width': 9, 'line-opacity': 0.95 },
             layout: { 'line-cap': 'round', 'line-join': 'round' } });
           map.addLayer({ id: layerId, type: 'line', source: srcId,
-            paint: { 'line-color': '#3b82f6', 'line-width': 4.5, 'line-opacity': 1 },
+            paint: { 'line-color': '#2563eb', 'line-width': 5.5, 'line-opacity': 1 },
             layout: { 'line-cap': 'round', 'line-join': 'round' } });
         }
         if (coords.length >= 2) {

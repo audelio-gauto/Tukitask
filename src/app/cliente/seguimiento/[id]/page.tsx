@@ -15,6 +15,7 @@ import ChatModal from '@/components/ChatModal';
 import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
+import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -405,8 +406,8 @@ export default function SeguimientoPage() {
     if (destLat != null && destLng != null) {
       const pinB = L.divIcon({
         className: '',
-        html: `<div style="background:#ef4444;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);white-space:nowrap;">B</div>`,
-        iconSize: [36, 28], iconAnchor: [18, 28],
+        html: routePinHtml('B', PIN_B_COLOR),
+        iconSize: [PIN_W, PIN_H], iconAnchor: [PIN_W / 2, PIN_H],
       });
       if (destMarkerRef.current) { map.removeLayer(destMarkerRef.current); }
       destMarkerRef.current = L.marker([destLat, destLng], { icon: pinB }).addTo(map);
@@ -416,8 +417,8 @@ export default function SeguimientoPage() {
     if (order.pickup_lat != null && order.pickup_lng != null) {
       const pinA = L.divIcon({
         className: '',
-        html: `<div style="background:#f59e0b;color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);">A</div>`,
-        iconSize: [36, 28], iconAnchor: [18, 28],
+        html: routePinHtml('A', PIN_A_COLOR),
+        iconSize: [PIN_W, PIN_H], iconAnchor: [PIN_W / 2, PIN_H],
       });
       if (pickupMarkerRef.current) { map.removeLayer(pickupMarkerRef.current); }
       pickupMarkerRef.current = L.marker([order.pickup_lat, order.pickup_lng], { icon: pinA }).addTo(map);
@@ -577,12 +578,15 @@ export default function SeguimientoPage() {
             // Draw combined polyline
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             if (segmentCoords.length > 1) {
-              routeLineRef.current = L.polyline(segmentCoords, {
-                color, weight: apiSuccess ? 4 : 2.5,
-                opacity: apiSuccess ? 0.88 : 0.7,
-                dashArray: apiSuccess ? undefined : '8 5',
-                lineJoin: 'round', lineCap: 'round',
-              }).addTo(map);
+              routeLineRef.current = L.layerGroup([
+                L.polyline(segmentCoords, { color: '#fff', weight: apiSuccess ? 9 : 5, opacity: apiSuccess ? 0.95 : 0.6, lineJoin: 'round', lineCap: 'round' }),
+                L.polyline(segmentCoords, {
+                  color, weight: apiSuccess ? 5.5 : 2.5,
+                  opacity: apiSuccess ? 1 : 0.8,
+                  dashArray: apiSuccess ? undefined : '8 5',
+                  lineJoin: 'round', lineCap: 'round',
+                }),
+              ]).addTo(map);
             }
 
             // ETA = first segment only (driver → next pending stop / final dest)

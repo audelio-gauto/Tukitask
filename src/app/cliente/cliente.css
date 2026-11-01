@@ -843,8 +843,8 @@
 .route-map-summary {
   position: absolute;
   left: 50%;
-  bottom: 34px;
-  transform: translateX(-50%) rotate(45deg);
+  bottom: 54px;
+  transform: translateX(-50%);
   width: max-content;
   padding: 5px 8px;
   border-radius: 8px;
