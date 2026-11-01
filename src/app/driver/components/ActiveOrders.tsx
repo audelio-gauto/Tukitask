@@ -373,7 +373,9 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
           setOrders(prev => prev.filter(o => o.id !== orderId));
           setCancelOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
           setCancelReason(prev => { const n = { ...prev }; delete n[orderId]; return n; });
-          showToast('\ud83d\udeab Env\u00edo cancelado.');        } else {
+          showToast('🚫 Servicio cancelado.');
+          if (mode === 'nav') router.replace('/driver');
+        } else {
           setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
           setFinalizeOpen(prev => { const n = new Set(prev); n.delete(orderId); return n; });
         }
@@ -1847,9 +1849,24 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
               <h3 style={{ color: '#f87171', fontWeight: 800, fontSize: '1.05rem', margin: '0 0 6px', textAlign: 'center' }}>
                 Cancelar envío
               </h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.83rem', margin: '0 0 16px', textAlign: 'center', lineHeight: 1.5 }}>
-                ¿Por qué cancelas este envío? Indicá el motivo para notificar al cliente.
+              <p style={{ color: '#94a3b8', fontSize: '0.83rem', margin: '0 0 12px', textAlign: 'center', lineHeight: 1.5 }}>
+                Elegí el motivo. El pedido volverá a buscar otro conductor.
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10, justifyContent: 'center' }}>
+                {['Problema con el vehículo', 'Emergencia personal', 'No encuentro la dirección', 'Cliente no responde'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setCancelReason(prev => ({ ...prev, [orderId]: r }))}
+                    style={{
+                      padding: '6px 10px', borderRadius: 99, fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer',
+                      border: reason === r ? '1.5px solid #ef4444' : '1.5px solid var(--border-strong)',
+                      background: reason === r ? 'rgba(239,68,68,0.18)' : 'var(--glass-card)',
+                      color: reason === r ? '#f87171' : 'var(--text-secondary)',
+                    }}
+                  >{r}</button>
+                ))}
+              </div>
               <textarea
                 value={reason}
                 onChange={e => setCancelReason(prev => ({ ...prev, [orderId]: e.target.value }))}

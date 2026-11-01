@@ -13,6 +13,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import ChatModal from '@/components/ChatModal';
 import RatingModal from '@/components/RatingModal';
+import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -174,6 +175,8 @@ export default function SeguimientoPage() {
   const [routeTotals, setRouteTotals] = useState<{ distKm: number; etaMin: number; stops: number } | null>(null);
   const [error,    setError]    = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [myEmail,  setMyEmail]  = useState('');
   const [pinsOpen, setPinsOpen] = useState(false);
   const [myName,   setMyName]   = useState<string | null>(null);
@@ -812,6 +815,10 @@ export default function SeguimientoPage() {
   }, [order?.status, order?.order_type, order?.payment_proof_url, proofUploaded]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  // Si el driver canceló, el pedido se reabrió: volver a buscar conductor
+  if (type === 'delivery' && order && ['pending', 'negotiating'].includes(order.status)) {
+    return <SearchingDriver orderId={id} serviceLabel="Servicio" />;
+  }
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden', position: 'relative' }}>
 
@@ -1246,18 +1253,7 @@ export default function SeguimientoPage() {
           </div>
           {type === 'delivery' && order && ['accepted', 'picking_up'].includes(order.status) && (
             <button
-              onClick={async () => {
-                if (!window.confirm('¿Cancelar este pedido? El conductor será notificado.')) return;
-                try {
-                  const res = await authFetch('/api/orders', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_id: id, status: 'cancelled' }),
-                  });
-                  if (res.ok) router.replace('/cliente');
-                  else window.alert('No se pudo cancelar el pedido.');
-                } catch { window.alert('No se pudo cancelar el pedido.'); }
-              }}
+              onClick={() => setCancelOpen(true)}
               style={{ width: '100%', marginTop: 12, padding: '12px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
             >
               Cancelar pedido
@@ -1265,6 +1261,38 @@ export default function SeguimientoPage() {
           )}
         </div>
       ) : null}
+
+      {cancelOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => !cancelling && setCancelOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, background: 'var(--sheet-bg)', borderRadius: '20px 20px 0 0', padding: '20px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: 4 }}>¿Por qué cancelás?</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>El conductor será notificado.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {['Cambié de opinión', 'El conductor tarda mucho', 'Me equivoqué en el pedido', 'Encontré otra opción'].map(r => (
+                <button
+                  key={r}
+                  disabled={cancelling}
+                  onClick={async () => {
+                    setCancelling(true);
+                    try {
+                      const res = await authFetch('/api/orders', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: id, status: 'cancelled', cancel_reason: r }),
+                      });
+                      if (res.ok) { router.replace('/cliente'); return; }
+                      window.alert('No se pudo cancelar el pedido.');
+                    } catch { window.alert('No se pudo cancelar el pedido.'); }
+                    setCancelling(false);
+                  }}
+                  style={{ padding: '13px', borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--glass-card)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', textAlign: 'left' }}
+                >{r}</button>
+              ))}
+              <button disabled={cancelling} onClick={() => setCancelOpen(false)} style={{ padding: '13px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer' }}>Volver</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Chat toast popup ── */}
       {chatToast && (

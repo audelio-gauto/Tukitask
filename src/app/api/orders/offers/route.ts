@@ -187,6 +187,20 @@ export async function POST(req: Request) {
   // Usar email del token — no del body
   const driverEmail = user.email;
 
+  // El driver que canceló este pedido no puede volver a ofertar en él tras la reasignación
+  try {
+    const { data: prevCancel } = await supabaseServer
+      .from('order_cancellations')
+      .select('id')
+      .eq('order_id', order_id)
+      .eq('user_email', driverEmail)
+      .eq('cancelled_by', 'driver')
+      .limit(1);
+    if (prevCancel?.length) {
+      return NextResponse.json({ error: 'Cancelaste este servicio, no podés volver a ofertar en él.' }, { status: 403 });
+    }
+  } catch { /* migración 119 pendiente */ }
+
   // ── Validación: vehículo del driver vs tipo de orden ────────────────
   {
     const VT_MAP: Record<string, string> = { moto: 'moto', auto: 'auto', motocarro: 'moto_carro', camion2t: 'camion' };

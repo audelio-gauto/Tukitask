@@ -768,6 +768,15 @@ export default function ClienteHistorialPage() {
                           </button>
                         </div>
                       )}
+                      {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (
+                        <Link
+                          href={`/cliente/recibo/${item.data.id}`}
+                          className="tuki-btn tuki-btn-sm"
+                          style={{ display: 'flex', justifyContent: 'center', marginTop: 8, fontSize: '0.78rem', textDecoration: 'none' }}
+                        >
+                          🧾 Ver recibo
+                        </Link>
+                      )}
                       {/* Tip + Favourite row */}
                       {['delivered','client_confirmed','commission_charged'].includes(item.data.status) && (item.data as Order).driver_email && (
                         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>

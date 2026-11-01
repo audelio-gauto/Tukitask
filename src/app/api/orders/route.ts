@@ -633,9 +633,44 @@ export async function PATCH(req: Request) {
   if (status === 'returned') extraUpdates.returned_at = new Date().toISOString();
   if (status === 'driver_cancelled') extraUpdates.cancel_reason = cancel_reason ?? null;
   if (status === 'driver_cancelled') extraUpdates.cancelled_at = new Date().toISOString();
+  if (status === 'cancelled') {
+    extraUpdates.cancelled_at = new Date().toISOString();
+    if (typeof cancel_reason === 'string' && cancel_reason.trim()) extraUpdates.cancel_reason = cancel_reason.trim().slice(0, 300);
+  }
   if (status === 'return_rejected' && return_rejected_reason) extraUpdates.return_rejected_reason = return_rejected_reason;
   if (Object.keys(extraUpdates).length > 0) {
     await db.from('orders').update(extraUpdates).eq('id', order_id);
+  }
+
+  // ── Registro de cancelaciones + reasignación automática ──────────────────
+  // Si el driver cancela antes de recoger un pedido inmediato, el pedido vuelve a buscar conductor.
+  let reassigned = false;
+  if (status === 'driver_cancelled' || (status === 'cancelled' && order.accepted_by)) {
+    reassigned = status === 'driver_cancelled' && !order.date_scheduled && order.order_type !== 'mandadito';
+    try {
+      await db.from('order_cancellations').insert({
+        order_id,
+        cancelled_by: status === 'driver_cancelled' ? 'driver' : 'cliente',
+        user_email: user.email,
+        reason: typeof cancel_reason === 'string' ? cancel_reason.trim().slice(0, 300) || null : null,
+        reassigned,
+      });
+    } catch { /* migración 119 pendiente: no bloquea la cancelación */ }
+    if (reassigned) {
+      const reopen: Record<string, unknown> = {
+        status: 'pending', accepted_by: null, accepted_at: null, pickup_code: null, delivery_pin: null,
+      };
+      if (order.suggested_price != null) reopen.offer = order.suggested_price;
+      const { error: reopenErr } = await db.from('orders').update(reopen).eq('id', order_id);
+      if (reopenErr) {
+        console.error('[orders PATCH] reassign failed:', reopenErr.message);
+        reassigned = false;
+      } else {
+        await db.from('driver_offers').update({ status: 'rejected', updated_at: new Date().toISOString() })
+          .eq('order_id', order_id).in('status', ['pending', 'accepted']);
+        await cacheDel('orders:v2:available');
+      }
+    }
   }
 
   // ── Descontar comisión automáticamente cuando el driver confirma entrega ──
@@ -675,6 +710,8 @@ export async function PATCH(req: Request) {
   // Urgent statuses deserve popup + sound
   const urgentStatuses = ['awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'delivered', 'failed', 'returned', 'returning'];
   let label = statusLabels[status];
+  if (status === 'driver_cancelled' && reassigned) label = '⚠️ Tu conductor canceló. Estamos buscando otro conductor para vos';
+  if (status === 'cancelled' && typeof cancel_reason === 'string' && cancel_reason.trim()) label = `El cliente canceló el pedido: ${cancel_reason.trim().slice(0, 120)}`;
   // Override for mandadito: driver confirms payment → goes to pick up in one step
   if (status === 'picking_up' && order.order_type === 'mandadito' && order.status === 'awaiting_payment') {
     label = '✅ Tu conductor confirmó el pago y va al local a buscar tus productos';
