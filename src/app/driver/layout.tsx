@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { WorkerContext, DEFAULT_FILTERS } from './context';
 import type { ServiceFilters } from './context';
 import { supabase } from '@/lib/supabaseClient';
@@ -26,6 +26,8 @@ const DRIVER_TABS = [
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const inNav = !!pathname?.startsWith('/driver/navegar');
   const [checking, setChecking] = useState(true);
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -231,14 +233,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     if (!email) return;
     const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'];
     // Abre la navegación una sola vez por pedido cuando el cliente acepta la oferta
+    // Un servicio a la vez: mientras haya uno en curso, el conductor queda en su pantalla de navegación
+    const LOCK_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'awaiting_payment', 'payment_confirmed'];
     const openNavForNew = (orders: any[]) => {
-      try {
-        const seen: string[] = JSON.parse(localStorage.getItem('tuki_nav_seen') || '[]');
-        const fresh = orders.find(o => o.status === 'accepted' && !o.date_scheduled && !seen.includes(o.id));
-        if (!fresh) return;
-        localStorage.setItem('tuki_nav_seen', JSON.stringify([...seen, fresh.id].slice(-50)));
-        if (!window.location.pathname.startsWith('/driver/navegar')) router.push(`/driver/navegar/${fresh.id}`);
-      } catch {}
+      const current = orders.find(o => LOCK_STATUSES.includes(o.status) && !(o.status === 'accepted' && o.date_scheduled));
+      if (current && !window.location.pathname.startsWith('/driver/navegar')) router.push(`/driver/navegar/${current.id}`);
     };
     const load = () => {
       authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
@@ -286,11 +285,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         profilePhoto={profilePhoto}
         onBeforeLogout={cleanupPushNotifications}
       />
-      <NotificationBell userEmail={email} className="" />
-      <ChatBadge email={email} href="/driver/activo" scope="order" />
+      {!inNav && <NotificationBell userEmail={email} className="" />}
+      {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, driverPos, setDriverPos }}>
         {children}
-        <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="#F5C518" />
+        {!inNav && <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="#F5C518" />}
       </WorkerContext.Provider>
     </div>
   );

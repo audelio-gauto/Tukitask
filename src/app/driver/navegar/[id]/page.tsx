@@ -183,20 +183,12 @@ export default function DriverNavegarPage() {
     if (map && driverPos) map.setView([driverPos.lat, driverPos.lng], 17);
   };
 
-  const clientName = order?.client_name || order?.client_email?.split('@')[0] || 'Cliente';
-  const price = Number(order?.offer ?? order?.suggested_price ?? 0);
-
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--background)', zIndex: 50 }}>
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <div ref={mapDivRef} style={{ position: 'absolute', inset: 0 }} />
 
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-start', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 12px 0', pointerEvents: 'none' }}>
-          <button
-            onClick={() => router.push('/driver')}
-            aria-label="Volver"
-            style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: '#fff', color: '#111', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.1rem', flexShrink: 0 }}
-          >←</button>
           <div style={{ pointerEvents: 'auto', flex: 1, background: '#111827', color: '#fff', borderRadius: 16, padding: '10px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', minWidth: 0 }}>
             <div style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 700, letterSpacing: '0.05em' }}>
               {toPickup ? 'IR A RECOGER' : 'IR A ENTREGAR'}
@@ -229,26 +221,19 @@ export default function DriverNavegarPage() {
           <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)' }}>Pedido no disponible</div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientName}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {route ? `${route.etaMin} min · ${route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}` : 'Calculando ruta…'}
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1, minWidth: 0, fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                {route ? `${route.etaMin} min · ${route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}` : 'Calculando ruta…'}
               </div>
-              {price > 0 && (
-                <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#16a34a', whiteSpace: 'nowrap' }}>{price.toLocaleString('es-PY')} Gs</div>
+              {target && (
+                <button
+                  onClick={() => openExternal(navApp, target)}
+                  style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--border-strong, #e5e7eb)', background: 'var(--glass-card, #f3f4f6)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  🧭 {navApp === 'waze' ? 'Waze' : 'Google Maps'}
+                </button>
               )}
             </div>
-
-            {target && (
-              <button
-                onClick={() => openExternal(navApp, target)}
-                style={{ width: '100%', padding: '10px', borderRadius: 12, border: '1px solid var(--border-strong, #e5e7eb)', background: 'var(--glass-card, #f3f4f6)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', marginBottom: 10 }}
-              >
-                🧭 Abrir en {navApp === 'waze' ? 'Waze' : 'Google Maps'}
-              </button>
-            )}
 
             <Suspense fallback={null}>
               <ActiveOrders mode="nav" orderId={id} />

@@ -550,6 +550,17 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
     setStopActing(prev => ({ ...prev, [stopId]: false }));
   };
 
+  // En navegación el servicio arranca solo: "Voy hacia la recogida" (accepted → picking_up)
+  const autoStartedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (mode !== 'nav' || acting) return;
+    const o = orders.find(x => x.id === orderId);
+    if (!o || o.status !== 'accepted' || o.order_type === 'mandadito' || autoStartedRef.current.has(o.id)) return;
+    autoStartedRef.current.add(o.id);
+    updateStatus(o.id, 'picking_up');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, orders, orderId, acting]);
+
   const renderCard = (order: any) => {
     const status = order.status as ActiveStatus;
     const statusInfo = STATUS_LABEL[status];
@@ -582,7 +593,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
         }}
       >
         {/* Status header */}
-        <div className="tuki-card-header">
+        {mode !== 'nav' && <div className="tuki-card-header">
           <span className="tuki-card-title">
             <Icon name={statusInfo.icon} size={14} color={statusTone.color} />
             {statusInfo.label}
@@ -593,11 +604,11 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             style={{ cursor: 'pointer', userSelect: 'none' }}
             title="Toca para copiar"
           >#{track}</span>
-        </div>
+        </div>}
 
         <div className="tuki-card-body">
           {/* Progress stepper */}
-          {(() => {
+          {mode !== 'nav' && (() => {
             const returnMode = ['returning', 'driver_returning', 'return_delivered'].includes(status);
             const steps = order.order_type === 'mandadito' ? MANDADITO_STEPS : DELIVERY_STEPS;
             const activeIdx = returnMode ? 3 : steps.findIndex(s => s.key === status);
@@ -655,7 +666,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{clientName}</div>
-              {phone && (
+              {phone && mode !== 'nav' && (
                 <a href={`tel:${phone}`} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Icon name="device-mobile" size={12} color="#60a5fa" /> {phone}
                 </a>
@@ -697,6 +708,20 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
                 </span>
               )}
             </button>
+
+            {mode === 'nav' && phone && (
+              <a
+                href={`tel:${phone}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '11px 16px', borderRadius: 13, flexShrink: 0,
+                  background: 'rgba(34,197,94,0.14)', boxShadow: '0 0 0 1px rgba(34,197,94,0.3)',
+                  color: '#4ade80', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none',
+                }}
+              >
+                <Icon name="device-mobile" size={15} color="#4ade80" /> Llamar
+              </a>
+            )}
 
             {/* SOS — emergency call */}
             <a
@@ -777,7 +802,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
           }
 
           {/* Addresses */}
-          {(order.pickup_address || order.delivery_address) && (
+          {mode !== 'nav' && (order.pickup_address || order.delivery_address) && (
             <div className="tuki-address-box" style={{ marginBottom: 14 }}>
               {(() => {
                 const addrSortedStops: any[] = Array.isArray(order.order_stops)
