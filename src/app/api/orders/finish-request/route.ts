@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { emitNotification } from '@/lib/notificationEmitter';
-import { FINISH_TOLERANCE_M, FINISH_MIN_PORTION, haversineKm } from '@/lib/tripFinish';
+import { FINISH_TOLERANCE_M, FINISH_MIN_PORTION, roadKm } from '@/lib/tripFinish';
 
 const round1000 = (n: number) => Math.round(n / 1000) * 1000;
 const gs = (n: number) => Math.round(n).toLocaleString('es-PY');
@@ -32,9 +32,9 @@ export async function POST(req: Request) {
   const fresh = loc?.updated_at && Date.now() - new Date(loc.updated_at).getTime() < 5 * 60_000;
   if (!loc || !fresh) return NextResponse.json({ error: 'No se pudo obtener tu ubicación. Activá el GPS.' }, { status: 409 });
 
-  const routeKm = haversineKm(pLat, pLng, dLat, dLng);
-  const toDestKm = haversineKm(loc.lat, loc.lng, dLat, dLng);
-  const fromPickupKm = haversineKm(pLat, pLng, loc.lat, loc.lng);
+  const routeKm = await roadKm(pLat, pLng, dLat, dLng);
+  const toDestKm = await roadKm(loc.lat, loc.lng, dLat, dLng);
+  const fromPickupKm = await roadKm(pLat, pLng, loc.lat, loc.lng);
   const distM = Math.round(toDestKm * 1000);
   if (distM <= FINISH_TOLERANCE_M) return NextResponse.json({ error: 'within_destination' }, { status: 409 });
 

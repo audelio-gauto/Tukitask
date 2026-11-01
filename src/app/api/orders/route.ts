@@ -4,7 +4,7 @@ import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheDel } from '@/lib/cache';
 import { emitNotification } from '@/lib/notificationEmitter';
 import { allowRequest } from '@/lib/rateLimit';
-import { FINISH_TOLERANCE_M, FINISH_REQUEST_TIMEOUT_MS, haversineKm } from '@/lib/tripFinish';
+import { FINISH_TOLERANCE_M, FINISH_REQUEST_TIMEOUT_MS, roadKm } from '@/lib/tripFinish';
 
 // Saldo mínimo para poder ver pedidos disponibles.
 // 0 = solo bloquear si saldo negativo. Sube este valor para exigir depósito previo.
@@ -622,7 +622,7 @@ export async function PATCH(req: Request) {
     const { data: loc } = await db.from('driver_locations').select('lat, lng, updated_at').eq('driver_email', user.email).maybeSingle();
     const fresh = loc?.updated_at && Date.now() - new Date(loc.updated_at).getTime() < 5 * 60_000;
     if (loc && fresh) {
-      const distM = Math.round(haversineKm(loc.lat, loc.lng, order.delivery_lat, order.delivery_lng) * 1000);
+      const distM = Math.round((await roadKm(loc.lat, loc.lng, order.delivery_lat, order.delivery_lng)) * 1000);
       if (distM > FINISH_TOLERANCE_M) {
         const askedAt = order.finish_request_at ? new Date(order.finish_request_at).getTime() : 0;
         const timedOut = order.finish_request_status === 'requested' && Date.now() - askedAt > FINISH_REQUEST_TIMEOUT_MS;
