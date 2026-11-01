@@ -1207,6 +1207,42 @@ export default function SeguimientoPage() {
                 📞 Llamar
               </a>
             )}
+            {isActive && type === 'delivery' && (
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await authFetch('/api/trip-share', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ order_id: id }),
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok || !json.token) { window.alert(json.error || 'No se pudo generar el enlace.'); return; }
+                    const url = `${window.location.origin}/seguimiento/${json.token}`;
+                    if (navigator.share) { await navigator.share({ title: 'Seguí mi viaje en Tukitask', url }).catch(() => {}); }
+                    else { await navigator.clipboard.writeText(url).catch(() => {}); window.alert('Enlace copiado:\n' + url); }
+                  } catch { window.alert('No se pudo generar el enlace.'); }
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, background: 'var(--glass-card)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+              >
+                🔗 Compartir
+              </button>
+            )}
+            {isActive && type === 'delivery' && (
+              <a
+                href="tel:911"
+                onClick={() => {
+                  authFetch('/api/sos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: id, lat: order?.client_lat ?? undefined, lng: order?.client_lng ?? undefined }),
+                  }).catch(() => {});
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.14)', boxShadow: '0 0 0 1px rgba(239,68,68,0.4)', color: '#f87171', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', flexShrink: 0 }}
+              >
+                🆘 SOS
+              </a>
+            )}
           </div>
           {type === 'delivery' && order && ['accepted', 'picking_up'].includes(order.status) && (
             <button

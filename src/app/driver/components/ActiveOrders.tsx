@@ -726,6 +726,14 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             {/* SOS — emergency call */}
             <a
               href="tel:911"
+              onClick={() => {
+                // Avisa a soporte sin impedir la llamada al 911
+                authFetch('/api/sos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ order_id: order.id, lat: driverPos?.lat, lng: driverPos?.lng }),
+                }).catch(() => {});
+              }}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '11px 18px', borderRadius: 13,
