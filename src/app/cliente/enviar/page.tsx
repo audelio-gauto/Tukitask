@@ -74,6 +74,15 @@ export default function EnviarPaquetePage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoOpen, setPromoOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [senderOpen, setSenderOpen] = useState(false);
+  const [receiverOpen, setReceiverOpen] = useState(false);
+  const [destHistory, setDestHistory] = useState<Array<{ address: string; lat: string; lng: string }>>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('tukitask_dest_history');
+      if (raw) setDestHistory(JSON.parse(raw));
+    } catch {}
+  }, []);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Address search overlay state — now also handles stop index
@@ -556,6 +565,14 @@ export default function EnviarPaquetePage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Error al crear el pedido');
       }
+      try {
+        const used = stops
+          .filter(s => s.address && isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
+          .map(s => ({ address: s.address, lat: s.lat, lng: s.lng }));
+        const next = [...used, ...destHistory].filter((p, i, arr) => arr.findIndex(q => q.address === p.address) === i).slice(0, 5);
+        localStorage.setItem('tukitask_dest_history', JSON.stringify(next));
+        setDestHistory(next);
+      } catch {}
       setSuccess(true);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error al crear el pedido');
@@ -740,7 +757,7 @@ export default function EnviarPaquetePage() {
           {step === 1 ? (
             <>
           {USE_CATEGORY_CAROUSEL ? (
-            (!showServicePicker || stops.some(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))) && (
+            (!showServicePicker || stops.some(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))) ? (
             <div className="enviar-order-toggle enviar-category-carousel">
               {serviceCategories.map(cat => {
                 const selected = !showServicePicker && orderType === cat.orderType && form.vehicleType === cat.vehicle;
@@ -772,7 +789,26 @@ export default function EnviarPaquetePage() {
                 );
               })}
             </div>
-            )
+            ) : destHistory.length > 0 ? (
+              <div className="enviar-dest-history">
+                <div className="enviar-dest-history-title">Destinos recientes</div>
+                {destHistory.map(p => (
+                  <button
+                    key={p.address}
+                    type="button"
+                    className="enviar-dest-history-item"
+                    onClick={() => {
+                      updateStop(0, 'address', p.address);
+                      updateStop(0, 'lat', p.lat);
+                      updateStop(0, 'lng', p.lng);
+                    }}
+                  >
+                    <span aria-hidden>🕘</span>
+                    <span className="enviar-dest-history-text">{p.address}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null
           ) : showServicePicker ? (
           <>
           <div className="enviar-step-title enviar-service-heading" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
@@ -1306,46 +1342,66 @@ export default function EnviarPaquetePage() {
                   </div>
                 </div>
 
-                <div className="enviar-contact-card">
-                  <div className="enviar-contact-header">
-                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
-                  </div>
-                  <div className="enviar-field-row">
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Nombre</label>
-                      <input
-                        className="enviar-field-input"
-                        placeholder="Nombre completo"
-                        value={form.senderContact}
-                        onChange={e => update('senderContact', e.target.value)}
-                        required
-                        autoComplete="name"
-                      />
-                    </div>
-                    <div className="enviar-field">
-                      <label className="enviar-field-label">Teléfono</label>
-                      <input
-                        className="enviar-field-input"
-                        type="tel"
-                        placeholder="0981 000 000"
-                        value={form.senderPhone}
-                        onChange={e => update('senderPhone', e.target.value)}
-                        required
-                        autoComplete="tel"
-                      />
+                <div className={`enviar-accordion${senderOpen ? ' open' : ''}${form.senderContact && form.senderPhone ? ' has-value' : ''}`} style={{ marginTop: '0.75rem' }}>
+                  <button type="button" className="enviar-accordion-row" onClick={() => setSenderOpen(o => !o)} aria-expanded={senderOpen}>
+                    <span className="enviar-accordion-left">
+                      <span className="enviar-accordion-icon">👤</span>
+                      <span className="enviar-accordion-label">Remitente{form.senderContact ? ` · ${form.senderContact}` : ''}</span>
+                    </span>
+                    <svg className="enviar-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                  <div className="enviar-accordion-body">
+                    <div className="enviar-accordion-content">
+                      <div className="enviar-field-row" style={{ paddingTop: 12 }}>
+                        <div className="enviar-field">
+                          <label className="enviar-field-label">Nombre</label>
+                          <input
+                            className="enviar-field-input"
+                            placeholder="Nombre completo"
+                            value={form.senderContact}
+                            onChange={e => update('senderContact', e.target.value)}
+                            onInvalid={() => setSenderOpen(true)}
+                            required
+                            autoComplete="name"
+                          />
+                        </div>
+                        <div className="enviar-field">
+                          <label className="enviar-field-label">Teléfono</label>
+                          <input
+                            className="enviar-field-input"
+                            type="tel"
+                            placeholder="0981 000 000"
+                            value={form.senderPhone}
+                            onChange={e => update('senderPhone', e.target.value)}
+                            onInvalid={() => setSenderOpen(true)}
+                            required
+                            autoComplete="tel"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
                 </>
                 )}
 
-                {orderType !== 'viaje' && stops.map((stop, idx) => (
-                  <div key={stop.id} className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
-                    <div className="enviar-contact-header">
-                      <span className="enviar-dot" style={{ width: 10, height: 10, background: 'var(--client-danger)' }} />
-                      {stops.length > 1 ? `Recibe en destino ${idx + 1}` : 'Datos de quien recibe'}
-                      <span style={{ fontWeight: 400, color: 'var(--client-text-secondary)', marginLeft: 4 }}>(opcional)</span>
-                    </div>
+                {orderType !== 'viaje' && (
+                <div className={`enviar-accordion${receiverOpen ? ' open' : ''}${stops.some(s => s.receiverContact || s.receiverPhone) ? ' has-value' : ''}`} style={{ marginTop: '0.75rem' }}>
+                  <button type="button" className="enviar-accordion-row" onClick={() => setReceiverOpen(o => !o)} aria-expanded={receiverOpen}>
+                    <span className="enviar-accordion-left">
+                      <span className="enviar-accordion-icon">📦</span>
+                      <span className="enviar-accordion-label">Datos de quien recibe</span>
+                      <span style={{ fontWeight: 400, color: 'var(--client-text-secondary)', fontSize: '0.75rem' }}>(opcional)</span>
+                    </span>
+                    <svg className="enviar-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                  <div className="enviar-accordion-body">
+                    <div className="enviar-accordion-content">
+                {stops.map((stop, idx) => (
+                  <div key={stop.id} style={{ paddingTop: 12 }}>
+                    {stops.length > 1 && (
+                      <div className="enviar-contact-header">Recibe en destino {idx + 1}</div>
+                    )}
                     <div className="enviar-field-row">
                       <div className="enviar-field">
                         <label className="enviar-field-label">Nombre</label>
@@ -1371,6 +1427,10 @@ export default function EnviarPaquetePage() {
                     </div>
                   </div>
                 ))}
+                    </div>
+                  </div>
+                </div>
+                )}
 
                 <div className="enviar-contact-card" style={{ marginTop: '0.75rem', background: 'var(--client-action-active)' }}>
                   <div className="enviar-field">
