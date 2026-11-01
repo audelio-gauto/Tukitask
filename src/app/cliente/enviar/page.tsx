@@ -19,6 +19,18 @@ const vehicleTypes = [
   { value: 'camion2t', label: 'Camion flete', sub: 'Carga mediana, pesada, mudanza', icon: 'truck', priceHint: 'Mudanzas y fletes' },
 ];
 
+// Carrusel estilo Bolt: cada tarjeta fija el mismo orderType + vehicleType que ya existían.
+// Poner en false para volver al selector anterior (servicio y luego vehículo).
+const USE_CATEGORY_CAROUSEL = true;
+const serviceCategories = [
+  { key: 'viaje-auto', orderType: 'viaje', vehicle: 'auto', label: 'Remis Auto', cta: 'Remis Auto', icon: 'car' },
+  { key: 'viaje-moto', orderType: 'viaje', vehicle: 'moto', label: 'Remis Moto', cta: 'Remis Moto', icon: 'bolt' },
+  { key: 'envio-moto', orderType: 'envio', vehicle: 'moto', label: 'Envío Moto', cta: 'Envío Moto', icon: 'package' },
+  { key: 'envio-auto', orderType: 'envio', vehicle: 'auto', label: 'Envío Auto', cta: 'Envío Auto', icon: 'package' },
+  { key: 'flete-motocarro', orderType: 'flete', vehicle: 'motocarro', label: 'Flete Moto Carro', cta: 'Flete Moto Carro', icon: 'truck' },
+  { key: 'flete-camion', orderType: 'flete', vehicle: 'camion2t', label: 'Flete Camión', cta: 'Flete Camión', icon: 'truck' },
+] as const;
+
 const paymentMethods = [
   { value: 'efectivo', label: 'Efectivo', icon: 'money' },
   { value: 'transferencia', label: 'Transferencia', icon: 'credit-card' },
@@ -333,6 +345,21 @@ export default function EnviarPaquetePage() {
     // round to nearest integer
     return Math.round(price || 0);
   }, [pricing, pricingSettings, form.vehicleType, distanceKm, routeDistanceMeters]);
+
+  const estimatePriceFor = (vehicle: string) => {
+    const vp = pricing[vehicle];
+    const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
+    let est = 0;
+    if (vp?.base_price) est += vp.base_price;
+    if (vp?.price_per_km && dist > 0) est += vp.price_per_km * dist;
+    const globalMin = pricingSettings['min_shipping_price'] ?? 0;
+    if (globalMin && est < globalMin) est = globalMin;
+    return est;
+  };
+
+  const ctaLabel = USE_CATEGORY_CAROUSEL
+    ? `Pedir ${serviceCategories.find(c => c.orderType === orderType && c.vehicle === form.vehicleType)?.cta ?? ''}`.trim()
+    : 'Solicitar';
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -711,7 +738,39 @@ export default function EnviarPaquetePage() {
           {/* Order type toggle — solo visible en paso 1 */}
           {step === 1 ? (
             <>
-          {showServicePicker ? (
+          {USE_CATEGORY_CAROUSEL ? (
+            <div className="enviar-order-toggle enviar-category-carousel">
+              {serviceCategories.map(cat => {
+                const selected = !showServicePicker && orderType === cat.orderType && form.vehicleType === cat.vehicle;
+                const est = estimatePriceFor(cat.vehicle);
+                const eta = nearbyEta[cat.vehicle];
+                const hasDest = stops.some(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)));
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    className={`enviar-category-card ${selected ? 'active' : ''}`}
+                    onClick={() => {
+                      setOrderType(cat.orderType);
+                      setShowServicePicker(false);
+                      update('vehicleType', cat.vehicle);
+                    }}
+                  >
+                    <span className="enviar-category-icon">
+                      {pricing[cat.vehicle]?.image_url
+                        ? <img src={pricing[cat.vehicle].image_url!} alt={cat.label} width={56} height={56} />
+                        : <Icon name={cat.icon as import('@/components/Icon').IconName} size={26} />}
+                    </span>
+                    <span className="enviar-category-label">{cat.label}</span>
+                    <span className="enviar-category-price">
+                      {!hasDest ? 'Elegí destino' : !loadingPricing && est > 0 ? `${Math.round(est).toLocaleString('es-PY')} Gs` : '—'}
+                    </span>
+                    <span className="enviar-category-eta">{eta ? `${eta} min` : 'Sin conductores cerca'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : showServicePicker ? (
           <>
           <div className="enviar-step-title enviar-service-heading" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
               <div>
@@ -1056,13 +1115,16 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 2: VEHICLE + PRICE + PAYMENT ── */}
             {(step === 2 || !showServicePicker) && (
               <>
+                {!USE_CATEGORY_CAROUSEL && (
                 <div className="enviar-step-title" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
                   <div>
                     <div className="enviar-step-title-main">Elegí el vehículo y tu precio</div>
                     <div className="enviar-step-title-sub">El conductor puede aceptar o proponerte otro monto.</div>
                   </div>
                 </div>
+                )}
                 {/* Vehicle cards */}
+                {!USE_CATEGORY_CAROUSEL && (
                 <div className="enviar-vehicle-grid">
                   {vehicleTypes.filter(v =>
                     orderType === 'flete' ? ['motocarro', 'camion2t'].includes(v.value) :
@@ -1119,6 +1181,7 @@ export default function EnviarPaquetePage() {
                     );
                   })}
                 </div>
+                )}
 
                 {/* Price control */}
                 <div className="enviar-price-section">
@@ -1538,12 +1601,12 @@ export default function EnviarPaquetePage() {
                       </span>
                     ) : promoResult ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        Solicitar ·
+                        {ctaLabel} ·
                         <span style={{ textDecoration: 'line-through', opacity: 0.6, fontSize: '0.85em' }}>{offerPrice.toLocaleString('es-PY')} Gs</span>
                         <span style={{ color: '#bbf7d0', fontWeight: 800 }}>{Math.max(0, offerPrice - promoResult.discount_amount).toLocaleString('es-PY')} Gs</span>
                       </span>
                     ) : (
-                      <>Solicitar · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
+                      <>{ctaLabel} · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
                     )}
                   </button>
                 </div>
