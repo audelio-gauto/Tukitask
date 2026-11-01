@@ -230,20 +230,35 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!email) return;
     const ACTIVE_STATUSES = ['accepted', 'picking_up', 'in_transit'];
+    // Abre la navegación una sola vez por pedido cuando el cliente acepta la oferta
+    const openNavForNew = (orders: any[]) => {
+      try {
+        const seen: string[] = JSON.parse(localStorage.getItem('tuki_nav_seen') || '[]');
+        const fresh = orders.find(o => o.status === 'accepted' && !seen.includes(o.id));
+        if (!fresh) return;
+        localStorage.setItem('tuki_nav_seen', JSON.stringify([...seen, fresh.id].slice(-50)));
+        if (!window.location.pathname.startsWith('/driver/navegar')) router.push(`/driver/navegar/${fresh.id}`);
+      } catch {}
+    };
     const load = () => {
       authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
         .then(r => r.json())
         .then((data: any[]) => {
           if (Array.isArray(data)) {
             setActiveOrderCount(data.filter(o => ACTIVE_STATUSES.includes(o.status)).length);
+            openNavForNew(data);
           }
         })
         .catch(() => {});
     };
     load();
-    const timer = setInterval(load, 60_000);
-    return () => clearInterval(timer);
-  }, [email]);
+    const timer = setInterval(load, 15_000);
+    const ch = supabase
+      .channel(`driver-nav-${email}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `accepted_by=eq.${email}` } as never, () => load())
+      .subscribe();
+    return () => { clearInterval(timer); supabase.removeChannel(ch); };
+  }, [email, router]);
 
   if (checking) {
     return (

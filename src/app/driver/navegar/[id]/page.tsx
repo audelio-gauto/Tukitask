@@ -1,0 +1,304 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { authFetch } from '@/lib/authFetch';
+import { haversineKm } from '@/lib/geo';
+import { useWorkerContext } from '../../context';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+interface LatLng { lat: number; lng: number }
+
+const NAV_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit'];
+
+function toLL(lat: unknown, lng: unknown): LatLng | null {
+  const a = Number(lat), b = Number(lng);
+  return Number.isFinite(a) && Number.isFinite(b) && (a !== 0 || b !== 0) ? { lat: a, lng: b } : null;
+}
+
+function openExternal(navApp: string, p: LatLng) {
+  const url = navApp === 'waze'
+    ? `https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`
+    : `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
+  window.open(url, '_blank');
+}
+
+/**
+ * Pantalla de navegación del conductor estilo Bolt/Uber.
+ * Se abre sola cuando el cliente acepta la oferta. Los pasos con PIN, foto o cobro
+ * siguen en /driver/activo para no duplicar esa lógica.
+ */
+export default function DriverNavegarPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
+  const { email, navApp, driverPos } = useWorkerContext();
+
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [route, setRoute] = useState<{ distKm: number; etaMin: number } | null>(null);
+
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const leafletRef = useRef<any>(null);
+  const meMarker = useRef<any>(null);
+  const targetMarker = useRef<any>(null);
+  const lineRef = useRef<any>(null);
+  const fittedRef = useRef(false);
+  const lastRouteKey = useRef('');
+  const [mapReady, setMapReady] = useState(false);
+
+  const fetchOrder = useCallback(async () => {
+    if (!email) return;
+    try {
+      const res = await authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const found = Array.isArray(data) ? data.find((o: any) => o.id === id) : null;
+      // Pedido ya no es del conductor o terminó: volver al panel activo
+      if (!found || ['cancelled', 'driver_cancelled', 'delivered', 'failed', 'returned'].includes(found.status)) {
+        router.replace('/driver/activo');
+        return;
+      }
+      setOrder(found);
+    } catch { /* se reintenta */ } finally {
+      setLoading(false);
+    }
+  }, [email, id, router]);
+
+  useEffect(() => {
+    fetchOrder();
+    const t = setInterval(fetchOrder, 8000);
+    return () => clearInterval(t);
+  }, [fetchOrder]);
+
+  // Mapa Leaflet (sin WebGL), igual que el seguimiento del cliente
+  useEffect(() => {
+    if (!mapDivRef.current || mapRef.current) return;
+    let cancelled = false;
+    (async () => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      const L = (await import('leaflet')).default;
+      if (cancelled || !mapDivRef.current) return;
+      leafletRef.current = L;
+      const map = L.map(mapDivRef.current, { center: [-25.2637, -57.5759], zoom: 14, zoomControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+      mapRef.current = map;
+      const ro = new ResizeObserver(() => map.invalidateSize());
+      ro.observe(mapDivRef.current);
+      setMapReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const status: string = order?.status ?? '';
+  const toPickup = status === 'accepted' || status === 'picking_up';
+
+  // Destino actual: recogida primero; luego la próxima parada pendiente o el destino final
+  const pendingStop = (order?.order_stops || [])
+    .filter((s: any) => s.status === 'pending')
+    .sort((a: any, b: any) => a.sequence - b.sequence)[0];
+  const targetLat = toPickup ? order?.pickup_lat : (pendingStop?.lat ?? order?.delivery_lat);
+  const targetLng = toPickup ? order?.pickup_lng : (pendingStop?.lng ?? order?.delivery_lng);
+  const target = order ? toLL(targetLat, targetLng) : null;
+  const targetKey = target ? `${target.lat},${target.lng}` : '';
+  const targetAddress: string = toPickup ? (order?.pickup_address ?? '') : (pendingStop?.address ?? order?.delivery_address ?? '');
+
+  // Marcadores y ruta
+  useEffect(() => {
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!mapReady || !L || !map) return;
+
+    const dot = (html: string, bg: string) => L.divIcon({
+      className: '',
+      html: `<div style="width:34px;height:34px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">${html}</div>`,
+      iconSize: [34, 34], iconAnchor: [17, 17],
+    });
+
+    if (driverPos) {
+      if (!meMarker.current) meMarker.current = L.marker([driverPos.lat, driverPos.lng], { icon: dot('🚗', '#111827'), zIndexOffset: 1000 }).addTo(map);
+      else meMarker.current.setLatLng([driverPos.lat, driverPos.lng]);
+    }
+    const tgt = targetKey ? { lat: Number(targetKey.split(',')[0]), lng: Number(targetKey.split(',')[1]) } : null;
+    if (tgt) {
+      const icon = dot(toPickup ? '📍' : '🏁', toPickup ? '#f59e0b' : '#22c55e');
+      if (!targetMarker.current) targetMarker.current = L.marker([tgt.lat, tgt.lng], { icon }).addTo(map);
+      else { targetMarker.current.setLatLng([tgt.lat, tgt.lng]); targetMarker.current.setIcon(icon); }
+    }
+
+    if (!driverPos || !tgt) return;
+    // Solo recalcula la ruta si cambió el destino o el conductor se movió ~100 m
+    const key = `${targetKey}|${driverPos.lat.toFixed(3)},${driverPos.lng.toFixed(3)}`;
+    if (key === lastRouteKey.current) return;
+    lastRouteKey.current = key;
+
+    (async () => {
+      let coords: [number, number][] = [[driverPos.lat, driverPos.lng], [tgt.lat, tgt.lng]];
+      let ok = false;
+      try {
+        const r = await authFetch('/api/maps/directions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: driverPos, to: tgt }),
+        });
+        if (r.ok) {
+          const json = await r.json();
+          if (json?.coords?.length > 1) {
+            coords = json.coords.map((c: LatLng) => [Number(c.lat), Number(c.lng)] as [number, number]);
+            ok = true;
+            setRoute({
+              distKm: Number(json.distance_meters || 0) / 1000 || haversineKm(driverPos.lat, driverPos.lng, tgt.lat, tgt.lng),
+              etaMin: Math.max(1, Math.round(Number(json.duration_seconds || 0) / 60)),
+            });
+          }
+        }
+      } catch { /* línea recta */ }
+      if (!ok) {
+        const d = haversineKm(driverPos.lat, driverPos.lng, tgt.lat, tgt.lng);
+        setRoute({ distKm: d, etaMin: Math.max(1, Math.round(d * 2.5)) });
+      }
+      if (lineRef.current) map.removeLayer(lineRef.current);
+      lineRef.current = L.polyline(coords, { color: '#2563eb', weight: ok ? 6 : 3, opacity: 0.9, dashArray: ok ? undefined : '8 6', lineJoin: 'round' }).addTo(map);
+      if (!fittedRef.current) {
+        map.fitBounds(L.latLngBounds(coords), { padding: [70, 70], maxZoom: 17 });
+        fittedRef.current = true;
+      }
+    })();
+  }, [mapReady, driverPos, targetKey, toPickup]);
+
+  // Al cambiar de tramo (recogida → entrega) se vuelve a encuadrar
+  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; }, [toPickup]);
+
+  const recenter = () => {
+    const map = mapRef.current;
+    if (map && driverPos) map.setView([driverPos.lat, driverPos.lng], 17);
+  };
+
+  const advance = async (nextStatus: string) => {
+    setActing(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: id, status: nextStatus, driver_email: email }),
+      });
+      if (res.ok) await fetchOrder();
+      else {
+        const err = await res.json().catch(() => ({}));
+        setError(err?.error || 'No se pudo actualizar el estado');
+      }
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const isMandadito = order?.order_type === 'mandadito';
+  const clientName = order?.client_name || order?.client_email?.split('@')[0] || 'Cliente';
+  const phone = order?.client_phone || order?.sender_phone || null;
+  const price = Number(order?.offer ?? order?.suggested_price ?? 0);
+
+  let cta: { label: string; onClick: () => void } | null = null;
+  if (order) {
+    if (status === 'accepted' && !isMandadito) cta = { label: 'Ir a recoger', onClick: () => advance('picking_up') };
+    else if (status === 'picking_up' && !isMandadito) {
+      cta = { label: 'Ya llegué', onClick: () => { if (window.confirm('¿Confirmás que ya llegaste al punto de recogida?')) advance('at_pickup'); } };
+    } else cta = { label: status === 'in_transit' ? 'Finalizar entrega' : 'Continuar', onClick: () => router.push('/driver/activo') };
+  }
+
+  const btnStyle = { flex: 1, padding: '10px', borderRadius: 12, border: '1px solid var(--border-strong, #e5e7eb)', background: 'var(--glass-card, #f3f4f6)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center' as const, textDecoration: 'none' };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--background)', zIndex: 50 }}>
+      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div ref={mapDivRef} style={{ position: 'absolute', inset: 0 }} />
+
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-start', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 12px 0', pointerEvents: 'none' }}>
+          <button
+            onClick={() => router.push('/driver/activo')}
+            aria-label="Volver"
+            style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: '#fff', color: '#111', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.1rem', flexShrink: 0 }}
+          >←</button>
+          <div style={{ pointerEvents: 'auto', flex: 1, background: '#111827', color: '#fff', borderRadius: 16, padding: '10px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', minWidth: 0 }}>
+            <div style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 700, letterSpacing: '0.05em' }}>
+              {toPickup ? 'IR A RECOGER' : 'IR A ENTREGAR'}
+            </div>
+            <div style={{ fontWeight: 800, fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {targetAddress || 'Destino'}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={recenter}
+          aria-label="Centrar en mi ubicación"
+          style={{ position: 'absolute', right: 12, bottom: 28, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
+        >🎯</button>
+
+        {!driverPos && mapReady && (
+          <div style={{ position: 'absolute', bottom: 28, left: 12, zIndex: 1001, background: 'rgba(0,0,0,0.75)', color: '#f59e0b', borderRadius: 12, padding: '8px 14px', fontSize: '0.75rem', fontWeight: 600 }}>
+            Esperando señal GPS…
+          </div>
+        )}
+      </div>
+
+      <div style={{ flexShrink: 0, background: 'var(--sheet-bg, #fff)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', padding: '8px 14px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+        <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--border-strong, #d1d5db)', margin: '0 auto 12px' }} />
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)' }}>Cargando…</div>
+        ) : !order ? (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)' }}>Pedido no disponible</div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientName}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {route ? `${route.etaMin} min · ${route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}` : 'Calculando ruta…'}
+                </div>
+              </div>
+              {price > 0 && (
+                <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#16a34a', whiteSpace: 'nowrap' }}>{price.toLocaleString('es-PY')} Gs</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              {target && (
+                <button onClick={() => openExternal(navApp, target)} style={btnStyle}>
+                  🧭 {navApp === 'waze' ? 'Waze' : 'Google Maps'}
+                </button>
+              )}
+              {phone && <a href={`tel:${phone}`} style={btnStyle}>📞 Llamar</a>}
+              <button onClick={() => router.push('/driver/activo')} style={btnStyle}>💬 Detalle</button>
+            </div>
+
+            {error && <div style={{ color: '#ef4444', fontSize: '0.78rem', marginBottom: 8, textAlign: 'center' }}>{error}</div>}
+
+            {cta && (
+              <button
+                onClick={cta.onClick}
+                disabled={acting}
+                style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#22c55e', color: '#fff', fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer', opacity: acting ? 0.6 : 1 }}
+              >
+                {acting ? 'Actualizando…' : cta.label}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
