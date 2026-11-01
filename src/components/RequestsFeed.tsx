@@ -123,6 +123,15 @@ export interface RateConfig {
   rate_ok_gspm: number | null;
 }
 
+type SortKey = 'near' | 'price' | 'rate' | 'client';
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: 'near', label: 'Más cerca' },
+  { key: 'price', label: 'Mejor precio' },
+  { key: 'rate', label: 'Mejor Gs/km' },
+  { key: 'client', label: 'Mejor cliente' },
+];
+
 type Props = {
   items: FeedItem[];
   available: boolean;
@@ -157,7 +166,9 @@ export default memo(function RequestsFeed({
   const [customPrice, setCustomPrice] = useState('');
   const [customOpen, setCustomOpen] = useState(false);
   const [stopsOpen, setStopsOpen] = useState(false);
-  const [cardIdx, setCardIdx] = useState(0);
+  const [selId, setSelId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>('near');
+  const selectedChipRef = useRef<HTMLButtonElement | null>(null);
 
   // Auto-dismiss expired cards — checked every 5s
   const itemsRef     = useRef(items);
@@ -216,10 +227,38 @@ export default memo(function RequestsFeed({
     if (soundIvRef.current) clearInterval(soundIvRef.current);
   }, []);
 
-  const visible = items.filter(i => !dismissed.has(i.id));
+  // Distancias y rentabilidad de cada solicitud (para la tira comparativa y el orden)
+  const metricsOf = (it: FeedItem) => {
+    const d = (driverLat != null && driverLng != null && it.pickupLat != null && it.pickupLng != null)
+      ? haversineKm(driverLat, driverLng, it.pickupLat, it.pickupLng) : null;
+    const r = (it.pickupLat != null && it.pickupLng != null && it.deliveryLat != null && it.deliveryLng != null)
+      ? haversineKm(it.pickupLat, it.pickupLng, it.deliveryLat, it.deliveryLng) : null;
+    const price = Number(it.price || 0);
+    const km = (d ?? 0) + (r ?? 0);
+    const gs = km > 0 && price > 0 ? Math.round(price / km) : null;
+    const vr = rateConfig.find(x => x.vehicle_type === it.title);
+    const color = gs != null && vr && (vr.rate_good_gspm != null || vr.rate_ok_gspm != null)
+      ? (gs >= (vr.rate_good_gspm ?? Infinity) ? '#22c55e' : vr.rate_ok_gspm != null && gs >= vr.rate_ok_gspm ? '#f59e0b' : '#ef4444')
+      : null;
+    return { d, r, price, gs, color };
+  };
 
-  // Clamp idx to valid range when list changes
-  const safeIdx = Math.min(cardIdx, Math.max(0, visible.length - 1));
+  const liveItems = items.filter(i => !dismissed.has(i.id));
+  // Solo el modo driver se ordena; técnicos conservan el orden original
+  const visible = mode === 'driver'
+    ? [...liveItems].sort((a, b) => {
+        const ma = metricsOf(a), mb = metricsOf(b);
+        if (sortBy === 'price') return mb.price - ma.price;
+        if (sortBy === 'rate') return (mb.gs ?? -1) - (ma.gs ?? -1);
+        if (sortBy === 'client') return Number(b.clientRating ?? 0) - Number(a.clientRating ?? 0);
+        return (ma.d ?? Infinity) - (mb.d ?? Infinity);
+      })
+    : liveItems;
+
+  // La selección sigue al id: reordenar la lista no cambia la solicitud abierta
+  const foundIdx = selId ? visible.findIndex(i => i.id === selId) : -1;
+  const safeIdx = foundIdx >= 0 ? foundIdx : 0;
+  const setCardIdx = (i: number) => setSelId(visible[i]?.id ?? null);
 
   // Notify parent when current item changes (for map route)
   const activeItem = visible[safeIdx] ?? null;
@@ -239,6 +278,11 @@ export default memo(function RequestsFeed({
     setCustomOpen(false);
     setStopsOpen(false);
   }, [safeIdx, activeItem?.id]);
+
+  // Mantiene visible en la tira la solicitud seleccionada
+  useEffect(() => {
+    selectedChipRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeItem?.id]);
 
   if (!available) {
     if (activeIdRef.current !== null) { activeIdRef.current = null; onActiveItem?.(null); }
@@ -320,6 +364,68 @@ export default memo(function RequestsFeed({
       }}>
 
         {/* ── Top bar: dots + nav arrows ── */}
+        {mode === 'driver' ? (
+          <div style={{ padding: '2px 0 8px' }}>
+            {/* Orden */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' as never }}>
+              <span style={{
+                flexShrink: 0, background: `linear-gradient(135deg,${BRAND},#F58A07)`, color: '#1C1C2E',
+                borderRadius: 99, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 900,
+              }}>{total} solicitud{total !== 1 ? 'es' : ''}</span>
+              {SORT_OPTIONS.map(o => (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => setSortBy(o.key)}
+                  style={{
+                    flexShrink: 0, padding: '4px 10px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
+                    border: sortBy === o.key ? `1.5px solid ${BRAND}` : '1px solid rgba(255,255,255,0.15)',
+                    background: sortBy === o.key ? 'rgba(245,197,24,0.16)' : 'var(--sheet-bg)',
+                    color: sortBy === o.key ? BRAND : 'var(--text-secondary)',
+                  }}
+                >{o.label}</button>
+              ))}
+            </div>
+            {/* Tira comparativa */}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' as never, scrollSnapType: 'x proximity' }}>
+              {visible.map((it, idx) => {
+                const m = metricsOf(it);
+                const active = idx === safeIdx;
+                return (
+                  <button
+                    key={it.id}
+                    ref={active ? selectedChipRef : undefined}
+                    type="button"
+                    onClick={() => setSelId(it.id)}
+                    aria-pressed={active}
+                    style={{
+                      flexShrink: 0, minWidth: 112, textAlign: 'left', cursor: 'pointer', scrollSnapAlign: 'center',
+                      padding: '8px 10px', borderRadius: 14,
+                      background: 'var(--sheet-bg)',
+                      border: active ? `2px solid ${BRAND}` : '1.5px solid rgba(255,255,255,0.12)',
+                      boxShadow: active ? `0 0 0 3px ${BRAND_SHADOW}` : '0 2px 8px rgba(0,0,0,0.25)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 900, fontSize: '1rem', color: BRAND, lineHeight: 1 }}>₲{m.price.toLocaleString('es-PY')}</span>
+                      {m.color && <span style={{ width: 8, height: 8, borderRadius: 99, background: m.color, flexShrink: 0 }} title="Rentabilidad" />}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)', marginTop: 4, whiteSpace: 'nowrap' }}>
+                      {it.clientRating != null && Number(it.clientRating) > 0
+                        ? <span style={{ color: '#F5C518' }}>★ {Number(it.clientRating).toFixed(1)}</span>
+                        : <span style={{ color: 'var(--text-muted)' }}>Nuevo</span>}
+                      {m.gs != null && <span style={{ color: 'var(--text-muted)' }}> · {m.gs.toLocaleString('es-PY')} Gs/km</span>}
+                    </div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap' }}>
+                      {m.d != null ? `📍 ${m.d.toFixed(1)} km` : '📍 —'}{m.r != null ? ` · viaje ${m.r.toFixed(1)} km` : ''}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '4px 2px 6px',
@@ -391,6 +497,7 @@ export default memo(function RequestsFeed({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
           </button>
         </div>
+        )}
 
         {/* ── Single card ── */}
         <div style={{
@@ -747,6 +854,34 @@ export default memo(function RequestsFeed({
                         </button>
                       ))}
                     </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([-5000, -1000, 1000, 5000] as const).map(step => (
+                        <button
+                          type="button"
+                          key={step}
+                          onClick={() => {
+                            const base = parseInt(customPrice || '0') || clientPrice;
+                            setCustomPrice(String(Math.max(1000, base + step)));
+                          }}
+                          disabled={isSending}
+                          style={{
+                            flex: 1, padding: '8px 0', border: '1px solid var(--border-subtle)',
+                            borderRadius: 10, background: 'var(--surface-2)',
+                            color: step < 0 ? '#f87171' : '#4ade80',
+                            fontSize: '0.74rem', fontWeight: 800, cursor: isSending ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {step > 0 ? '+' : '−'}{Math.abs(step).toLocaleString('es-PY')}
+                        </button>
+                      ))}
+                    </div>
+                    {customPrice && parseInt(customPrice) > 0 && clientPrice > 0 && (
+                      <div style={{ fontSize: '0.74rem', fontWeight: 700, textAlign: 'center', color: 'var(--text-muted)' }}>
+                        {parseInt(customPrice) === clientPrice
+                          ? 'Igual al precio del cliente'
+                          : `${parseInt(customPrice) > clientPrice ? '+' : '−'}₲${Math.abs(parseInt(customPrice) - clientPrice).toLocaleString('es-PY')} respecto al cliente`}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>₲</span>
                       <input
