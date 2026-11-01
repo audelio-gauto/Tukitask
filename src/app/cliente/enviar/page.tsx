@@ -739,6 +739,7 @@ export default function EnviarPaquetePage() {
           {step === 1 ? (
             <>
           {USE_CATEGORY_CAROUSEL ? (
+            (!showServicePicker || stops.some(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))) && (
             <div className="enviar-order-toggle enviar-category-carousel">
               {serviceCategories.map(cat => {
                 const selected = !showServicePicker && orderType === cat.orderType && form.vehicleType === cat.vehicle;
@@ -770,6 +771,7 @@ export default function EnviarPaquetePage() {
                 );
               })}
             </div>
+            )
           ) : showServicePicker ? (
           <>
           <div className="enviar-step-title enviar-service-heading" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
@@ -955,6 +957,18 @@ export default function EnviarPaquetePage() {
                     </div>
                   ))}
 
+                  {/* Add stop button */}
+                  {stops.length < MAX_STOPS && (
+                    <button
+                      type="button"
+                      onClick={addStop}
+                      className="enviar-add-stop-btn"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                      Agregar otra parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : '(opcional)'}
+                    </button>
+                  )}
+
                   {/* Destinos rápidos (guardados en este dispositivo) */}
                   <div className="enviar-quick-places">
                     {([['casa', '🏠', 'Casa'], ['trabajo', '💼', 'Trabajo']] as const).map(([key, emoji, label]) => {
@@ -989,18 +1003,6 @@ export default function EnviarPaquetePage() {
                       );
                     })}
                   </div>
-
-                  {/* Add stop button */}
-                  {stops.length < MAX_STOPS && (
-                    <button
-                      type="button"
-                      onClick={addStop}
-                      className="enviar-add-stop-btn"
-                    >
-                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      Agregar otra parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : '(opcional)'}
-                    </button>
-                  )}
 
                   {/* Optimize route button — visible when ≥2 stops have coords */}
                   {canOptimize && (
