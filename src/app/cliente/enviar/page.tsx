@@ -844,10 +844,8 @@ export default function EnviarPaquetePage() {
                   onClick={() => {
                     setOrderType(tab.key);
                     setShowServicePicker(false);
-                    if (tab.key === 'mandadito' && !['moto', 'auto'].includes(form.vehicleType)) update('vehicleType', 'moto');
                     if (tab.key === 'flete' && !['motocarro', 'camion2t'].includes(form.vehicleType)) update('vehicleType', 'motocarro');
                     if (tab.key === 'viaje') update('vehicleType', 'auto');
-                    if (tab.key === 'mandadito') { update('pickupAddress', ''); update('pickupLat', ''); update('pickupLng', ''); }
                   }}
                   className={`enviar-order-tab ${orderType === tab.key ? 'active' : ''}`}
                 >
