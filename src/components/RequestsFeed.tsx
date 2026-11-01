@@ -169,6 +169,7 @@ export default memo(function RequestsFeed({
   const [customPrice, setCustomPrice] = useState('');
   const [customOpen, setCustomOpen] = useState(false);
   const [stopsOpen, setStopsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('near');
   const selectedChipRef = useRef<HTMLButtonElement | null>(null);
@@ -280,6 +281,7 @@ export default memo(function RequestsFeed({
     setCustomPrice('');
     setCustomOpen(false);
     setStopsOpen(false);
+    setDetailsOpen(false);
   }, [safeIdx, activeItem?.id]);
 
   // Mantiene visible en la tira la solicitud seleccionada
@@ -346,6 +348,14 @@ export default memo(function RequestsFeed({
     : (labels[item.title] || item.title);
   const stopCount = item.stops?.length ?? 0;
   const pricePerStop = stopCount > 1 && clientPrice > 0 ? Math.round(clientPrice / (stopCount + 1)) : null;
+  const extrasList = [
+    item.photos && item.photos.length > 0 ? 'fotos' : null,
+    item.orderType === 'mandadito' && item.shoppingList ? 'lista' : null,
+    item.orderType === 'mandadito' && item.maxBudget != null ? 'presupuesto' : null,
+    item.instructions ? 'notas' : null,
+  ].filter(Boolean) as string[];
+  const hasExtras = extrasList.length > 0;
+  const extrasLabel = extrasList.join(', ');
 
   const goNext = () => {
     if (safeIdx < total - 1) setCardIdx(safeIdx + 1);
@@ -529,7 +539,7 @@ export default memo(function RequestsFeed({
           )}
 
           {/* ── Info zone ── */}
-          <div style={{ padding: '12px 14px 10px', position: 'relative' }}>
+          <div style={{ padding: '8px 12px 6px', position: 'relative' }}>
 
             {/* Omitir: esquina pequeña, lejos de los botones de acción */}
             <button
@@ -738,6 +748,24 @@ export default memo(function RequestsFeed({
               )}
             </div>
 
+            {/* Detalles extra plegados para dejar ver el mapa */}
+            {hasExtras && (
+              <button
+                type="button"
+                onClick={() => setDetailsOpen(o => !o)}
+                aria-expanded={detailsOpen}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: 10, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                {detailsOpen ? 'Ocultar detalles ▲' : `Ver detalles (${extrasLabel}) ▼`}
+              </button>
+            )}
+
+            {detailsOpen && (<>
             {/* Photos */}
             {item.photos && item.photos.length > 0 && (
               <div style={{ display: 'flex', gap: 6, marginBottom: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never }}>
@@ -785,13 +813,14 @@ export default memo(function RequestsFeed({
                 </span>
               </div>
             )}
+            </>)}
           </div>
 
           {/* ── Divider ── */}
           <div style={{ height: 1, background: 'rgba(245,197,24,0.10)', margin: '0 14px' }} />
 
           {/* ── Action zone ── */}
-          <div style={{ padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ padding: '8px 12px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
 
             {/* Countdown progress bar — shrinks as timer runs */}
             <CountdownBar createdAt={item.createdAt} />
@@ -804,7 +833,7 @@ export default memo(function RequestsFeed({
                   onClick={() => onAccept(item.id, clientPrice, offerNote, distKm)}
                   disabled={isSending}
                   style={{
-                    width: '100%', padding: '14px 0', border: 'none', borderRadius: 14,
+                    width: '100%', padding: '11px 0', border: 'none', borderRadius: 14,
                     cursor: isSending ? 'not-allowed' : 'pointer',
                     background: isSending
                       ? 'rgba(245,197,24,0.25)'
@@ -824,7 +853,7 @@ export default memo(function RequestsFeed({
                   disabled={isSending}
                   aria-expanded={customOpen}
                   style={{
-                    width: '100%', padding: '10px 12px', borderRadius: 12,
+                    width: '100%', padding: '8px 12px', borderRadius: 12,
                     border: '1px solid var(--border-subtle)',
                     background: 'var(--surface-2)', color: 'var(--text-secondary)',
                     fontSize: '0.85rem', fontWeight: 700, cursor: isSending ? 'not-allowed' : 'pointer',
