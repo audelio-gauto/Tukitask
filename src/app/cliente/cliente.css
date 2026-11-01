@@ -954,6 +954,44 @@
 .enviar-page-bolt form > .enviar-price-warning,
 .enviar-page-bolt form > .enviar-route-info,
 .enviar-page-bolt form > .enviar-payment-pills { display: none; }
+/* Panel inferior tipo Bolt: el mapa queda fijo y el contenido sube por encima */
+.enviar-page-bolt .enviar-page-body { --enviar-map-h: 42vh; position: relative; }
+.enviar-page-bolt .enviar-bolt-map-shell {
+  position: sticky !important;
+  top: 68px;
+  z-index: 0;
+  height: var(--enviar-map-h) !important;
+  margin-bottom: -22px !important;
+}
+.enviar-page-bolt .enviar-page-body::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: -16px;
+  right: -16px;
+  top: calc(var(--enviar-map-h) - 22px);
+  bottom: 0;
+  background: var(--client-bg);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+}
+.enviar-page-bolt .enviar-page-body::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: calc(var(--enviar-map-h) - 14px);
+  width: 40px;
+  height: 4px;
+  margin-left: -20px;
+  border-radius: 99px;
+  background: var(--client-border);
+  pointer-events: none;
+}
+.enviar-page-bolt .enviar-page-body > *:not(.enviar-bolt-map-shell):not(.enviar-sheet-backdrop):not(.enviar-step-actions),
+.enviar-page-bolt .enviar-page-body form > *:not(.enviar-bolt-map-shell):not(.enviar-sheet-backdrop):not(.enviar-step-actions) { position: relative; z-index: 2; }
+.enviar-page-bolt .enviar-address-section { margin-top: 18px !important; }
 .enviar-bolt-inline-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .enviar-bolt-option-btn { min-width: 0; min-height: 48px; border: 1px solid var(--client-border); border-radius: 12px; background: var(--client-surface); color: var(--client-text); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 6px 10px; cursor: pointer; }
 .enviar-bolt-option-btn span { font-size: 0.68rem; color: var(--client-text-secondary); }
