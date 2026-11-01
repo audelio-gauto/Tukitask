@@ -172,7 +172,7 @@ export default function DriverDashboard() {
     if (!email) return;
     loadPendingOrders();
     // Fallback poll — 3 min (Realtime handles instant updates)
-    const iv = setInterval(loadPendingOrders, 180_000);
+    const iv = setInterval(loadWithRefresh, 45_000);
 
     // Primary: driver_feed INSERT fires when fn_match_driver_feed matches this driver
     const chFeed = supabase.channel(`driver-feed-${email}`)
@@ -192,10 +192,28 @@ export default function DriverDashboard() {
       } as never, loadWithRefresh)
       .subscribe();
 
+    // Pedido cancelado por el cliente: se quita de la bandeja al instante
+    const chCancelled = supabase.channel(`driver-orders-cancelled-${email}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'orders',
+        filter: `status=eq.cancelled`,
+      } as never, (payload: { new?: { id?: string } }) => {
+        const cid = payload?.new?.id;
+        if (cid) setPendingOrders(prev => prev.filter(o => String(o.id) !== String(cid)));
+        loadWithRefresh();
+      })
+      .subscribe();
+
+    // Respaldo por si Realtime pierde el evento: al volver a la app se refresca
+    const onVisible = () => { if (!document.hidden) loadWithRefresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(chFeed);
       supabase.removeChannel(chOrders);
+      supabase.removeChannel(chCancelled);
     };
   }, [loadPendingOrders, loadWithRefresh, email]);
 

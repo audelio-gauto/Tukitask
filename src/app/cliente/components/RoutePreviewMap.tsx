@@ -267,7 +267,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
       if (!isFinite(d.lat) || !isFinite(d.lng)) continue;
       const el = document.createElement('div');
       el.textContent = DRIVER_EMOJI[d.vehicle_type] ?? '🚖';
-      el.style.cssText = 'width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 8px rgba(0,0,0,0.35);pointer-events:none;';
+      el.style.cssText = 'width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));pointer-events:none;';
       driverMarkersRef.current.push(
         new mapboxgl.Marker({ element: el }).setLngLat([d.lng, d.lat]).addTo(map),
       );
