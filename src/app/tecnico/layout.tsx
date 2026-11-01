@@ -245,7 +245,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       />
       <NotificationBell userEmail={email} className="" />
       <ChatBadge email={email} href="/tecnico/citas" scope="job" />
-      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, deliveryRangeKm: 20, setDeliveryRangeKm: () => {}, driverPos, setDriverPos }}>
+      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters: DEFAULT_FILTERS, toggleFilter: () => {}, navApp, pickupRangeKm: 10, setPickupRangeKm: () => {}, driverPos, setDriverPos }}>
         <main>
           {children}
         </main>

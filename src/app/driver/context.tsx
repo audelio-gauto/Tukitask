@@ -31,8 +31,6 @@ interface WorkerCtx {
   navApp: string;
   pickupRangeKm: number;
   setPickupRangeKm: (v: number) => void;
-  deliveryRangeKm: number;
-  setDeliveryRangeKm: (v: number) => void;
   /** Live GPS position shared from layout — avoids duplicate watchPosition instances */
   driverPos: { lat: number; lng: number } | null;
   setDriverPos: (v: { lat: number; lng: number } | null) => void;
@@ -51,8 +49,6 @@ export const WorkerContext = createContext<WorkerCtx>({
   navApp: 'google_maps',
   pickupRangeKm: 10,
   setPickupRangeKm: () => {},
-  deliveryRangeKm: 20,
-  setDeliveryRangeKm: () => {},
   driverPos: null,
   setDriverPos: () => {},
 });

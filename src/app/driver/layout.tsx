@@ -41,7 +41,6 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
-  const [deliveryRangeKm, setDeliveryRangeKm] = useState(20);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
@@ -208,7 +207,6 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           if (fullName) setDisplayName(fullName);
           if (profJson.profile?.nav_app) setNavApp(profJson.profile.nav_app);
           if (profJson.profile?.pickup_range)   setPickupRangeKm(Number(profJson.profile.pickup_range));
-          if (profJson.profile?.delivery_range) setDeliveryRangeKm(Number(profJson.profile.delivery_range));
           if (profJson.profile?.avg_rating)     setAvgRating(Number(profJson.profile.avg_rating));
           if (profJson.profile?.total_ratings)  setTotalRatings(Number(profJson.profile.total_ratings));
           if (profJson.profile?.service_filters && typeof profJson.profile.service_filters === 'object') {
@@ -289,7 +287,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       />
       {!inNav && <NotificationBell userEmail={email} className="" />}
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}
-      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, driverPos, setDriverPos }}>
+      <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, driverPos, setDriverPos }}>
         {children}
         {!inNav && <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="#F5C518" />}
       </WorkerContext.Provider>

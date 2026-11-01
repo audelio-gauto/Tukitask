@@ -113,12 +113,10 @@ export async function GET(req: Request) {
     // Fetch driver profile + approved doc types for server-side filtering
     const { data: dProf } = await db
       .from('driver_profiles')
-      .select('service_filters, pickup_range, delivery_range')
+      .select('service_filters')
       .eq('email', user.email)
       .maybeSingle();
     const sf = (dProf?.service_filters as Record<string, boolean> | null) ?? {};
-    const dPickupRange   = Number(dProf?.pickup_range   ?? 10);
-    const dDeliveryRange = Number(dProf?.delivery_range  ?? 20);
 
     // Compute which vehicle types the driver has fully approved docs for
     const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];

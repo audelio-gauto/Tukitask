@@ -14,7 +14,7 @@ import { Icon } from '@/components/Icon';
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
 export default function DriverDashboard() {
-  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, deliveryRangeKm, setDeliveryRangeKm, profilePhoto, displayName, avgRating, totalRatings, driverPos } = useWorkerContext();
+  const { openDrawer, email, serviceFilters, toggleFilter, pickupRangeKm, setPickupRangeKm, profilePhoto, displayName, avgRating, totalRatings, driverPos } = useWorkerContext();
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -522,13 +522,6 @@ export default function DriverDashboard() {
         if (distPickup > pickupRangeKm) return false;
       }
 
-      // Rango de entrega: distancia del conductor al punto B
-      // Los fletes suelen ir lejos: no se limitan por rango de entrega
-      if (o.order_type !== 'flete' && o.delivery_lat != null && o.delivery_lng != null) {
-        const distDelivery = haversineKm(dLat, dLng, Number(o.delivery_lat), Number(o.delivery_lng));
-        if (distDelivery > deliveryRangeKm) return false;
-      }
-
       return true;
     })
     .map((o): FeedItem => ({
@@ -710,21 +703,6 @@ export default function DriverDashboard() {
                   <span>1 km</span><span>50 km</span>
                 </div>
               </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--tuki-text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Icon name="truck" size={12} color="var(--tuki-text-main)" />
-                    Rango de entrega
-                  </label>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6' }}>{deliveryRangeKm} km</span>
-                </div>
-                <input type="range" min={1} max={100} step={1} value={deliveryRangeKm}
-                  onChange={e => setDeliveryRangeKm(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#3b82f6' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
-                  <span>1 km</span><span>100 km</span>
-                </div>
-              </div>
             </div>
 
             <button className="driver-filter-done" onClick={() => {
@@ -736,7 +714,6 @@ export default function DriverDashboard() {
                 body: JSON.stringify({
                   email,
                   pickup_range: pickupRangeKm,
-                  delivery_range: deliveryRangeKm,
                   service_filters: serviceFilters,
                 }),
               }).catch(() => {});
@@ -816,7 +793,7 @@ export default function DriverDashboard() {
           </span>
           <div>
             <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.88rem' }}>Activá el GPS para ver solicitudes</div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de recogida ({pickupRangeKm} km) y entrega ({deliveryRangeKm} km) requieren tu ubicación</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>El rango de recogida ({pickupRangeKm} km) requiere tu ubicación</div>
           </div>
         </div>
       )}
@@ -1060,9 +1037,7 @@ export default function DriverDashboard() {
                   <Icon name="package" size={12} />
                   Serv. activos ·
                   <Icon name="map-pin" size={12} />
-                  {pickupRangeKm} km recogida ·
-                  <Icon name="truck" size={12} />
-                  {deliveryRangeKm} km entrega
+                  {pickupRangeKm} km recogida
                 </span>
                 <button
                   type="button"

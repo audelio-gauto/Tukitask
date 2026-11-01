@@ -208,7 +208,7 @@ export async function POST(req: Request) {
     if (orderVt) {
       const { data: dProf } = await supabaseServer
         .from('driver_profiles')
-        .select('service_filters, pickup_range, delivery_range')
+        .select('service_filters')
         .eq('email', driverEmail)
         .maybeSingle();
 
