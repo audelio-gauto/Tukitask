@@ -1277,6 +1277,7 @@ export default function SeguimientoPage() {
           myName={myName}
           otherName={workerName}
           otherPhoto={workerPhoto}
+          quickReplies={['Ya bajo', 'Esperame un momento', 'Estoy en la puerta', '¿Cuánto falta?', 'Gracias']}
         />
       )}
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
+import { playClientOfferAlert } from '@/lib/audio';
 
 interface Offer {
   id: string;
@@ -35,6 +36,7 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
   const [cancelling, setCancelling] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const doneRef = useRef(false);
+  const seenOffersRef = useRef<Set<string>>(new Set());
 
   const poll = useCallback(async () => {
     if (doneRef.current || document.hidden) return;
@@ -56,6 +58,13 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
         const grouped = await offersRes.json();
         const list: Offer[] = (grouped[orderId] ?? []).filter((o: { status: string }) => o.status === 'pending');
         setOffers(list);
+        // Aviso solo para ofertas que no habíamos visto antes
+        const fresh = list.some(o => !seenOffersRef.current.has(o.id));
+        list.forEach(o => seenOffersRef.current.add(o.id));
+        if (fresh) {
+          playClientOfferAlert();
+          try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
+        }
       }
     } catch { /* se reintenta en el próximo ciclo */ }
   }, [orderId, router]);

@@ -2023,6 +2023,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
           myName={displayName || null}
           otherName={chatModal.clientName}
           otherPhoto={chatModal.clientPhoto}
+          quickReplies={['Ya voy en camino', 'Ya llegué', 'Estoy afuera', '¿Dónde estás?', 'Gracias']}
         />
       )}
 

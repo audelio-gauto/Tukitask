@@ -38,6 +38,7 @@ interface ChatModalProps {
   myName: string | null;
   otherName: string | null;
   otherPhoto: string | null;
+  quickReplies?: string[];
 }
 
 function formatTime(iso: string) {
@@ -45,7 +46,7 @@ function formatTime(iso: string) {
 }
 
 export default function ChatModal({
-  open, onClose, orderId, jobId, myEmail, myName, otherName, otherPhoto,
+  open, onClose, orderId, jobId, myEmail, myName, otherName, otherPhoto, quickReplies,
 }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
@@ -147,12 +148,12 @@ export default function ChatModal({
     return () => { supabase.removeChannel(ch); };
   }, [open, orderId, jobId, myEmail, scrollToBottom]);
 
-  const sendMessage = async () => {
-    const content = text.trim();
+  const sendMessage = async (override?: string) => {
+    const content = (typeof override === 'string' ? override : text).trim();
     if (!content || sending) return;
     setSending(true);
     setSendError(null);
-    setText('');
+    if (typeof override !== 'string') setText('');
 
     // Optimistic: show message immediately before server confirms
     const tempId = `temp-${Date.now()}`;
@@ -182,12 +183,12 @@ export default function ChatModal({
         const j = await res.json().catch(() => ({}));
         // Remove optimistic message on failure
         setMessages(prev => prev.filter(m => m.id !== tempId));
-        setText(content);
+        if (typeof override !== 'string') setText(content);
         setSendError(j?.error || 'No se pudo enviar el mensaje.');
       }
     } catch {
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setText(content);
+      if (typeof override !== 'string') setText(content);
       setSendError('Error de red al enviar.');
     }
     setSending(false);
@@ -335,6 +336,19 @@ export default function ChatModal({
               {500 - text.length} caracteres restantes
             </div>
           )}
+          {quickReplies && quickReplies.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 2 }}>
+              {quickReplies.map(q => (
+                <button
+                  key={q}
+                  type="button"
+                  disabled={sending}
+                  onClick={() => sendMessage(q)}
+                  style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: 'inherit', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >{q}</button>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
             ref={inputRef}
@@ -360,7 +374,7 @@ export default function ChatModal({
             maxLength={500}
           />
           <button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={!text.trim() || sending}
             style={{
               width: 44, height: 44,
