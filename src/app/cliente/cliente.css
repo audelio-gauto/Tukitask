@@ -950,9 +950,10 @@
   height: 74px;
   object-fit: contain;
 }
-.enviar-page-bolt.enviar-page-remis form > .enviar-price-section,
-.enviar-page-bolt.enviar-page-remis form > .enviar-price-warning,
-.enviar-page-bolt.enviar-page-remis form > .enviar-payment-pills { display: none; }
+.enviar-page-bolt form > .enviar-price-section,
+.enviar-page-bolt form > .enviar-price-warning,
+.enviar-page-bolt form > .enviar-route-info,
+.enviar-page-bolt form > .enviar-payment-pills { display: none; }
 .enviar-bolt-inline-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .enviar-bolt-option-btn { min-width: 0; min-height: 48px; border: 1px solid var(--client-border); border-radius: 12px; background: var(--client-surface); color: var(--client-text); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 6px 10px; cursor: pointer; }
 .enviar-bolt-option-btn span { font-size: 0.68rem; color: var(--client-text-secondary); }
