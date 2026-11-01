@@ -172,7 +172,7 @@ export async function GET(req: Request) {
     if (qErr) return serverError(qErr);
 
     // Enrich with client profile info
-    const raw = (fetched || []) as Record<string, unknown>[];
+    const raw = ((fetched || []) as Record<string, unknown>[]).filter(o => o.order_type !== 'mandadito');
     const emails = [...new Set(raw.map(o => o.client_email as string).filter(Boolean))];
     const profileMap: Record<string, { photo_url: string | null; avg_rating: number | null; is_verified: boolean }> = {};
     const orderCountMap: Record<string, number> = {};
@@ -262,7 +262,10 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
-  // Validate price bounds (en Gs.) — configurable via env vars
+  // Servicio de mandaditos retirado: no se aceptan pedidos nuevos
+  if (body?.order_type === 'mandadito') {
+    return NextResponse.json({ error: 'El servicio de mandaditos ya no está disponible' }, { status: 400 });
+  } — configurable via env vars
   const MIN_PRICE = Number(process.env.ORDER_MIN_PRICE ?? 1000);      // default 1.000 Gs.
   const MAX_PRICE = Number(process.env.ORDER_MAX_PRICE ?? 50_000_000); // default 50.000.000 Gs.
   const price = Number(body.suggested_price ?? body.client_initial_price ?? body.offer_price ?? 0);

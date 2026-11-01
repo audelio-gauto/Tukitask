@@ -834,7 +834,6 @@ export default function EnviarPaquetePage() {
             </div>
             <div className="enviar-order-toggle">
                 {([
-                  { key: 'mandadito', icon: 'shopping-cart' as const, label: 'Mandaditos', sub: 'Ir a comprar' },
                   { key: 'viaje',     icon: 'car'     as const, label: 'Remis',      sub: 'Traslado de personas' },
                   { key: 'envio',     icon: 'package' as const, label: 'Envío',      sub: 'Paquetes y objetos' },
                   { key: 'flete',     icon: 'truck'   as const, label: 'Flete',      sub: 'Carga y mudanzas' },
