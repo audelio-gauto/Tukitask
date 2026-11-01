@@ -156,7 +156,8 @@ export async function GET(req: Request) {
       .from('driver_feed')
       .select('order_id')
       .eq('driver_email', user.email)
-      .limit(150);
+      .order('matched_at', { ascending: false })
+      .limit(100);
     if (feedErr) return serverError(feedErr);
 
     const feedIds = (feedRows ?? []).map((r: { order_id: string }) => r.order_id).filter(Boolean);
@@ -165,7 +166,9 @@ export async function GET(req: Request) {
     if (feedIds.length > 0) {
       query = query.in('id', feedIds);
     }
-    query = query.in('status', ['pending', 'negotiating']).limit(100);
+    // Con rango amplio entran muchos pedidos viejos sin atender: solo los de las últimas 3 h
+    const recentSince = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    query = query.in('status', ['pending', 'negotiating']).or(`created_at.gte.${recentSince},date_scheduled.not.is.null`).limit(100);
     const { data: fetched, error: qErr } = await query;
     if (qErr) return serverError(qErr);
 
