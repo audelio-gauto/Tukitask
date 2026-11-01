@@ -304,8 +304,10 @@ export default function EnviarPaquetePage() {
       } catch { /* map keeps previous drivers */ }
     };
     load();
-    const t = setInterval(load, 20000);
-    return () => { cancelled = true; clearInterval(t); };
+    const t = setInterval(load, 8000);
+    const onVisible = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
   }, [form.pickupLat, form.pickupLng]);
 
   const nearbyEta = useMemo(() => {

@@ -57,6 +57,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     let lastLng: number | null = null;
     let lastDbLat: number | null = null;
     let lastDbLng: number | null = null;
+    let lastDbAt = 0;
     let watchId: number | null = null;
     let dbIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -90,8 +91,10 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       if (typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
       if (lastDbLat != null && lastDbLng != null) {
         const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, { lat: lastLat, lng: lastLng });
-        if (moved < 50) return;
+        // Quieto: igual se refresca cada ~2 min para que el cliente lo siga viendo en línea
+        if (moved < 50 && Date.now() - lastDbAt < 120_000) return;
       }
+      lastDbAt = Date.now();
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.access_token) return;
         fetch('/api/driver-location', {
@@ -114,6 +117,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           lastLng = pos.coords.longitude;
           // Share position with child pages via context (eliminates duplicate watchPosition)
           setDriverPos({ lat: lastLat, lng: lastLng });
+          // Primer fix: publicar ya en DB para que el cliente lo vea al instante
+          if (lastDbAt === 0) postToDB();
           // Broadcast immediately on every GPS fix (< 1s for client)
           broadcastLocation(lastLat, lastLng);
         },
