@@ -7,6 +7,7 @@ import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
 import { haversineKm, nearestNeighborSort } from '@/lib/geo';
 import { Icon } from '@/components/Icon';
+import SearchingDriver from '../components/SearchingDriver';
 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
@@ -66,6 +67,7 @@ export default function EnviarPaquetePage() {
   const [maxBudget, setMaxBudget] = useState('');
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [dateScheduled, setDateScheduled] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -567,6 +569,8 @@ export default function EnviarPaquetePage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Error al crear el pedido');
       }
+      const created = await res.json().catch(() => null);
+      setCreatedOrderId(created?.id ? String(created.id) : null);
       try {
         const used = stops
           .filter(s => s.address && isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)))
@@ -642,7 +646,7 @@ export default function EnviarPaquetePage() {
 
   const [successCountdown, setSuccessCountdown] = useState(5);
   useEffect(() => {
-    if (!success) return;
+    if (!success || createdOrderId) return;
     setSuccessCountdown(5);
     const iv = setInterval(() => {
       setSuccessCountdown(prev => {
@@ -651,7 +655,7 @@ export default function EnviarPaquetePage() {
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [success, router]);
+  }, [success, createdOrderId, router]);
 
   const SERVICE_LABELS: Record<string, { title: string; sub: string; newLabel: string }> = {
     envio:     { title: '¡Envío registrado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un Tasker acepte tu envío.',     newLabel: 'Nuevo Envío' },
@@ -660,6 +664,16 @@ export default function EnviarPaquetePage() {
     viaje:     { title: '¡Remis solicitado!',     sub: 'Tu solicitud se ha creado correctamente. Te notificaremos cuando un conductor acepte tu viaje.',     newLabel: 'Nuevo Remis' },
   };
   const svcLabel = SERVICE_LABELS[orderType] ?? SERVICE_LABELS.envio;
+
+  if (success && createdOrderId) {
+    return (
+      <SearchingDriver
+        orderId={createdOrderId}
+        serviceLabel={svcLabel.newLabel.replace('Nuevo ', '')}
+        onNewOrder={() => { setSuccess(false); setCreatedOrderId(null); setStep(1); setForm(f => ({ pickupAddress: '', pickupLat: '', pickupLng: '', vehicleType: 'moto', senderContact: f.senderContact, senderPhone: f.senderPhone, instructions: '', paymentMethod: 'efectivo', offer: '' })); setStops([emptyStop()]); }}
+      />
+    );
+  }
 
   if (success) {
     return (
