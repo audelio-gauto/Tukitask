@@ -1296,16 +1296,18 @@ export default function EnviarPaquetePage() {
             {/* ── STEP 3: CONTACTS ── */}
             {(step === 3 || !showServicePicker) && (
               <>
+                {orderType !== 'viaje' && (
+                <>
                 <div className="enviar-step-title" style={{ padding: '6px 10px', gap: 6 }}>
                   <div>
-                    <div className="enviar-step-title-main" style={{ fontSize: 13 }}>{orderType === 'viaje' ? 'Confirmá tus datos de pasajero' : 'Confirmá tus datos de contacto'}</div>
-                    <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{orderType === 'viaje' ? 'El conductor los usará para coordinar el viaje.' : 'El conductor los usará para coordinar el servicio.'}</div>
+                    <div className="enviar-step-title-main" style={{ fontSize: 13 }}>                    {'Confirmá tus datos de contacto'}</div>
+                                        <div className="enviar-step-title-sub" style={{ fontSize: 11 }}>{'El conductor los usará para coordinar el servicio.'}</div>
                   </div>
                 </div>
 
                 <div className="enviar-contact-card">
                   <div className="enviar-contact-header">
-                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> {orderType === 'viaje' ? 'Pasajero' : 'Remitente'}
+                    <span className="enviar-dot green" style={{ width: 10, height: 10 }} /> Remitente
                   </div>
                   <div className="enviar-field-row">
                     <div className="enviar-field">
@@ -1333,6 +1335,8 @@ export default function EnviarPaquetePage() {
                     </div>
                   </div>
                 </div>
+                </>
+                )}
 
                 {orderType !== 'viaje' && stops.map((stop, idx) => (
                   <div key={stop.id} className="enviar-contact-card" style={{ marginTop: '0.75rem' }}>
@@ -1388,54 +1392,6 @@ export default function EnviarPaquetePage() {
                     />
                   </div>
                 </div>
-
-                {/* ── Card: Ubicación seleccionada ── */}
-                <div className="enviar-summary-card">
-                  <div className="enviar-summary-card-header"></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {/* Pickup */}
-                    <span className="enviar-summary-stop-dot green" style={{ flexShrink: 0 }} />
-                    <span className="enviar-summary-stop-text" style={{ flex: 1 }}>
-                      {form.pickupAddress.split(',')[0] || '—'}
-                    </span>
-                    {/* Arrow */}
-                    <svg width="14" height="14" fill="none" stroke="var(--client-text-secondary)" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    {/* Last stop */}
-                    <span className="enviar-summary-stop-dot red" style={{ flexShrink: 0 }} />
-                    <span className="enviar-summary-stop-text" style={{ flex: 1 }}>
-                      {stops.length === 1
-                        ? (firstStop.address || '').split(',')[0] || '—'
-                        : `${stops.length} paradas`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* ── Card: Vehículo seleccionado ── */}
-                {(() => {
-                  const veh = vehicleTypes.find(v => v.value === form.vehicleType);
-                  if (!veh) return null;
-                  const vp = pricing[veh.value];
-                  const subText =
-                    orderType === 'viaje' && veh.value === 'moto' ? 'Capacidad 1 Persona' :
-                    orderType === 'viaje' && veh.value === 'auto' ? 'Capacidad hasta 3 personas' :
-                    veh.sub;
-                  return (
-                    <div className="enviar-vehicle-summary-card">
-                      <div className="enviar-vehicle-summary-icon">
-                        {vp?.image_url ? (
-                          <img src={vp.image_url} alt={veh.label} width={48} height={48} style={{ objectFit: 'contain' }} />
-                        ) : (
-                          <Icon name={veh.icon as import('@/components/Icon').IconName} size={32} />
-                        )}
-                      </div>
-                      <div className="enviar-vehicle-summary-info">
-                        <div className="enviar-vehicle-summary-name">{veh.label}</div>
-                        <div className="enviar-vehicle-summary-sub">{subText}</div>
-                      </div>
-                      <span className="enviar-vehicle-summary-badge">✓ Seleccionado</span>
-                    </div>
-                  );
-                })()}
 
                 {/* Extras: Programar + Promo — accordion colapsable */}
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
