@@ -536,18 +536,16 @@ export default memo(function RequestsFeed({
                 {item.clientPhoto
                   ? <img src={item.clientPhoto} alt="" loading="lazy" decoding="async"
                       style={{
-                        width: 58, height: 58, borderRadius: '50%', objectFit: 'cover',
-                        border: `2.5px solid ${stopCount >= 5 ? '#f59e0b' : BRAND}`,
-                        boxShadow: `0 0 0 3px ${stopCount >= 5 ? 'rgba(245,158,11,0.2)' : BRAND_SHADOW}`,
+                        width: 40, height: 40, borderRadius: '50%', objectFit: 'cover',
+                        border: `2px solid ${stopCount >= 5 ? '#f59e0b' : BRAND}`,
                       }} />
                   : <div style={{
-                      width: 58, height: 58, borderRadius: '50%',
+                      width: 40, height: 40, borderRadius: '50%',
                       background: 'linear-gradient(135deg,rgba(245,197,24,0.15),rgba(245,138,7,0.15))',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: `2px solid ${BRAND_SHADOW}`,
-                      boxShadow: `0 0 0 3px rgba(245,197,24,0.08)`,
                     }}>
-                      <Icon name="user" size={24} color={BRAND} />
+                      <Icon name="user" size={18} color={BRAND} />
                     </div>
                 }
               </div>
@@ -557,7 +555,7 @@ export default memo(function RequestsFeed({
                 {/* Client name — PRIMARY, large */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
                   <div style={{
-                    fontWeight: 900, color: 'var(--text-primary)', fontSize: '1.15rem',
+                    fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     lineHeight: 1.2,
                   }}>{item.clientName || 'Cliente'}</div>
@@ -569,11 +567,9 @@ export default memo(function RequestsFeed({
                 </div>
                 {/* Rating row — prominent */}
                 {item.clientRating != null && item.clientRating > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
-                    {'★★★★★'.split('').map((_, i) => (
-                      <span key={i} style={{ fontSize: '0.82rem', color: i < Math.round(Number(item.clientRating)) ? '#F5C518' : 'rgba(156,163,175,0.35)', lineHeight: 1 }}>★</span>
-                    ))}
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#F5C518', marginLeft: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.78rem', color: '#F5C518', lineHeight: 1 }}>★</span>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#F5C518' }}>
                       {Number(item.clientRating).toFixed(1)}
                     </span>
                   </div>
@@ -667,16 +663,26 @@ export default memo(function RequestsFeed({
 
             {/* ── Addresses ── */}
             <div style={{
-              background: 'rgba(255,255,255,0.04)', borderRadius: 12,
+              background: 'rgba(255,255,255,0.04)', borderRadius: 14,
               border: '1px solid rgba(255,255,255,0.07)',
-              padding: '9px 12px', marginBottom: 8,
-              fontSize: '0.88rem', color: 'var(--text-secondary)',
-              display: 'flex', flexDirection: 'column', gap: 6,
+              padding: '10px 12px', marginBottom: 8,
+              fontSize: '0.86rem', color: 'var(--text-primary)',
+              display: 'flex', flexDirection: 'column', gap: 10,
+              position: 'relative',
             }}>
+              {/* Línea que une recogida y destino */}
+              {item.from && item.to && (
+                <span style={{ position: 'absolute', left: 17, top: 22, bottom: 22, width: 2, background: 'linear-gradient(#10b981,#ef4444)', opacity: 0.5, borderRadius: 2 }} />
+              )}
               {item.from && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#10b981', flexShrink: 0, marginTop: 5 }} />
-                  <span style={{ lineHeight: 1.4 }}>{item.from}</span>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 999, background: '#10b981', border: '3px solid #0f2f25', boxShadow: '0 0 0 2px #10b981', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
+                      Recogida{distKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· a {distKm.toFixed(1)} km de ti</span>}
+                    </div>
+                    <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.from}</div>
+                  </div>
                 </div>
               )}
               {/* Multi-stop toggle */}
@@ -715,9 +721,14 @@ export default memo(function RequestsFeed({
                 </div>
               )}
               {item.to && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, background: '#ef4444', flexShrink: 0, marginTop: 5 }} />
-                  <span style={{ lineHeight: 1.4 }}>{item.to}</span>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 3, background: '#ef4444', border: '3px solid #3a1414', boxShadow: '0 0 0 2px #ef4444', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
+                      Destino{routeKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· viaje de {routeKm.toFixed(1)} km</span>}
+                    </div>
+                    <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.to}</div>
+                  </div>
                 </div>
               )}
               {item.description && (
