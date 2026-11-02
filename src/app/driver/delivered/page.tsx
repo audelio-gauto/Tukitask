@@ -136,42 +136,36 @@ export default function DeliveredPage() {
     return (
       <div
         key={order.id}
-        className="tuki-card"
+        className="tuki-trip-card"
         style={{
-          marginBottom: 12,
           ['--status-color' as never]: statusTone.color,
           ['--status-bg' as never]: statusTone.bg,
           ['--status-border' as never]: statusTone.border,
-          ['--status-outline' as never]: statusTone.border,
         }}
       >
-        <div className="tuki-card-header">
-          <span className="tuki-card-title">
-            <Icon name="check" size={14} color={statusTone.color} />
-            {statusLabel} #{track}
-          </span>
-          <span className="tuki-card-subtitle">{date}</span>
+        <div className="tuki-trip-top">
+          <div className="tuki-trip-meta">
+            <span className="tuki-trip-code">#{track}</span>
+            <span className="tuki-trip-date">{date}</span>
+          </div>
+          <span className="tuki-trip-status">{statusLabel}</span>
         </div>
 
-        <div className="tuki-card-body">
-          {/* Client row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div className="tuki-trip-body">
+          <div className="tuki-trip-client">
             <div
-              className="tuki-avatar"
-              style={{
-                background: clientPhoto ? `url(${clientPhoto}) center/cover` : 'linear-gradient(135deg, #F5C518, #F58A07)',
-                color: '#1C1C2E',
-              }}
+              className="tuki-trip-avatar"
+              style={clientPhoto ? { background: `url(${clientPhoto}) center/cover` } : undefined}
             >
               {!clientPhoto && clientName[0]?.toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{clientName}</div>
+            <div className="tuki-trip-client-copy">
+              <div className="tuki-trip-client-name">{clientName}</div>
               <StarRow rating={existingRating} />
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className="tuki-price">₲{price}</div>
-              <div className="tuki-price-label">total</div>
+            <div className="tuki-trip-price">
+              <div className="tuki-trip-price-value">₲{price}</div>
+              <div className="tuki-trip-price-label">total</div>
             </div>
           </div>
 
@@ -181,41 +175,34 @@ export default function DeliveredPage() {
               Array.isArray(order.order_stops) && order.order_stops.length > 0
                 ? [...order.order_stops].sort((a: any, b: any) => a.sequence - b.sequence)
                 : [];
-            const hasStops = stops.length > 0;
             return (
-              <div className="tuki-address-box" style={{ marginBottom: 10 }}>
-                {/* Pickup A */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: hasStops ? 8 : 0 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#F5C518', display: 'block', flexShrink: 0 }} />
-                    <span style={{ width: 2, height: hasStops ? 14 : 18, background: 'var(--border-subtle)', display: 'block' }} />
+              <div className="tuki-route">
+                <div className="tuki-route-row">
+                  <div className="tuki-route-rail">
+                    <span className="tuki-route-dot is-a" />
+                    <span className="tuki-route-line" />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="tuki-address-label" style={{ color: '#F5C518' }}>A</div>
-                    <div className="tuki-address-text">{order.pickup_address || '—'}</div>
+                  <div className="tuki-route-text">
+                    <div className="tuki-route-label">Origen</div>
+                    <div className="tuki-route-address">{order.pickup_address || '—'}</div>
                   </div>
                 </div>
-                {/* Intermediate stops */}
                 {stops.map((s, idx) => {
                   const isDelivered = s.status === 'delivered';
                   const isFailed = s.status === 'failed';
-                  const dotColor = isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#8b5cf6';
-                  const labelColor = isDelivered ? '#6ee7b7' : isFailed ? '#fca5a5' : '#c4b5fd';
+                  const stopTone = isDelivered ? 'is-ok' : isFailed ? 'is-fail' : 'is-pending';
                   const icon = isDelivered ? '✓' : isFailed ? '✗' : String(s.sequence);
-                  const isLast = idx === stops.length - 1;
                   return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: isLast ? 8 : 4 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3, gap: 2 }}>
-                        <span style={{ width: 16, height: 16, borderRadius: '50%', background: `${dotColor}22`, border: `1.5px solid ${dotColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.5rem', fontWeight: 900, color: dotColor }}>
-                          {icon}
-                        </span>
-                        <span style={{ width: 2, height: 14, background: 'var(--border-subtle)', display: 'block' }} />
+                    <div key={idx} className="tuki-route-row">
+                      <div className="tuki-route-rail">
+                        <span className={`tuki-route-stop ${stopTone}`}>{icon}</span>
+                        <span className="tuki-route-line" />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.62rem', fontWeight: 700, color: dotColor, textTransform: 'uppercase', letterSpacing: 1 }}>P{s.sequence}</div>
-                        <div style={{ fontSize: '0.78rem', color: labelColor, lineHeight: 1.3 }}>{s.address}</div>
+                      <div className="tuki-route-text">
+                        <div className="tuki-route-label">Parada {s.sequence}</div>
+                        <div className="tuki-route-address">{s.address}</div>
                         {isFailed && s.fail_reason && (
-                          <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: 2 }}>
+                          <div className="tuki-route-fail">
                             <Icon name="x" size={12} /> {s.fail_reason}
                           </div>
                         )}
@@ -223,94 +210,83 @@ export default function DeliveredPage() {
                     </div>
                   );
                 })}
-                {/* Destination B */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 3 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10b981', display: 'block', flexShrink: 0 }} />
+                <div className="tuki-route-row">
+                  <div className="tuki-route-rail">
+                    <span className="tuki-route-dot is-b" />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="tuki-address-label" style={{ color: '#10b981' }}>B</div>
-                    <div className="tuki-address-text">{order.delivery_address || '—'}</div>
+                  <div className="tuki-route-text">
+                    <div className="tuki-route-label">Destino</div>
+                    <div className="tuki-route-address">{order.delivery_address || '—'}</div>
                   </div>
                 </div>
               </div>
             );
           })()}
 
-          {/* Chat — solo disponible las primeras 24h */}
-          {chatAvailable && (
-            <button
-              onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
-              className="tuki-btn tuki-btn-info tuki-btn-block"
-            >
-              <Icon name="chat" size={14} /> Chat con el cliente
-            </button>
-          )}
+          <div className="tuki-trip-actions">
+            {chatAvailable && (
+              <button
+                onClick={() => setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null })}
+                className="tuki-btn tuki-btn-info tuki-btn-block"
+              >
+                <Icon name="chat" size={14} /> Chat con el cliente
+              </button>
+            )}
 
-          {/* Rate button — only for successfully delivered orders */}
-          {existingRating == null && !['returned', 'return_rejected', 'cancelled', 'failed'].includes(order.status) && (
-            <button
-              onClick={() => openRating(order)}
-              className="tuki-btn tuki-btn-warning tuki-btn-block"
-              style={{ marginTop: chatAvailable ? 8 : 0 }}
-            >
-              <Icon name="star" size={14} /> Calificar cliente
-            </button>
-          )}
-          {/* Report button */}
-          {order.client_email && (
-            <button
-              onClick={() => setReportModal({ orderId: order.id, clientEmail: order.client_email, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente' })}
-              className="tuki-btn tuki-btn-danger tuki-btn-sm"
-              style={{ marginTop: 8 }}
-            >
-              <Icon name="exclamation" size={12} /> Reportar cliente
-            </button>
-          )}
+            {existingRating == null && !['returned', 'return_rejected', 'cancelled', 'failed'].includes(order.status) && (
+              <button
+                onClick={() => openRating(order)}
+                className="tuki-btn tuki-btn-warning tuki-btn-block"
+              >
+                <Icon name="star" size={14} /> Calificar cliente
+              </button>
+            )}
+            {order.client_email && (
+              <button
+                onClick={() => setReportModal({ orderId: order.id, clientEmail: order.client_email, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente' })}
+                className="tuki-trip-report"
+              >
+                <Icon name="exclamation" size={12} /> Reportar cliente
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <DriverScreenLayout title="Entregados">
-      <h2 className="tuki-heading" style={{ marginTop: '1rem' }}>Historial de Entregas</h2>
-
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
-          <svg style={{ width: 36, height: 36, marginBottom: 8, display: 'inline-block', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="#F5C518" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>
-          Cargando...
+    <DriverScreenLayout title="Historial">
+      <div className="tuki-history-summary">
+        <div className="tuki-history-stat">
+          <div className="tuki-history-stat-value">{deliveredToday.length}</div>
+          <div className="tuki-history-stat-label">Hoy</div>
         </div>
-      )}
+        <div className="tuki-history-stat">
+          <div className="tuki-history-stat-value">{orders.length}</div>
+          <div className="tuki-history-stat-label">Total</div>
+        </div>
+      </div>
+
+      {loading && <div className="tuki-empty-state">Cargando…</div>}
 
       {!loading && orders.length === 0 && (
-        <div className="tuki-card">
-          <div className="tuki-card-body" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-            <Icon name="check" size={36} style={{ opacity: 0.4 }} />
-            <p style={{ color: '#6b7280', marginTop: '1rem', fontWeight: 500 }}>
-              Aún no has completado entregas
-            </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              Las entregas completadas aparecerán aquí
-            </p>
-          </div>
+        <div className="tuki-empty-state">
+          <div className="tuki-empty-title">Aún no has completado entregas</div>
+          <div>Las entregas completadas aparecerán aquí.</div>
         </div>
       )}
 
       {deliveredToday.length > 0 && (
         <>
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', marginBottom: '0.75rem', fontWeight: 600 }}>
-            Hoy ({deliveredToday.length})
-          </p>
+          <p className="tuki-list-heading">Hoy ({deliveredToday.length})</p>
           {deliveredToday.map(renderCard)}
         </>
       )}
 
       {deliveredHistory.length > 0 && (
         <>
-          <p style={{ color: '#6b7280', fontSize: '0.88rem', margin: '1rem 0 0.75rem', fontWeight: 600 }}>
-            Anteriores ({deliveredHistory.length})
-          </p>
+          <p className="tuki-list-heading">Anteriores ({deliveredHistory.length})</p>
           {deliveredHistory.map(renderCard)}
         </>
       )}

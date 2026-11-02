@@ -40,14 +40,14 @@ function fmtNote(note: string | null): string {
   );
 }
 
-const TX_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string; sign: string }> = {
-  recharge:     { label: 'Recarga',        color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↑', sign: '+' },
-  commission:   { label: 'Comisión',       color: '#f87171', bg: 'rgba(239,68,68,0.15)',   icon: '↓', sign: '-' },
-  adjustment:   { label: 'Ajuste',         color: '#60a5fa', bg: 'rgba(96,165,250,0.15)',  icon: '⇄', sign: ''  },
-  admin_credit: { label: 'Crédito Admin',  color: '#4ade80', bg: 'rgba(34,197,94,0.18)',   icon: '✦', sign: '+' },
-  admin_debit:  { label: 'Débito Admin',   color: '#f87171', bg: 'rgba(239,68,68,0.18)',   icon: '✦', sign: '-' },
-  refund:       { label: 'Reembolso',      color: '#4ade80', bg: 'rgba(34,197,94,0.15)',   icon: '↩', sign: '+' },
-  bonus:        { label: 'Bono',           color: '#fbbf24', bg: 'rgba(245,158,11,0.15)',  icon: '★', sign: '+' },
+const TX_CONFIG: Record<string, { label: string; tone: 'in' | 'out' | 'neutral' | 'bonus'; icon: string; sign: string }> = {
+  recharge:     { label: 'Recarga',        tone: 'in',      icon: '↑', sign: '+' },
+  commission:   { label: 'Comisión',       tone: 'out',     icon: '↓', sign: '-' },
+  adjustment:   { label: 'Ajuste',         tone: 'neutral', icon: '⇄', sign: ''  },
+  admin_credit: { label: 'Crédito Admin',  tone: 'in',      icon: '✦', sign: '+' },
+  admin_debit:  { label: 'Débito Admin',   tone: 'out',     icon: '✦', sign: '-' },
+  refund:       { label: 'Reembolso',      tone: 'in',      icon: '↩', sign: '+' },
+  bonus:        { label: 'Bono',           tone: 'bonus',   icon: '★', sign: '+' },
 };
 
 export default function DriverBilleteraPage() {
@@ -126,9 +126,7 @@ export default function DriverBilleteraPage() {
   if (loading) {
     return (
       <DriverScreenLayout title="Mi Billetera">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Cargando billetera…</div>
-        </div>
+        <div className="tuki-empty-state">Cargando billetera…</div>
       </DriverScreenLayout>
     );
   }
@@ -139,89 +137,54 @@ export default function DriverBilleteraPage() {
 
   return (
     <DriverScreenLayout title="Mi Billetera">
-      <div style={{ minHeight: '100vh', color: 'var(--text-primary)', fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <div className="tuki-wallet-page">
 
-        {/* ── Hero balance card ── */}
-        <div style={{
-          margin: '16px 16px 0',
-          borderRadius: 24,
-          background: 'linear-gradient(135deg, #2563EB 0%, #1e40af 50%, #1C1C2E 100%)',
-          padding: '24px 22px 20px',
-          boxShadow: '0 8px 32px rgba(37,99,235,0.35)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {/* Decorative circles */}
-          <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-          <div style={{ position: 'absolute', bottom: -20, right: 40, width: 80, height: 80, borderRadius: '50%', background: 'rgba(245,197,24,0.12)' }} />
-
-          {/* Avatar row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <section className={`tuki-wallet-hero${isLow ? ' is-low' : ''}`}>
+          <div className="tuki-wallet-owner">
             {profilePhoto ? (
-              <img src={profilePhoto} alt="" loading="lazy" decoding="async" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+              <img src={profilePhoto} alt="" loading="lazy" decoding="async" className="tuki-wallet-avatar" />
             ) : (
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', border: '2px solid rgba(255,255,255,0.2)' }}>👤</div>
+              <div className="tuki-wallet-avatar">{(displayName || email || 'D').charAt(0).toUpperCase()}</div>
             )}
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Billetera de</div>
-              <div style={{ fontSize: '0.96rem', fontWeight: 700, color: '#fff' }}>{displayName || email}</div>
+            <div className="tuki-wallet-owner-copy">
+              <div className="tuki-wallet-owner-label">Billetera de</div>
+              <div className="tuki-wallet-owner-name">{displayName || email}</div>
             </div>
-            <div style={{ marginLeft: 'auto' }}>
-              {isLow ? (
-                <div style={{ background: 'rgba(239,68,68,0.25)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 20, padding: '4px 12px', fontSize: '0.7rem', fontWeight: 700, color: '#fca5a5' }}>⚠ Saldo bajo</div>
-              ) : (
-                <div style={{ background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.4)', borderRadius: 20, padding: '4px 12px', fontSize: '0.7rem', fontWeight: 700, color: '#4ade80' }}>● Activo</div>
-              )}
-            </div>
+            <span className={`tuki-wallet-badge ${isLow ? 'is-low' : 'is-ok'}`}>{isLow ? 'Saldo bajo' : 'Al día'}</span>
           </div>
 
-          {/* Balance */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Saldo disponible</div>
-            <div style={{ fontSize: '2.6rem', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 500, verticalAlign: 'super', marginRight: 4, color: 'rgba(255,255,255,0.6)' }}>Gs.</span>
-              {fmtGS(balance)}
+          <div className="tuki-wallet-balance-label">Saldo disponible</div>
+          <div className="tuki-wallet-balance"><span>Gs.</span>{fmtGS(balance)}</div>
+
+          <div className="tuki-wallet-stats">
+            <div className="tuki-wallet-stat">
+              <div className="tuki-wallet-stat-label">Total recargado</div>
+              <div className="tuki-wallet-stat-value is-in">Gs. {fmtGS(totalIn)}</div>
+            </div>
+            <div className="tuki-wallet-stat">
+              <div className="tuki-wallet-stat-label">Total comisiones</div>
+              <div className="tuki-wallet-stat-value is-out">Gs. {fmtGS(totalOut)}</div>
             </div>
           </div>
+        </section>
 
-          {/* Mini stats */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: '10px 14px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>Total recargado</div>
-              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#4ade80' }}>Gs. {fmtGS(totalIn)}</div>
-            </div>
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: '10px 14px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', marginBottom: 3 }}>Total comisiones</div>
-              <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#f87171' }}>Gs. {fmtGS(totalOut)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Tabs ── */}
-        <div style={{ display: 'flex', margin: '16px 16px 0', background: 'var(--glass-card)', borderRadius: 14, padding: 4 }}>
+        <div className="tuki-segmented" role="tablist">
           {(['movimientos', 'recargar'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: '10px', borderRadius: 11, border: 'none', cursor: 'pointer', fontWeight: 700,
-              fontSize: '0.88rem', transition: 'all 0.2s',
-              background: tab === t ? 'linear-gradient(135deg, #2563EB, #1e40af)' : 'transparent',
-              color: tab === t ? '#fff' : 'var(--text-muted)',
-              boxShadow: tab === t ? '0 2px 12px rgba(37,99,235,0.4)' : 'none',
-            }}>
-              {t === 'movimientos' ? '📊 Movimientos' : '➕ Recargar'}
+            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={tab === t ? 'is-active' : ''}>
+              {t === 'movimientos' ? 'Movimientos' : 'Recargar'}
             </button>
           ))}
         </div>
 
-        {/* ── Tab: Movimientos ── */}
         {tab === 'movimientos' && (
-          <div style={{ padding: '16px 16px 40px' }}>
+          <div className="tuki-wallet-section">
             {transactions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '3rem', marginBottom: 12 }}>📭</div>
-                <div style={{ fontWeight: 600 }}>Sin movimientos aún</div>
+              <div className="tuki-empty-state">
+                <div className="tuki-empty-title">Sin movimientos aún</div>
+                <div>Tus recargas y comisiones aparecerán aquí.</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="tuki-tx-list">
                 {transactions.map((tx) => {
                   const cfg = TX_CONFIG[tx.type] ?? TX_CONFIG.adjustment;
                   const absAmt = Math.abs(tx.amount);
@@ -231,38 +194,23 @@ export default function DriverBilleteraPage() {
                   const adminWho = adminNoteMatch ? adminNoteMatch[1] : null;
                   const cleanNote = adminNoteMatch ? adminNoteMatch[2] : tx.note;
                   return (
-                    <div key={tx.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      background: isAdmin ? cfg.bg : 'var(--glass-card)', borderRadius: 16,
-                      padding: '14px 16px',
-                      border: isAdmin ? `1.5px solid ${cfg.color}44` : '1px solid var(--border-subtle)',
-                    }}>
-                      <div style={{
-                        width: 44, height: 44, borderRadius: 14, flexShrink: 0,
-                        background: cfg.bg, display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: cfg.color,
-                      }}>
-                        {cfg.icon}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 2 }}>
+                    <div key={tx.id} className={`tuki-tx-row is-${cfg.tone}${isAdmin ? ' is-admin' : ''}`}>
+                      <div className="tuki-tx-icon">{cfg.icon}</div>
+                      <div className="tuki-tx-main">
+                        <div className="tuki-tx-title">
                           {isAdmin ? cfg.label : (fmtNote(tx.note) || cfg.label)}
                         </div>
                         {isAdmin && cleanNote && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)', opacity: 0.85, marginBottom: 2, lineHeight: 1.3 }}>
-                            {fmtNote(cleanNote)}
-                          </div>
+                          <div className="tuki-tx-note">{fmtNote(cleanNote)}</div>
                         )}
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <div className="tuki-tx-date">
                           {fmtDate(tx.created_at)}
-                          {adminWho && <span style={{ marginLeft: 6, opacity: 0.6 }}>· Admin</span>}
+                          {adminWho && <span> · Admin</span>}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontWeight: 900, fontSize: '1rem', color: cfg.color }}>
-                          {cfg.sign}Gs. {fmtGS(absAmt)}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 1 }}>{cfg.label}</div>
+                      <div className="tuki-tx-side">
+                        <div className="tuki-tx-amount">{cfg.sign}Gs. {fmtGS(absAmt)}</div>
+                        <div className="tuki-tx-type">{cfg.label}</div>
                       </div>
                     </div>
                   );
@@ -274,27 +222,25 @@ export default function DriverBilleteraPage() {
 
         {/* ── Tab: Recargar ── */}
         {tab === 'recargar' && (
-          <div style={{ padding: '16px 16px 40px' }}>
-            {/* Bank aliases */}
+          <div className="tuki-wallet-section">
             {bankAliases.length > 0 && (
-              <div style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 16, padding: '14px 16px', marginBottom: 16 }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#93c5fd', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>🏦 Transferí a estas cuentas</div>
+              <div className="tuki-bank-card">
+                <div className="tuki-section-label">Transferí a estas cuentas</div>
                 {bankAliases.map(b => (
-                  <div key={b.id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{b.bank_name}</div>
-                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#60a5fa', letterSpacing: '0.02em' }}>{b.alias}</div>
-                    {b.extra_info && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.extra_info}</div>}
+                  <div key={b.id} className="tuki-bank-row">
+                    <div className="tuki-bank-name">{b.bank_name}</div>
+                    <div className="tuki-bank-alias">{b.alias}</div>
+                    {b.extra_info && <div className="tuki-bank-extra">{b.extra_info}</div>}
                   </div>
                 ))}
-                <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Adjuntá el comprobante de la transferencia.</div>
+                <div className="tuki-bank-hint">Adjuntá el comprobante de la transferencia.</div>
               </div>
             )}
 
-            {/* Form */}
-            <div style={{ background: 'var(--glass-card)', border: '1px solid var(--glass-card-border)', borderRadius: 20, padding: '20px 16px' }}>
+            <div className="tuki-form-card">
               <form onSubmit={handleSubmitRecharge}>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--label-color)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Monto a recargar (Gs)</div>
+                <div className="tuki-field">
+                  <div className="tuki-section-label">Monto a recargar (Gs)</div>
                   <input
                     type="text" inputMode="numeric" value={amount}
                     onChange={e => {
@@ -303,48 +249,27 @@ export default function DriverBilleteraPage() {
                     }}
                     placeholder="Ej: 50.000"
                     required
-                    style={{
-                      width: '100%', padding: '14px 16px', borderRadius: 14, boxSizing: 'border-box',
-                      border: '1.5px solid var(--border-strong)', background: 'var(--input-bg)',
-                      color: 'var(--input-text)', fontSize: '1.1rem', fontWeight: 700, outline: 'none',
-                    }}
+                    className="tuki-amount-input"
                   />
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--label-color)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comprobante de pago</div>
+                <div className="tuki-field">
+                  <div className="tuki-section-label">Comprobante de pago</div>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-                  <button type="button" onClick={() => fileRef.current?.click()} style={{
-                    width: '100%', padding: '14px', borderRadius: 14,
-                    border: receiptPreview ? '1.5px solid rgba(34,197,94,0.5)' : '1.5px dashed rgba(239,68,68,0.5)',
-                    background: receiptPreview ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)',
-                    color: receiptPreview ? '#4ade80' : '#f87171', fontSize: '0.88rem', cursor: 'pointer', fontWeight: 700,
-                  }}>
-                    {receiptPreview ? '✓ Comprobante cargado — toca para cambiar' : '📷 Requerido: Adjuntar comprobante'}
+                  <button type="button" onClick={() => fileRef.current?.click()} className={`tuki-upload-btn${receiptPreview ? ' is-done' : ''}`}>
+                    {receiptPreview ? 'Comprobante cargado · tocá para cambiar' : 'Adjuntar comprobante (requerido)'}
                   </button>
                   {receiptPreview && (
-                    <img src={receiptPreview} alt="comprobante" style={{ marginTop: 10, height: 90, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)' }} />
+                    <img src={receiptPreview} alt="comprobante" className="tuki-receipt-preview" />
                   )}
                 </div>
 
                 {msg && (
-                  <div style={{
-                    marginBottom: 16, padding: '12px 14px', borderRadius: 12, fontSize: '0.85rem', fontWeight: 600,
-                    background: msg.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                    border: `1px solid ${msg.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                    color: msg.ok ? '#4ade80' : '#f87171',
-                  }}>
-                    {msg.text}
-                  </div>
+                  <div className={`tuki-form-msg ${msg.ok ? 'is-ok' : 'is-error'}`}>{msg.text}</div>
                 )}
 
-                <button type="submit" disabled={submitting} style={{
-                  width: '100%', padding: '16px', borderRadius: 14, border: 'none',
-                  background: submitting ? 'rgba(37,99,235,0.5)' : 'linear-gradient(135deg, #2563EB, #1e40af)',
-                  color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer',
-                  boxShadow: submitting ? 'none' : '0 4px 20px rgba(37,99,235,0.4)',
-                }}>
-                  {submitting ? 'Enviando…' : 'Enviar Solicitud de Recarga'}
+                <button type="submit" disabled={submitting} className="tuki-submit-btn">
+                  {submitting ? 'Enviando…' : 'Enviar solicitud de recarga'}
                 </button>
               </form>
             </div>
