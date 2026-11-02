@@ -285,7 +285,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         profilePhoto={profilePhoto}
         onBeforeLogout={cleanupPushNotifications}
       />
-      {!inNav && <NotificationBell userEmail={email} className="" />}
+      {!inNav && <NotificationBell userEmail={email} className="" variant={pathname === '/driver' ? 'driver' : undefined} />}
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, driverPos, setDriverPos }}>
         {children}
@@ -294,5 +294,4 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     </div>
   );
 }
-
 

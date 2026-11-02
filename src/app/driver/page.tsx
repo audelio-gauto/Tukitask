@@ -643,9 +643,10 @@ export default function DriverDashboard() {
 
       {/* Floating locate button */}
       <button className="tuki-float-btn locate" onClick={() => locateFnRef.current?.()} aria-label="Mi ubicación">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+          <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
+          <path strokeLinecap="round" strokeWidth={1.8} d="M12 2v2m0 16v2M2 12h2m16 0h2" />
         </svg>
       </button>
 

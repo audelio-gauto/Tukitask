@@ -76,7 +76,13 @@
 .tuki-float-btn:hover { background: var(--ghost-btn-hover); box-shadow: 0 5px 18px rgba(0,0,0,0.22); transform: scale(1.04); }
 .tuki-float-btn:active { transform: scale(0.96); }
 .tuki-float-btn.menu { top: 16px; right: 16px; }
-.tuki-float-btn.locate { bottom: calc(50vh + 72px); right: 16px; }
+.tuki-float-btn.locate {
+  top: 72px;
+  right: 16px;
+  bottom: auto;
+  color: var(--tuki-primary);
+}
+.tuki-float-btn.locate:hover { color: var(--tuki-primary-dark); }
 
 /* Driver profile — compact glass surface with the driver's own photo */
 .tuki-driver-profile {
@@ -818,6 +824,19 @@ input:checked + .tuki-toggle-slider:before {
   top: 16px;
   right: 72px;
 }
+.driver-notification-bell {
+  top: 72px !important;
+  right: 72px !important;
+}
+@media (min-width: 768px) {
+  .driver-notification-bell { right: calc(420px + 68px) !important; }
+}
+@media (min-width: 1024px) {
+  .driver-notification-bell { right: calc(460px + 68px) !important; }
+}
+@media (min-width: 1280px) {
+  .driver-notification-bell { right: calc(500px + 68px) !important; }
+}
 .tuki-float-btn.filter.has-filter {
   background: var(--tuki-primary);
   color: #1c1c2e;
@@ -1377,6 +1396,7 @@ input:checked + .tuki-toggle-slider:before {
   .tuki-wallet-pill-amount { font-size: 0.82rem; }
   .tuki-float-btn { width: 44px; height: 44px; }
   .tuki-float-btn.filter { right: 66px; }
+  .driver-notification-bell { right: 66px !important; }
 }
 @media (min-width: 381px) and (max-width: 430px) {
   .tuki-wallet-pill { left: 55%; }

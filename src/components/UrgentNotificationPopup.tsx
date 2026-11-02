@@ -90,11 +90,12 @@ interface Props {
   notification: AppNotification | null;
   /** Called after user dismisses */
   onDismiss: () => void;
+  variant?: 'driver';
   /** Enable/disable sounds (default true) */
   soundEnabled?: boolean;
 }
 
-export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled = true }: Props) {
+export function UrgentNotificationPopup({ notification, onDismiss, variant, soundEnabled = true }: Props) {
   const [visible, setVisible] = useState(false);
   const [animState, setAnimState] = useState<'entering' | 'visible' | 'exiting'>('entering');
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -144,31 +145,38 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
   if (!visible || !notification) return null;
 
   const cfg = typeConfig[notification.type] || defaultConfig;
+  const isDriver = variant === 'driver';
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        onClick={dismiss}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: animState === 'visible' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0)',
-          transition: 'background 0.3s ease',
-          zIndex: 9998,
-        }}
-      />
+      {!isDriver && (
+        <div
+          onClick={dismiss}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: animState === 'visible' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0)',
+            transition: 'background 0.3s ease',
+            zIndex: 9998,
+          }}
+        />
+      )}
       {/* Popup card — slides in from top */}
       <div style={{
         position: 'fixed',
-        top: animState === 'visible' ? 16 : -120,
+        top: animState === 'visible'
+          ? isDriver ? 'calc(env(safe-area-inset-top, 0px) + 128px)' : 16
+          : isDriver ? -140 : -120,
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'min(360px, calc(100vw - 32px))',
+        width: isDriver ? 'min(320px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 32px))',
         background: 'var(--modal-bg)',
         border: `1.5px solid ${cfg.color}40`,
-        borderRadius: 16,
-        boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${cfg.color}20`,
+        borderRadius: isDriver ? 14 : 16,
+        boxShadow: isDriver
+          ? '0 6px 20px rgba(0,0,0,0.24)'
+          : `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${cfg.color}20`,
         overflow: 'hidden',
         transition: 'top 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 9999,
@@ -182,11 +190,11 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
           animation: notification.priority === 'urgent' ? 'urgentPulse 1.5s ease-in-out infinite' : undefined,
         }} />
 
-        <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div style={{ padding: isDriver ? '10px 12px' : '14px 16px', display: 'flex', gap: isDriver ? 10 : 12, alignItems: 'flex-start' }}>
           {/* Icon circle */}
           <div style={{
-            width: 44,
-            height: 44,
+            width: isDriver ? 36 : 44,
+            height: isDriver ? 36 : 44,
             borderRadius: 12,
             background: cfg.bg,
             display: 'flex',
@@ -196,21 +204,23 @@ export function UrgentNotificationPopup({ notification, onDismiss, soundEnabled 
             flexShrink: 0,
             animation: notification.priority === 'urgent' ? 'urgentBounce 0.6s ease' : undefined,
           }}>
-            <Icon name={cfg.icon} size={20} />
+            <Icon name={cfg.icon} size={isDriver ? 18 : 20} />
           </div>
 
           {/* Text content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               color: 'var(--text-primary)',
+              fontSize: isDriver ? '0.88rem' : undefined,
+              fontWeight: isDriver ? 700 : undefined,
               lineHeight: 1.3,
               marginBottom: 2,
             }}>
               {notification.title}
             </div>
             <div style={{
-              color: '#9ca3af',
-              fontSize: '0.78rem',
+              color: isDriver ? 'var(--text-secondary)' : '#9ca3af',
+              fontSize: isDriver ? '0.74rem' : '0.78rem',
               lineHeight: 1.35,
             }}>
               {notification.body}

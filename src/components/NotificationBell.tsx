@@ -60,11 +60,12 @@ const priorityBorder: Record<NotifPriority, string> = {
 interface Props {
   userEmail: string | undefined;
   className?: string;
+  variant?: 'driver';
   /** Enable sound on urgent popups (default true) */
   soundEnabled?: boolean;
 }
 
-export function NotificationBell({ userEmail, className, soundEnabled = true }: Props) {
+export function NotificationBell({ userEmail, className, variant, soundEnabled = true }: Props) {
   const router = useRouter();
   const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail);
   const [open, setOpen] = useState(false);
@@ -113,6 +114,7 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
         notification={latestUrgent}
         onDismiss={dismissUrgent}
         soundEnabled={soundEnabled}
+        variant={variant}
       />
     );
   }
@@ -124,9 +126,14 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
         notification={latestUrgent}
         onDismiss={dismissUrgent}
         soundEnabled={soundEnabled}
+        variant={variant}
       />
 
-      <div ref={panelRef} className={className} style={{ position: 'fixed', top: 16, right: 70, zIndex: 900 }}>
+      <div
+        ref={panelRef}
+        className={[className, variant === 'driver' ? 'driver-notification-bell' : ''].filter(Boolean).join(' ')}
+        style={{ position: 'fixed', zIndex: 900, ...(variant !== 'driver' ? { top: 16, right: 70 } : {}) }}
+      >
         {/* Bell button */}
         <button
           onClick={() => setOpen((v) => !v)}
@@ -136,8 +143,8 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
             background: 'rgba(28,28,46,0.85)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '50%',
-            width: 48,
-            height: 48,
+            width: variant === 'driver' ? 44 : 48,
+            height: variant === 'driver' ? 44 : 48,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -182,10 +189,10 @@ export function NotificationBell({ userEmail, className, soundEnabled = true }: 
         {open && (
           <div style={{
             position: 'absolute',
-            top: 56,
+            top: variant === 'driver' ? 52 : 56,
             right: 0,
-            width: Math.min(340, typeof window !== 'undefined' ? window.innerWidth - 32 : 340),
-            maxHeight: 440,
+            width: Math.min(variant === 'driver' ? 300 : 340, typeof window !== 'undefined' ? window.innerWidth - 32 : 340),
+            maxHeight: variant === 'driver' ? 360 : 440,
             background: 'var(--modal-bg)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 14,
