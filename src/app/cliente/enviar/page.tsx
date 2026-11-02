@@ -731,6 +731,7 @@ export default function EnviarPaquetePage() {
                   <MapboxSearch
                     key="pickup"
                     autoFocus
+                    fullScreen
                     placeholder={orderType === 'mandadito' ? 'Almacén o tienda' : orderType === 'viaje' ? 'Punto de salida' : 'Punto de recogida'}
                     value={form.pickupAddress}
                     onSelect={(name: string, lat: number, lng: number) => {
@@ -754,6 +755,7 @@ export default function EnviarPaquetePage() {
                     <MapboxSearch
                       key={`stop_${idx}`}
                       autoFocus
+                      fullScreen
                       placeholder={stopPlaceholder(idx)}
                       value={stop.address}
                       onSelect={(name: string, lat: number, lng: number) => {

@@ -6,6 +6,7 @@ interface Props {
   placeholder?: string;
   value?: string;
   autoFocus?: boolean;
+  fullScreen?: boolean;
 }
 
 interface Suggestion {
@@ -15,7 +16,8 @@ interface Suggestion {
   lng: number;
 }
 
-export default function MapboxSearch({ onSelect, placeholder, value, autoFocus }: Props) {
+export default function MapboxSearch({ onSelect, placeholder, value, autoFocus, fullScreen }: Props) {
+  const [listTop, setListTop] = useState<number | null>(null);
   const [query, setQuery] = useState(value || '');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -159,9 +161,15 @@ export default function MapboxSearch({ onSelect, placeholder, value, autoFocus }
     li?.scrollIntoView({ block: 'nearest' });
   }, [activeIdx]);
 
+  // Pantalla completa: la lista arranca justo debajo de la tarjeta de ruta
+  useEffect(() => {
+    if (!fullScreen || !open) return;
+    const card = wrapperRef.current?.closest('.enviar-route-card');
+    if (card) setListTop(Math.round(card.getBoundingClientRect().bottom) + 8);
+  }, [fullScreen, open, suggestions.length]);
+
   return (
     <div ref={wrapperRef} className="relative w-full">
-      {/* Input con clear button */}
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none msearch-icon">
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +237,8 @@ export default function MapboxSearch({ onSelect, placeholder, value, autoFocus }
           ref={listRef}
           id="mapbox-search-listbox"
           role="listbox"
-          className="msearch-dropdown"
+          className={fullScreen ? 'msearch-dropdown msearch-fullscreen' : 'msearch-dropdown'}
+          style={fullScreen && listTop != null ? { top: listTop } : undefined}
         >
           {suggestions.map((s, i) => (
             <li key={s.id} role="option" id={`mapbox-opt-${i}`} aria-selected={i === activeIdx}>
@@ -253,7 +262,7 @@ export default function MapboxSearch({ onSelect, placeholder, value, autoFocus }
 
       {/* No results */}
       {open && !loading && !error && suggestions.length === 0 && query.length >= 2 && (
-        <div className="msearch-empty">
+        <div className={fullScreen ? 'msearch-empty msearch-fullscreen' : 'msearch-empty'} style={fullScreen && listTop != null ? { top: listTop } : undefined}>
           No se encontraron direcciones para &ldquo;{query}&rdquo;
         </div>
       )}
