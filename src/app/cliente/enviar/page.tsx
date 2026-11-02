@@ -700,37 +700,159 @@ export default function EnviarPaquetePage() {
   return (
     <>
       {/* Address search fullscreen overlay */}
-      {searchMode && (
+      {searchMode && (() => {
+        const activeIdx = searchMode.startsWith('stop_') ? parseInt((searchMode as string).split('_')[1]) : -1;
+        const hasCoords = (lat: string, lng: string) => isFinite(parseFloat(lat)) && isFinite(parseFloat(lng));
+        const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+        const applyToStop = (address: string, lat: string, lng: string) => {
+          updateStop(targetIdx, 'address', address);
+          updateStop(targetIdx, 'lat', lat);
+          updateStop(targetIdx, 'lng', lng);
+          setSearchMode(null);
+        };
+        const current = stops[targetIdx];
+        const canSaveCurrent = !!current && !!current.address && hasCoords(current.lat, current.lng);
+        const stopPlaceholder = (i: number) => orderType === 'viaje' ? 'Destino' : `Destino${stops.length > 1 ? ` ${i + 1}` : ''}`;
+        return (
         <div className="enviar-search-overlay">
           <div className="enviar-search-header">
-            <button type="button" className="enviar-search-back" onClick={() => setSearchMode(null)}>
+            <button type="button" className="enviar-search-back" onClick={() => setSearchMode(null)} aria-label="Cerrar">
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <span className={`enviar-dot ${searchMode === 'pickup' ? 'green' : 'red'}`} style={{ marginLeft: 8 }} />
-            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--client-text)', marginLeft: 8 }}>
-              {searchMode === 'pickup' ? 'Punto de recogida' : searchMode.startsWith('stop_') ? `Parada ${parseInt((searchMode as string).split('_')[1]) + 1}` : 'Destino'}
-            </span>
+            <span className="enviar-route-heading">Tu ruta</span>
           </div>
-          <div style={{ padding: '12px 16px 0' }}>
-            <MapboxSearch
-              placeholder={searchMode === 'pickup' ? 'Buscar punto de recogida...' : 'Buscar destino...'}
-              value={searchMode === 'pickup' ? form.pickupAddress : searchMode.startsWith('stop_') ? stops[parseInt((searchMode as string).split('_')[1])]?.address || '' : ''}
-              onSelect={(name: string, lat: number, lng: number) => {
-                resolveLocation(searchMode, name, lat, lng);
-                setSearchMode(null);
-              }}
-            />
+
+          <div className="enviar-route-card">
+            <div className="enviar-route-line" aria-hidden />
+            <div className="enviar-route-row">
+              <span className="enviar-route-pin origin" />
+              <div className="enviar-route-field">
+                {searchMode === 'pickup' ? (
+                  <MapboxSearch
+                    key="pickup"
+                    autoFocus
+                    placeholder={orderType === 'mandadito' ? 'Almacén o tienda' : orderType === 'viaje' ? 'Punto de salida' : 'Punto de recogida'}
+                    value={form.pickupAddress}
+                    onSelect={(name: string, lat: number, lng: number) => {
+                      resolveLocation('pickup', name, lat, lng);
+                      setSearchMode(stops[0]?.address ? null : 'stop_0');
+                    }}
+                  />
+                ) : (
+                  <button type="button" className="enviar-route-text" onClick={() => setSearchMode('pickup')}>
+                    {form.pickupAddress || 'Punto de recogida'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {stops.map((stop, idx) => (
+              <div className="enviar-route-row" key={stop.id}>
+                <span className="enviar-route-pin dest">{stops.length > 1 ? idx + 1 : ''}</span>
+                <div className="enviar-route-field">
+                  {activeIdx === idx ? (
+                    <MapboxSearch
+                      key={`stop_${idx}`}
+                      autoFocus
+                      placeholder={stopPlaceholder(idx)}
+                      value={stop.address}
+                      onSelect={(name: string, lat: number, lng: number) => {
+                        resolveLocation(`stop_${idx}`, name, lat, lng);
+                        setSearchMode(null);
+                      }}
+                    />
+                  ) : (
+                    <button type="button" className="enviar-route-text" onClick={() => setSearchMode(`stop_${idx}`)}>
+                      {stop.address || stopPlaceholder(idx)}
+                    </button>
+                  )}
+                </div>
+                {stops.length > 1 && (
+                  <button
+                    type="button"
+                    className="enviar-route-remove"
+                    onClick={() => { removeStop(idx); setSearchMode(null); }}
+                    aria-label="Eliminar parada"
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {stops.length < MAX_STOPS && (
+              <button
+                type="button"
+                className="enviar-route-add"
+                onClick={() => { addStop(); setSearchMode(`stop_${stops.length}`); }}
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Agregar parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : '(opcional)'}
+              </button>
+            )}
           </div>
-          <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode as 'pickup' | `stop_${number}`)}>
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
-            <span>Usar mi ubicación actual</span>
-          </button>
-          <button type="button" className="enviar-search-gps" onClick={() => { setPickerMode(searchMode as typeof pickerMode); setSearchMode(null); }}>
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-            <span>Seleccionar en el mapa</span>
-          </button>
+
+          <div className="enviar-route-actions">
+            <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode as 'pickup' | `stop_${number}`)}>
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
+              <span>Usar mi ubicación actual</span>
+            </button>
+            <button type="button" className="enviar-search-gps" onClick={() => { setPickerMode(searchMode as typeof pickerMode); setSearchMode(null); }}>
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
+              <span>Seleccionar en el mapa</span>
+            </button>
+
+            {searchMode !== 'pickup' && (
+              <>
+                {(['casa', 'trabajo'] as const).map(key => {
+                  const saved = savedPlaces[key];
+                  const label = key === 'casa' ? 'Casa' : 'Trabajo';
+                  const save = () => {
+                    if (!canSaveCurrent) return;
+                    const next = { ...savedPlaces, [key]: { address: current.address, lat: current.lat, lng: current.lng } };
+                    setSavedPlaces(next);
+                    try { localStorage.setItem('tukitask_saved_places', JSON.stringify(next)); } catch {}
+                  };
+                  return (
+                    <div className="enviar-place-row" key={key}>
+                      <button
+                        type="button"
+                        className="enviar-place-main"
+                        disabled={!saved && !canSaveCurrent}
+                        onClick={() => { if (saved) applyToStop(saved.address, saved.lat, saved.lng); else save(); }}
+                      >
+                        <span className="enviar-place-icon">
+                          {key === 'casa'
+                            ? <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V11z"/></svg>
+                            : <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>}
+                        </span>
+                        <span className="enviar-place-text">
+                          <span className="enviar-place-title">{label}</span>
+                          <span className="enviar-place-sub">{saved ? saved.address : canSaveCurrent ? 'Guardar el destino actual' : 'Elegí un destino para guardarlo'}</span>
+                        </span>
+                      </button>
+                      {saved && canSaveCurrent && current.address !== saved.address && (
+                        <button type="button" className="enviar-place-save" onClick={save} aria-label={`Guardar destino actual como ${label}`}>Guardar actual</button>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {destHistory.length > 0 && <div className="enviar-place-heading">Recientes</div>}
+                {destHistory.map(p => (
+                  <button key={p.address} type="button" className="enviar-place-row enviar-place-main" onClick={() => applyToStop(p.address, p.lat, p.lng)}>
+                    <span className="enviar-place-icon">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </span>
+                    <span className="enviar-place-text"><span className="enviar-place-title">{p.address}</span></span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Location Picker (Uber/Bolt style) */}
       {pickerMode && (
@@ -927,131 +1049,27 @@ export default function EnviarPaquetePage() {
                     />
                   </div>
                 )}
-                <div className="enviar-step-title enviar-address-heading" style={{ padding: '12px 14px', gap: 6, marginBottom: 12 }}>
-                  <div>
-                    <div className="enviar-step-title-main">
-                      {orderType === 'viaje' ? '¿De dónde salís y a dónde vas?' : '¿Dónde recogemos y entregamos?'}
-                    </div>
-                    <div className="enviar-step-title-sub">
-                      {orderType === 'flete'
-                        ? 'Indicá el origen y destino de la carga.'
-                        : orderType === 'viaje'
-                          ? 'Marcá el punto de salida y tu destino.'
-                          : 'Marcá el punto de retiro y el destino.'}
-                    </div>
-                  </div>
-                </div>
                 <div className="enviar-address-section">
-                  {/* Pickup */}
-                  <div className="enviar-address-row">
-                    <span className="enviar-dot green" />
-                    <input
-                      className="enviar-address-input"
-                      placeholder={pickupLoading ? 'Detectando ubicación…' : orderType === 'mandadito' ? 'Almacén o tienda' : orderType === 'viaje' ? 'Punto de salida' : 'Punto de recogida'}
-                      value={form.pickupAddress}
-                      onClick={() => { if (!pickupLoading) openSearch('pickup'); }}
-                      readOnly
-                    />
-                    <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode('pickup'); }} aria-label="Seleccionar en mapa">
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                    </button>
-                  </div>
+                  <button type="button" className="enviar-where-bar" onClick={() => openSearch(stops[0]?.address ? 'stop_0' : 'pickup')}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    <span>{stops.some(s => s.address) ? 'Cambiar ruta' : orderType === 'viaje' ? '¿A dónde vamos?' : '¿A dónde enviamos?'}</span>
+                  </button>
 
-                  {/* Delivery stops — dynamic list */}
-                  {stops.map((stop, idx) => (
-                    <div key={stop.id}>
-                      <div className="enviar-address-divider" />
-                      <div className="enviar-address-row" style={{ alignItems: 'flex-start', gap: 8 }}>
-                        {/* Numbered badge */}
-                        <span style={{
-                          minWidth: 20, height: 20, borderRadius: '50%',
-                          background: 'var(--client-danger)', color: '#fff',
-                          fontSize: '0.7rem', fontWeight: 800,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, marginTop: 2,
-                        }}>
-                          {stops.length > 1 ? idx + 1 : ''}
-                          {stops.length === 1 && (
-                            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                          )}
-                        </span>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Address */}
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                            <input
-                              className="enviar-address-input"
-                              placeholder={orderType === 'viaje' ? 'Destino' : `Destino${stops.length > 1 ? ` ${idx + 1}` : ''}`}
-                              value={stop.address}
-                              onClick={() => openSearch(`stop_${idx}`)}
-                              readOnly
-                              style={{ flex: 1 }}
-                            />
-                            <button type="button" className="enviar-gps-btn" onClick={(e) => { e.stopPropagation(); setPickerMode(`stop_${idx}`); }} aria-label="Seleccionar en mapa">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
-                            </button>
-                            {stops.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeStop(idx)}
-                                style={{ background: 'none', border: 'none', color: 'var(--client-danger)', cursor: 'pointer', padding: '2px 4px', fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}
-                                aria-label="Eliminar parada"
-                              >✕</button>
-                            )}
-                          </div>
-
-  
-                        </div>
+                  {(form.pickupAddress || stops.some(s => s.address)) && (
+                    <div className="enviar-route-summary" role="button" tabIndex={0} onClick={() => openSearch('pickup')} onKeyDown={e => { if (e.key === 'Enter') openSearch('pickup'); }}>
+                      <div className="enviar-route-line" aria-hidden />
+                      <div className="enviar-route-row">
+                        <span className="enviar-route-pin origin" />
+                        <span className="enviar-route-summary-text">{pickupLoading ? 'Detectando ubicación…' : form.pickupAddress || 'Punto de recogida'}</span>
                       </div>
+                      {stops.map((stop, idx) => (
+                        <div className="enviar-route-row" key={stop.id}>
+                          <span className="enviar-route-pin dest">{stops.length > 1 ? idx + 1 : ''}</span>
+                          <span className="enviar-route-summary-text">{stop.address || 'Elegí el destino'}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-
-                  {/* Add stop button */}
-                  {stops.length < MAX_STOPS && (
-                    <button
-                      type="button"
-                      onClick={addStop}
-                      className="enviar-add-stop-btn"
-                    >
-                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      Agregar otra parada {stops.length > 1 ? `(${stops.length}/${MAX_STOPS})` : '(opcional)'}
-                    </button>
                   )}
-
-                  {/* Destinos rápidos (guardados en este dispositivo) */}
-                  <div className="enviar-quick-places">
-                    {([['casa', '🏠', 'Casa'], ['trabajo', '💼', 'Trabajo']] as const).map(([key, emoji, label]) => {
-                      const saved = savedPlaces[key];
-                      const first = stops[0];
-                      const canSave = !!first && first.address && isFinite(parseFloat(first.lat)) && isFinite(parseFloat(first.lng));
-                      const save = () => {
-                        if (!canSave) return;
-                        const next = { ...savedPlaces, [key]: { address: first.address, lat: first.lat, lng: first.lng } };
-                        setSavedPlaces(next);
-                        try { localStorage.setItem('tukitask_saved_places', JSON.stringify(next)); } catch {}
-                      };
-                      return (
-                        <span key={key} className="enviar-quick-chip">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (saved) {
-                                updateStop(0, 'address', saved.address);
-                                updateStop(0, 'lat', saved.lat);
-                                updateStop(0, 'lng', saved.lng);
-                              } else if (canSave) save();
-                              else openSearch('stop_0');
-                            }}
-                          >
-                            {emoji} {label}{saved ? '' : canSave ? ' · guardar destino' : ' · agregar'}
-                          </button>
-                          {saved && canSave && (first.address !== saved.address) && (
-                            <button type="button" className="enviar-quick-save" onClick={save} aria-label={`Guardar destino actual como ${label}`}>✎</button>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
 
                   {/* Optimize route button — visible when ≥2 stops have coords */}
                   {canOptimize && (
@@ -1080,7 +1098,7 @@ export default function EnviarPaquetePage() {
                 {orderType !== 'viaje' && (routeDistanceMeters || distanceKm > 0) && (
                   <div className="enviar-route-info">
                     <div className="enviar-route-stat">
-                      <span className="enviar-route-icon" style={{ background: '#f97316' }}>
+                      <span className="enviar-route-icon" style={{ background: '#F5C518', color: '#1C1C2E' }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
                       </span>
                       <span><strong>{routeDistanceMeters ? (routeDistanceMeters/1000).toFixed(1) : distanceKm.toFixed(1)}</strong> km</span>
@@ -1089,7 +1107,7 @@ export default function EnviarPaquetePage() {
                       <>
                         <div className="enviar-route-divider" />
                         <div className="enviar-route-stat">
-                          <span className="enviar-route-icon" style={{ background: '#8b5cf6' }}>
+                          <span className="enviar-route-icon" style={{ background: '#F5C518', color: '#1C1C2E' }}>
                             <Icon name="map-pin" size={10} />
                           </span>
                           <span><strong>{stops.length}</strong> paradas</span>
@@ -1098,7 +1116,7 @@ export default function EnviarPaquetePage() {
                     )}
                     <div className="enviar-route-divider" />
                     <div className="enviar-route-stat">
-                      <span className="enviar-route-icon" style={{ background: '#22c55e' }}>
+                      <span className="enviar-route-icon" style={{ background: '#F5C518', color: '#1C1C2E' }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       </span>
                       <span><strong>{routeDurationSec ? Math.max(1, Math.round(routeDurationSec/60)) : Math.max(1, Math.round((distanceKm / 30) * 60))}</strong> min</span>

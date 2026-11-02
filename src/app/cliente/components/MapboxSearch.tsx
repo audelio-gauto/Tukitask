@@ -5,6 +5,7 @@ interface Props {
   onSelect: (name: string, lat: number, lng: number) => void;
   placeholder?: string;
   value?: string;
+  autoFocus?: boolean;
 }
 
 interface Suggestion {
@@ -14,7 +15,7 @@ interface Suggestion {
   lng: number;
 }
 
-export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
+export default function MapboxSearch({ onSelect, placeholder, value, autoFocus }: Props) {
   const [query, setQuery] = useState(value || '');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -183,6 +184,7 @@ export default function MapboxSearch({ onSelect, placeholder, value }: Props) {
           onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
           placeholder={placeholder || 'Buscar dirección...'}
           autoComplete="off"
+          autoFocus={autoFocus}
           className="msearch-input"
         />
 
