@@ -793,10 +793,12 @@ export default function EnviarPaquetePage() {
           </div>
 
           <div className="enviar-route-actions">
-            <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS(searchMode as 'pickup' | `stop_${number}`)}>
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
-              <span>Usar mi ubicación actual</span>
-            </button>
+            {searchMode === 'pickup' && (
+              <button type="button" className="enviar-search-gps" onClick={() => handleUseGPS('pickup')}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4m10-10h-4M6 12H2" strokeWidth={2} strokeLinecap="round" /></svg>
+                <span>Usar mi ubicación actual</span>
+              </button>
+            )}
             <button type="button" className="enviar-search-gps" onClick={() => { setPickerMode(searchMode as typeof pickerMode); setSearchMode(null); }}>
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg>
               <span>Seleccionar en el mapa</span>
@@ -1050,13 +1052,13 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
                 <div className="enviar-address-section">
-                  <button type="button" className="enviar-where-bar" onClick={() => openSearch(stops[0]?.address ? 'stop_0' : 'pickup')}>
+                  <button type="button" className="enviar-where-bar" onClick={() => openSearch('stop_0')}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                     <span>{stops.some(s => s.address) ? 'Cambiar ruta' : orderType === 'viaje' ? '¿A dónde vamos?' : '¿A dónde enviamos?'}</span>
                   </button>
 
                   {(form.pickupAddress || stops.some(s => s.address)) && (
-                    <div className="enviar-route-summary" role="button" tabIndex={0} onClick={() => openSearch('pickup')} onKeyDown={e => { if (e.key === 'Enter') openSearch('pickup'); }}>
+                    <div className="enviar-route-summary" role="button" tabIndex={0} onClick={() => openSearch('stop_0')} onKeyDown={e => { if (e.key === 'Enter') openSearch('stop_0'); }}>
                       <div className="enviar-route-line" aria-hidden />
                       <div className="enviar-route-row">
                         <span className="enviar-route-pin origin" />
