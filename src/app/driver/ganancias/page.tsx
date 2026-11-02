@@ -42,7 +42,7 @@ const FAILED_STATUSES    = ['failed', 'cancelled', 'return_rejected'];
 
 const STATUS_HUMAN: Record<string, string> = {
   delivered:          'Entregado',
-  commission_charged: 'Entregado ✓',
+  commission_charged: 'Entregado',
   client_confirmed:   'Confirmado',
   returned:           'Devuelto',
   failed:             'Fallido',
@@ -123,223 +123,149 @@ export default function GananciasPage() {
       .reduce((acc, o) => acc + orderPrice(o), 0),
   }));
 
+  const dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const days: { label: string; amount: number }[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+    const amount   = uniqueOrders
+      .filter(o => DELIVERED_STATUSES.includes(o.status))
+      .filter(o => { const t = new Date(o.created_at).getTime(); return t >= dayStart && t < dayEnd; })
+      .reduce((s, o) => s + orderPrice(o), 0);
+    return { label: dayLabels[d.getDay()], amount };
+  });
+  const maxAmt = Math.max(...days.map(d => d.amount), 1);
+  const BAR_H = 72;
+
   return (
     <DriverScreenLayout title="Ganancias">
-      {/* Period selector + Export */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem', alignItems: 'center' }}>
-        {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-          <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            style={{
-              flex: 1, padding: '0.55rem 0',
-              borderRadius: 12, border: 'none', cursor: 'pointer',
-              fontWeight: 700, fontSize: '0.82rem',
-              background: period === p ? '#c8ff00' : 'var(--glass-card)',
-              color: period === p ? '#111' : '#9ca3af',
-              transition: 'all 0.18s',
-            }}
-          >
-            {PERIOD_LABELS[p]}
+      <div className="tuki-earn-page">
+        <div className="tuki-earn-periods">
+          <div className="tuki-segmented" role="tablist">
+            {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={period === p}
+                className={period === p ? 'is-active' : ''}
+                onClick={() => setPeriod(p)}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="tuki-earn-export" onClick={handleExportPDF} title="Exportar PDF" aria-label="Exportar PDF">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            </svg>
           </button>
-        ))}
-        <button
-          onClick={handleExportPDF}
-          title="Exportar PDF"
-          style={{
-            padding: '0.55rem 0.75rem', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: 'rgba(255,255,255,0.08)', color: '#9ca3af', fontWeight: 700, fontSize: '0.82rem',
-            flexShrink: 0,
-          }}
-        >
-          📄
-        </button>
-      </div>
-
-      {fetchError && (
-        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '1rem', color: '#f87171', fontSize: '0.82rem', fontWeight: 600 }}>
-          ⚠️ {fetchError}
         </div>
-      )}
 
-      {loading ? (
-        /* Skeleton */
-        <>
-          <div className="tuki-skeleton" style={{ height: 110, borderRadius: 18, marginBottom: '1rem' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: '1rem' }}>
+        {fetchError && <div className="tuki-form-msg is-error">{fetchError}</div>}
+
+        {loading ? (
+          <>
+            <div className="tuki-skeleton" style={{ height: 130, borderRadius: 18, marginBottom: 12 }} />
+            <div className="tuki-earn-stats">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="tuki-skeleton" style={{ height: 74, borderRadius: 14 }} />
+              ))}
+            </div>
             {[0, 1, 2].map(i => (
-              <div key={i} className="tuki-skeleton" style={{ height: 74, borderRadius: 14 }} />
+              <div key={i} className="tuki-skeleton" style={{ height: 64, borderRadius: 14, marginBottom: 8 }} />
             ))}
-          </div>
-          {[0, 1, 2].map(i => (
-            <div key={i} className="tuki-skeleton" style={{ height: 64, borderRadius: 14, marginBottom: 8 }} />
-          ))}
-        </>
-      ) : (
-        <>
-          {/* Main earnings card */}
-          <div style={{
-            background: 'var(--surface-1)',
-            borderRadius: 18, padding: '1.5rem 1.25rem',
-            marginBottom: '1rem', textAlign: 'center',
-            border: '1.5px solid var(--border-strong)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          }}>
-            <div style={{ color: '#9ca3af', fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>
-              💰 Ganancias • {PERIOD_LABELS[period]}
-            </div>
-            <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#c8ff00', lineHeight: 1 }}>
-              {fmtGs(earnings)}
-            </div>
-            <div style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 6 }}>Guaraníes</div>
-          </div>
-
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: '1rem' }}>
-            <div style={{
-              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
-              borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
-            }}>
-              <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1.3rem' }}>{delivered.length}</div>
-              <div style={{ color: '#6b7280', fontSize: '0.72rem', marginTop: 2 }}>Entregados</div>
-            </div>
-            <div style={{
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-              borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
-            }}>
-              <div style={{ fontWeight: 800, color: '#ef4444', fontSize: '1.3rem' }}>{failed.length}</div>
-              <div style={{ color: '#6b7280', fontSize: '0.72rem', marginTop: 2 }}>Fallidos</div>
-            </div>
-            <div style={{
-              background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.25)',
-              borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
-            }}>
-              <div style={{ fontWeight: 800, color: '#facc15', fontSize: '1.3rem' }}>
-                {acceptance !== null ? `${acceptance}%` : '—'}
+          </>
+        ) : (
+          <>
+            <section className="tuki-wallet-hero">
+              <div className="tuki-wallet-balance-label">Ganancias · {PERIOD_LABELS[period]}</div>
+              <div className="tuki-wallet-balance" style={{ marginBottom: 4 }}><span>Gs.</span>{fmtGs(earnings)}</div>
+              <div className="tuki-earn-sub">
+                {delivered.length} {delivered.length === 1 ? 'viaje completado' : 'viajes completados'}
               </div>
-              <div style={{ color: '#6b7280', fontSize: '0.72rem', marginTop: 2 }}>Aceptación</div>
-            </div>
-          </div>
+            </section>
 
-          {/* Summary by all periods */}
-          <div style={{
-            background: 'var(--glass-card)', borderRadius: 16, padding: '0.85rem 1rem',
-            marginBottom: '1.25rem', border: '1px solid var(--glass-card-border)',
-          }}>
-            {/* ── Weekly bar chart (last 7 days) ── */}
-            {(() => {
-              const days: { label: string; amount: number }[] = Array.from({ length: 7 }, (_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() - (6 - i));
-                const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-                const amount   = uniqueOrders
-                  .filter(o => DELIVERED_STATUSES.includes(o.status))
-                  .filter(o => { const t = new Date(o.created_at).getTime(); return t >= dayStart.getTime() && t < dayEnd.getTime(); })
-                  .reduce((s, o) => s + orderPrice(o), 0);
-                const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-                return { label: labels[d.getDay()], amount };
-              });
-              const maxAmt = Math.max(...days.map(d => d.amount), 1);
-              const BAR_H = 60;
-              return (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Últimos 7 días
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: BAR_H + 20 }}>
-                    {days.map((d, i) => {
-                      const h = Math.max(4, Math.round((d.amount / maxAmt) * BAR_H));
-                      const isToday = i === 6;
-                      return (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
-                          <div style={{
-                            width: '100%', height: h, borderRadius: '4px 4px 0 0',
-                            background: isToday ? '#c8ff00' : d.amount > 0 ? 'rgba(200,255,0,0.35)' : 'rgba(255,255,255,0.06)',
-                            transition: 'height 0.4s ease',
-                          }} />
-                          <span style={{ fontSize: '0.55rem', color: isToday ? '#c8ff00' : '#6b7280', fontWeight: isToday ? 800 : 500 }}>{d.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+            <div className="tuki-earn-stats">
+              <div className="tuki-wallet-stat">
+                <div className="tuki-wallet-stat-value is-in">{delivered.length}</div>
+                <div className="tuki-wallet-stat-label">Entregados</div>
+              </div>
+              <div className="tuki-wallet-stat">
+                <div className="tuki-wallet-stat-value is-out">{failed.length}</div>
+                <div className="tuki-wallet-stat-label">Fallidos</div>
+              </div>
+              <div className="tuki-wallet-stat">
+                <div className="tuki-wallet-stat-value">{acceptance !== null ? `${acceptance}%` : '—'}</div>
+                <div className="tuki-wallet-stat-label">Aceptación</div>
+              </div>
+            </div>
+
+            <section className="tuki-form-card">
+              <div className="tuki-section-label">Últimos 7 días</div>
+              <div className="tuki-earn-chart" style={{ height: BAR_H + 22 }}>
+                {days.map((d, i) => {
+                  const h = Math.max(4, Math.round((d.amount / maxAmt) * BAR_H));
+                  const isToday = i === 6;
+                  return (
+                    <div key={i} className="tuki-earn-bar-col">
+                      <div
+                        className={`tuki-earn-bar${isToday ? ' is-today' : d.amount > 0 ? ' has-value' : ''}`}
+                        style={{ height: h }}
+                      />
+                      <span className={`tuki-earn-bar-label${isToday ? ' is-today' : ''}`}>{d.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="tuki-form-card">
+              <div className="tuki-section-label">Resumen</div>
+              {allPeriodEarnings.map(({ period: p, amount }) => (
+                <div key={p} className={`tuki-earn-summary-row${p === period ? ' is-active' : ''}`}>
+                  <span>{PERIOD_LABELS[p]}</span>
+                  <strong>{fmtGs(amount)} <small>Gs</small></strong>
                 </div>
-              );
-            })()}
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Resumen
-            </div>
-            {allPeriodEarnings.map(({ period: p, amount }) => (
-              <div key={p} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.4rem 0',
-                borderBottom: p !== 'año' ? '1px solid var(--border-subtle)' : 'none',
-              }}>
-                <span style={{ color: p === period ? '#c8ff00' : '#9ca3af', fontWeight: p === period ? 700 : 500, fontSize: '0.88rem' }}>
-                  {PERIOD_LABELS[p]}
-                </span>
-                <span style={{ color: p === period ? '#c8ff00' : 'var(--text-secondary)', fontWeight: 800, fontSize: '0.95rem' }}>
-                  {fmtGs(amount)} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280' }}>Gs</span>
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </section>
 
-          {/* Recent delivered orders */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Pedidos recientes
-            </div>
+            <div className="tuki-list-heading">Pedidos recientes</div>
             {delivered.length === 0 ? (
-              <div style={{
-                textAlign: 'center', padding: '2rem 1rem',
-                background: 'var(--glass-card)', borderRadius: 16,
-                border: '1px dashed var(--border-subtle)',
-              }}>
-                <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
-                <p style={{ color: '#6b7280', margin: 0, fontSize: '0.88rem' }}>
-                  Sin pedidos entregados en este período
-                </p>
+              <div className="tuki-empty-state">
+                <div className="tuki-empty-title">Sin pedidos entregados</div>
+                <div>No hay entregas en este período.</div>
               </div>
             ) : (
               delivered.slice(0, 20).map((o, idx) => (
-                <div key={o.id ?? idx} style={{
-                  background: 'var(--glass-card)', borderRadius: 14,
-                  border: '1px solid var(--glass-card-border)',
-                  padding: '0.75rem 1rem', marginBottom: 8,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div key={o.id ?? idx} className="tuki-tx-row tuki-earn-order">
+                  <div className="tuki-tx-main">
+                    <div className="tuki-tx-title tuki-earn-route">
                       {o.origin || 'Origen'} → {o.destination || 'Destino'}
                     </div>
                     {o.order_stops && o.order_stops.length > 0 && (
-                      <div style={{ marginTop: 3, marginBottom: 2, borderRadius: 8, border: '1px solid rgba(245,158,11,0.25)', overflow: 'hidden' }}>
+                      <div className="tuki-earn-stops">
                         <button
+                          type="button"
                           onClick={() => setStopsOpen(prev => ({ ...prev, [o.id!]: !prev[o.id!] }))}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,158,11,0.08)', padding: '3px 8px', cursor: 'pointer', border: 'none' }}
                         >
-                          <span style={{ fontSize: '0.7rem' }}>📦</span>
-                          <span style={{ flex: 1, fontSize: '0.67rem', fontWeight: 800, color: '#fbbf24', textAlign: 'left' }}>{o.order_stops.length} paradas de entrega</span>
-                          <span style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 700 }}>{stopsOpen[o.id!] ? '▲' : '▼'}</span>
+                          <span>{o.order_stops.length} paradas de entrega</span>
+                          <span>{stopsOpen[o.id!] ? '▲' : '▼'}</span>
                         </button>
                         {stopsOpen[o.id!] && (
-                          <div style={{ maxHeight: 160, overflowY: 'auto', padding: '4px 8px 6px', display: 'flex', flexDirection: 'column', gap: 4, WebkitOverflowScrolling: 'touch' as never }}>
+                          <div className="tuki-earn-stops-list">
                             {[...o.order_stops].sort((a, b) => a.sequence - b.sequence).map((s, si) => {
                               const isDelivered = s.status === 'delivered';
                               const isFailed = s.status === 'failed';
-                              const dotColor = isDelivered ? '#10b981' : isFailed ? '#ef4444' : '#fbbf24';
-                              const dotBg = isDelivered ? 'rgba(16,185,129,0.15)' : isFailed ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
-                              const dotBorder = isDelivered ? 'rgba(16,185,129,0.35)' : isFailed ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)';
+                              const tone = isDelivered ? 'is-ok' : isFailed ? 'is-fail' : 'is-pending';
                               const icon = isDelivered ? '✓' : isFailed ? '✗' : String(s.sequence);
                               return (
-                                <div key={si} style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
-                                  <div style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: dotBg, border: `1px solid ${dotBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 900, color: dotColor, marginTop: 1 }}>{icon}</div>
-                                  <div style={{ flex: 1 }}>
-                                    <span style={{ fontSize: '0.68rem', color: isDelivered ? '#6ee7b7' : isFailed ? '#fca5a5' : '#fde68a', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.address}</span>
-                                    {isFailed && s.fail_reason && (
-                                      <div style={{ fontSize: '0.62rem', color: '#f87171', marginTop: 1 }}>✗ {s.fail_reason}</div>
-                                    )}
+                                <div key={si} className="tuki-earn-stop">
+                                  <span className={`tuki-route-stop ${tone}`}>{icon}</span>
+                                  <div>
+                                    <div>{s.address}</div>
+                                    {isFailed && s.fail_reason && <div className="tuki-route-fail">{s.fail_reason}</div>}
                                   </div>
                                 </div>
                               );
@@ -348,24 +274,17 @@ export default function GananciasPage() {
                         )}
                       </div>
                     )}
-                    <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmtDate(o.created_at)}</div>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#10b981', marginTop: 2 }}>{STATUS_HUMAN[o.status] ?? o.status}</div>
+                    <div className="tuki-tx-date">{fmtDate(o.created_at)} · {STATUS_HUMAN[o.status] ?? o.status}</div>
                   </div>
-                  <div style={{ marginLeft: 12, flexShrink: 0 }}>
-                    <span style={{
-                      background: 'rgba(200,255,0,0.12)', color: '#c8ff00',
-                      fontWeight: 800, fontSize: '0.9rem', padding: '3px 10px',
-                      borderRadius: 8, border: '1px solid rgba(200,255,0,0.2)',
-                    }}>
-                      +{fmtGs(orderPrice(o))} Gs
-                    </span>
+                  <div className="tuki-tx-side">
+                    <div className="tuki-tx-amount" style={{ color: '#059669' }}>+{fmtGs(orderPrice(o))} Gs</div>
                   </div>
                 </div>
               ))
             )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </DriverScreenLayout>
   );
 }

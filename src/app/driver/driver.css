@@ -821,11 +821,11 @@ input:checked + .tuki-toggle-slider:before {
 
 /* ── Service Filter Button ── */
 .tuki-float-btn.filter {
-  top: 16px;
+  top: 72px;
   right: 72px;
 }
 .driver-notification-bell {
-  top: 72px !important;
+  top: 16px !important;
   right: 72px !important;
 }
 @media (min-width: 768px) {
@@ -1609,3 +1609,36 @@ input:checked + .tuki-toggle-slider:before {
 .tuki-trip-actions { display: flex; flex-direction: column; gap: 8px; }
 .tuki-trip-report { align-self: flex-start; padding: 6px 4px; border: 0; background: transparent; color: var(--text-muted); font-size: 0.76rem; font-weight: 600; cursor: pointer; }
 .tuki-trip-report:hover { color: #dc2626; }
+
+/* Ganancias */
+.tuki-earn-page { padding-bottom: 24px; }
+.tuki-earn-periods { display: flex; align-items: center; gap: 8px; margin: 14px 0; }
+.tuki-earn-periods .tuki-segmented { flex: 1; margin-top: 0; }
+.tuki-earn-export {
+  display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 50px; height: 50px;
+  border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-1);
+  color: var(--text-secondary); cursor: pointer;
+}
+.tuki-earn-sub { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; }
+.tuki-earn-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.tuki-earn-stats .tuki-wallet-stat { text-align: center; }
+.tuki-earn-stats .tuki-wallet-stat-value { font-size: 1.25rem; }
+.tuki-earn-page .tuki-form-card { margin-bottom: 12px; }
+.tuki-earn-chart { display: flex; align-items: flex-end; gap: 6px; }
+.tuki-earn-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.tuki-earn-bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--surface-3, var(--surface-2)); transition: height 0.4s ease; }
+.tuki-earn-bar.has-value { background: color-mix(in srgb, var(--tuki-primary) 45%, transparent); }
+.tuki-earn-bar.is-today { background: var(--tuki-primary); }
+.tuki-earn-bar-label { color: var(--text-muted); font-size: 0.62rem; font-weight: 600; }
+.tuki-earn-bar-label.is-today { color: var(--text-primary); font-weight: 800; }
+.tuki-earn-summary-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 0.88rem; }
+.tuki-earn-summary-row:last-child { border-bottom: 0; }
+.tuki-earn-summary-row strong { color: var(--text-primary); font-size: 0.95rem; font-weight: 800; }
+.tuki-earn-summary-row small { color: var(--text-muted); font-size: 0.72rem; font-weight: 500; }
+.tuki-earn-summary-row.is-active { color: var(--text-primary); font-weight: 700; }
+.tuki-earn-order { margin-bottom: 8px; align-items: flex-start; }
+.tuki-earn-route { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tuki-earn-stops { margin: 4px 0; border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden; }
+.tuki-earn-stops > button { display: flex; justify-content: space-between; width: 100%; padding: 6px 10px; border: 0; background: var(--surface-2); color: var(--text-secondary); font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+.tuki-earn-stops-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; padding: 8px 10px; overflow-y: auto; }
+.tuki-earn-stop { display: flex; gap: 8px; align-items: flex-start; font-size: 0.74rem; line-height: 1.35; }
