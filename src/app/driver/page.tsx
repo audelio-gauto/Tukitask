@@ -479,7 +479,7 @@ export default function DriverDashboard() {
 
   // Stats
   const stats = [
-    { label: 'Tasa Aceptacion', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: 'trophy' as const, onClick: undefined as (() => void) | undefined },
+    { label: 'Tasa de aceptación', value: acceptanceRate !== null ? `${acceptanceRate}%` : '—', href: '/driver/aceptacion', icon: 'trophy' as const, onClick: undefined as (() => void) | undefined },
   ];
 
   // Pre-filter orders by service type preferences before passing to feed
@@ -585,7 +585,7 @@ export default function DriverDashboard() {
       {/* Radar overlay — visible only when online and no active feed */}
       {available && !walletBlocked && !feedVisible && (
         <div className="tuki-radar">
-          <div className="tuki-radar-label">Pedidos en camino... atento</div>
+          <div className="tuki-radar-label">En línea · buscando pedidos</div>
           <div className="tuki-radar-rings">
             <div className="tuki-radar-ring" />
             <div className="tuki-radar-ring" />
@@ -595,26 +595,30 @@ export default function DriverDashboard() {
         </div>
       )}
 
-      {/* Profile pill — top left */}
-      <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 100, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      {/* Driver profile and Tukitask branding */}
+      <div className="tuki-driver-profile">
+        <div className="tuki-driver-avatar-wrap">
           {profilePhoto ? (
-            <img src={profilePhoto} alt="" loading="lazy" decoding="async" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }} />
+            <img src={profilePhoto} alt="" loading="lazy" decoding="async" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="tuki-driver-avatar" />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid #F5C518', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              {displayName?.[0]?.toUpperCase() || <Icon name="user" size={16} color="#1C1C2E" />}
+            <div className="tuki-driver-avatar tuki-driver-avatar-fallback">
+              {displayName?.[0]?.toUpperCase() || <Icon name="user" size={16} />}
             </div>
           )}
           {avgRating > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(245,197,24,0.18)', borderRadius: 6, padding: '1px 6px' }}>
+            <div className="tuki-driver-rating">
               <Icon name="star" size={10} color="#F5C518" />
-              <span style={{ color: '#F5C518', fontSize: '0.65rem', fontWeight: 800 }}>{avgRating.toFixed(1)}</span>
+              <span>{avgRating.toFixed(1)}</span>
             </div>
           )}
         </div>
-        <div style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, lineHeight: 1.2 }}>{getGreeting()}</div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>{displayName?.split(' ')[0] || 'Driver'}</div>
+        <div className="tuki-driver-profile-copy">
+          <div className="tuki-driver-greeting">{getGreeting()}</div>
+          <div className="tuki-driver-name">{displayName?.split(' ')[0] || 'Conductor'}</div>
+          <div className="tuki-driver-brand">
+            <img src="/api/logo" alt="" width="16" height="16" onError={e => { e.currentTarget.style.display = 'none'; }} />
+            <span>Tukitask</span>
+          </div>
         </div>
       </div>
 
@@ -626,15 +630,13 @@ export default function DriverDashboard() {
       </button>
 
       {/* Wallet balance pill — centered top */}
-      <Link href="/driver/billetera" className="tuki-wallet-pill" aria-label="Mi billetera"
-        style={walletBlocked ? { background: 'rgba(239,68,68,0.18)', border: '1.5px solid rgba(239,68,68,0.5)', boxShadow: '0 0 0 3px rgba(239,68,68,0.12)' } : undefined}
-      >
-        <span className="tuki-wallet-pill-amount" style={walletBlocked ? { color: '#f87171' } : undefined}>
+      <Link href="/driver/billetera" className={`tuki-wallet-pill${walletBlocked ? ' is-blocked' : ''}`} aria-label="Mi billetera">
+        <span className="tuki-wallet-pill-amount">
           {walletBalance !== null
             ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
             : <span style={{ display: 'inline-block', width: 72, height: 14, borderRadius: 6, background: 'rgba(255,255,255,0.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />}
         </span>
-        <span className="tuki-wallet-pill-label" style={walletBlocked ? { color: 'rgba(248,113,113,0.9)' } : undefined}>
+        <span className="tuki-wallet-pill-label">
           {walletBlocked ? 'Recargar' : 'Billetera'}
         </span>
       </Link>
@@ -873,8 +875,8 @@ export default function DriverDashboard() {
                 )}
               </>
             ) : (
-              <span style={{ color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 }}>
-                Activate para recibir solicitudes
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>
+                Activá tu disponibilidad para recibir solicitudes
               </span>
             )}
           </div>
@@ -883,9 +885,9 @@ export default function DriverDashboard() {
           {/* Availability Toggle */}
           <div className="tuki-availability">
             <div>
-              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--tuki-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
+              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estado</p>
               <span className={`tuki-status-badge ${available && !walletBlocked ? 'tuki-status-online' : 'tuki-status-offline'}`} style={{ fontSize: '1rem', padding: '0.35rem 1rem' }}>
-                {available && !walletBlocked ? 'Disponible' : 'Sin conexion'}
+                {available && !walletBlocked ? 'Disponible' : 'Desconectado'}
               </span>
             </div>
             <label className="tuki-toggle">
@@ -1075,7 +1077,7 @@ export default function DriverDashboard() {
           {/* Stats Grid */}
           {statsLoading ? (
             <div className="tuki-stats-grid">
-              {[0,1,2,3].map(i => (
+              {[0,1,2,3,4].map(i => (
                 <div key={i} className="tuki-stat-card" style={i === 0 ? { gridColumn: 'span 2' } : {}}>
                   <div className="tuki-skeleton" style={{ width: 28, height: 28, borderRadius: '50%', marginBottom: 8 }} />
                   <div className="tuki-skeleton" style={{ width: '60%', height: 24, marginBottom: 6 }} />
@@ -1085,47 +1087,31 @@ export default function DriverDashboard() {
             </div>
           ) : (
           <div className="tuki-stats-grid">
-            {/* Ganancias Hoy — full width, premium BRAND hero card */}
+            {/* Daily earnings summary */}
             <div
-              onClick={() => setShowEarnings(true)} role="button" tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && setShowEarnings(true)}
-              style={{
-                gridColumn: 'span 2',
-                background: 'linear-gradient(135deg, rgba(245,197,24,0.14) 0%, rgba(245,130,7,0.08) 100%)',
-                border: '1.5px solid rgba(245,197,24,0.35)',
-                borderRadius: 20,
-                padding: '14px 18px',
-                boxShadow: '0 4px 20px rgba(245,197,24,0.10), 0 2px 8px rgba(0,0,0,0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                cursor: 'pointer',
-                textDecoration: 'none',
-                color: 'inherit',
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'transform 0.18s, box-shadow 0.18s',
+              onClick={() => setShowEarnings(true)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Ver ganancias de hoy: ${earningsData.dia.toLocaleString('es-PY')} guaraníes`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setShowEarnings(true);
+                }
               }}
+              className="tuki-earnings-card"
             >
-              {/* Subtle top-left glow */}
-              <div style={{ position: 'absolute', top: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(245,197,24,0.18)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-              <div style={{
-                width: 48, height: 48, borderRadius: 15,
-                background: 'linear-gradient(135deg, #F5C518, #F58A07)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(245,197,24,0.4)',
-                flexShrink: 0,
-              }}>
-                <Icon name="money" size={22} color="#1C1C2E" />
+              <div className="tuki-earnings-icon">
+                <Icon name="money" size={21} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C8960A', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Ganancias Hoy</div>
-                <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#F5C518', lineHeight: 1, letterSpacing: '-0.5px' }}>
+              <div className="tuki-earnings-copy">
+                <div className="tuki-earnings-label">Ganancias de hoy</div>
+                <div className="tuki-earnings-amount">
                   {earningsData.dia.toLocaleString('es-PY')}
-                  <span style={{ fontSize: '1rem', fontWeight: 600, color: 'rgba(245,197,24,0.7)', marginLeft: 6 }}>Gs</span>
+                  <span>Gs</span>
                 </div>
               </div>
-              <div style={{ flexShrink: 0, color: 'rgba(245,197,24,0.6)', fontSize: '1.3rem' }}>›</div>
+              <span className="tuki-earnings-arrow" aria-hidden="true">›</span>
             </div>
             {stats.map((s) => (
               s.onClick ? (
