@@ -16,6 +16,7 @@ import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
+import { CLEAN_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,10 +92,7 @@ interface DriverLoc {
 type MapStyle = 'Map' | 'Satelite' | 'Noche';
 
 const TILES: Record<MapStyle, { url: string; attr: string }> = {
-  Map: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attr: '© OpenStreetMap',
-  },
+  Map: CLEAN_TILE,
   Satelite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attr: '© Esri',
@@ -365,7 +363,9 @@ export default function SeguimientoPage() {
         center: [-25.2637, -57.5759],
         zoom: 13,
         zoomControl: false,
+        attributionControl: false,
       });
+      L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
       const tile = L.tileLayer(TILES['Map'].url, { attribution: TILES['Map'].attr, maxZoom: 19 });
       tile.addTo(map);
@@ -473,7 +473,15 @@ export default function SeguimientoPage() {
         iconAnchor: [21, 54],
       });
 
-      if (driverMarkerRef.current) {
+      if (type !== 'service') {
+        const kind = vehicleKindFrom(vehicleRef.current?.label);
+        if (!driverMarkerRef.current) {
+          driverMarkerRef.current = createVehicleMarker(L, map, dLat, dLng, kind);
+        } else {
+          driverMarkerRef.current.setKind(kind);
+          driverMarkerRef.current.move(dLat, dLng);
+        }
+      } else if (driverMarkerRef.current) {
         const marker = driverMarkerRef.current;
         const from = marker.getLatLng();
         const dist = Math.abs(from.lat - dLat) + Math.abs(from.lng - dLng);
@@ -1398,8 +1406,9 @@ export default function SeguimientoPage() {
             });
             if (!res.ok && res.status !== 409) throw new Error('rate');
             setRatingDone(true);
+            router.replace('/cliente');
           }}
-          onClose={() => setRatingDone(true)}
+          onClose={() => { setRatingDone(true); router.replace('/cliente'); }}
         />
       )}
 

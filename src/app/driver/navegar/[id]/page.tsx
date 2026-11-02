@@ -8,6 +8,7 @@ import { useWorkerContext } from '../../context';
 import ActiveOrders from '../../components/ActiveOrders';
 import RatingModal from '@/components/RatingModal';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
+import { CLEAN_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -98,8 +99,9 @@ export default function DriverNavegarPage() {
       const L = (await import('leaflet')).default;
       if (cancelled || !mapDivRef.current) return;
       leafletRef.current = L;
-      const map = L.map(mapDivRef.current, { center: [-25.2637, -57.5759], zoom: 14, zoomControl: false });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+      const map = L.map(mapDivRef.current, { center: [-25.2637, -57.5759], zoom: 14, zoomControl: false, attributionControl: false });
+      L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map);
+      L.tileLayer(CLEAN_TILE.url, { attribution: CLEAN_TILE.attr, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
       const ro = new ResizeObserver(() => map.invalidateSize());
       ro.observe(mapDivRef.current);
@@ -127,15 +129,13 @@ export default function DriverNavegarPage() {
     const map = mapRef.current;
     if (!mapReady || !L || !map) return;
 
-    const dot = (html: string, bg: string) => L.divIcon({
-      className: '',
-      html: `<div style="width:34px;height:34px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">${html}</div>`,
-      iconSize: [34, 34], iconAnchor: [17, 17],
-    });
-
     if (driverPos) {
-      if (!meMarker.current) meMarker.current = L.marker([driverPos.lat, driverPos.lng], { icon: dot('🚗', '#111827'), zIndexOffset: 1000 }).addTo(map);
-      else meMarker.current.setLatLng([driverPos.lat, driverPos.lng]);
+      const kind = vehicleKindFrom(order?.vehicle_type);
+      if (!meMarker.current) meMarker.current = createVehicleMarker(L, map, driverPos.lat, driverPos.lng, kind);
+      else {
+        meMarker.current.setKind(kind);
+        meMarker.current.move(driverPos.lat, driverPos.lng);
+      }
     }
     const tgt = targetKey ? { lat: Number(targetKey.split(',')[0]), lng: Number(targetKey.split(',')[1]) } : null;
     if (tgt) {
@@ -181,8 +181,8 @@ export default function DriverNavegarPage() {
       }
       if (lineRef.current) map.removeLayer(lineRef.current);
       lineRef.current = L.layerGroup([
-        L.polyline(coords, { color: '#fff', weight: ok ? 11 : 5, opacity: ok ? 0.95 : 0.6, lineJoin: 'round', lineCap: 'round' }),
-        L.polyline(coords, { color: '#2563eb', weight: ok ? 7 : 3, opacity: 1, dashArray: ok ? undefined : '8 6', lineJoin: 'round', lineCap: 'round' }),
+        L.polyline(coords, { color: '#fff', weight: ok ? 9 : 5, opacity: ok ? 0.95 : 0.6, lineJoin: 'round', lineCap: 'round' }),
+        L.polyline(coords, { color: '#1C1C2E', weight: ok ? 5 : 3, opacity: 1, dashArray: ok ? undefined : '8 6', lineJoin: 'round', lineCap: 'round' }),
       ]).addTo(map);
       if (!fittedRef.current) {
         map.fitBounds(L.latLngBounds(coords), { padding: [70, 70], maxZoom: 17 });
