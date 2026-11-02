@@ -2216,6 +2216,106 @@
   color: rgba(245,197,24,0.6);
 }
 
+/* ── Home idle: bottom sheet estilo inDrive/Uber ── */
+.client-home-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 72px;
+  z-index: 5;
+  padding: 10px 16px 16px;
+  background: var(--surface-1);
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid var(--border-subtle);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
+}
+.client-home-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-subtle);
+  margin: 0 auto 12px;
+}
+.client-home-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+}
+.client-home-search svg { color: #F5C518; flex-shrink: 0; }
+.client-home-services {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.client-home-service {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.client-home-service-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #F5C518;
+  color: #1C1C2E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.client-home-service-label { font-size: 0.82rem; font-weight: 700; }
+.client-home-recents { margin-top: 14px; }
+.client-home-recents-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.client-home-recent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  text-decoration: none;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.client-home-recent:last-child { border-bottom: none; }
+.client-home-recent-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.client-home-recent-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Servicio: modo de solicitud ── */
 .servicio-mode-section {
   margin: 16px 0;

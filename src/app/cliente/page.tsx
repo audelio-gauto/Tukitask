@@ -446,6 +446,7 @@ export default function ClienteHomePage() {
   const [acceptConfirm, setAcceptConfirm] = useState<{ offerId: string; jobId?: string; workerName: string | null; amount: number; requestType: 'delivery' | 'service' } | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [recentPlaces, setRecentPlaces] = useState<string[]>([]);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
   const [noTaskerMsg, setNoTaskerMsg] = useState<string | null>(null);
   const locateRef = useRef<(() => void) | null>(null);
@@ -523,6 +524,19 @@ export default function ClienteHomePage() {
         ? ordersData.filter((o: Order) => ALL_ACTIVE_STS.includes(o.status))
         : [];
       const activeJobs: ActiveJob[] = Array.isArray(jobsData) ? jobsData : [];
+
+      if (Array.isArray(ordersData)) {
+        const seen = new Set<string>();
+        const places: string[] = [];
+        for (const o of ordersData as Order[]) {
+          const addr = o.delivery_address?.trim();
+          if (!addr || seen.has(addr.toLowerCase())) continue;
+          seen.add(addr.toLowerCase());
+          places.push(addr);
+          if (places.length >= 3) break;
+        }
+        setRecentPlaces(places);
+      }
 
       setOrders(activeOrders);
       setJobs(activeJobs);
@@ -1096,7 +1110,7 @@ export default function ClienteHomePage() {
             {profilePhoto ? (
               <img src={profilePhoto} alt="" style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5C518' }} />
             ) : (
-              <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg, #F5C518, #F58A07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid rgba(245,197,24,0.5)' }}>
+              <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#F5C518', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#1C1C2E', border: '2px solid rgba(245,197,24,0.5)' }}>
                 {displayName?.[0]?.toUpperCase() || '👤'}
               </div>
             )}
@@ -1111,8 +1125,8 @@ export default function ClienteHomePage() {
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{getGreeting()}</div>
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Cliente'}</div>
           </div>
-          <button onClick={openDrawer} style={{ background: 'var(--ghost-btn)', border: '1px solid var(--border-subtle)', borderRadius: 12, width: 42, height: 42, color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 16, height: 2, background: 'var(--text-primary)', borderRadius: 2 }} />)}
+          <button onClick={openDrawer} aria-label="Abrir menú" style={{ background: 'var(--ghost-btn)', border: '1px solid var(--border-subtle)', borderRadius: 12, width: 42, height: 42, color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
           </button>
         </div>
       </div>
@@ -1120,8 +1134,13 @@ export default function ClienteHomePage() {
       {/* ── Locate button ─────────────────────────────────────────────────── */}
       <button
         onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: homeMode === 'idle' ? 130 : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '2px solid rgba(245,197,24,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'bottom 0.4s ease' }}
-      >📍</button>
+        style={{ position: 'absolute', right: 16, bottom: homeMode === 'idle' ? (recentPlaces.length > 0 ? 340 : 240) : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F5C518', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', transition: 'bottom 0.4s ease' }}
+        aria-label="Mi ubicación"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
+        </svg>
+      </button>
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
       <div style={{
@@ -1346,77 +1365,58 @@ export default function ClienteHomePage() {
       )}
 
       {homeMode === 'idle' && !loading && (
-        <div className="client-idle-overlay">
-          {/* Hero illustration */}
-          <div className="client-idle-hero">
-            <div className="client-idle-hero-core">
-              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-            </div>
-            <div className="client-idle-hero-glow" />
-          </div>
+        <div className="client-home-sheet">
+          <div className="client-home-handle" />
 
-          <div style={{ textAlign: 'center', marginBottom: 26 }}>
-            <div className="client-idle-title">¿Qué necesitás hoy?</div>
-            <div className="client-idle-subtitle">Elegí un servicio para empezar</div>
-          </div>
+          <Link href="/cliente/enviar" className="client-home-search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+            </svg>
+            <span>¿A dónde vamos?</span>
+          </Link>
 
-          {/* Direct service cards — no modal needed */}
-          <div className="client-idle-cards">
-            {/* Envíos card */}
-            <Link href="/cliente/enviar" className="client-idle-card envios">
-              <div className="client-idle-card-icon envios">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="1" y="3" width="15" height="13" rx="2"/>
-                  <path d="M16 8h4l3 5v3h-7V8z"/>
-                  <circle cx="5.5" cy="18.5" r="2.5"/>
-                  <circle cx="18.5" cy="18.5" r="2.5"/>
+          <div className="client-home-services">
+            <Link href="/cliente/enviar" className="client-home-service">
+              <span className="client-home-service-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
                 </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="client-idle-card-title">Remis / Envíos / Fletes</div>
-                <div className="client-idle-card-sub">Todo en un solo lugar</div>
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="client-idle-card-arrow">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              </span>
+              <span className="client-home-service-label">Envíos</span>
             </Link>
-
-            {/* Tasker card */}
-            <Link href="/cliente/servicio" className="client-idle-card tasker">
-              <div className="client-idle-card-icon tasker">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <Link href="/cliente/servicio" className="client-home-service">
+              <span className="client-home-service-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
                 </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="client-idle-card-title">Contratar un Tasker</div>
-                <div className="client-idle-card-sub">Servicios en tu hogar</div>
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="client-idle-card-arrow">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              </span>
+              <span className="client-home-service-label">Tasker</span>
             </Link>
-
-            {/* TukiMarket card */}
-            <Link href="/tienda" className="client-idle-card market">
-              <div className="client-idle-card-icon market">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1C1C2E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="9" cy="21" r="1"/>
-                  <circle cx="20" cy="21" r="1"/>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+            <Link href="/tienda" className="client-home-service">
+              <span className="client-home-service-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
                 </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="client-idle-card-title">TukiMarket</div>
-                <div className="client-idle-card-sub">Comprá, ofertá y negociá al mejor precio</div>
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="client-idle-card-arrow">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              </span>
+              <span className="client-home-service-label">Market</span>
             </Link>
           </div>
+
+          {recentPlaces.length > 0 && (
+            <div className="client-home-recents">
+              <div className="client-home-recents-title">Recientes</div>
+              {recentPlaces.map(place => (
+                <Link key={place} href="/cliente/enviar" className="client-home-recent">
+                  <span className="client-home-recent-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                    </svg>
+                  </span>
+                  <span className="client-home-recent-text">{place}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
