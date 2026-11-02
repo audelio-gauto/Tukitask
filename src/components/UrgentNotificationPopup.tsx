@@ -170,12 +170,12 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
           : isDriver ? -140 : -120,
         left: '50%',
         transform: 'translateX(-50%)',
-        width: isDriver ? 'min(320px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 32px))',
+        width: isDriver ? 'min(250px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 32px))',
         background: 'var(--modal-bg)',
         border: `1.5px solid ${cfg.color}40`,
-        borderRadius: isDriver ? 14 : 16,
+        borderRadius: isDriver ? 12 : 16,
         boxShadow: isDriver
-          ? '0 6px 20px rgba(0,0,0,0.24)'
+          ? '0 4px 14px rgba(0,0,0,0.22)'
           : `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${cfg.color}20`,
         overflow: 'hidden',
         transition: 'top 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -183,19 +183,19 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
       }}>
         {/* Priority indicator bar */}
         <div style={{
-          height: 3,
+          height: isDriver ? 2 : 3,
           background: notification.priority === 'urgent'
             ? `linear-gradient(90deg, ${cfg.color}, #ef4444)`
             : cfg.color,
           animation: notification.priority === 'urgent' ? 'urgentPulse 1.5s ease-in-out infinite' : undefined,
         }} />
 
-        <div style={{ padding: isDriver ? '10px 12px' : '14px 16px', display: 'flex', gap: isDriver ? 10 : 12, alignItems: 'flex-start' }}>
+        <div style={{ padding: isDriver ? '6px 8px' : '14px 16px', display: 'flex', gap: isDriver ? 8 : 12, alignItems: 'center' }}>
           {/* Icon circle */}
           <div style={{
-            width: isDriver ? 36 : 44,
-            height: isDriver ? 36 : 44,
-            borderRadius: 12,
+            width: isDriver ? 28 : 44,
+            height: isDriver ? 28 : 44,
+            borderRadius: isDriver ? 9 : 12,
             background: cfg.bg,
             display: 'flex',
             alignItems: 'center',
@@ -204,24 +204,26 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
             flexShrink: 0,
             animation: notification.priority === 'urgent' ? 'urgentBounce 0.6s ease' : undefined,
           }}>
-            <Icon name={cfg.icon} size={isDriver ? 18 : 20} />
+            <Icon name={cfg.icon} size={isDriver ? 15 : 20} />
           </div>
 
           {/* Text content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               color: 'var(--text-primary)',
-              fontSize: isDriver ? '0.88rem' : undefined,
+              fontSize: isDriver ? '0.78rem' : undefined,
               fontWeight: isDriver ? 700 : undefined,
-              lineHeight: 1.3,
-              marginBottom: 2,
+              lineHeight: 1.25,
+              marginBottom: isDriver ? 1 : 2,
+              ...(isDriver ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {}),
             }}>
               {notification.title}
             </div>
             <div style={{
               color: isDriver ? 'var(--text-secondary)' : '#9ca3af',
-              fontSize: isDriver ? '0.74rem' : '0.78rem',
-              lineHeight: 1.35,
+              fontSize: isDriver ? '0.68rem' : '0.78rem',
+              lineHeight: 1.3,
+              ...(isDriver ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' } : {}),
             }}>
               {notification.body}
             </div>
@@ -232,8 +234,8 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
             onClick={dismiss}
             style={{
               background: 'var(--glass-card)',
-              width: 28,
-              height: 28,
+              width: isDriver ? 22 : 28,
+              height: isDriver ? 22 : 28,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
