@@ -1132,15 +1132,18 @@ export default function ClienteHomePage() {
       </div>
 
       {/* ── Locate button ─────────────────────────────────────────────────── */}
-      <button
-        onClick={() => { locateRef.current?.(); }}
-        style={{ position: 'absolute', right: 16, bottom: homeMode === 'idle' ? (recentPlaces.length > 0 ? 340 : 240) : 16, zIndex: 4, width: 46, height: 46, borderRadius: '50%', background: 'var(--nav-bg)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F5C518', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.25)', transition: 'bottom 0.4s ease' }}
-        aria-label="Mi ubicación"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
-        </svg>
-      </button>
+      {!(homeMode === 'idle' && !loading) && (
+        <button
+          onClick={() => { locateRef.current?.(); }}
+          className="client-locate-btn"
+          style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 4 }}
+          aria-label="Mi ubicación"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
+          </svg>
+        </button>
+      )}
 
       {/* ── BOTTOM SHEET ─────────────────────────────────────────────────── */}
       <div style={{
@@ -1366,6 +1369,15 @@ export default function ClienteHomePage() {
 
       {homeMode === 'idle' && !loading && (
         <div className="client-home-sheet">
+          <button
+            onClick={() => { locateRef.current?.(); }}
+            className="client-locate-btn client-home-locate"
+            aria-label="Mi ubicación"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
+            </svg>
+          </button>
           <div className="client-home-handle" />
 
           <Link href="/cliente/enviar" className="client-home-search">
