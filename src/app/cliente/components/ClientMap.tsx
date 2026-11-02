@@ -27,6 +27,9 @@ function staticMapUrl(
   return `https://api.mapbox.com/styles/v1/mapbox/${style}/static/${overlay}${center.lng},${center.lat},${zoom},0/${w}x${h}@2x?access_token=${MAPBOX_TOKEN}&attribution=false&logo=false`;
 }
 
+const NO_DRIVERS: Array<{ vehicle_type: string; lat: number; lng: number }> = [];
+const DRIVER_EMOJI: Record<string, string> = { moto: '🏍️', auto: '🚖', motocarro: '🛺', camion2t: '🚚' };
+
 export default function ClientMap({
   pickup,
   delivery,
@@ -34,6 +37,7 @@ export default function ClientMap({
   showMyLocationButton = false,
   dark = false,
   locateRef,
+  drivers = NO_DRIVERS,
 }: {
   pickup?: { lat: number; lng: number } | null;
   delivery?: { lat: number; lng: number } | null;
@@ -41,7 +45,9 @@ export default function ClientMap({
   showMyLocationButton?: boolean;
   dark?: boolean;
   locateRef?: React.MutableRefObject<(() => void) | null>;
+  drivers?: Array<{ vehicle_type: string; lat: number; lng: number }>;
 }) {
+  const driverMarkers = useRef<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const initRef = useRef(false);
@@ -174,6 +180,26 @@ export default function ClientMap({
       return () => map.off('load', onLoad);
     }
   }, [dark]);
+
+  // Update GL markers and route
+  useEffect(() => {
+    const map = mapInstance.current;
+    const mapboxgl = mbRef.current;
+    if (!map || !mapboxgl || !glReady) return;
+    for (const m of driverMarkers.current) m.remove();
+    driverMarkers.current = [];
+    for (const d of drivers) {
+      if (!isFinite(d.lat) || !isFinite(d.lng)) continue;
+      const el = document.createElement('div');
+      el.textContent = DRIVER_EMOJI[d.vehicle_type] ?? '🚖';
+      el.style.cssText = 'width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));pointer-events:none;';
+      driverMarkers.current.push(new mapboxgl.Marker({ element: el }).setLngLat([d.lng, d.lat]).addTo(map));
+    }
+    return () => {
+      for (const m of driverMarkers.current) m.remove();
+      driverMarkers.current = [];
+    };
+  }, [glReady, drivers]);
 
   // Update GL markers and route
   useEffect(() => {

@@ -877,19 +877,9 @@ export default function EnviarPaquetePage() {
 
       {/* Clean form page */}
       <div className={`enviar-page enviar-page-bolt ${orderType === 'viaje' ? 'enviar-page-remis' : ''}`}>
-        <div className="enviar-page-header">
-          <button type="button" className="enviar-page-menu" onClick={openDrawer} aria-label="Menú">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <h1 className="enviar-page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name={ORDER_TYPE_ICONS[orderType]} size={18} />
-            <span>
-              {orderType === 'mandadito' ? 'Nuevo Mandadito' : orderType === 'flete' ? 'Nuevo Flete' : orderType === 'viaje' ? 'Nuevo Remis' : 'Nuevo Envío'}
-            </span>
-          </h1>
-        </div>
+        <button type="button" className="enviar-map-back" onClick={() => router.push('/cliente')} aria-label="Volver al inicio">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 19l-7-7 7-7" /></svg>
+        </button>
 
         <div className="enviar-page-body">
           {/* Order type toggle — solo visible en paso 1 */}
@@ -1052,26 +1042,23 @@ export default function EnviarPaquetePage() {
                   </div>
                 )}
                 <div className="enviar-address-section">
-                  <button type="button" className="enviar-where-bar" onClick={() => openSearch('stop_0')}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                    <span>{stops.some(s => s.address) ? 'Cambiar ruta' : orderType === 'viaje' ? '¿A dónde vamos?' : '¿A dónde enviamos?'}</span>
-                  </button>
-
-                  {(form.pickupAddress || stops.some(s => s.address)) && (
-                    <div className="enviar-route-summary" role="button" tabIndex={0} onClick={() => openSearch('stop_0')} onKeyDown={e => { if (e.key === 'Enter') openSearch('stop_0'); }}>
-                      <div className="enviar-route-line" aria-hidden />
-                      <div className="enviar-route-row">
-                        <span className="enviar-route-pin origin" />
-                        <span className="enviar-route-summary-text">{pickupLoading ? 'Detectando ubicación…' : form.pickupAddress || 'Punto de recogida'}</span>
-                      </div>
-                      {stops.map((stop, idx) => (
-                        <div className="enviar-route-row" key={stop.id}>
-                          <span className="enviar-route-pin dest">{stops.length > 1 ? idx + 1 : ''}</span>
-                          <span className="enviar-route-summary-text">{stop.address || 'Elegí el destino'}</span>
-                        </div>
-                      ))}
+                  <div className="enviar-route-summary">
+                    <div className="enviar-route-line" aria-hidden />
+                    <div className="enviar-route-row">
+                      <span className="enviar-route-pin origin" />
+                      <button type="button" className="enviar-route-summary-text" onClick={() => { if (!pickupLoading) openSearch('pickup'); }}>
+                        {pickupLoading ? 'Detectando ubicación…' : form.pickupAddress || 'Tu ubicación'}
+                      </button>
                     </div>
-                  )}
+                    {stops.map((stop, idx) => (
+                      <div className="enviar-route-row" key={stop.id}>
+                        <span className="enviar-route-pin dest">{stops.length > 1 ? idx + 1 : ''}</span>
+                        <button type="button" className={`enviar-route-summary-text${stop.address ? '' : ' placeholder'}`} onClick={() => openSearch(`stop_${idx}`)}>
+                          {stop.address || (stops.length > 1 ? `Elegir destino ${idx + 1}` : 'Elegir destino')}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
 
                   {/* Optimize route button — visible when ≥2 stops have coords */}
                   {canOptimize && (

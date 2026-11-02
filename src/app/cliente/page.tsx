@@ -447,6 +447,31 @@ export default function ClienteHomePage() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recentPlaces, setRecentPlaces] = useState<string[]>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ vehicle_type: string; lat: number; lng: number }>>([]);
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const load = async () => {
+          if (document.hidden) return;
+          try {
+            const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}`);
+            if (!res.ok || cancelled) return;
+            const json = await res.json();
+            if (!cancelled && Array.isArray(json.drivers)) setNearbyDrivers(json.drivers);
+          } catch { /* keep previous drivers */ }
+        };
+        load();
+        timer = setInterval(load, 5000);
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+    );
+    return () => { cancelled = true; if (timer) clearInterval(timer); };
+  }, []);
   const [elapsed2, setElapsed]    = useState(0); // seconds counter for searching
   const [noTaskerMsg, setNoTaskerMsg] = useState<string | null>(null);
   const locateRef = useRef<(() => void) | null>(null);
@@ -1080,7 +1105,7 @@ export default function ClienteHomePage() {
     <div className="client-map-shell">
       {/* Map base */}
       <div className="client-map-base">
-        <ClientMap showMyLocationButton={false} locateRef={locateRef} dark={isDark} />
+        <ClientMap showMyLocationButton={false} locateRef={locateRef} dark={isDark} drivers={nearbyDrivers} />
       </div>
 
       {/* Top gradient */}
