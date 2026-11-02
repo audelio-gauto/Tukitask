@@ -44,6 +44,10 @@ async function getApiKeys(): Promise<{ mapbox: string; google: string }> {
   return { mapbox, google }
 }
 
+export async function getMapboxKey(): Promise<string> {
+  return (await getApiKeys()).mapbox
+}
+
 const preferred = (process.env.MAP_PROVIDER || 'mapbox').split(',').map(p => p.trim())
 
 async function getProviders() {

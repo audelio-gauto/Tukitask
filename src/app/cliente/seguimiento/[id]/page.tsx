@@ -16,7 +16,7 @@ import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
-import { CLEAN_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
+import { CLEAN_TILE, DARK_TILE, SATELLITE_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,14 +93,8 @@ type MapStyle = 'Map' | 'Satelite' | 'Noche';
 
 const TILES: Record<MapStyle, { url: string; attr: string }> = {
   Map: CLEAN_TILE,
-  Satelite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr: '© Esri',
-  },
-  Noche: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attr: '© CARTO',
-  },
+  Satelite: SATELLITE_TILE,
+  Noche: DARK_TILE,
 };
 
 const STATUS_ACTIVE = new Set([

@@ -1,10 +1,21 @@
 // Marcador de vehículo para mapas Leaflet (seguimiento del cliente y navegación del driver).
 // Icono vista cenital sin fondo, rota hacia la dirección de avance y se desliza de forma continua.
 
+// Teselas servidas por /api/maps/tiles con la API key de Mapbox configurada en Admin.
 export const CLEAN_TILE = {
-  url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  attr: '© OpenStreetMap © CARTO',
+  url: '/api/maps/tiles/light/{z}/{x}/{y}',
+  attr: '© Mapbox © OpenStreetMap',
 };
+export const DARK_TILE = {
+  url: '/api/maps/tiles/dark/{z}/{x}/{y}',
+  attr: '© Mapbox © OpenStreetMap',
+};
+export const SATELLITE_TILE = {
+  url: '/api/maps/tiles/satellite/{z}/{x}/{y}',
+  attr: '© Mapbox © Maxar',
+};
+
+export const TILE_OPTIONS = { tileSize: 256, maxZoom: 19 } as const;
 
 export type VehicleKind = 'car' | 'moto';
 
