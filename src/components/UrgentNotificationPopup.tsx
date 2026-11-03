@@ -137,7 +137,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
 
     // Auto-dismiss after 8s for urgent, 5s for high
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(dismiss, 3500);
+    timerRef.current = setTimeout(dismiss, 1500);
 
     return () => clearTimeout(timerRef.current);
   }, [notification, soundEnabled, dismiss]);
