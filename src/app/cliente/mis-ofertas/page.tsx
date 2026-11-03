@@ -577,7 +577,8 @@ export default function MisOfertasPage() {
               Cuando un Tasker acepte<br />tu solicitud aparecerá aquí
             </div>
             <Link
-              href="/cliente/enviar", padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}
+              href="/cliente/enviar"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 20, padding: '10px 20px', borderRadius: 12, background: 'linear-gradient(135deg,#F5C518,#F58A07)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}
             >
               <Icon name="plus" size={16} />
               Nueva solicitud
