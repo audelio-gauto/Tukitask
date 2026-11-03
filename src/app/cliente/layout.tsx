@@ -116,7 +116,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       <div className="tuki-client-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--surface-1)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
           <div className="client-spinner" />
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Verificando acceso...</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Cargando...</p>
         </div>
       </div>
     );

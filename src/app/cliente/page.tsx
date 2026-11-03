@@ -1527,10 +1527,6 @@ export default function ClienteHomePage() {
             label: 'Mis ofertas', path: '/cliente/mis-ofertas', active: false, onClick: undefined as (() => void) | undefined, badge: acceptedBadge > 0 ? acceptedBadge : undefined,
           },
           {
-            icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>),
-            label: 'Solicitar', path: '', active: false, onClick: () => setShowPublishModal(true), badge: undefined as number | undefined,
-          },
-          {
             icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>),
             label: 'Historial', path: '/cliente/historial', active: false, onClick: undefined as (() => void) | undefined, badge: undefined as number | undefined,
           },

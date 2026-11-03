@@ -48,7 +48,7 @@ export default function ReciboPage() {
         {order && (
           <div style={{ background: 'var(--glass-card)', borderRadius: 18, padding: 20 }}>
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: '1.6rem' }}>🧾</div>
+              <img src="/api/logo" alt="Tukitask" style={{ height: 44, maxWidth: 160, objectFit: 'contain', marginBottom: 6 }} onError={e => { e.currentTarget.style.display = 'none'; }} />
               <div style={{ fontWeight: 900, fontSize: '1.1rem' }}>Recibo de {TYPE_LABEL[order.order_type ?? 'envio'] ?? 'servicio'}</div>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>#{order.id.slice(0, 8).toUpperCase()}</div>
             </div>
