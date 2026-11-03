@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWorkerContext } from '../context';
+import { authFetch } from '@/lib/authFetch';
 
 export default function DriverAceptacionPage() {
   const router = useRouter();
@@ -12,8 +13,8 @@ export default function DriverAceptacionPage() {
 
   useEffect(() => {
     if (!email) return;
-    fetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
-      .then(r => r.json())
+    authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+      .then(r => (r.ok ? r.json() : []))
       .then(data => {
         if (Array.isArray(data)) setHistory(data);
         setLoading(false);
