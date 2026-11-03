@@ -137,7 +137,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
 
     // Auto-dismiss after 8s for urgent, 5s for high
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(dismiss, priority === 'urgent' ? 8000 : 5000);
+    timerRef.current = setTimeout(dismiss, 3500);
 
     return () => clearTimeout(timerRef.current);
   }, [notification, soundEnabled, dismiss]);
@@ -149,21 +149,10 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
 
   return (
     <>
-      {/* Backdrop */}
-      {!isDriver && (
-        <div
-          onClick={dismiss}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: animState === 'visible' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0)',
-            transition: 'background 0.3s ease',
-            zIndex: 9998,
-          }}
-        />
-      )}
+      {/* Sin fondo bloqueante: la pantalla sigue tocable (aceptar/rechazar) mientras se muestra el aviso */}
       {/* Popup card — slides in from top */}
-      <div style={{
+      <div onClick={dismiss} style={{
+        cursor: 'pointer',
         position: 'fixed',
         top: animState === 'visible'
           ? isDriver ? 'calc(env(safe-area-inset-top, 0px) + 128px)' : 16
@@ -231,7 +220,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
 
           {/* Close button */}
           <button
-            onClick={dismiss}
+            onClick={e => { e.stopPropagation(); dismiss(); }}
             style={{
               background: 'var(--glass-card)',
               width: isDriver ? 22 : 28,
