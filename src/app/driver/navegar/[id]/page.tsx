@@ -8,7 +8,7 @@ import { useWorkerContext } from '../../context';
 import ActiveOrders from '../../components/ActiveOrders';
 import RatingModal from '@/components/RatingModal';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
-import { CLEAN_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
+import { themeTile, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -101,7 +101,11 @@ export default function DriverNavegarPage() {
       leafletRef.current = L;
       const map = L.map(mapDivRef.current, { center: [-25.2637, -57.5759], zoom: 14, zoomControl: false, attributionControl: false });
       L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map);
-      L.tileLayer(CLEAN_TILE.url, { attribution: CLEAN_TILE.attr, maxZoom: 19 }).addTo(map);
+      const zc = L.control.zoom({ position: 'topright' }).addTo(map);
+      const zcEl = zc.getContainer();
+      if (zcEl) zcEl.style.marginTop = 'calc(env(safe-area-inset-top, 0px) + 84px)';
+      const base = themeTile();
+      L.tileLayer(base.url, { attribution: base.attr, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
       const ro = new ResizeObserver(() => map.invalidateSize());
       ro.observe(mapDivRef.current);

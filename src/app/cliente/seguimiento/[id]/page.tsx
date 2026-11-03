@@ -16,7 +16,7 @@ import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
-import { CLEAN_TILE, DARK_TILE, SATELLITE_TILE, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
+import { themeTile, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,14 +89,6 @@ interface DriverLoc {
   updated_at: string;
 }
 
-type MapStyle = 'Map' | 'Satelite' | 'Noche';
-
-const TILES: Record<MapStyle, { url: string; attr: string }> = {
-  Map: CLEAN_TILE,
-  Satelite: SATELLITE_TILE,
-  Noche: DARK_TILE,
-};
-
 const STATUS_ACTIVE = new Set([
   'accepted', 'assigned', 'picking_up', 'at_pickup', 'in_transit', 'in_progress',
   'returning', 'driver_returning',
@@ -168,7 +160,7 @@ export default function SeguimientoPage() {
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
   const [driverLoc, setDriverLoc] = useState<DriverLoc | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [mapStyle, setMapStyle] = useState<MapStyle>('Map');
+  const [themeVersion, setThemeVersion] = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [eta,      setEta]      = useState<{ distKm: number; etaMin: number; fromApi: boolean } | null>(null);
   const [routeTotals, setRouteTotals] = useState<{ distKm: number; etaMin: number; stops: number } | null>(null);
@@ -360,8 +352,11 @@ export default function SeguimientoPage() {
         attributionControl: false,
       });
       L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map);
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
-      const tile = L.tileLayer(TILES['Map'].url, { attribution: TILES['Map'].attr, maxZoom: 19 });
+      const zc = L.control.zoom({ position: 'topright' }).addTo(map);
+      const zcEl = zc.getContainer();
+      if (zcEl) zcEl.style.marginTop = 'calc(env(safe-area-inset-top, 0px) + 66px)';
+      const base = themeTile();
+      const tile = L.tileLayer(base.url, { attribution: base.attr, maxZoom: 19 });
       tile.addTo(map);
       tileRef.current = tile;
       mapInst.current = map;
@@ -375,15 +370,21 @@ export default function SeguimientoPage() {
     return () => { mounted = false; };
   }, []);
 
-  // ── Swap tile layer ───────────────────────────────────────────────────────
+  // ── Swap tile layer cuando cambia el tema (claro/oscuro) ──────────────────
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeVersion(v => v + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
   useEffect(() => {
     const map = mapInst.current;
     const L = leafletRef.current;
     if (!map || !L) return;
     if (tileRef.current) map.removeLayer(tileRef.current);
-    const tile = L.tileLayer(TILES[mapStyle].url, { attribution: TILES[mapStyle].attr, maxZoom: 19 });
-    tile.addTo(map); tileRef.current = tile;
-  }, [mapStyle]);
+    const base = themeTile();
+    const tile = L.tileLayer(base.url, { attribution: base.attr, maxZoom: 19 });
+    tile.addTo(map); tile.bringToBack(); tileRef.current = tile;
+  }, [themeVersion]);
 
   // ── Update map when order + location change ───────────────────────────────
   useEffect(() => {
@@ -840,68 +841,15 @@ export default function SeguimientoPage() {
         <button
           onClick={() => router.back()}
           aria-label="Volver"
-          style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'var(--sheet-bg)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.1rem' }}
+          style={{ pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'var(--sheet-bg)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
         >
-          ←
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <div style={{ pointerEvents: 'auto', minWidth: 0, background: 'var(--sheet-bg)', borderRadius: 22, padding: '7px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {type === 'service' ? 'Seguimiento del técnico' : 'Seguimiento del envío'}
-            {order && <span style={{ color: 'var(--text-muted)', fontWeight: 600, marginLeft: 8, fontSize: '0.72rem' }}>#{id.slice(0, 8).toUpperCase()}</span>}
-          </div>
-        </div>
       </div>
 
       {/* ── Map ── */}
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
-
-        {/* style switcher */}
-        <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 66px)', right: 12, zIndex: 1000, display: 'flex', borderRadius: 10, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)' }}>
-          {(['Map', 'Satelite', 'Noche'] as MapStyle[]).map(s => (
-            <button key={s} onClick={() => setMapStyle(s)} style={{
-              padding: '6px 10px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700,
-              background: mapStyle === s ? '#fff' : 'rgba(0,0,0,0.65)',
-              color: mapStyle === s ? '#111' : 'rgba(255,255,255,0.7)',
-              transition: 'background 0.15s',
-            }}>{s}</button>
-          ))}
-        </div>
-
-        {/* ETA badge — bottom-left (Bolt/Uber style) */}
-        {eta && isActive && (
-          <div style={{
-            position: 'absolute', bottom: 16, left: 12,
-            zIndex: 1000, background: 'rgba(15,15,20,0.88)', backdropFilter: 'blur(10px)',
-            borderRadius: 14, padding: '7px 12px',
-            border: '1px solid rgba(255,255,255,0.10)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <div style={{ textAlign: 'center', lineHeight: 1 }}>
-              <div style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>{eta.etaMin}</div>
-              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>MIN</div>
-            </div>
-            <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.13)' }} />
-            <div style={{ textAlign: 'center', lineHeight: 1 }}>
-              <div style={{ color: '#38bdf8', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>
-                {Number(eta.distKm) < 1 ? `${Math.round(Number(eta.distKm) * 1000)}m` : `${Number(eta.distKm).toFixed(1)}km`}
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>
-                {routeTotals ? 'PRÓX.' : 'DIST.'}
-              </div>
-            </div>
-            {routeTotals && (
-              <>
-                <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.13)' }} />
-                <div style={{ textAlign: 'center', lineHeight: 1 }}>
-                  <div style={{ color: '#f59e0b', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1 }}>{routeTotals.etaMin}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', marginTop: 2, letterSpacing: '0.05em' }}>TOTAL</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
         {/* Spinner */}
         {!mapReady && (

@@ -17,6 +17,18 @@ export const SATELLITE_TILE = {
 
 export const TILE_OPTIONS = { tileSize: 256, maxZoom: 19 } as const;
 
+// Mismo estilo que el mapa de "Nuevo envío" (Mapbox streets claro / dark según el tema)
+export const STREETS_TILE = {
+  url: '/api/maps/tiles/streets/{z}/{x}/{y}',
+  attr: '© Mapbox © OpenStreetMap',
+};
+export function isDarkTheme(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') !== 'light';
+}
+export function themeTile() {
+  return isDarkTheme() ? DARK_TILE : STREETS_TILE;
+}
+
 export type VehicleKind = 'car' | 'moto';
 
 export function vehicleKindFrom(type?: string | null): VehicleKind {
