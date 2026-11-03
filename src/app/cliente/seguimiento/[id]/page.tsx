@@ -141,6 +141,7 @@ export default function SeguimientoPage() {
   const initRef  = useRef(false);
   const tileRef  = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
+  const fitKeyRef = useRef('');
   const glideRef = useRef<number>(0);
   const destMarkerRef   = useRef<any>(null);
   const pickupMarkerRef = useRef<any>(null);
@@ -386,6 +387,27 @@ export default function SeguimientoPage() {
     tile.addTo(map); tile.bringToBack(); tileRef.current = tile;
   }, [themeVersion]);
 
+  // ── Vehículo del conductor: se desliza y rota con cada ubicación nueva ────
+  useEffect(() => {
+    const map = mapInst.current;
+    const L = leafletRef.current;
+    if (!mapReady || !map || !L || !driverLoc || type === 'service') return;
+    const dLat = Number(driverLoc.lat);
+    const dLng = Number(driverLoc.lng);
+    if (!Number.isFinite(dLat) || !Number.isFinite(dLng)) return;
+    const kind = vehicleKindFrom(vehicleRef.current?.label);
+    if (!driverMarkerRef.current) {
+      driverMarkerRef.current = createVehicleMarker(L, map, dLat, dLng, kind);
+    } else {
+      driverMarkerRef.current.setKind(kind);
+      driverMarkerRef.current.move(dLat, dLng);
+    }
+    // Si el vehículo se acerca al borde de la pantalla, el mapa lo sigue
+    if (!map.getBounds().pad(-0.2).contains([dLat, dLng])) {
+      map.panTo([dLat, dLng], { animate: true, duration: 1 });
+    }
+  }, [driverLoc, mapReady, type]);
+
   // ── Update map when order + location change ───────────────────────────────
   useEffect(() => {
     const map = mapInst.current;
@@ -469,13 +491,7 @@ export default function SeguimientoPage() {
       });
 
       if (type !== 'service') {
-        const kind = vehicleKindFrom(vehicleRef.current?.label);
-        if (!driverMarkerRef.current) {
-          driverMarkerRef.current = createVehicleMarker(L, map, dLat, dLng, kind);
-        } else {
-          driverMarkerRef.current.setKind(kind);
-          driverMarkerRef.current.move(dLat, dLng);
-        }
+        // El vehículo del delivery se mueve en su propio efecto (no depende de la ruta)
       } else if (driverMarkerRef.current) {
         const marker = driverMarkerRef.current;
         const from = marker.getLatLng();
@@ -650,7 +666,12 @@ export default function SeguimientoPage() {
         order.order_stops.forEach(s => { if (s.lat != null && s.lng != null) points.push([Number(s.lat), Number(s.lng)]); });
       }
       if (points.length > 1) {
-        map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 16 });
+        // Solo encuadra al inicio y al cambiar de estado; después el mapa queda quieto y el vehículo se mueve
+        const fitKey = String(order.status);
+        if (fitKeyRef.current !== fitKey) {
+          fitKeyRef.current = fitKey;
+          map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 16 });
+        }
       } else {
         map.setView([dLat, dLng], 15);
       }

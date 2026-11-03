@@ -51,6 +51,8 @@ export default function DriverNavegarPage() {
   const targetMarker = useRef<any>(null);
   const lineRef = useRef<any>(null);
   const fittedRef = useRef(false);
+  const followRef = useRef(true);
+  const [following, setFollowing] = useState(true);
   const lastRouteKey = useRef('');
   const [mapReady, setMapReady] = useState(false);
 
@@ -107,6 +109,7 @@ export default function DriverNavegarPage() {
       const base = themeTile();
       L.tileLayer(base.url, { attribution: base.attr, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
+      map.on('dragstart', () => { followRef.current = false; setFollowing(false); });
       const ro = new ResizeObserver(() => map.invalidateSize());
       ro.observe(mapDivRef.current);
       setMapReady(true);
@@ -139,6 +142,10 @@ export default function DriverNavegarPage() {
       else {
         meMarker.current.setKind(kind);
         meMarker.current.move(driverPos.lat, driverPos.lng);
+      }
+      // Modo seguimiento (como Bolt/inDrive): el mapa va con el vehículo hasta que el conductor lo mueva con el dedo
+      if (followRef.current) {
+        map.setView([driverPos.lat, driverPos.lng], Math.max(map.getZoom(), 16), { animate: true, duration: 1 });
       }
     }
     const tgt = targetKey ? { lat: Number(targetKey.split(',')[0]), lng: Number(targetKey.split(',')[1]) } : null;
@@ -189,7 +196,6 @@ export default function DriverNavegarPage() {
         L.polyline(coords, { color: '#1C1C2E', weight: ok ? 5 : 3, opacity: 1, dashArray: ok ? undefined : '8 6', lineJoin: 'round', lineCap: 'round' }),
       ]).addTo(map);
       if (!fittedRef.current) {
-        map.fitBounds(L.latLngBounds(coords), { padding: [70, 70], maxZoom: 17 });
         fittedRef.current = true;
       }
     })();
@@ -200,7 +206,9 @@ export default function DriverNavegarPage() {
 
   const recenter = () => {
     const map = mapRef.current;
-    if (map && driverPos) map.setView([driverPos.lat, driverPos.lng], 17);
+    followRef.current = true;
+    setFollowing(true);
+    if (map && driverPos) map.setView([driverPos.lat, driverPos.lng], Math.max(map.getZoom(), 17), { animate: true });
   };
 
   return (
@@ -222,7 +230,7 @@ export default function DriverNavegarPage() {
         <button
           onClick={recenter}
           aria-label="Centrar en mi ubicación"
-          style={{ position: 'absolute', right: 12, bottom: 28, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
+          style={{ position: 'absolute', right: 12, bottom: 28, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: following ? '2px solid #F5C518' : 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
         >🎯</button>
 
         {!driverPos && mapReady && (
