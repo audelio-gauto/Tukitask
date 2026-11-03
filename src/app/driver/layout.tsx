@@ -263,7 +263,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       <div className="tuki-driver-app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-1)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
           <div className="tuki-spinner" />
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Verificando acceso...</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Cargando...</p>
         </div>
       </div>
     );

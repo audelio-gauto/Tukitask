@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="adm-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-[#F5C518] border-t-transparent rounded-full animate-spin" />
-          <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.875rem' }}>Verificando permisos...</p>
+          <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.875rem' }}>Cargando...</p>
         </div>
       </div>
     );
