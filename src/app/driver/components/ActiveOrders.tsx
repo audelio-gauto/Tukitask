@@ -916,7 +916,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
                         className="tuki-btn tuki-btn-success tuki-btn-sm"
                         style={{ flex: 1 }}
                       >
-                        <Icon name="map" size={14} /> Navegar a {deliveryTarget ? `entrega ${deliveryTarget.sequence}` : 'destino'}
+                        <Icon name="map" size={14} /> {deliveryTarget ? `Ir a entrega ${deliveryTarget.sequence}` : order.order_type === 'envio' ? 'Ir a entrega' : 'Ir a destino'}
                       </button>
                     )}
                   </div>
@@ -1427,7 +1427,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
                 }}
               >
                 <Icon name="flag" size={16} color="#4ade80" />
-                Finalizar entrega
+                {order.order_type === 'viaje' ? 'Finalizar viaje' : order.order_type === 'flete' ? 'Finalizar flete' : 'Finalizar envío'}
               </button>
             );
           })()}
@@ -1620,7 +1620,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
           }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
             <h3 style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 8px' }}>
-              {isEnvioSingle ? 'Código de Entrega' : '¿Confirmar entrega?'}
+              {isEnvioSingle ? 'Código de Entrega' : ord?.order_type === 'viaje' ? '¿Finalizar viaje?' : ord?.order_type === 'flete' ? '¿Finalizar flete?' : '¿Confirmar entrega?'}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 20px', lineHeight: 1.5 }}>
               {isEnvioSingle
@@ -1699,31 +1699,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
               </div>
             )}
 
-            {/* Optional delivery proof photo */}
-            <label style={{
-              display: 'block', cursor: 'pointer', marginBottom: 18,
-              background: 'var(--glass-card)', borderRadius: 12,
-              border: '1.5px dashed var(--border-strong)', padding: '12px',
-              color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600,
-            }}>
-              {photoEntry
-                ? <img src={photoEntry.previewUrl} alt="Foto de entrega" loading="lazy" decoding="async" style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8 }} />
-                : <>📷 Adjuntar foto de entrega <span style={{ color: '#6b7280', fontWeight: 400 }}>(opcional)</span></>
-              }
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                capture="environment"
-                style={{ display: 'none' }}
-                onChange={e => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  const url = URL.createObjectURL(f);
-                  setDeliveryPhotos(prev => ({ ...prev, [orderId]: { file: f, previewUrl: url } }));
-                }}
-              />
-            </label>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
               <button
                 onClick={() => {
                   setConfirmDelivery(prev => { const n = new Set(prev); n.delete(orderId); return n; });
@@ -1771,7 +1747,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
                   opacity: confirmDisabled ? 0.7 : 1,
                 }}
               >
-                {acting === orderId + 'delivered' ? '...' : '✅ Sí, entregado'}
+                {acting === orderId + 'delivered' ? '...' : ord?.order_type === 'viaje' ? '✅ Sí, finalizar viaje' : ord?.order_type === 'flete' ? '✅ Sí, finalizar flete' : '✅ Sí, entregado'}
               </button>
             </div>
           </div>
