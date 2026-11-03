@@ -13,7 +13,7 @@ export default function DriverAceptacionPage() {
 
   useEffect(() => {
     if (!email) return;
-    authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
+    authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true&_t=${Date.now()}`)
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
         if (Array.isArray(data)) setHistory(data);
@@ -22,11 +22,12 @@ export default function DriverAceptacionPage() {
       .catch(() => setLoading(false));
   }, [email]);
 
+  // Mismos estados que la página Ganancias (una devolución cuenta como servicio completado)
   const delivered = history.filter(o =>
-    ['delivered', 'commission_charged', 'client_confirmed'].includes(o.status)
+    ['delivered', 'commission_charged', 'client_confirmed', 'returned'].includes(o.status)
   ).length;
   const cancelled = history.filter(o =>
-    ['failed', 'cancelled', 'returned', 'return_rejected'].includes(o.status)
+    ['failed', 'cancelled', 'return_rejected'].includes(o.status)
   ).length;
   const total = delivered + cancelled;
   const tasa  = total > 0 ? Math.round((delivered / total) * 100) : null;

@@ -324,8 +324,8 @@ export default function DriverDashboard() {
           const isToday = (o: any) => new Date(o.created_at) >= startOfDay;
 
           const DELIVERED_STATUSES = ['delivered', 'commission_charged', 'client_confirmed'];
-          const CANCELLED_STATUSES = ['failed', 'cancelled', 'returned', 'return_rejected'];
-          const delivered = data.filter(o => DELIVERED_STATUSES.includes(o.status));
+          const CANCELLED_STATUSES = ['failed', 'cancelled', 'return_rejected'];
+          const delivered = data.filter(o => [...DELIVERED_STATUSES, 'returned'].includes(o.status));
           const failed = data.filter(o => CANCELLED_STATUSES.includes(o.status));
           // Cards: only today (use completed_at when available, fallback to created_at)
           const deliveredToday = delivered.filter(isToday);
