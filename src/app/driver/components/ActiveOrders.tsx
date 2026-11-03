@@ -1410,6 +1410,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
           )}
 
           {status === 'in_transit' && !isFinOpen && (() => {
+            const isEnvio = order.order_type !== 'viaje' && order.order_type !== 'flete';
             // Multi-stop: only show Finalizar when ALL stops are done (delivered or failed)
             const stops: any[] = order.order_stops || [];
             const hasStops = stops.length > 0;
@@ -1417,7 +1418,9 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
             if (hasStops && !allStopsDone) return null;
             return (
               <button
-                onClick={() => setFinalizeOpen(prev => new Set([...prev, order.id]))}
+                onClick={() => isEnvio
+                  ? setFinalizeOpen(prev => new Set([...prev, order.id]))
+                  : setConfirmDelivery(prev => new Set([...prev, order.id]))}
                 style={{
                   width: '100%', padding: '14px', borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.5)',
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.28))',
