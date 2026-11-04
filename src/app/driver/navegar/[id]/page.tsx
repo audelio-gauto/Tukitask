@@ -108,7 +108,7 @@ export default function DriverNavegarPage() {
       L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map);
       const zc = L.control.zoom({ position: 'topright' }).addTo(map);
       const zcEl = zc.getContainer();
-      if (zcEl) zcEl.style.marginTop = 'calc(env(safe-area-inset-top, 0px) + 84px)';
+      if (zcEl) zcEl.style.marginTop = 'calc(env(safe-area-inset-top, 0px) + 122px)';
       const base = themeTile();
       L.tileLayer(base.url, { attribution: base.attr, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
@@ -232,13 +232,13 @@ export default function DriverNavegarPage() {
         <button
           onClick={recenter}
           aria-label="Centrar en mi ubicación"
-          style={{ position: 'absolute', right: 12, bottom: 28, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: following ? '2px solid #F5C518' : 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
+          style={{ position: 'absolute', right: 12, top: 'calc(env(safe-area-inset-top, 0px) + 66px)', zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: following ? '2px solid #F5C518' : 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
         >🎯</button>
 
         <button
           onClick={() => setMapFull(v => !v)}
           aria-label={mapFull ? 'Mostrar panel' : 'Mapa en pantalla completa'}
-          style={{ position: 'absolute', right: 12, bottom: 82, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', color: '#111827', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'absolute', right: 12, top: 'calc(env(safe-area-inset-top, 0px) + 12px)', zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', color: '#111827', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           {mapFull ? (
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
