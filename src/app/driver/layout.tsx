@@ -90,11 +90,14 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
     const postToDB = () => {
       if (lastLat == null || lastLng == null) return;
-      if (typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
+      // En un viaje activo (navegar/activo) siempre se publica, aunque el switch esté en offline
+      const onTrip = typeof window !== 'undefined' && /^\/driver\/(navegar|activo)/.test(window.location.pathname);
+      if (!onTrip && typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
+      if (!onTrip && lastDbAt !== 0 && Date.now() - lastDbAt < 60_000) return;
       if (lastDbLat != null && lastDbLng != null) {
         const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, { lat: lastLat, lng: lastLng });
         // Quieto: igual se refresca cada ~2 min para que el cliente lo siga viendo en línea
-        if (moved < 50 && Date.now() - lastDbAt < 120_000) return;
+        if (moved < (onTrip ? 15 : 50) && Date.now() - lastDbAt < 120_000) return;
       }
       lastDbAt = Date.now();
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -127,8 +130,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      // DB write every 60s (reduced from 15s — 75% fewer writes)
-      dbIntervalId = setInterval(postToDB, 60_000);
+      // DB write: 60s en general, 10s durante un viaje activo (respaldo si falla el broadcast)
+      dbIntervalId = setInterval(postToDB, 10_000);
     }
 
     // Background GPS — only activates inside the Capacitor APK.

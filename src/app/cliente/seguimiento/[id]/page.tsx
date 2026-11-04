@@ -96,7 +96,7 @@ const STATUS_ACTIVE = new Set([
   'awaiting_payment', 'payment_confirmed',
 ]);
 
-const POLL_INTERVAL = 8_000; // 8s for client tracking (faster than admin 15s)
+const POLL_INTERVAL = 5_000; // 5s: respaldo si el broadcast en tiempo real falla
 
 function fmtGs(n: number | null) {
   return n != null ? `${Number(n).toLocaleString('es-PY')} Gs` : '—';
@@ -161,6 +161,11 @@ export default function SeguimientoPage() {
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
   const [driverLoc, setDriverLoc] = useState<DriverLoc | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapFull, setMapFull] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => mapInst.current?.invalidateSize(), 80);
+    return () => clearTimeout(t);
+  }, [mapFull]);
   const [themeVersion, setThemeVersion] = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [eta,      setEta]      = useState<{ distKm: number; etaMin: number; fromApi: boolean } | null>(null);
@@ -419,8 +424,15 @@ export default function SeguimientoPage() {
     const destLat = order.delivery_lat ?? order.client_lat ?? null;
     const destLng = order.delivery_lng ?? order.client_lng ?? null;
 
+    // Antes de iniciar el viaje: solo se muestra A (el conductor va hacia el punto de recogida)
+    const preTrip = type !== 'service'
+      && ['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order.status))
+      && order.pickup_lat != null && order.pickup_lng != null;
+
     // ── Destination marker (B) ──
-    if (destLat != null && destLng != null) {
+    if (preTrip) {
+      if (destMarkerRef.current) { map.removeLayer(destMarkerRef.current); destMarkerRef.current = null; }
+    } else if (destLat != null && destLng != null) {
       const pinB = L.divIcon({
         className: '',
         html: routePinHtml('B', PIN_B_COLOR),
@@ -533,7 +545,9 @@ export default function SeguimientoPage() {
           : [];
 
         const hasOrderStops = (order.order_stops?.length ?? 0) > 0;
-        const waypoints: Array<{ lat: number; lng: number }> = [
+        const waypoints: Array<{ lat: number; lng: number }> = preTrip
+          ? [{ lat: dLat, lng: dLng }, { lat: Number(order.pickup_lat), lng: Number(order.pickup_lng) }]
+          : [
           { lat: dLat, lng: dLng },
           ...pendingStops.map(s => ({ lat: Number(s.lat), lng: Number(s.lng) })),
           // Single-stop legacy: append delivery dest (it is NOT already covered by order_stops)
@@ -541,7 +555,7 @@ export default function SeguimientoPage() {
         ];
 
         // Route key: driver position (low-res) + stop statuses + dest
-        const routeKey = waypoints.map(w => `${w.lat.toFixed(3)},${w.lng.toFixed(3)}`).join('|');
+        const routeKey = (preTrip ? 'A:' : 'B:') + waypoints.map(w => `${w.lat.toFixed(3)},${w.lng.toFixed(3)}`).join('|');
         if (routeKey !== lastRouteKey.current) {
           lastRouteKey.current = routeKey;
 
@@ -659,10 +673,10 @@ export default function SeguimientoPage() {
 
       // ── Fit bounds ──
       const points: [number, number][] = [[dLat, dLng]];
-      if (destLat != null && destLng != null) points.push([Number(destLat), Number(destLng)]);
+      if (!preTrip && destLat != null && destLng != null) points.push([Number(destLat), Number(destLng)]);
       if (order.pickup_lat != null && order.pickup_lng != null) points.push([Number(order.pickup_lat), Number(order.pickup_lng)]);
       // include stop coords in bounds
-      if (order.order_stops) {
+      if (!preTrip && order.order_stops) {
         order.order_stops.forEach(s => { if (s.lat != null && s.lng != null) points.push([Number(s.lat), Number(s.lng)]); });
       }
       if (points.length > 1) {
@@ -715,7 +729,8 @@ export default function SeguimientoPage() {
     }, POLL_INTERVAL);
 
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [mapReady, order, fetchOrder, fetchDriverLoc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, !!order, order?.status, fetchOrder, fetchDriverLoc]);
 
   // ── Supabase Broadcast subscription for real-time driver location ─────────
   // Listens to the channel `loc:driver:<email>` that the driver app broadcasts to.
@@ -869,8 +884,20 @@ export default function SeguimientoPage() {
       </div>
 
       {/* ── Map ── */}
-      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+      <div style={mapFull ? { position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--background)' } : { flex: 1, position: 'relative', minHeight: 0 }}>
         <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
+
+        <button
+          onClick={() => setMapFull(v => !v)}
+          aria-label={mapFull ? 'Salir de pantalla completa' : 'Mapa en pantalla completa'}
+          style={{ position: 'absolute', top: mapFull ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : 'calc(env(safe-area-inset-top, 0px) + 12px)', right: 12, zIndex: 1003, width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'var(--sheet-bg)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
+        >
+          {mapFull ? (
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+          ) : (
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+          )}
+        </button>
 
         {/* Spinner */}
         {!mapReady && (

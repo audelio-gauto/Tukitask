@@ -55,6 +55,7 @@ export default function DriverNavegarPage() {
   const [following, setFollowing] = useState(true);
   const lastRouteKey = useRef('');
   const [mapReady, setMapReady] = useState(false);
+  const [mapFull, setMapFull] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     if (!email) return;
@@ -233,6 +234,18 @@ export default function DriverNavegarPage() {
           style={{ position: 'absolute', right: 12, bottom: 28, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: following ? '2px solid #F5C518' : 'none', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '1.2rem' }}
         >🎯</button>
 
+        <button
+          onClick={() => setMapFull(v => !v)}
+          aria-label={mapFull ? 'Mostrar panel' : 'Mapa en pantalla completa'}
+          style={{ position: 'absolute', right: 12, bottom: 82, zIndex: 1001, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', color: '#111827', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          {mapFull ? (
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+          ) : (
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+          )}
+        </button>
+
         {!driverPos && mapReady && (
           <div style={{ position: 'absolute', bottom: 28, left: 12, zIndex: 1001, background: 'rgba(0,0,0,0.75)', color: '#f59e0b', borderRadius: 12, padding: '8px 14px', fontSize: '0.75rem', fontWeight: 600 }}>
             Esperando señal GPS…
@@ -240,7 +253,7 @@ export default function DriverNavegarPage() {
         )}
       </div>
 
-      <div style={{ flexShrink: 0, background: 'var(--sheet-bg, #fff)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', maxHeight: '60dvh', overflowY: 'auto', padding: '8px 14px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      <div style={{ display: mapFull ? 'none' : undefined, flexShrink: 0, background: 'var(--sheet-bg, #fff)', borderRadius: '22px 22px 0 0', marginTop: -18, position: 'relative', zIndex: 1002, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)', maxHeight: '60dvh', overflowY: 'auto', padding: '8px 14px calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--border-strong, #d1d5db)', margin: '0 auto 12px' }} />
 
         {loading ? (
