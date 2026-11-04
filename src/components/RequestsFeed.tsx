@@ -676,10 +676,15 @@ export default memo(function RequestsFeed({
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
                   <span style={{ width: 12, height: 12, borderRadius: 999, background: '#10b981', border: '3px solid #0f2f25', boxShadow: '0 0 0 2px #10b981', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
-                      Recogida{distKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· {distKm.toFixed(1)} km · {Math.max(1, Math.round(distKm * 2.5))} min</span>}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                      {distKm != null ? (
+                        <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                          {Math.max(1, Math.round(distKm * 2.5))} min <span style={{ color: 'var(--text-muted)', fontWeight: 800 }}>· {distKm.toFixed(1)} km</span>
+                        </span>
+                      ) : null}
+                      <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recogida</span>
                     </div>
-                    <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.from}</div>
+                    <div style={{ lineHeight: 1.3, fontWeight: 500, fontSize: '0.72rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>{item.from}</div>
                   </div>
                 </div>
               )}
@@ -722,10 +727,15 @@ export default memo(function RequestsFeed({
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', position: 'relative' }}>
                   <span style={{ width: 12, height: 12, borderRadius: 3, background: '#ef4444', border: '3px solid #3a1414', boxShadow: '0 0 0 2px #ef4444', flexShrink: 0, marginTop: 3, boxSizing: 'border-box' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', gap: 6 }}>
-                      Destino{routeKm != null && <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>· {routeKm.toFixed(1)} km · {Math.max(1, Math.round(routeKm * 2.5))} min</span>}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                      {routeKm != null ? (
+                        <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                          {Math.max(1, Math.round(routeKm * 2.5))} min <span style={{ color: 'var(--text-muted)', fontWeight: 800 }}>· {routeKm.toFixed(1)} km</span>
+                        </span>
+                      ) : null}
+                      <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destino</span>
                     </div>
-                    <div style={{ lineHeight: 1.35, fontWeight: 600, wordBreak: 'break-word' }}>{item.to}</div>
+                    <div style={{ lineHeight: 1.3, fontWeight: 500, fontSize: '0.72rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>{item.to}</div>
                   </div>
                 </div>
               )}
