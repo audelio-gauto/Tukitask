@@ -9,6 +9,7 @@ import ActiveOrders from '../../components/ActiveOrders';
 import RatingModal from '@/components/RatingModal';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
 import { themeTile, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
+import { playArrivingAlert } from '@/lib/audio';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -54,6 +55,7 @@ export default function DriverNavegarPage() {
   const followRef = useRef(true);
   const [following, setFollowing] = useState(true);
   const lastRouteKey = useRef('');
+  const arrivingRef = useRef('');
   const [mapReady, setMapReady] = useState(false);
   const [mapFull, setMapFull] = useState(false);
 
@@ -129,7 +131,6 @@ export default function DriverNavegarPage() {
   const targetLng = toPickup ? order?.pickup_lng : (pendingStop?.lng ?? order?.delivery_lng);
   const target = order ? toLL(targetLat, targetLng) : null;
   const targetKey = target ? `${target.lat},${target.lng}` : '';
-  const targetAddress: string = toPickup ? (order?.pickup_address ?? '') : (pendingStop?.address ?? order?.delivery_address ?? '');
 
   // Marcadores y ruta
   useEffect(() => {
@@ -203,7 +204,18 @@ export default function DriverNavegarPage() {
   }, [mapReady, driverPos, targetKey, toPickup]);
 
   // Al cambiar de tramo (recogida → entrega) se vuelve a encuadrar
-  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; }, [toPickup]);
+  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; arrivingRef.current = ''; }, [toPickup]);
+
+  // Aviso sonoro al llegar a ~80 m del punto de recogida / entrega (una vez por destino)
+  useEffect(() => {
+    if (!driverPos || !targetKey) return;
+    const [tLat, tLng] = targetKey.split(',').map(Number);
+    const meters = haversineKm(driverPos.lat, driverPos.lng, tLat, tLng) * 1000;
+    if (meters <= 80 && arrivingRef.current !== targetKey) {
+      arrivingRef.current = targetKey;
+      playArrivingAlert();
+    }
+  }, [driverPos, targetKey]);
 
   const recenter = () => {
     const map = mapRef.current;
@@ -216,17 +228,6 @@ export default function DriverNavegarPage() {
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--background)', zIndex: 50 }}>
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <div ref={mapDivRef} style={{ position: 'absolute', inset: 0 }} />
-
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-start', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 12px 0', pointerEvents: 'none' }}>
-          <div style={{ pointerEvents: 'auto', flex: 1, background: '#111827', color: '#fff', borderRadius: 16, padding: '10px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', minWidth: 0 }}>
-            <div style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 700, letterSpacing: '0.05em' }}>
-              {toPickup ? 'IR A RECOGER' : 'IR A ENTREGAR'}
-            </div>
-            <div style={{ fontWeight: 800, fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {targetAddress || 'Destino'}
-            </div>
-          </div>
-        </div>
 
         <button
           onClick={recenter}

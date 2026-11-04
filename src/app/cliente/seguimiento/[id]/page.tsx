@@ -12,6 +12,7 @@ import { haversineKm } from '@/lib/geo';
 import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import ChatModal from '@/components/ChatModal';
+import { playArrivingAlert } from '@/lib/audio';
 import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
@@ -701,14 +702,28 @@ export default function SeguimientoPage() {
     if (!driverLoc || etaFromApiRef.current) return;
     const order_ = order;
     if (!order_) return;
-    const destLat = Number(order_.delivery_lat ?? order_.client_lat ?? 0);
-    const destLng = Number(order_.delivery_lng ?? order_.client_lng ?? 0);
+    const preTripEta = type !== 'service' && ['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order_.status)) && order_.pickup_lat != null && order_.pickup_lng != null;
+    const destLat = Number((preTripEta ? order_.pickup_lat : (order_.delivery_lat ?? order_.client_lat)) ?? 0);
+    const destLng = Number((preTripEta ? order_.pickup_lng : (order_.delivery_lng ?? order_.client_lng)) ?? 0);
     if (!destLat || !destLng) return;
     const dLat = Number(driverLoc.lat);
     const dLng = Number(driverLoc.lng);
     const distKm = haversineKm(dLat, dLng, destLat, destLng);
     setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
   }, [driverLoc, order]);  
+
+  // Aviso sonoro al cliente cuando el conductor está a ~80 m del punto de recogida
+  const arrivedAlertRef = useRef(false);
+  useEffect(() => {
+    if (!driverLoc || !order || type === 'service') return;
+    if (!['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order.status))) return;
+    if (order.pickup_lat == null || order.pickup_lng == null) return;
+    const m = haversineKm(Number(driverLoc.lat), Number(driverLoc.lng), Number(order.pickup_lat), Number(order.pickup_lng)) * 1000;
+    if (m <= 80 && !arrivedAlertRef.current) {
+      arrivedAlertRef.current = true;
+      playArrivingAlert();
+    }
+  }, [driverLoc, order, type]);
   useEffect(() => {
     if (id) {
       fetchOrder();
@@ -815,6 +830,10 @@ export default function SeguimientoPage() {
   const workerRating = order?.driver_avg_rating ?? null;
   const st           = order ? statusLabel(order.status) : null;
   const isActive     = order ? STATUS_ACTIVE.has(order.status) : false;
+  const preTripView  = !!order && type !== 'service' && ['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order.status));
+  const etaLabel     = eta && isActive
+    ? (eta.distKm * 1000 < 80 && preTripView ? 'Tu conductor está llegando' : `${preTripView ? 'Llega en' : 'Destino en'} ${eta.etaMin} min`)
+    : null;
   const PICKUP_VALIDATED_STATUSES = ['in_transit', 'delivered', 'failed', 'returning', 'returned', 'driver_returning', 'return_delivered', 'return_rejected', 'driver_cancelled', 'client_confirmed'];
   const pickupValidated  = !!(order?.pickup_code  && PICKUP_VALIDATED_STATUSES.includes(order.status));
   const deliveryValidated = !!(order?.delivery_pin && ['delivered', 'client_confirmed'].includes(order.status));
@@ -898,6 +917,13 @@ export default function SeguimientoPage() {
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           )}
         </button>
+
+        {/* ETA estilo Bolt/Uber */}
+        {mapReady && etaLabel && (
+          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: '50%', transform: 'translateX(-50%)', zIndex: 1003, background: '#111827', color: '#fff', borderRadius: 22, padding: '9px 16px', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 2px 12px rgba(0,0,0,0.35)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+            {etaLabel}
+          </div>
+        )}
 
         {/* Spinner */}
         {!mapReady && (

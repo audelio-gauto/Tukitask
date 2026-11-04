@@ -238,6 +238,17 @@ export function playClientOfferAlert(): void {
   } catch { /* silent */ }
 }
 
+/** Triple chime — driver is about to arrive (≈80 m) */
+export function playArrivingAlert(): void {
+  try {
+    const c = getAC(); if (!c) return;
+    const n = c.currentTime;
+    ([784, 988, 1175, 1568] as number[]).forEach((f, i) => tone(f, n + i * 0.16, 0.3, 0.32));
+    ([784, 988, 1175, 1568] as number[]).forEach((f, i) => tone(f, n + 1.1 + i * 0.16, 0.3, 0.32));
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+  } catch { /* silent */ }
+}
+
 /** Double soft beep — new chat message received */
 export function playMessageAlert(): void {
   try {
