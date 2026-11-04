@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, memo } from 'react';
 import { haversineKm } from '@/lib/geo';
-import { playKaChing } from '@/lib/audio';
+import { playRideRequest } from '@/lib/audio';
 import { Icon } from '@/components/Icon';
 
 const CARD_TIMER = 100;
@@ -211,15 +211,15 @@ export default memo(function RequestsFeed({
     const hasNew = visibleLive.some(i => !prevIdsRef.current.has(i.id));
     prevIdsRef.current = new Set(items.map(i => i.id));
     if (hasNew && visibleLive.length > 0 && !sendingIdRef.current) {
-      playKaChing();
+      playRideRequest();
       if (soundIvRef.current) clearInterval(soundIvRef.current);
-      // Repeat every 4500 ms — matches the new ~4.2 s ka-ching sound duration
+      // Se repite cada 3 s mientras haya solicitudes vigentes
       soundIvRef.current = setInterval(() => {
         if (sendingIdRef.current) { clearInterval(soundIvRef.current!); soundIvRef.current = null; return; }
         const alive = itemsRef.current.filter(i => !dismissedRef.current.has(i.id) && getRemaining(i.createdAt) > 0);
-        if (alive.length > 0) playKaChing();
+        if (alive.length > 0) playRideRequest();
         else { clearInterval(soundIvRef.current!); soundIvRef.current = null; }
-      }, 4500);
+      }, 3000);
     }
     if (visibleLive.length === 0 && soundIvRef.current) {
       clearInterval(soundIvRef.current); soundIvRef.current = null;

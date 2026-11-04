@@ -202,6 +202,40 @@ export function playKaChing(): void {
 /** Ka-ching! — driver sees a new delivery order in the feed */
 export function playNewOrderAlert(): void { playKaChing(); }
 
+/**
+ * Ride-request alert (estilo Uber/Bolt/inDrive): motivo ascendente limpio de
+ * tres notas con timbre de campana suave, seguido de un acorde final. ~1.6 s.
+ */
+export function playRideRequest(): void {
+  try {
+    const c = getAC(); if (!c) return;
+    const t0 = c.currentTime + 0.02;
+
+    const note = (f: number, t: number, dur: number, vol: number) => {
+      // Fundamental + armónicos suaves: sonido de "marimba/campana" limpio
+      ([[1, 1], [2, 0.32], [3, 0.12]] as [number, number][]).forEach(([mult, amp]) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine'; o.frequency.value = f * mult;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol * amp, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+        o.connect(g); g.connect(c.destination);
+        o.start(t); o.stop(t + dur + 0.03);
+      });
+    };
+
+    note(698.46, t0,        0.30, 0.34); // F5
+    note(880.00, t0 + 0.16, 0.30, 0.34); // A5
+    note(1046.5, t0 + 0.32, 0.30, 0.36); // C6
+    // Acorde final resuelto
+    note(1396.9, t0 + 0.55, 0.95, 0.38); // F6
+    note(1760.0, t0 + 0.55, 0.95, 0.26); // A6
+    note(2093.0, t0 + 0.55, 0.95, 0.16); // C7
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([120, 70, 120, 70, 220]);
+  } catch { /* silent */ }
+}
+
 /** Rising scale — offer accepted / order confirmed */
 export function playAccepted(): void {
   try {
