@@ -28,6 +28,9 @@ export function usePushNotifications(userEmail: string | undefined) {
     if (typeof window === 'undefined') return;
 
     if (Capacitor.getPlatform() === 'android') {
+      // Sin google-services.json (Firebase) en el APK, PushNotifications.register() cierra la app.
+      // Se activa solo cuando el APK se compiló con Firebase: NEXT_PUBLIC_ANDROID_PUSH=true
+      if (process.env.NEXT_PUBLIC_ANDROID_PUSH !== 'true') return;
       try {
         let permission = await PushNotifications.checkPermissions();
         if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
