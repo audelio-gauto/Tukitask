@@ -11,6 +11,7 @@ import { WorkerDrawer } from '@/components/WorkerDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
+import { enableDriverMode, disableDriverMode } from '@/lib/driverMode';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfflineBanner from '@/components/OfflineBanner';
@@ -47,6 +48,35 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
+
+  // APK: pantalla encendida + burbuja flotante mientras el conductor usa la app
+  useEffect(() => {
+    if (!email) return;
+    void enableDriverMode();
+    return () => { void disableDriverMode(); };
+  }, [email]);
+
+  // Wake Lock web: mantiene la pantalla encendida (APK y navegador), se renueva al volver a la app
+  useEffect(() => {
+    if (!email || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+    const acquire = async () => {
+      try {
+        if (document.visibilityState !== 'visible' || (lock && !lock.released)) return;
+        const l = await navigator.wakeLock.request('screen');
+        if (cancelled) { void l.release(); return; }
+        lock = l;
+      } catch { /* no soportado o denegado */ }
+    };
+    void acquire();
+    document.addEventListener('visibilitychange', acquire);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', acquire);
+      void lock?.release();
+    };
+  }, [email]);
 
   // ── GPS broadcast: always-on while driver app is open ──────────────────────
   // 1. Broadcasts via Supabase Realtime Broadcast (0 DB writes, < 1s latency)

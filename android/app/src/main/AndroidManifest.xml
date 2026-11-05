@@ -58,4 +58,7 @@
     <!-- Notificaciones (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Burbuja flotante sobre otras apps (volver a TukiTask desde Google Maps/Waze) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
 </manifest>
