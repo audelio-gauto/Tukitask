@@ -9,6 +9,7 @@ import { setAppMode, saveRealRole } from '@/lib/modeSwitch';
 import { useWorkerContext } from '../context';
 import DriverScreenLayout from '../components/DriverScreenLayout';
 import { Icon } from '@/components/Icon';
+import AccountSections from '@/components/AccountSections';
 
 const VEHICLE_TYPES = [
   { value: 'moto',       label: 'Moto',       icon: 'bolt', color: '#f59e0b' },
@@ -195,7 +196,7 @@ export default function DriverSettingsPage() {
   }
 
   return (
-    <DriverScreenLayout title="Mi Perfil">
+    <DriverScreenLayout title="Mi cuenta">
       <form onSubmit={handleSave} style={{ paddingBottom: '2rem' }}>
 
         {/* ── HERO: Foto + identidad ── */}
@@ -305,8 +306,18 @@ export default function DriverSettingsPage() {
           </div>
         </div>
 
+        <AccountSections items={[
+          { label: 'Mi perfil', description: 'Datos personales y contacto', icon: 'user', section: 'cuenta-perfil' },
+          { label: 'Mis documentos', description: 'Personales y del vehículo', icon: 'document', section: 'cuenta-documentos', onActivate: () => setDocsOpen(true) },
+          { label: 'Mi vehículo', description: 'Tipo, marca y matrícula', icon: 'car', section: 'cuenta-vehiculo' },
+          { label: 'Mi billetera', description: 'Saldo y movimientos', icon: 'credit-card', href: '/driver/billetera' },
+          { label: 'Ganancias', description: 'Resumen de ganancias', icon: 'money', href: '/driver/ganancias' },
+          { label: 'Navegación y preferencias', description: 'Google Maps, Waze y tema', icon: 'settings', section: 'cuenta-navegacion' },
+        ]} />
+
         {/* ── SECCIÓN: TIPO DE VEHÍCULO ── */}
-        <div style={{
+        <div id="cuenta-vehiculo" style={{
+          scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
@@ -403,9 +414,10 @@ export default function DriverSettingsPage() {
             const borderColor = hasRejected || hasExpired ? 'var(--alert-error-border)' : approvedCount === allDocs.length ? 'var(--stat-success-border)' : 'var(--alert-warning-border)';
             const icon = hasExpired ? 'x' : hasRejected ? 'x' : approvedCount === allDocs.length ? 'check' : 'paper-clip';
             return (
-              <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+              <div id="cuenta-documentos" style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', scrollMarginTop: 80 }}>
                 <button
                   type="button"
+                  aria-expanded={docsOpen}
                   onClick={() => setDocsOpen(p => !p)}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -556,7 +568,8 @@ export default function DriverSettingsPage() {
         </div>
 
         {/* ── SECCIÓN: NAVEGACIÓN ── */}
-        <div style={{
+        <div id="cuenta-navegacion" style={{
+          scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
@@ -626,7 +639,8 @@ export default function DriverSettingsPage() {
         </div>
 
         {/* ── SECCIÓN: DATOS PERSONALES ── */}
-        <div style={{
+        <div id="cuenta-perfil" style={{
+          scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
@@ -774,4 +788,3 @@ export default function DriverSettingsPage() {
     </DriverScreenLayout>
   );
 }
-

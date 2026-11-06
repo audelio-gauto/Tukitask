@@ -8,7 +8,7 @@ const driverMenuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/driver', icon: 'home' },
   { slug: 'deliveries', label: 'Envíos', href: '/driver/delivered', icon: 'box' },
   { slug: 'billetera', label: 'Mi Billetera', href: '/driver/billetera', icon: 'wallet' },
-  { slug: 'settings', label: 'Configuración', href: '/driver/settings', icon: 'settings' },
+  { slug: 'settings', label: 'Mi cuenta', href: '/driver/settings', icon: 'settings' },
 ];
 
 const tecnicoMenuItems = [
@@ -17,7 +17,7 @@ const tecnicoMenuItems = [
   { slug: 'aceptacion', label: 'Tasa de Aceptación', href: '/tecnico/aceptacion', icon: 'check' },
   { slug: 'ganancias', label: 'Ganancias', href: '/tecnico/ganancias', icon: 'map' },
   { slug: 'billetera', label: 'Mi Billetera', href: '/tecnico/billetera', icon: 'wallet' },
-  { slug: 'settings', label: 'Configuración', href: '/tecnico/settings', icon: 'settings' },
+  { slug: 'settings', label: 'Mi cuenta', href: '/tecnico/settings', icon: 'settings' },
 ];
 
 const icons: Record<string, React.ReactNode> = {

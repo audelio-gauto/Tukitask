@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { setAppMode, saveRealRole } from '@/lib/modeSwitch';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import { Icon } from '@/components/Icon';
+import AccountSections from '@/components/AccountSections';
 
 const TECNICO_DOC_TYPES: { key: string; label: string; icon: React.ComponentProps<typeof Icon>['name']; hint?: string; requiresExpiry?: boolean }[] = [
   { key: 'selfie_cedula', label: 'Selfie sosteniendo tu cedula', icon: 'camera', hint: 'Cara y cedula visibles' },
@@ -22,11 +23,14 @@ export default function TecnicoSettings() {
 
   const docsRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+  const [docsOpen, setDocsOpen] = useState(false);
 
   // Auto-scroll to docs section when ?scroll=docs is in the URL
   useEffect(() => {
     if (searchParams.get('scroll') === 'docs' && docsRef.current) {
-      setTimeout(() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      setDocsOpen(true);
+      const timer = setTimeout(() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      return () => clearTimeout(timer);
     }
   }, [searchParams]);
 
@@ -222,7 +226,7 @@ export default function TecnicoSettings() {
   };
 
   return (
-    <DriverScreenLayout title="Configuración">
+    <DriverScreenLayout title="Mi cuenta" backHref="/tecnico">
       <form onSubmit={handleSave} style={{ paddingBottom: '2rem' }}>
 
         {/* ── HERO: Avatar + nombre + email ── */}
@@ -289,6 +293,15 @@ export default function TecnicoSettings() {
           </div>
         </div>
 
+        <AccountSections items={[
+          { label: 'Mi perfil', description: 'Datos personales y contacto', icon: 'user', section: 'cuenta-perfil' },
+          { label: 'Mis documentos', description: 'Identidad y estado de revisión', icon: 'document', section: 'cuenta-documentos', onActivate: () => setDocsOpen(true) },
+          { label: 'Mi actividad profesional', description: 'Empresa y contacto', icon: 'briefcase', section: 'cuenta-perfil' },
+          { label: 'Mi billetera', description: 'Saldo y movimientos', icon: 'credit-card', href: '/tecnico/billetera' },
+          { label: 'Ganancias', description: 'Resumen de ganancias', icon: 'money', href: '/tecnico/ganancias' },
+          { label: 'Cuenta y preferencias', description: 'Correo, tema y navegación', icon: 'settings', section: 'cuenta-preferencias' },
+        ]} />
+
         {/* ── SECCIÓN: Soy ── */}
         <Section icon="user" title="Soy" required>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -315,8 +328,8 @@ export default function TecnicoSettings() {
 
 
         {/* ── SECCIÓN: Mis documentos ── */}
-        <div ref={docsRef} style={{ scrollMarginTop: 80 }}>
-        <Section icon="paper-clip" title="Mis documentos" collapsible>
+        <div id="cuenta-documentos" ref={docsRef} style={{ scrollMarginTop: 80 }}>
+        <Section icon="paper-clip" title="Mis documentos" collapsible expanded={docsOpen} onExpandedChange={setDocsOpen}>
           <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
           </p>
@@ -435,6 +448,7 @@ export default function TecnicoSettings() {
         </div>
 
         {/* ── SECCIÓN: Datos personales ── */}
+        <div id="cuenta-perfil" style={{ scrollMarginTop: 80 }}>
         <Section icon="user" title="Datos personales">
           <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
             <Field label="Nombre" required>
@@ -448,6 +462,7 @@ export default function TecnicoSettings() {
             <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
           </Field>
         </Section>
+        </div>
 
         {/* ── SECCIÓN: Contacto ── */}
         <Section icon="mail" title="Contacto">
@@ -465,6 +480,7 @@ export default function TecnicoSettings() {
         </Section>
 
         {/* ── SECCIÓN: Cuenta ── */}
+        <div id="cuenta-preferencias" style={{ scrollMarginTop: 80 }}>
         <Section icon="lock" title="Cuenta">
           <Field label="Correo electrónico">
             <input type="email" value={email || ''} readOnly style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
@@ -482,6 +498,7 @@ export default function TecnicoSettings() {
             </select>
           </Field>
         </Section>
+        </div>
 
         {/* ── Mensajes ── */}
         {success && (
@@ -555,12 +572,25 @@ export default function TecnicoSettings() {
 }
 
 /* ── Helpers de layout ── */
-function Section({ icon, title, required, collapsible, children }: { icon: React.ComponentProps<typeof Icon>['name']; title: string; required?: boolean; collapsible?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(!collapsible);
+function Section({ icon, title, required, collapsible, expanded, onExpandedChange, children }: { icon: React.ComponentProps<typeof Icon>['name']; title: string; required?: boolean; collapsible?: boolean; expanded?: boolean; onExpandedChange?: (open: boolean) => void; children: React.ReactNode }) {
+  const [internalOpen, setInternalOpen] = useState(!collapsible);
+  const open = expanded ?? internalOpen;
   return (
     <div style={{ marginBottom: '1rem', background: 'var(--card-bg)', borderRadius: 16, border: '1px solid var(--card-border)', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div
-        onClick={collapsible ? () => setOpen(o => !o) : undefined}
+        role={collapsible ? 'button' : undefined}
+        tabIndex={collapsible ? 0 : undefined}
+        aria-expanded={collapsible ? open : undefined}
+        onClick={collapsible ? () => {
+          if (onExpandedChange) onExpandedChange(!open);
+          else setInternalOpen(!open);
+        } : undefined}
+        onKeyDown={collapsible ? e => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          if (onExpandedChange) onExpandedChange(!open);
+          else setInternalOpen(!open);
+        } : undefined}
         style={{ padding: '0.75rem 1rem', borderBottom: open ? '1px solid var(--card-section-border)' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: collapsible ? 'pointer' : 'default' }}
       >
         <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}>

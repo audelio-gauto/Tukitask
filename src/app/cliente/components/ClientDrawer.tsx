@@ -8,7 +8,7 @@ const menuItems = [
   { slug: 'dashboard', label: 'Dashboard', href: '/cliente', icon: 'home' },
   { slug: 'enviar', label: 'Enviar Paquete', href: '/cliente/enviar', icon: 'send' },
   { slug: 'servicio', label: 'Solicitar Servicio', href: '/cliente/servicio', icon: 'tools' },
-  { slug: 'settings', label: 'Configuración', href: '/cliente/settings', icon: 'settings' },
+  { slug: 'settings', label: 'Mi cuenta', href: '/cliente/settings', icon: 'settings' },
 ];
 
 const icons: Record<string, React.ReactNode> = {

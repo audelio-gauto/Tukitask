@@ -8,6 +8,7 @@ import { authFetch } from '@/lib/authFetch';
 import { useRouter } from 'next/navigation';
 import { clearAppMode, getRealRole, TASKER_ROLES } from '@/lib/modeSwitch';
 import { Icon, type IconName } from '@/components/Icon';
+import AccountSections from '@/components/AccountSections';
 
 function StarDisplay({ rating, total }: { rating: number; total: number }) {
   if (!rating) return null;
@@ -184,11 +185,11 @@ export default function ClientSettingsPage() {
   };
 
   return (
-    <ClientScreenLayout title="Configuración">
+    <ClientScreenLayout title="Mi cuenta">
       <form onSubmit={handleSaveAll}>
 
         {/* ── Perfil ── */}
-        <div className="client-form-card">
+        <div id="cuenta-perfil" className="client-form-card" style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="user" size={16} />
             Mi Perfil
@@ -251,6 +252,14 @@ export default function ClientSettingsPage() {
           </div>
         </div>
 
+        <AccountSections items={[
+          { label: 'Mi perfil', description: 'Nombre, foto y contacto', icon: 'user', section: 'cuenta-perfil' },
+          { label: 'Verificación de identidad', description: 'Documentos y estado de revisión', icon: 'shield', section: 'cuenta-documentos', onActivate: () => setIdOpen(true) },
+          { label: 'Mis direcciones', description: 'Lugares guardados', icon: 'map-pin', href: '/cliente/direcciones' },
+          { label: 'Cuenta y seguridad', description: 'Correo y contraseña', icon: 'lock', section: 'cuenta-seguridad' },
+          { label: 'Preferencias', description: 'Tema de la app', icon: 'settings', section: 'cuenta-preferencias' },
+        ]} />
+
         {/* ── Verificar identidad ── */}
         {(() => {
           const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
@@ -260,9 +269,10 @@ export default function ClientSettingsPage() {
           const bdCol    = isVerified ? 'var(--stat-success-border)' : hasRejected ? 'var(--alert-error-border)' : approvedCount > 0 ? 'var(--alert-warning-border)' : 'var(--border-subtle)';
           const headerIcon: IconName = isVerified ? 'check' : hasRejected ? 'x' : approvedCount > 0 ? 'clock' : 'document';
           return (
-            <div className="client-form-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div id="cuenta-documentos" className="client-form-card" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 80 }}>
               <button
                 type="button"
+                aria-expanded={idOpen}
                 onClick={() => setIdOpen(p => !p)}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -349,7 +359,7 @@ export default function ClientSettingsPage() {
         })()}
 
         {/* ── Cuenta ── */}
-        <div className="client-form-card">
+        <div id="cuenta-seguridad" className="client-form-card" style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="lock" size={16} />
             Cuenta
@@ -368,7 +378,7 @@ export default function ClientSettingsPage() {
         </div>
 
         {/* ── Tema ── */}
-        <div className="client-form-card">
+        <div id="cuenta-preferencias" className="client-form-card" style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="sun" size={16} />
             Tema de la app
