@@ -38,6 +38,30 @@ public class DriverModePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getVersion(PluginCall call) {
+        try {
+            android.content.pm.PackageInfo p = getContext().getPackageManager()
+                .getPackageInfo(getContext().getPackageName(), 0);
+            JSObject r = new JSObject();
+            r.put("versionCode", android.os.Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode);
+            call.resolve(r);
+        } catch (Exception e) {
+            call.reject("version");
+        }
+    }
+
+    /** Abre la descarga del APK nuevo en el navegador del sistema para instalarlo. */
+    @PluginMethod
+    public void downloadUpdate(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || !url.startsWith("https://")) { call.reject("url"); return; }
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
+        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
+        call.resolve();
+    }
+
+    @PluginMethod
     public void hasOverlayPermission(PluginCall call) {
         JSObject r = new JSObject();
         r.put("granted", BubbleManager.canDraw(getContext()));

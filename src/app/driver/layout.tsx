@@ -15,6 +15,7 @@ import { enableDriverMode, disableDriverMode } from '@/lib/driverMode';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfflineBanner from '@/components/OfflineBanner';
+import AppUpdateBanner from '@/components/AppUpdateBanner';
 import GpsBanner from '@/components/GpsBanner';
 import { authFetch } from '@/lib/authFetch';
 
@@ -309,6 +310,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   return (
     <div className="tuki-driver-app">
       <OfflineBanner />
+      <AppUpdateBanner />
       <GpsBanner />
       <WorkerDrawer
         open={drawerOpen}
