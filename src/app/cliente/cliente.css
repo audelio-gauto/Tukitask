@@ -1674,6 +1674,12 @@
 .enviar-category-card { flex: 0 0 132px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 8px; border-radius: 16px; border: 2px solid var(--client-border); background: var(--client-surface); cursor: pointer; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.07); -webkit-tap-highlight-color: transparent; }
 .enviar-category-card:active { transform: scale(0.97); }
 .enviar-category-card.active { border-color: #F5C518; background: rgba(245,197,24,0.12); box-shadow: 0 0 0 3px rgba(245,197,24,0.20); }
+.enviar-category-card:disabled, .enviar-vehicle-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.enviar-category-card:disabled:active, .enviar-vehicle-card:disabled:active { transform: none; }
 .enviar-category-icon { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
 .enviar-category-icon img { width: 56px; height: 56px; object-fit: contain; }
 .enviar-category-label { font-size: 0.82rem; font-weight: 800; color: var(--client-text); }

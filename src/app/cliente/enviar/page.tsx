@@ -8,10 +8,13 @@ import { authFetch } from '@/lib/authFetch';
 import { haversineKm, nearestNeighborSort } from '@/lib/geo';
 import { Icon } from '@/components/Icon';
 import SearchingDriver from '../components/SearchingDriver';
+import { vehicleAvailability, type DriverLookupStatus } from './vehicleAvailability';
 
 const MapboxSearch = dynamic(() => import('../components/MapboxSearch'), { ssr: false });
 const LocationPicker = dynamic(() => import('../components/LocationPicker'), { ssr: false });
 const RoutePreviewMap = dynamic(() => import('../components/RoutePreviewMap'), { ssr: false });
+
+const NO_NEARBY_DRIVERS: Array<{ vehicle_type: string; lat: number; lng: number }> = [];
 
 const vehicleTypes = [
   { value: 'moto', label: 'Moto', sub: 'Paquetes pequeños', icon: 'bolt', priceHint: 'Más económico' },
@@ -289,28 +292,44 @@ export default function EnviarPaquetePage() {
   const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
 
   // ── Nearby drivers (read-only, display only) ──────────────────────────────
-  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ vehicle_type: string; lat: number; lng: number }>>([]);
-  const [driversLoaded, setDriversLoaded] = useState(false);
+  const [driverLookup, setDriverLookup] = useState<{
+    key: string;
+    status: Exclude<DriverLookupStatus, 'loading'>;
+    drivers: Array<{ vehicle_type: string; lat: number; lng: number }>;
+  } | null>(null);
+  const pickupKey = `${form.pickupLat},${form.pickupLng}`;
+  const driverLookupStatus: DriverLookupStatus = driverLookup?.key === pickupKey ? driverLookup.status : 'loading';
+  const nearbyDrivers = driverLookup?.key === pickupKey ? driverLookup.drivers : NO_NEARBY_DRIVERS;
   useEffect(() => {
     const lat = parseFloat(form.pickupLat);
     const lng = parseFloat(form.pickupLng);
     if (!isFinite(lat) || !isFinite(lng)) return;
     let cancelled = false;
+    let loading = false;
     const load = async () => {
-      if (document.hidden) return;
+      if (document.hidden || loading) return;
+      loading = true;
       try {
         const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}`);
-        if (!res.ok || cancelled) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if (!cancelled && Array.isArray(json.drivers)) { setNearbyDrivers(json.drivers); setDriversLoaded(true); }
-      } catch { /* map keeps previous drivers */ }
+        if (!Array.isArray(json.drivers)) throw new Error('Respuesta inválida');
+        if (!cancelled) setDriverLookup({ key: pickupKey, status: 'ready', drivers: json.drivers });
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[nearby-drivers] No se pudo comprobar disponibilidad', error);
+          setDriverLookup({ key: pickupKey, status: 'error', drivers: [] });
+        }
+      } finally {
+        loading = false;
+      }
     };
     load();
     const t = setInterval(load, 4000);
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { cancelled = true; clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
-  }, [form.pickupLat, form.pickupLng]);
+  }, [form.pickupLat, form.pickupLng, pickupKey]);
 
   const nearbyEta = useMemo(() => {
     const lat = parseFloat(form.pickupLat);
@@ -318,6 +337,7 @@ export default function EnviarPaquetePage() {
     const result: Record<string, number | null> = {};
     if (!isFinite(lat) || !isFinite(lng)) return result;
     for (const d of nearbyDrivers) {
+      if (!Number.isFinite(d.lat) || !Number.isFinite(d.lng)) continue;
       const km = haversineKm(lat, lng, d.lat, d.lng);
       const speed = d.vehicle_type === 'moto' ? 30 : 25;
       const min = Math.max(1, Math.round((km / speed) * 60));
@@ -325,6 +345,7 @@ export default function EnviarPaquetePage() {
     }
     return result;
   }, [nearbyDrivers, form.pickupLat, form.pickupLng]);
+  const selectedAvailability = vehicleAvailability(driverLookupStatus, nearbyEta[form.vehicleType]);
 
   const visibleNearbyDrivers = useMemo(() => {
     if (showServicePicker) return nearbyDrivers;
@@ -499,6 +520,7 @@ export default function EnviarPaquetePage() {
     // Validaciones previas al envío
     if (!form.pickupAddress.trim()) { setSubmitError('Dirección de recogida requerida'); return; }
     if (!firstStop.address.trim()) { setSubmitError('Dirección de entrega requerida'); return; }
+    if (!selectedAvailability.available) { setSubmitError(selectedAvailability.label); return; }
     if (orderType === 'mandadito' && !shoppingList?.trim()) {
       setSubmitError('Para mandaditos debes escribir qué debe comprar el mensajero'); return;
     }
@@ -894,12 +916,14 @@ export default function EnviarPaquetePage() {
                 const selected = !showServicePicker && orderType === cat.orderType && form.vehicleType === cat.vehicle;
                 const est = estimatePriceFor(cat.vehicle);
                 const eta = nearbyEta[cat.vehicle];
+                const availability = vehicleAvailability(driverLookupStatus, eta);
                 const hasDest = stops.some(s => isFinite(parseFloat(s.lat)) && isFinite(parseFloat(s.lng)));
                 return (
                   <button
                     key={cat.key}
                     type="button"
-                    className={`enviar-category-card ${selected ? 'active' : ''}`}
+                    disabled={!availability.available}
+                    className={`enviar-category-card ${selected && availability.available ? 'active' : ''}`}
                     onClick={() => {
                       setOrderType(cat.orderType);
                       setShowServicePicker(false);
@@ -915,7 +939,7 @@ export default function EnviarPaquetePage() {
                     <span className="enviar-category-price">
                       {!hasDest ? 'Elegí destino' : !loadingPricing && est > 0 ? `${Math.round(est).toLocaleString('es-PY')} Gs` : '—'}
                     </span>
-                    <span className="enviar-category-eta">{eta ? `${eta} min` : 'Sin conductores cerca'}</span>
+                    <span className="enviar-category-eta">{availability.label}</span>
                   </button>
                 );
               })}
@@ -1191,6 +1215,7 @@ export default function EnviarPaquetePage() {
                     ['moto', 'auto'].includes(v.value)
                   ).map(v => {
                     const vp = pricing[v.value];
+                    const availability = vehicleAvailability(driverLookupStatus, nearbyEta[v.value]);
                     const dist = routeDistanceMeters ? routeDistanceMeters / 1000 : distanceKm;
                     let estPrice = 0;
                     if (vp?.base_price) estPrice += vp.base_price;
@@ -1201,7 +1226,8 @@ export default function EnviarPaquetePage() {
                       <button
                         key={v.value}
                         type="button"
-                        className={`enviar-vehicle-card ${form.vehicleType === v.value ? 'selected' : ''}`}
+                        disabled={!availability.available}
+                        className={`enviar-vehicle-card ${form.vehicleType === v.value && availability.available ? 'selected' : ''}`}
                         onClick={() => update('vehicleType', v.value)}
                       >
                         <span className="enviar-vehicle-icon">
@@ -1222,7 +1248,7 @@ export default function EnviarPaquetePage() {
                             {orderType === 'viaje' && v.value === 'moto' ? 'Capacidad 1 Persona' :
                              orderType === 'viaje' && v.value === 'auto' ? 'Capacidad hasta 3 personas' :
                              v.sub}
-                            {nearbyEta[v.value] ? ` · ${nearbyEta[v.value]} min` : ''}
+                            {` · ${availability.label}`}
                           </span>
                         </div>
                         <div className="enviar-vehicle-price">
@@ -1232,7 +1258,7 @@ export default function EnviarPaquetePage() {
                             <span className="enviar-vehicle-hint">{v.priceHint}</span>
                           )}
                         </div>
-                        {form.vehicleType === v.value && (
+                        {form.vehicleType === v.value && availability.available && (
                           <span className="enviar-vehicle-check">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           </span>
@@ -1629,7 +1655,7 @@ export default function EnviarPaquetePage() {
                     type="submit"
                     form="enviar-form"
                     className="enviar-submit-final"
-                    disabled={sending || offerPrice <= 0 || (driversLoaded && !nearbyEta[form.vehicleType])}
+                    disabled={sending || offerPrice <= 0 || !selectedAvailability.available}
                     style={{ flex: 1 }}
                   >
                     {sending ? (
@@ -1639,14 +1665,14 @@ export default function EnviarPaquetePage() {
                         </svg>
                         Enviando...
                       </span>
+                    ) : !selectedAvailability.available ? (
+                      <>{selectedAvailability.label}</>
                     ) : promoResult ? (
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {ctaLabel} ·
                         <span style={{ textDecoration: 'line-through', opacity: 0.6, fontSize: '0.85em' }}>{offerPrice.toLocaleString('es-PY')} Gs</span>
                         <span style={{ color: '#bbf7d0', fontWeight: 800 }}>{Math.max(0, offerPrice - promoResult.discount_amount).toLocaleString('es-PY')} Gs</span>
                       </span>
-                    ) : driversLoaded && !nearbyEta[form.vehicleType] ? (
-                      <>Sin conductores disponibles</>
                     ) : (
                       <>{ctaLabel} · {offerPrice > 0 ? offerPrice.toLocaleString('es-PY') : '0'} Gs</>
                     )}
