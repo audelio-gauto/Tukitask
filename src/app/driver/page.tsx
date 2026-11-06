@@ -609,7 +609,7 @@ export default function DriverDashboard() {
       )}
 
       {/* Driver profile and Tukitask branding */}
-      <div className="tuki-driver-profile">
+      <div className="tuki-driver-profile" style={feedVisible ? { display: 'none' } : undefined}>
         <div className="tuki-driver-avatar-wrap">
           {profilePhoto ? (
             <img src={profilePhoto} alt="" loading="lazy" decoding="async" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} className="tuki-driver-avatar" />
@@ -636,14 +636,14 @@ export default function DriverDashboard() {
       </div>
 
       {/* Floating menu button — top right */}
-      <button className="tuki-float-btn menu" onClick={openDrawer} aria-label="Menú">
+      <button className="tuki-float-btn menu" style={feedVisible ? { display: 'none' } : undefined} onClick={openDrawer} aria-label="Menú">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
       {/* Wallet balance pill — centered top */}
-      <Link href="/driver/billetera" className={`tuki-wallet-pill${walletBlocked ? ' is-blocked' : ''}`} aria-label="Mi billetera">
+      <Link href="/driver/billetera" style={feedVisible ? { display: 'none' } : undefined} className={`tuki-wallet-pill${walletBlocked ? ' is-blocked' : ''}`} aria-label="Mi billetera">
         <span className="tuki-wallet-pill-amount">
           {walletBalance !== null
             ? `${Number(walletBalance).toLocaleString('es-PY')} ₲`
@@ -655,7 +655,7 @@ export default function DriverDashboard() {
       </Link>
 
       {/* Floating locate button */}
-      <button className="tuki-float-btn locate" onClick={() => locateFnRef.current?.()} aria-label="Mi ubicación">
+      <button className="tuki-float-btn locate" style={feedVisible ? { display: 'none' } : undefined} onClick={() => locateFnRef.current?.()} aria-label="Mi ubicación">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
           <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
@@ -667,6 +667,7 @@ export default function DriverDashboard() {
       <button
         className={`tuki-float-btn filter${Object.values(serviceFilters).some(v => !v) ? ' has-filter' : ''}`}
         onClick={() => setFilterOpen(true)}
+        style={feedVisible ? { display: 'none' } : undefined}
         aria-label="Filtrar servicios"
       >
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
