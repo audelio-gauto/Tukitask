@@ -229,6 +229,12 @@ export default function DriverNavegarPage() {
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <div ref={mapDivRef} style={{ position: 'absolute', inset: 0 }} />
 
+        {route && (
+          <div style={{ position: 'absolute', left: 12, right: 68, top: 'calc(env(safe-area-inset-top, 0px) + 12px)', zIndex: 1001, background: '#111827', color: '#fff', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontWeight: 900, fontSize: '1.3rem', lineHeight: 1.1, textAlign: 'center' }}>
+            {route.etaMin} min <span style={{ color: '#9ca3af', fontWeight: 800 }}>· {route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}</span>
+          </div>
+        )}
+
         <button
           onClick={recenter}
           aria-label="Centrar en mi ubicación"
@@ -265,7 +271,7 @@ export default function DriverNavegarPage() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <div style={{ flex: 1, minWidth: 0, fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                {route ? `${route.etaMin} min · ${route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}` : 'Calculando ruta…'}
+                {!route && 'Calculando ruta…'}
               </div>
               {target && (
                 <button
