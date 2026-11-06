@@ -795,6 +795,22 @@
   box-shadow: 0 0 0 4px rgba(245,197,24,0.25), 0 2px 8px rgba(0,0,0,0.2);
 }
 
+.client-nearby-vehicle {
+  width: 46px;
+  height: 46px;
+  pointer-events: none;
+}
+.client-nearby-vehicle-icon {
+  animation: client-nearby-vehicle-pulse 2.2s ease-in-out infinite;
+}
+@keyframes client-nearby-vehicle-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .client-nearby-vehicle-icon { animation: none; }
+}
+
 /* Full-page form container */
 .enviar-page {
   display: flex;
