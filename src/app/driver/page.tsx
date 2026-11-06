@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { setDriverBubble } from '@/lib/driverMode';
 import { useWorkerContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -386,8 +387,14 @@ export default function DriverDashboard() {
     };
   }, [email]);
 
+  // La burbuja flotante (APK) solo aparece con el conductor disponible
+  useEffect(() => {
+    void setDriverBubble(available && !walletBlocked);
+  }, [available, walletBlocked]);
+
   // Touch drag state
   const isDragging = useRef(false);
+  const moved = useRef(false);
   const startY = useRef(0);
   const startTranslate = useRef(0);
 
@@ -419,6 +426,7 @@ export default function DriverDashboard() {
       if (['button', 'input', 'textarea', 'select', 'a'].includes(tag)) return;
 
       isDragging.current = true;
+      moved.current = false;
       startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
       startTranslate.current = getTranslateY();
       sheet!.style.transition = 'none';
@@ -428,6 +436,8 @@ export default function DriverDashboard() {
       if (!isDragging.current) return;
       const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const delta = currentY - startY.current;
+      if (!moved.current && Math.abs(delta) < 8) return;
+      moved.current = true;
       const newTranslate = Math.max(0, startTranslate.current + delta);
       sheet!.style.transform = `translateY(${newTranslate}px)`;
     }
@@ -436,6 +446,9 @@ export default function DriverDashboard() {
       if (!isDragging.current) return;
       isDragging.current = false;
       sheet!.style.transition = '';
+
+      // Un toque simple (chips, ganancias, etc.) no debe mover el panel
+      if (!moved.current) { sheet!.style.transform = ''; return; }
 
       const finalTranslate = getTranslateY();
       const viewH = window.innerHeight;

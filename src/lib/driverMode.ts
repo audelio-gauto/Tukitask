@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface DriverModePlugin {
   setEnabled(opts: { enabled: boolean }): Promise<void>;
+  setBubble(opts: { enabled: boolean }): Promise<void>;
   hasOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
 }
@@ -21,6 +22,12 @@ export async function enableDriverMode(): Promise<void> {
       await DriverMode.requestOverlayPermission();
     }
   } catch { /* el plugin nativo no está en este APK */ }
+}
+
+/** Burbuja flotante: solo cuando el conductor está disponible. */
+export async function setDriverBubble(enabled: boolean): Promise<void> {
+  if (Capacitor.getPlatform() !== 'android') return;
+  try { await DriverMode.setBubble({ enabled }); } catch { /* sin plugin */ }
 }
 
 export async function disableDriverMode(): Promise<void> {

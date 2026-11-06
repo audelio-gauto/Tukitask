@@ -28,7 +28,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
-        if (BubbleManager.isEnabled()) {
+        if (DriverModePlugin.keepAwake) {
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     }

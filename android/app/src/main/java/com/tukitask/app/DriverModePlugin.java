@@ -11,17 +11,30 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 /** Puente JS ↔ nativo para el modo conductor: burbuja flotante y pantalla siempre encendida. */
 @CapacitorPlugin(name = "DriverMode")
 public class DriverModePlugin extends Plugin {
+    static volatile boolean keepAwake = false;
 
     @PluginMethod
     public void setEnabled(final PluginCall call) {
         final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
-        BubbleManager.setEnabled(enabled);
+        keepAwake = enabled;
+        if (!enabled) BubbleManager.setEnabled(false);
         getActivity().runOnUiThread(() -> {
             if (enabled) getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             else getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (!enabled) BubbleManager.hide(getContext().getApplicationContext());
             call.resolve();
         });
+    }
+
+    /** La burbuja solo se muestra mientras el conductor está disponible. */
+    @PluginMethod
+    public void setBubble(final PluginCall call) {
+        final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        BubbleManager.setEnabled(enabled);
+        if (!enabled) {
+            getActivity().runOnUiThread(() -> BubbleManager.hide(getContext().getApplicationContext()));
+        }
+        call.resolve();
     }
 
     @PluginMethod
