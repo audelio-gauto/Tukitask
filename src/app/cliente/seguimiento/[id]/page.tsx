@@ -13,6 +13,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
 import ChatModal from '@/components/ChatModal';
 import { playArrivingAlert } from '@/lib/audio';
+import { nextArrivalAlert } from '@/lib/arrivalAlert';
 import RatingModal from '@/components/RatingModal';
 import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
@@ -712,18 +713,27 @@ export default function SeguimientoPage() {
     setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
   }, [driverLoc, order]);  
 
-  // Aviso sonoro al cliente cuando el conductor está a ~80 m del punto de recogida
-  const arrivedAlertRef = useRef(false);
+  const [arrivalAlertKey, setArrivalAlertKey] = useState<string | null>(null);
+  const arrivalOrderKey = order && type !== 'service' ? `${order.id}:${order.accepted_by ?? ''}` : null;
+  const arrivalStatus = order?.status ?? null;
   useEffect(() => {
-    if (!driverLoc || !order || type === 'service') return;
-    if (!['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order.status))) return;
-    if (order.pickup_lat == null || order.pickup_lng == null) return;
-    const m = haversineKm(Number(driverLoc.lat), Number(driverLoc.lng), Number(order.pickup_lat), Number(order.pickup_lng)) * 1000;
-    if (m <= 80 && !arrivedAlertRef.current) {
-      arrivedAlertRef.current = true;
-      playArrivingAlert();
+    let distanceMeters: number | null = null;
+    if (driverLoc && order?.pickup_lat != null && order.pickup_lng != null) {
+      const coords = [driverLoc.lat, driverLoc.lng, order.pickup_lat, order.pickup_lng].map(Number);
+      if (coords.every(Number.isFinite)) {
+        distanceMeters = haversineKm(coords[0], coords[1], coords[2], coords[3]) * 1000;
+      }
     }
-  }, [driverLoc, order, type]);
+    setArrivalAlertKey(current => nextArrivalAlert(current, arrivalOrderKey, arrivalStatus, distanceMeters));
+  }, [driverLoc, order, arrivalOrderKey, arrivalStatus]);
+
+  useEffect(() => {
+    if (!arrivalAlertKey || arrivalAlertKey !== arrivalOrderKey ||
+        !arrivalStatus || !['accepted', 'assigned', 'picking_up'].includes(arrivalStatus)) return;
+    playArrivingAlert();
+    const timer = setInterval(playArrivingAlert, 3000);
+    return () => clearInterval(timer);
+  }, [arrivalAlertKey, arrivalOrderKey, arrivalStatus]);
   useEffect(() => {
     if (id) {
       fetchOrder();

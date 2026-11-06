@@ -9,7 +9,6 @@ import ActiveOrders from '../../components/ActiveOrders';
 import RatingModal from '@/components/RatingModal';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
 import { themeTile, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
-import { playArrivingAlert } from '@/lib/audio';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -55,7 +54,6 @@ export default function DriverNavegarPage() {
   const followRef = useRef(true);
   const [following, setFollowing] = useState(true);
   const lastRouteKey = useRef('');
-  const arrivingRef = useRef('');
   const [mapReady, setMapReady] = useState(false);
   const [mapFull, setMapFull] = useState(false);
 
@@ -204,18 +202,7 @@ export default function DriverNavegarPage() {
   }, [mapReady, driverPos, targetKey, toPickup]);
 
   // Al cambiar de tramo (recogida → entrega) se vuelve a encuadrar
-  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; arrivingRef.current = ''; }, [toPickup]);
-
-  // Aviso sonoro al llegar a ~80 m del punto de recogida / entrega (una vez por destino)
-  useEffect(() => {
-    if (!driverPos || !targetKey) return;
-    const [tLat, tLng] = targetKey.split(',').map(Number);
-    const meters = haversineKm(driverPos.lat, driverPos.lng, tLat, tLng) * 1000;
-    if (meters <= 80 && arrivingRef.current !== targetKey) {
-      arrivingRef.current = targetKey;
-      playArrivingAlert();
-    }
-  }, [driverPos, targetKey]);
+  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; }, [toPickup]);
 
   const recenter = () => {
     const map = mapRef.current;

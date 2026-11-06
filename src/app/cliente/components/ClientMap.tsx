@@ -1,7 +1,6 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import type { Marker } from 'mapbox-gl';
-import { vehicleIconHtml, vehicleKindFrom } from '@/lib/mapVehicle';
+import { useNearbyDriverMarkers } from './useNearbyDriverMarkers';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 const DEFAULT_CENTER = { lat: -25.2637, lng: -57.5759 };
@@ -48,7 +47,6 @@ export default function ClientMap({
   locateRef?: React.MutableRefObject<(() => void) | null>;
   drivers?: Array<{ vehicle_type: string; lat: number; lng: number }>;
 }) {
-  const driverMarkers = useRef<Map<string, Marker>>(new Map());
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const initRef = useRef(false);
@@ -182,44 +180,7 @@ export default function ClientMap({
     }
   }, [dark]);
 
-  // Nearby drivers
-  useEffect(() => {
-    const map = mapInstance.current;
-    const mapboxgl = mbRef.current;
-    if (!map || !mapboxgl || !glReady || glFailed) return;
-    const markers = driverMarkers.current;
-    const seen = new Set<string>();
-    const counts = new Map<string, number>();
-    for (const d of drivers) {
-      if (!isFinite(d.lat) || !isFinite(d.lng)) continue;
-      const kind = vehicleKindFrom(d.vehicle_type);
-      const position = `${kind}:${d.lat}:${d.lng}`;
-      const count = counts.get(position) ?? 0;
-      counts.set(position, count + 1);
-      const key = `${position}:${count}`;
-      seen.add(key);
-      if (markers.has(key)) continue;
-      const el = document.createElement('div');
-      el.className = 'client-nearby-vehicle';
-      el.innerHTML = `<div class="client-nearby-vehicle-icon">${vehicleIconHtml(kind)}</div>`;
-      markers.set(key, new mapboxgl.Marker({ element: el }).setLngLat([d.lng, d.lat]).addTo(map));
-    }
-    for (const [key, marker] of markers) {
-      if (!seen.has(key)) {
-        marker.remove();
-        markers.delete(key);
-      }
-    }
-  }, [glReady, glFailed, drivers]);
-
-  useEffect(() => {
-    if (!glReady || glFailed) return;
-    const markers = driverMarkers.current;
-    return () => {
-      for (const marker of markers.values()) marker.remove();
-      markers.clear();
-    };
-  }, [glReady, glFailed]);
+  useNearbyDriverMarkers(mapInstance, mbRef, glReady && !glFailed, drivers);
 
   // Update GL markers and route
   useEffect(() => {

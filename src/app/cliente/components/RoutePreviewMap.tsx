@@ -1,12 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { routePinElement, PIN_A_COLOR, PIN_B_COLOR } from '@/lib/mapPins';
+import { useNearbyDriverMarkers, type NearbyDriverPin } from './useNearbyDriverMarkers';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
-export interface NearbyDriverPin { vehicle_type: string; lat: number; lng: number }
-
-const DRIVER_EMOJI: Record<string, string> = { moto: '🏍️', auto: '🚖', motocarro: '🛺', camion2t: '🚚' };
+export type { NearbyDriverPin } from './useNearbyDriverMarkers';
 
 interface RoutePreviewMapProps {
   pickup: { lat: number; lng: number };
@@ -35,7 +34,6 @@ function useDarkMode() {
 const NO_DRIVERS: NearbyDriverPin[] = [];
 
 export default function RoutePreviewMap({ pickup, stops, routeCoords = [], routeSummary, drivers = NO_DRIVERS }: RoutePreviewMapProps) {
-  const driverMarkersRef = useRef<any[]>([]);
   const dark = useDarkMode();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -234,27 +232,7 @@ export default function RoutePreviewMap({ pickup, stops, routeCoords = [], route
    
   }, [ready, styleVersion, pickup.lat, pickup.lng, stops, routeCoords, routeSummary]);
 
-  // ── Nearby drivers (separate markers so route redraws never wipe them) ─────
-  useEffect(() => {
-    const map = mapRef.current;
-    const mapboxgl = mbRef.current;
-    if (!map || !mapboxgl || !ready) return;
-    for (const m of driverMarkersRef.current) m.remove();
-    driverMarkersRef.current = [];
-    for (const d of drivers) {
-      if (!isFinite(d.lat) || !isFinite(d.lng)) continue;
-      const el = document.createElement('div');
-      el.textContent = DRIVER_EMOJI[d.vehicle_type] ?? '🚖';
-      el.style.cssText = 'width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));pointer-events:none;';
-      driverMarkersRef.current.push(
-        new mapboxgl.Marker({ element: el }).setLngLat([d.lng, d.lat]).addTo(map),
-      );
-    }
-    return () => {
-      for (const m of driverMarkersRef.current) m.remove();
-      driverMarkersRef.current = [];
-    };
-  }, [ready, drivers]);
+  useNearbyDriverMarkers(mapRef, mbRef, ready && !failed, drivers);
 
 
 
