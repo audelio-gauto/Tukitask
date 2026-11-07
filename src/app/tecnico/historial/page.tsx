@@ -184,7 +184,7 @@ export default function TecnicoHistorialPage() {
 
           {/* Address */}
           {job.address && (
-            <div className="tuki-address-box" style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 10 }}>
               <div className="tuki-address-label">Direccion</div>
               <div className="tuki-address-text">{job.address}</div>
             </div>
@@ -193,8 +193,7 @@ export default function TecnicoHistorialPage() {
           {/* Description */}
           {job.description && (
             <div style={{
-              background: 'var(--surface-2)', borderRadius: 8,
-              padding: '7px 10px', marginBottom: 10,
+              marginBottom: 10,
               fontSize: '0.77rem', color: 'var(--text-secondary)',
               fontStyle: 'italic',
             }}>
@@ -208,32 +207,30 @@ export default function TecnicoHistorialPage() {
             const hasExtraCharge = Number(job.extra_charge ?? 0) > 0;
             const hasExtras = hasExtraItems || hasExtraCharge;
             return (
-              <div style={{ marginBottom: 10, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 14, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(16,185,129,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#10b981' }}>₲{Number(job.agreed_price ?? totalPrice).toLocaleString('es-PY')}</span>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Acordado</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--stat-success-text)' }}>₲{Number(job.agreed_price ?? totalPrice).toLocaleString('es-PY')}</span>
                 </div>
                 {hasExtras && (
                   <>
-                    <div style={{ height: 1, background: 'rgba(16,185,129,0.15)', margin: '0 14px' }} />
                     {hasExtraItems
                       ? job.extra_items!.map((it, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>₲{Number(it.amount).toLocaleString('es-PY')}</span>
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--alert-warning-title)', fontWeight: 600 }}>➕ {it.reason || 'Extra'}</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--alert-warning-title)' }}>₲{Number(it.amount).toLocaleString('es-PY')}</span>
                           </div>
                         ))
                       : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>➕ Extra servicio</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>₲{Number(job.extra_charge).toLocaleString('es-PY')}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--alert-warning-title)', fontWeight: 600 }}>➕ Extra servicio</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--alert-warning-title)' }}>₲{Number(job.extra_charge).toLocaleString('es-PY')}</span>
                           </div>
                         )
                     }
-                    <div style={{ height: 1, background: 'rgba(16,185,129,0.25)', margin: '0 14px' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: 'rgba(16,185,129,0.1)' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(16,185,129,0.8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
-                      <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#10b981' }}>₲{totalPrice.toLocaleString('es-PY')}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderTop: '1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                      <span style={{ fontSize: '1.12rem', fontWeight: 900, color: 'var(--stat-success-text)' }}>₲{totalPrice.toLocaleString('es-PY')}</span>
                     </div>
                   </>
                 )}
@@ -243,7 +240,7 @@ export default function TecnicoHistorialPage() {
 
           {/* Warranty */}
           {job.warranty_days != null && job.warranty_days > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '5px 10px', marginBottom: 10, fontSize: '0.8rem', fontWeight: 700, color: '#818cf8' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
               🛡️ Garantía: {job.warranty_days} {job.warranty_days === 1 ? 'día' : 'días'}
             </div>
           )}
@@ -253,6 +250,7 @@ export default function TecnicoHistorialPage() {
             <button
               onClick={() => setChatModal({ jobId: job.id, clientName: clientName, clientPhoto: clientPhoto })}
               className="tuki-btn tuki-btn-info tuki-btn-block"
+              style={{ background: 'transparent' }}
             >
               <Icon name="chat" size={15} /> Chat con el cliente
             </button>

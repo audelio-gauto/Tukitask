@@ -20,7 +20,13 @@ test('technician history uses the same theme-aware card surfaces as driver histo
   assert.match(styles, /\.tuki-trip-top\s*\{[^}]*border-bottom:\s*1px solid var\(--border-subtle\)/);
   assert.match(tokens, /--surface-1:\s*#1C1C2E/i);
   assert.match(tokens, /\[data-theme="light"\]\s*\{[^}]*--surface-1:\s*#ffffff/i);
-  assert.match(technician, /background: 'var\(--surface-2\)'/);
+  assert.doesNotMatch(technician, /className="tuki-address-box"/);
+  const details = technician.slice(technician.indexOf('{/* Address */}'), technician.indexOf('{/* Rate button'));
+  assert.match(details, /style=\{\{ background: 'transparent' \}\}/);
+  assert.doesNotMatch(details.replace("background: 'transparent'", ''), /background:/);
+  for (const value of ['job.address', 'job.description', 'job.agreed_price', 'job.extra_items', 'job.extra_charge', 'job.warranty_days', 'Chat con el cliente']) {
+    assert.ok(details.includes(value), `missing ${value}`);
+  }
   assert.match(technician, /setChatModal\(/);
   assert.match(technician, /setRatingJobId\(/);
   assert.match(technician, /setReportModal\(/);
