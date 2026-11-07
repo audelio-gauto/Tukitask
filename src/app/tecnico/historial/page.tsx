@@ -139,24 +139,25 @@ export default function TecnicoHistorialPage() {
     return (
       <div
         key={job.id}
-        className="tuki-card"
+        className="tuki-trip-card"
         style={{
-          marginBottom: 12,
           ['--status-color' as never]: statusTone.color,
           ['--status-bg' as never]: statusTone.bg,
           ['--status-border' as never]: statusTone.border,
-          ['--status-outline' as never]: statusTone.border,
         }}
       >
-        <div className="tuki-card-header">
-          <span className="tuki-card-title">
-            <Icon name={st.icon} size={14} color={statusTone.color} />
-            {st.label} · {serviceLabel}
+        <div className="tuki-trip-top">
+          <div className="tuki-trip-meta">
+            <span className="tuki-trip-code">{serviceLabel}</span>
+            <span className="tuki-trip-date">{date}</span>
+          </div>
+          <span className="tuki-trip-status" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name={st.icon} size={14} />
+            {st.label}
           </span>
-          <span className="tuki-card-subtitle">{date}</span>
         </div>
 
-        <div className="tuki-card-body">
+        <div className="tuki-trip-body">
           {/* Client row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div
@@ -192,7 +193,7 @@ export default function TecnicoHistorialPage() {
           {/* Description */}
           {job.description && (
             <div style={{
-              background: 'var(--glass-card)', borderRadius: 8,
+              background: 'var(--surface-2)', borderRadius: 8,
               padding: '7px 10px', marginBottom: 10,
               fontSize: '0.77rem', color: 'var(--text-secondary)',
               fontStyle: 'italic',
