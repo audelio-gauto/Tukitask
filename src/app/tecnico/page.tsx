@@ -305,6 +305,7 @@ export default function TecnicoDashboard() {
 
   // Touch drag state
   const isDragging = useRef(false);
+  const moved = useRef(false);
   const startY = useRef(0);
   const startTranslate = useRef(0);
 
@@ -329,9 +330,9 @@ export default function TecnicoDashboard() {
 
     function onStart(e: TouchEvent | MouseEvent) {
       if (isDesktop()) return;
-      const tag = ((e.target as HTMLElement)?.tagName || '').toLowerCase();
-      if (['button', 'input', 'textarea', 'select', 'a'].includes(tag)) return;
+      if (e.target instanceof Element && e.target.closest('button, input, textarea, select, a, label')) return;
       isDragging.current = true;
+      moved.current = false;
       startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
       startTranslate.current = getTranslateY();
       sheet!.style.transition = 'none';
@@ -341,6 +342,8 @@ export default function TecnicoDashboard() {
       if (!isDragging.current) return;
       const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const delta = currentY - startY.current;
+      if (!moved.current && Math.abs(delta) < 8) return;
+      moved.current = true;
       const newTranslate = Math.max(0, startTranslate.current + delta);
       sheet!.style.transform = `translateY(${newTranslate}px)`;
     }
@@ -349,6 +352,7 @@ export default function TecnicoDashboard() {
       if (!isDragging.current) return;
       isDragging.current = false;
       sheet!.style.transition = '';
+      if (!moved.current) { sheet!.style.transform = ''; return; }
       const finalTranslate = getTranslateY();
       const viewH = window.innerHeight;
       if (finalTranslate > viewH * 0.6) {
