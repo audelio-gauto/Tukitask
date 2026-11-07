@@ -1,12 +1,5 @@
 /* TukiTask Tecnico Panel — theme overrides on top of driver/driver.css */
 
-/* Yellow accent for tecnico instead of lime */
-.tuki-back-btn {
-  background: rgba(245,197,24,0.12);
-  color: #F5C518;
-}
-.tuki-back-btn:hover { background: rgba(245,197,24,0.22); }
-
 /* ── Radar overlay (tecnico — gold tones) ────────────────── */
 .tuki-radar-ring {
   border-color: rgba(245,197,24,0.8);
@@ -33,7 +26,7 @@
 }
 
 /* Stat icon uses yellow for tecnico */
-.tuki-stat-icon { color: #F5C518; }
+.tuki-stat-icon { color: var(--panel-accent); }
 
 /* Tecnico header and content use global theme tokens */
 .tuki-normal-header {
@@ -52,7 +45,7 @@
 /* Status badge online — yellow for tecnico */
 .tuki-status-online {
   background: rgba(245,197,24,0.12);
-  color: #F5C518;
+  color: var(--panel-accent);
   box-shadow: 0 0 0 1.5px rgba(245,197,24,0.30);
 }
 
@@ -61,4 +54,3 @@ input:checked + .tuki-toggle-slider {
   background: linear-gradient(135deg, #F5C518, #E6A800);
   box-shadow: 0 2px 10px rgba(245,197,24,0.45);
 }
-

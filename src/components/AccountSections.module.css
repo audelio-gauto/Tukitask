@@ -39,7 +39,7 @@
 
 .item:hover, .item:focus-visible { background: var(--surface-2, rgba(128, 128, 128, 0.12)); }
 .item:focus-visible { outline: 2px solid #d59d00; outline-offset: 1px; }
-.icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px; color: #947000; background: rgba(245, 197, 24, 0.16); }
+.icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px; color: var(--panel-accent, #947000); background: rgba(245, 197, 24, 0.16); }
 .text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
 .label { font-size: 0.88rem; font-weight: 750; }
 .description { color: var(--text-secondary, var(--client-text-secondary, #4b5563)); font-size: 0.75rem; }

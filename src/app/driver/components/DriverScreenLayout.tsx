@@ -8,17 +8,17 @@ export default function DriverScreenLayout({ children, title, backHref }: { chil
   return (
     <>
       <div className="tuki-normal-header">
-        <button className="menu-btn" onClick={openDrawer}>
-          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <span className="tuki-screen-title">{title}</span>
-        <Link href={backHref ?? '/driver'} className="tuki-back-btn">
+        <Link href={backHref ?? '/driver'} className="tuki-back-btn" aria-label="Volver">
           <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
+        <span className="tuki-screen-title">{title}</span>
+        <button className="menu-btn" onClick={openDrawer} aria-label="Menú">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </div>
       <div className="tuki-normal-content">
         {children}

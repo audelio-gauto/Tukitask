@@ -419,13 +419,13 @@ export default function CitasPage() {
           >✕</button>
         </div>
       )}
-      <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', color: 'var(--text-primary)', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>←</button>
-        <div>
+      <div className="tuki-normal-header">
+        <button type="button" className="tuki-back-btn" aria-label="Volver" onClick={() => router.back()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
+        <div className="tuki-screen-title">
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Citas Activas</h1>
           <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85 }}>Tus trabajos en curso</p>
         </div>
-          <button onClick={loadJobs} style={{ marginLeft: 'auto', background: 'rgba(245,197,24,0.15)', border: 'none', color: '#F5C518', borderRadius: 8, padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={loadJobs} style={{ marginLeft: 'auto', background: 'rgba(245,197,24,0.15)', border: 'none', color: 'var(--panel-accent)', borderRadius: 8, padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
           ↺
         </button>
       </div>

@@ -253,7 +253,7 @@ export default function TecnicoSettings() {
             }}
           >
             {!profilePhoto && (
-              <svg width="36" height="36" fill="none" stroke="rgba(255,255,255,0.8)" viewBox="0 0 24 24">
+              <svg width="36" height="36" fill="none" stroke="#172033" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             )}
@@ -289,10 +289,10 @@ export default function TecnicoSettings() {
           }} />
 
           <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem', margin: 0, lineHeight: 1.2 }}>
+            <p style={{ color: '#172033', fontWeight: 800, fontSize: '1.05rem', margin: 0, lineHeight: 1.2 }}>
               {firstName && lastName ? `${firstName} ${lastName}` : displayName || 'Mi perfil'}
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem', margin: '2px 0 0' }}>{email}</p>
+            <p style={{ color: '#28354a', fontSize: '0.8rem', margin: '2px 0 0', overflowWrap: 'anywhere' }}>{email}</p>
           </div>
         </div>
         </div>
@@ -313,9 +313,9 @@ export default function TecnicoSettings() {
             {(['hombre', 'mujer'] as const).map(g => (
               <button key={g} type="button" onClick={() => setGender(g)} style={{
                 flex: 1, padding: '0.9rem 0.5rem', borderRadius: 14,
-                border: gender === g ? '2px solid #F5C518' : '2px solid #e5e7eb',
-                background: gender === g ? 'linear-gradient(135deg,#F5C518,#F58A07)' : '#f9fafb',
-                color: gender === g ? '#1C1C2E' : '#374151',
+                border: gender === g ? '2px solid #F5C518' : '2px solid var(--input-border)',
+                background: gender === g ? 'linear-gradient(135deg,#F5C518,#F58A07)' : 'var(--input-bg)',
+                color: gender === g ? '#1C1C2E' : 'var(--input-text)',
                 fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'all 0.18s', boxShadow: gender === g ? '0 4px 12px rgba(245,197,24,0.35)' : 'none',
@@ -336,7 +336,7 @@ export default function TecnicoSettings() {
         {/* ── SECCIÓN: Mis documentos ── */}
         <div id="cuenta-documentos" ref={docsRef} hidden={accountSection !== 'cuenta-documentos'} style={{ scrollMarginTop: 80 }}>
         <Section icon="paper-clip" title="Mis documentos" collapsible expanded={docsOpen} onExpandedChange={setDocsOpen}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -347,21 +347,21 @@ export default function TecnicoSettings() {
               const isLocked = ds?.status === 'approved' && !(_expAtT && new Date(_expAtT).getTime() <= Date.now());
               const needsExpiry = doc.requiresExpiry && !docExpiries[doc.key];
               return (
-                <div key={doc.key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                <div key={doc.key} style={{ padding: '10px 12px', background: 'var(--doc-card-bg)', borderRadius: 12, border: '1px solid var(--doc-card-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ display: 'inline-flex', flexShrink: 0, color: '#6b7280' }}>
+                  <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text-secondary)' }}>
                     <Icon name={doc.icon} size={16} />
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>{doc.label}</p>
-                    {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af' }}>{doc.hint}</p>}
-                    {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: '#dc2626' }}>↳ {ds.rejection_reason}</p>}
+                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{doc.label}</p>
+                    {doc.hint && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>{doc.hint}</p>}
+                    {ds?.rejection_reason && <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--alert-error-text)' }}>↳ {ds.rejection_reason}</p>}
                   </div>
                   {ds && (
                     <span style={{
                       flexShrink: 0, borderRadius: 99, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700,
-                      background: ds.status === 'approved' ? '#d1fae5' : ds.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                      color: ds.status === 'approved' ? '#065f46' : ds.status === 'rejected' ? '#991b1b' : '#92400e',
+                      background: ds.status === 'approved' ? 'var(--stat-success-bg)' : ds.status === 'rejected' ? 'var(--stat-danger-bg)' : 'var(--alert-warning-bg)',
+                      color: ds.status === 'approved' ? 'var(--stat-success-text)' : ds.status === 'rejected' ? 'var(--stat-danger-text)' : 'var(--alert-warning-title)',
                     }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <Icon name={ds.status === 'approved' ? 'check' : ds.status === 'rejected' ? 'x' : 'clock'} size={10} />
@@ -370,17 +370,17 @@ export default function TecnicoSettings() {
                     </span>
                   )}
                   {isUploading ? (
-                    <span style={{ fontSize: '0.72rem', color: '#6b7280', flexShrink: 0 }}>Subiendo...</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', flexShrink: 0 }}>Subiendo...</span>
                   ) : isLocked ? (
-                    <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: '#f0fdf4', color: '#059669', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 8, background: 'var(--stat-success-bg)', color: 'var(--stat-success-text)', fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--stat-success-border)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <Icon name="lock" size={10} />
                       Verificado
                     </span>
                   ) : needsExpiry ? (
                     <span title="Ingresá la fecha de vencimiento primero" style={{
                       flexShrink: 0, cursor: 'not-allowed', padding: '5px 10px', borderRadius: 8,
-                      background: '#f3f4f6', color: '#9ca3af',
-                      fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid #e5e7eb',
+                      background: 'var(--surface-2)', color: 'var(--text-muted)',
+                      fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid var(--border-subtle)',
                     }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <Icon name="calendar" size={10} />
@@ -390,10 +390,10 @@ export default function TecnicoSettings() {
                   ) : (
                     <label style={{
                       flexShrink: 0, cursor: 'pointer', padding: '5px 10px', borderRadius: 8,
-                      background: ds?.status === 'approved' ? '#fffbeb' : '#fefce8',
-                      color: ds?.status === 'approved' ? '#b45309' : '#92400e',
+                      background: 'var(--alert-warning-bg)',
+                      color: 'var(--alert-warning-title)',
                       fontSize: '0.72rem', fontWeight: 700, border: '1.5px solid',
-                      borderColor: ds?.status === 'approved' ? '#fcd34d' : '#fde68a',
+                      borderColor: 'var(--alert-warning-border)',
                       display: 'inline-flex', alignItems: 'center', gap: 3,
                     }}>
                       {ds?.status === 'approved' ? '↑ Resubir (vencido)' : ds ? '↑ Re-subir' : '↑ Subir'}
@@ -428,12 +428,12 @@ export default function TecnicoSettings() {
                   </div>
                   {doc.requiresExpiry && (
                     <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <label style={{ fontSize: '0.72rem', color: '#6b7280', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <Icon name="calendar" size={10} />
                         Vence:
                       </label>
                       {isLocked ? (
-                        <span style={{ fontSize: '0.75rem', color: '#374151', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                           {docExpiries[doc.key] ? new Date(docExpiries[doc.key]).toLocaleDateString('es-PY') : '—'}
                         </span>
                       ) : (
@@ -441,7 +441,7 @@ export default function TecnicoSettings() {
                           type="date"
                           value={docExpiries[doc.key] || ''}
                           onChange={e => updateExpiry(doc.key, e.target.value)}
-                          style={{ fontSize: '0.75rem', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 6px', color: '#374151', background: '#fff', outline: 'none', flex: 1 }}
+                          style={{ fontSize: '0.75rem', border: '1px solid var(--input-border)', borderRadius: 6, padding: '2px 6px', color: 'var(--input-text)', background: 'var(--input-bg)', outline: 'none', flex: 1 }}
                         />
                       )}
                     </div>

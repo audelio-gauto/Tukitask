@@ -108,26 +108,18 @@ export default function TecnicoGananciasPage() {
     <div style={{ minHeight: '100dvh', background: 'var(--content-bg)', color: 'var(--text-primary)' }}>
 
       {/* ── Header ── */}
-      <div style={{
-        background: 'var(--header-bg)',
-        borderBottom: '1px solid var(--header-border)',
-        padding: '14px 16px',
-        display: 'flex', alignItems: 'center', gap: 12,
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
+      <div className="tuki-normal-header">
         <button
+          type="button"
+          className="tuki-back-btn"
+          aria-label="Volver"
           onClick={() => router.back()}
-          style={{
-            width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'var(--glass-card)', color: 'var(--text-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <div style={{ flex: 1 }}>
+        <div className="tuki-screen-title">
           <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Ganancias</h1>
           <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>Tus ingresos por servicios</p>
         </div>
@@ -135,7 +127,7 @@ export default function TecnicoGananciasPage() {
           onClick={fetchJobs}
           style={{
             width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(245,197,24,0.25)',
-            background: 'rgba(245,197,24,0.1)', color: '#F5C518', cursor: 'pointer',
+            background: 'rgba(245,197,24,0.1)', color: 'var(--panel-accent)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}
         >
@@ -196,7 +188,7 @@ export default function TecnicoGananciasPage() {
               <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>
                 Ganancias · {PERIOD_LABELS[period]}
               </div>
-              <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#F5C518', lineHeight: 1 }}>
+              <div style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--panel-accent)', lineHeight: 1 }}>
                 {fmtGs(earnings)}
               </div>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 6 }}>
@@ -210,14 +202,14 @@ export default function TecnicoGananciasPage() {
                 background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
                 borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
               }}>
-                <div style={{ fontWeight: 800, color: '#10b981', fontSize: '1.5rem' }}>{filtered.length}</div>
+                <div style={{ fontWeight: 800, color: 'var(--stat-success-text)', fontSize: '1.5rem' }}>{filtered.length}</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 2 }}>Completados</div>
               </div>
               <div style={{
                 background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)',
                 borderRadius: 14, padding: '0.75rem 0.5rem', textAlign: 'center',
               }}>
-                <div style={{ fontWeight: 800, color: '#F5C518', fontSize: '1.5rem' }}>{jobs.length}</div>
+                <div style={{ fontWeight: 800, color: 'var(--panel-accent)', fontSize: '1.5rem' }}>{jobs.length}</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 2 }}>Total histórico</div>
               </div>
             </div>
@@ -237,13 +229,13 @@ export default function TecnicoGananciasPage() {
                   borderBottom: p !== 'año' ? '1px solid var(--border-subtle)' : 'none',
                 }}>
                   <span style={{
-                    color: p === period ? '#F5C518' : 'var(--text-muted)',
+                    color: p === period ? 'var(--panel-accent)' : 'var(--text-muted)',
                     fontWeight: p === period ? 700 : 500, fontSize: '0.88rem',
                   }}>
                     {PERIOD_LABELS[p]}
                   </span>
                   <span style={{
-                    color: p === period ? '#F5C518' : 'var(--text-secondary)',
+                    color: p === period ? 'var(--panel-accent)' : 'var(--text-secondary)',
                     fontWeight: 800, fontSize: '0.95rem',
                   }}>
                     {fmtGs(amount)}{' '}
@@ -290,7 +282,7 @@ export default function TecnicoGananciasPage() {
                         </div>
                       </div>
                       <span style={{
-                        background: 'rgba(245,197,24,0.12)', color: '#F5C518',
+                        background: 'rgba(245,197,24,0.12)', color: 'var(--panel-accent)',
                         fontWeight: 800, fontSize: '0.9rem', padding: '3px 10px',
                         borderRadius: 8, border: '1px solid rgba(245,197,24,0.2)',
                         flexShrink: 0,

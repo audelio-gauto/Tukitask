@@ -324,9 +324,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, driverPos, setDriverPos }}>
         {children}
-        {!inNav && <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="#F5C518" />}
+        {!inNav && <BottomNav tabs={DRIVER_TABS.map(t => t.href === '/driver/activo' ? { ...t, badge: activeOrderCount } : t)} accent="var(--panel-accent)" />}
       </WorkerContext.Provider>
     </div>
   );
 }
-

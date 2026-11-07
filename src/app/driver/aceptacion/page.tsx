@@ -38,12 +38,11 @@ export default function DriverAceptacionPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--background)', paddingBottom: 80 }}>
-      {/* Header */}
-      <div style={{ background: '#F5C518', color: '#111', padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#111', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
-        <div>
+      <div className="tuki-normal-header">
+        <button type="button" className="tuki-back-btn" aria-label="Volver" onClick={() => router.back()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg></button>
+        <div className="tuki-screen-title">
           <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🏆 Tasa de Aceptación</h1>
-          <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.75 }}>Tu rendimiento histórico</p>
+          <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Tu rendimiento histórico</p>
         </div>
       </div>
 

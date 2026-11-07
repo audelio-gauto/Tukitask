@@ -249,7 +249,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         <main>
           {children}
         </main>
-        <BottomNav tabs={TECNICO_TABS.map(t => t.href === '/tecnico/activo' ? { ...t, badge: activeJobCount } : t)} accent="#F5C518" />
+        <BottomNav tabs={TECNICO_TABS.map(t => t.href === '/tecnico/activo' ? { ...t, badge: activeJobCount } : t)} accent="var(--panel-accent)" />
       </WorkerContext.Provider>
     </div>
   );
