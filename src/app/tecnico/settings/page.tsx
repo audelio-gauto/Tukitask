@@ -24,11 +24,13 @@ export default function TecnicoSettings() {
   const docsRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const [docsOpen, setDocsOpen] = useState(false);
+  const [accountSection, setAccountSection] = useState<string | null>(null);
 
   // Auto-scroll to docs section when ?scroll=docs is in the URL
   useEffect(() => {
     if (searchParams.get('scroll') === 'docs' && docsRef.current) {
       setDocsOpen(true);
+      setAccountSection('cuenta-documentos');
       const timer = setTimeout(() => docsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
       return () => clearTimeout(timer);
     }
@@ -161,9 +163,9 @@ export default function TecnicoSettings() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!gender) { setError('Debés seleccionar si sos Hombre o Mujer.'); return; }
-    if (!firstName.trim()) { setError('El Nombre es obligatorio.'); return; }
-    if (!lastName.trim()) { setError('El Apellido es obligatorio.'); return; }
+    if (!gender) { setAccountSection('cuenta-perfil'); setError('Debés seleccionar si sos Hombre o Mujer.'); return; }
+    if (!firstName.trim()) { setAccountSection('cuenta-perfil'); setError('El Nombre es obligatorio.'); return; }
+    if (!lastName.trim()) { setAccountSection('cuenta-perfil'); setError('El Apellido es obligatorio.'); return; }
     setLoading(true); setError(null); setSuccess(null);
     try {
       const payload = {
@@ -227,9 +229,10 @@ export default function TecnicoSettings() {
 
   return (
     <DriverScreenLayout title="Mi cuenta" backHref="/tecnico">
-      <form onSubmit={handleSave} style={{ paddingBottom: '2rem' }}>
+      <form onSubmit={handleSave} noValidate style={{ paddingBottom: '2rem' }}>
 
         {/* ── HERO: Avatar + nombre + email ── */}
+        <div hidden={accountSection !== null && accountSection !== 'cuenta-perfil'}>
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: '1.5rem 1rem 1.25rem', gap: '0.6rem',
@@ -292,17 +295,19 @@ export default function TecnicoSettings() {
             <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem', margin: '2px 0 0' }}>{email}</p>
           </div>
         </div>
+        </div>
 
-        <AccountSections items={[
+        <AccountSections selected={accountSection} onSelect={setAccountSection} items={[
           { label: 'Mi perfil', description: 'Datos personales y contacto', icon: 'user', section: 'cuenta-perfil' },
           { label: 'Mis documentos', description: 'Identidad y estado de revisión', icon: 'document', section: 'cuenta-documentos', onActivate: () => setDocsOpen(true) },
-          { label: 'Mi actividad profesional', description: 'Empresa y contacto', icon: 'briefcase', section: 'cuenta-perfil' },
+          { label: 'Mi actividad profesional', description: 'Empresa', icon: 'briefcase', section: 'cuenta-actividad' },
           { label: 'Mi billetera', description: 'Saldo y movimientos', icon: 'credit-card', href: '/tecnico/billetera' },
           { label: 'Ganancias', description: 'Resumen de ganancias', icon: 'money', href: '/tecnico/ganancias' },
           { label: 'Cuenta y preferencias', description: 'Correo, tema y navegación', icon: 'settings', section: 'cuenta-preferencias' },
         ]} />
 
         {/* ── SECCIÓN: Soy ── */}
+        <div hidden={accountSection !== 'cuenta-perfil'}>
         <Section icon="user" title="Soy" required>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             {(['hombre', 'mujer'] as const).map(g => (
@@ -324,11 +329,12 @@ export default function TecnicoSettings() {
           </div>
           {!gender && <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: 6 }}>Selección obligatoria</p>}
         </Section>
+        </div>
 
 
 
         {/* ── SECCIÓN: Mis documentos ── */}
-        <div id="cuenta-documentos" ref={docsRef} style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-documentos" ref={docsRef} hidden={accountSection !== 'cuenta-documentos'} style={{ scrollMarginTop: 80 }}>
         <Section icon="paper-clip" title="Mis documentos" collapsible expanded={docsOpen} onExpandedChange={setDocsOpen}>
           <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
             Subi los siguientes documentos. Serán revisados por el equipo antes de habilitar tu cuenta.
@@ -448,7 +454,7 @@ export default function TecnicoSettings() {
         </div>
 
         {/* ── SECCIÓN: Datos personales ── */}
-        <div id="cuenta-perfil" style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-perfil" hidden={accountSection !== 'cuenta-perfil'} style={{ scrollMarginTop: 80 }}>
         <Section icon="user" title="Datos personales">
           <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: '1fr 1fr' }}>
             <Field label="Nombre" required>
@@ -458,13 +464,11 @@ export default function TecnicoSettings() {
               <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Pérez" style={inputStyle} required />
             </Field>
           </div>
-          <Field label="Empresa" hint="Opcional">
-            <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
-          </Field>
         </Section>
         </div>
 
         {/* ── SECCIÓN: Contacto ── */}
+        <div hidden={accountSection !== 'cuenta-perfil'}>
         <Section icon="mail" title="Contacto">
           <Field label="Teléfono / WhatsApp">
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+595 9XX XXX XXX" style={inputStyle} />
@@ -478,9 +482,18 @@ export default function TecnicoSettings() {
             </Field>
           </div>
         </Section>
+        </div>
+
+        <div id="cuenta-actividad" hidden={accountSection !== 'cuenta-actividad'} style={{ scrollMarginTop: 80 }}>
+          <Section icon="briefcase" title="Mi actividad profesional">
+            <Field label="Empresa" hint="Opcional">
+              <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="Nombre de tu empresa" style={inputStyle} />
+            </Field>
+          </Section>
+        </div>
 
         {/* ── SECCIÓN: Cuenta ── */}
-        <div id="cuenta-preferencias" style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-preferencias" hidden={accountSection !== 'cuenta-preferencias'} style={{ scrollMarginTop: 80 }}>
         <Section icon="lock" title="Cuenta">
           <Field label="Correo electrónico">
             <input type="email" value={email || ''} readOnly style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
@@ -517,13 +530,14 @@ export default function TecnicoSettings() {
         {/* ── Botón guardar ── */}
         <button
           type="submit"
+          hidden={!accountSection || accountSection === 'cuenta-documentos'}
           disabled={loading}
           style={{
             width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
             background: loading ? '#f0e68c' : 'linear-gradient(135deg, #F5C518, #F58A07)',
             color: loading ? '#888' : '#1C1C2E', fontWeight: 800, fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer',
             boxShadow: loading ? 'none' : '0 6px 20px rgba(245,197,24,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            display: accountSection && accountSection !== 'cuenta-documentos' ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'all 0.18s',
           }}
         >
@@ -543,7 +557,7 @@ export default function TecnicoSettings() {
         </button>
 
         {/* ── Modo cliente ── */}
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div hidden={accountSection !== null} style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
             ¿Querés pedir un servicio como cliente?
           </p>

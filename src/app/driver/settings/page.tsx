@@ -63,6 +63,7 @@ export default function DriverSettingsPage() {
   const [docExpiries, setDocExpiries] = useState<Record<string, string>>({});
   const [docUploading, setDocUploading] = useState<Record<string, boolean>>({});
   const [docsOpen, setDocsOpen] = useState(false);
+  const [accountSection, setAccountSection] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -200,6 +201,7 @@ export default function DriverSettingsPage() {
       <form onSubmit={handleSave} style={{ paddingBottom: '2rem' }}>
 
         {/* ── HERO: Foto + identidad ── */}
+        <div hidden={accountSection !== null && accountSection !== 'cuenta-perfil'}>
         <div style={{
           background: 'linear-gradient(135deg, var(--content-bg) 0%, var(--surface-3) 100%)',
           borderRadius: 20, margin: '1rem 0 1.25rem', padding: '1.5rem',
@@ -305,8 +307,9 @@ export default function DriverSettingsPage() {
             )}
           </div>
         </div>
+        </div>
 
-        <AccountSections items={[
+        <AccountSections selected={accountSection} onSelect={setAccountSection} items={[
           { label: 'Mi perfil', description: 'Datos personales y contacto', icon: 'user', section: 'cuenta-perfil' },
           { label: 'Mis documentos', description: 'Personales y del vehículo', icon: 'document', section: 'cuenta-documentos', onActivate: () => setDocsOpen(true) },
           { label: 'Mi vehículo', description: 'Tipo, marca y matrícula', icon: 'car', section: 'cuenta-vehiculo' },
@@ -316,11 +319,12 @@ export default function DriverSettingsPage() {
         ]} />
 
         {/* ── SECCIÓN: TIPO DE VEHÍCULO ── */}
-        <div id="cuenta-vehiculo" style={{
+        <div hidden={accountSection !== 'cuenta-vehiculo' && accountSection !== 'cuenta-documentos'} style={{
           scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
+          <div id="cuenta-vehiculo" hidden={accountSection !== 'cuenta-vehiculo'}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>
@@ -398,6 +402,7 @@ export default function DriverSettingsPage() {
             </div>
           </div>
 
+          </div>
           {/* Mis documentos — colapsable */}
           {(() => {
             const allDocs = [
@@ -414,7 +419,7 @@ export default function DriverSettingsPage() {
             const borderColor = hasRejected || hasExpired ? 'var(--alert-error-border)' : approvedCount === allDocs.length ? 'var(--stat-success-border)' : 'var(--alert-warning-border)';
             const icon = hasExpired ? 'x' : hasRejected ? 'x' : approvedCount === allDocs.length ? 'check' : 'paper-clip';
             return (
-              <div id="cuenta-documentos" style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', scrollMarginTop: 80 }}>
+              <div id="cuenta-documentos" hidden={accountSection !== 'cuenta-documentos'} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', scrollMarginTop: 80 }}>
                 <button
                   type="button"
                   aria-expanded={docsOpen}
@@ -568,7 +573,7 @@ export default function DriverSettingsPage() {
         </div>
 
         {/* ── SECCIÓN: NAVEGACIÓN ── */}
-        <div id="cuenta-navegacion" style={{
+        <div id="cuenta-navegacion" hidden={accountSection !== 'cuenta-navegacion'} style={{
           scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
@@ -613,7 +618,7 @@ export default function DriverSettingsPage() {
         </div>
 
         {/* ── SECCIÓN: TEMA ── */}
-        <div style={{
+        <div hidden={accountSection !== 'cuenta-navegacion'} style={{
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
         }}>
@@ -639,7 +644,7 @@ export default function DriverSettingsPage() {
         </div>
 
         {/* ── SECCIÓN: DATOS PERSONALES ── */}
-        <div id="cuenta-perfil" style={{
+        <div id="cuenta-perfil" hidden={accountSection !== 'cuenta-perfil'} style={{
           scrollMarginTop: 80,
           background: 'var(--card-bg)', borderRadius: 18, padding: '1.25rem',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid var(--card-border)', marginBottom: '1rem',
@@ -730,6 +735,7 @@ export default function DriverSettingsPage() {
         {/* ── BOTÓN GUARDAR ── */}
         <button
           type="submit"
+          hidden={!accountSection || accountSection === 'cuenta-documentos'}
           disabled={saving}
           style={{
             width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
@@ -761,7 +767,7 @@ export default function DriverSettingsPage() {
         )}
 
         {/* ── Modo cliente ── */}
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div hidden={accountSection !== null} style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
             ¿Querés pedir un servicio como cliente?
           </p>

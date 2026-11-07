@@ -15,7 +15,22 @@ type AccountItem = {
   | { href: string; section?: never; onActivate?: never }
 );
 
-export default function AccountSections({ items }: { items: AccountItem[] }) {
+export default function AccountSections({ items, selected, onSelect }: {
+  items: AccountItem[];
+  selected: string | null;
+  onSelect: (section: string | null) => void;
+}) {
+  if (selected) {
+    const item = items.find(entry => entry.section === selected);
+    return (
+      <div className={styles.detailHeader}>
+        <button type="button" className={styles.back} onClick={() => onSelect(null)}>
+          ← Mi cuenta
+        </button>
+        <h2 className={styles.detailTitle}>{item?.label ?? 'Mi cuenta'}</h2>
+      </div>
+    );
+  }
   return (
     <nav className={styles.nav} aria-label="Secciones de mi cuenta">
       <div className={styles.heading}>Mi cuenta</div>
@@ -38,7 +53,10 @@ export default function AccountSections({ items }: { items: AccountItem[] }) {
             <button key={item.label} type="button" className={styles.item} onClick={() => {
               item.onActivate?.();
               const section = item.section;
-              if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              if (section) {
+                onSelect(section);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
             }}>
               {content}
             </button>

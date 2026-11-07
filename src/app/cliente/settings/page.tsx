@@ -59,6 +59,7 @@ export default function ClientSettingsPage() {
   const [nameInput, setNameInput] = useState(displayName);
   const [phoneInput, setPhoneInput] = useState(phone);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [accountSection, setAccountSection] = useState<string | null>(null);
 
   // Sync inputs when context values load asynchronously (async profile fetch in layout)
   useEffect(() => { if (phone) setPhoneInput(phone); }, [phone]);
@@ -188,8 +189,16 @@ export default function ClientSettingsPage() {
     <ClientScreenLayout title="Mi cuenta">
       <form onSubmit={handleSaveAll}>
 
+        <AccountSections selected={accountSection} onSelect={setAccountSection} items={[
+          { label: 'Mi perfil', description: 'Nombre, foto y contacto', icon: 'user', section: 'cuenta-perfil' },
+          { label: 'Verificación de identidad', description: 'Documentos y estado de revisión', icon: 'shield', section: 'cuenta-documentos', onActivate: () => setIdOpen(true) },
+          { label: 'Mis direcciones', description: 'Lugares guardados', icon: 'map-pin', href: '/cliente/direcciones' },
+          { label: 'Cuenta y seguridad', description: 'Correo y contraseña', icon: 'lock', section: 'cuenta-seguridad' },
+          { label: 'Preferencias', description: 'Tema de la app', icon: 'settings', section: 'cuenta-preferencias' },
+        ]} />
+
         {/* ── Perfil ── */}
-        <div id="cuenta-perfil" className="client-form-card" style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-perfil" className="client-form-card" hidden={accountSection !== 'cuenta-perfil'} style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="user" size={16} />
             Mi Perfil
@@ -252,14 +261,6 @@ export default function ClientSettingsPage() {
           </div>
         </div>
 
-        <AccountSections items={[
-          { label: 'Mi perfil', description: 'Nombre, foto y contacto', icon: 'user', section: 'cuenta-perfil' },
-          { label: 'Verificación de identidad', description: 'Documentos y estado de revisión', icon: 'shield', section: 'cuenta-documentos', onActivate: () => setIdOpen(true) },
-          { label: 'Mis direcciones', description: 'Lugares guardados', icon: 'map-pin', href: '/cliente/direcciones' },
-          { label: 'Cuenta y seguridad', description: 'Correo y contraseña', icon: 'lock', section: 'cuenta-seguridad' },
-          { label: 'Preferencias', description: 'Tema de la app', icon: 'settings', section: 'cuenta-preferencias' },
-        ]} />
-
         {/* ── Verificar identidad ── */}
         {(() => {
           const approvedCount = ID_DOCS.filter(d => idDocs[d.key]?.status === 'approved').length;
@@ -269,7 +270,7 @@ export default function ClientSettingsPage() {
           const bdCol    = isVerified ? 'var(--stat-success-border)' : hasRejected ? 'var(--alert-error-border)' : approvedCount > 0 ? 'var(--alert-warning-border)' : 'var(--border-subtle)';
           const headerIcon: IconName = isVerified ? 'check' : hasRejected ? 'x' : approvedCount > 0 ? 'clock' : 'document';
           return (
-            <div id="cuenta-documentos" className="client-form-card" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 80 }}>
+            <div id="cuenta-documentos" className="client-form-card" hidden={accountSection !== 'cuenta-documentos'} style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 80 }}>
               <button
                 type="button"
                 aria-expanded={idOpen}
@@ -359,7 +360,7 @@ export default function ClientSettingsPage() {
         })()}
 
         {/* ── Cuenta ── */}
-        <div id="cuenta-seguridad" className="client-form-card" style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-seguridad" className="client-form-card" hidden={accountSection !== 'cuenta-seguridad'} style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="lock" size={16} />
             Cuenta
@@ -378,7 +379,7 @@ export default function ClientSettingsPage() {
         </div>
 
         {/* ── Tema ── */}
-        <div id="cuenta-preferencias" className="client-form-card" style={{ scrollMarginTop: 80 }}>
+        <div id="cuenta-preferencias" className="client-form-card" hidden={accountSection !== 'cuenta-preferencias'} style={{ scrollMarginTop: 80 }}>
           <h3 className="client-form-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="sun" size={16} />
             Tema de la app
@@ -392,6 +393,7 @@ export default function ClientSettingsPage() {
         {/* ── Botón único guardar ── */}
         <button
           type="submit"
+          hidden={accountSection !== 'cuenta-perfil' && accountSection !== 'cuenta-seguridad'}
           disabled={savingProfile}
           style={{
             width: '100%', padding: '1rem', borderRadius: 16, border: 'none',
@@ -399,7 +401,7 @@ export default function ClientSettingsPage() {
             color: savingProfile ? '#888' : '#fff', fontWeight: 800, fontSize: '1rem',
             cursor: savingProfile ? 'not-allowed' : 'pointer',
             boxShadow: savingProfile ? 'none' : '0 6px 20px rgba(16,185,129,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            display: accountSection === 'cuenta-perfil' || accountSection === 'cuenta-seguridad' ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'all 0.18s', marginBottom: '1rem',
           }}
         >
@@ -419,7 +421,7 @@ export default function ClientSettingsPage() {
         </button>
 
         {/* ── Modo Tasker — solo visible para driver/tecnico en modo cliente ── */}
-        {isTasker && (
+        {isTasker && !accountSection && (
           <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textAlign: 'center' }}>
               Volver a tu panel de trabajo
