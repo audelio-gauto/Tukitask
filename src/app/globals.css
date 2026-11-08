@@ -381,12 +381,6 @@ a, button, [role="button"], input, select, textarea {
   user-select: none;
 }
 
-/* ── PWA Install Prompt slide-up animation ─────────────────────────────── */
-@keyframes tuki-slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
 /* ── Hide scrollbar visually but keep scroll functionality ─────────────── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -596,4 +590,3 @@ button:active:not(:disabled), a[role="button"]:active {
   border-color: rgba(220,38,38,0.3);
   background: rgba(239,68,68,0.08);
 }
-

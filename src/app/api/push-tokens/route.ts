@@ -4,7 +4,7 @@ import { getAuthUser, unauthorized, sbAdmin } from '@/lib/apiAuth';
 
 /**
  * POST /api/push-tokens — register a push token for the authenticated user.
- * Body: { token: string, platform: 'web' | 'android' | 'ios' }
+ * Body: { token: string, platform: 'android' | 'ios' }
  */
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
   if (!token || typeof token !== 'string') {
     return NextResponse.json({ error: 'token is required' }, { status: 400 });
   }
-  if (!['web', 'android', 'ios'].includes(platform)) {
-    return NextResponse.json({ error: 'platform must be web, android, or ios' }, { status: 400 });
+  if (!['android', 'ios'].includes(platform)) {
+    return NextResponse.json({ error: 'platform must be android or ios' }, { status: 400 });
   }
 
   const { error } = await sbAdmin()

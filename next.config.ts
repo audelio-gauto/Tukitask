@@ -59,11 +59,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      // Combined service worker (PWA caching + FCM notifications)
+      // Temporary retirement endpoints for previously registered service workers
       { source: '/sw.js', destination: '/api/sw' },
-      // Legacy FCM-only SW — kept for any existing registrations
+      // Legacy FCM-only worker
       { source: '/firebase-messaging-sw.js', destination: '/api/firebase-sw' },
-      // Dynamic manifest — reads custom PWA icons from app_config
+      // Retired manifest (410), retained for older installations
       { source: '/manifest.json', destination: '/api/manifest' },
     ];
   },
@@ -82,7 +82,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Combined service worker — controls full origin scope
+        // Retirement worker — controls full origin scope
         source: '/sw.js',
         headers: [
           { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
@@ -92,7 +92,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Legacy FCM SW
+        // Legacy retirement worker
         source: '/firebase-messaging-sw.js',
         headers: [
           { key: 'Content-Type', value: 'application/javascript' },

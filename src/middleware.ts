@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Allowed origins: web/PWA, future custom domain, Capacitor Android/iOS WebView, local dev
+// Allowed origins: web, future custom domain, Capacitor Android/iOS WebView, local dev
 const ALLOWED_ORIGINS = [
   'https://tukitask.vercel.app',
   'https://tukitask.com',

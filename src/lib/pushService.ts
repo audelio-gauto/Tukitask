@@ -56,7 +56,8 @@ export async function dispatchPush(
   const { data: tokens, error } = await sbAdmin()
     .from('push_tokens')
     .select('token, platform')
-    .eq('user_email', userEmail.toLowerCase());
+    .eq('user_email', userEmail.toLowerCase())
+    .in('platform', ['android', 'ios']);
 
   if (error || !tokens?.length) return 0;
 
@@ -103,9 +104,6 @@ async function sendFCM(tokens: string[], payload: PushPayload): Promise<number> 
           priority: payload.priority === 'high' ? 'high' : 'normal',
           notification: { sound: 'default', channelId: ANDROID_PUSH_CHANNEL_ID },
         },
-        webpush: payload.priority === 'high'
-          ? { headers: { Urgency: 'high' } }
-          : undefined,
       });
       sent += response.successCount;
       // Remove tokens that are no longer valid

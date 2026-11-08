@@ -11,7 +11,6 @@ const sb = () =>
 
 /**
  * GET /api/logo — serves the admin-configured logo image directly.
- * The service worker precaches this so it works offline.
  * Falls back to the static /icons/icon-192x192.png if no custom logo is set.
  */
 export async function GET() {

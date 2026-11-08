@@ -32,6 +32,23 @@ no deben interpretarse como ausencia de alertas. Los retiros de vendedores aún
 no están habilitados. La pantalla de registros y estados de vendedores clasifica
 por antigüedad y bloqueo; no representa una verificación de identidad.
 
+## Aplicación Android y retirada de la PWA
+
+La APK usa la aplicación web en vivo configurada en `capacitor.config.ts`.
+La instalación como PWA, su caché sin conexión y las notificaciones push web
+fueron retiradas; las notificaciones nativas de Android conservan su
+configuración existente. La aplicación sigue disponible en el navegador.
+
+Durante la transición, las instalaciones web existentes reciben un aviso:
+Android puede descargar `/app-update/TukiTask.apk`; en iPhone se indica que el
+APK no es compatible y que se puede utilizar el navegador. Los workers antiguos
+se desregistran y solo se eliminan cachés con prefijo `tuki-cache-` cuando el
+dispositivo vuelve a conectarse. Las rutas `/sw.js`,
+`/firebase-messaging-sw.js` y `/manifest.json`, así como los endpoints antiguos
+de iconos (que devuelven 410), se conservan temporalmente para retirar
+instalaciones anteriores; no debe eliminarse esta compatibilidad sin considerar
+a los usuarios que aún no hayan regresado.
+
 ---
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).

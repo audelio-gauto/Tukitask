@@ -21,8 +21,8 @@ async function authorizeAdmin(req: Request) {
   } catch { return false; }
 }
 
-// Claves que se exponen públicamente (usadas en login page y PWA manifest)
-const PUBLIC_KEYS = new Set(['logo_url', 'logo_size', 'pwa_icon_192', 'pwa_icon_512']);
+// Claves que se exponen públicamente (usadas en la página de acceso)
+const PUBLIC_KEYS = new Set(['logo_url', 'logo_size']);
 
 // GET /api/admin/config  → sin auth: solo claves públicas; con auth admin: todo
 export async function GET(req: Request) {

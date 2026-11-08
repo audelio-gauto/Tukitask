@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Manrope } from "next/font/google";
-import { InstallPrompt } from "@/components/InstallPrompt";
+import { PwaRetirement } from "@/components/PwaRetirement";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -19,34 +19,6 @@ export const metadata: Metadata = {
     template: "%s | TukiTask",
   },
   description: "Plataforma de envíos y servicios técnicos en tiempo real",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "TukiTask",
-    startupImage: [
-      // iPhone 15 Pro Max
-      { url: "/api/pwa-icon/512", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" },
-      // Generic fallback
-      { url: "/api/pwa-icon/512" },
-    ],
-  },
-  icons: {
-    icon: [
-      { url: "/api/pwa-icon/192", sizes: "192x192", type: "image/png" },
-      { url: "/api/pwa-icon/512", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [
-      { url: "/api/pwa-icon/192", sizes: "192x192", type: "image/png" },
-    ],
-    shortcut: "/api/pwa-icon/192",
-  },
-  other: {
-    "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#000000",
-    "msapplication-TileImage": "/api/pwa-icon/192",
-    "msapplication-config": "none",
-  },
 };
 
 export const viewport: Viewport = {
@@ -83,7 +55,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
-        <InstallPrompt />
+        <PwaRetirement />
       </body>
     </html>
   );

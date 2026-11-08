@@ -22,7 +22,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const { data: tokens, error: tokensErr } = await sbAdmin()
     .from('push_tokens')
     .select('token, platform, created_at')
-    .eq('user_email', email.toLowerCase());
+    .eq('user_email', email.toLowerCase())
+    .in('platform', ['android', 'ios']);
 
   if (tokensErr) {
     return serverError(tokensErr);
