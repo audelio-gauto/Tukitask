@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { authFetch } from '@/lib/authFetch';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
@@ -14,48 +14,46 @@ import type { AppNotification, NotifPriority } from '@/lib/notifications';
  */
 export function useNotifications(userEmail: string | undefined) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
   const [latestUrgent, setLatestUrgent] = useState<AppNotification | null>(null);
-  const emailRef = useRef(userEmail);
   const seenIdsRef = useRef(new Set<string>());
-  emailRef.current = userEmail;
 
   const fetchNotifications = useCallback(async () => {
-    if (!emailRef.current) return;
+    if (!userEmail) return;
     try {
       const res = await authFetch('/api/notifications?limit=50');
       if (res.ok) {
         const data: AppNotification[] = await res.json();
         setNotifications(data);
-        setUnreadCount(data.filter((n) => !n.read).length);
         // Track seen IDs to avoid re-triggering popups on tab refocus
         data.forEach((n) => seenIdsRef.current.add(n.id));
       }
     } catch {
       // silent
     }
-  }, []);
+  }, [userEmail]);
 
   const markRead = useCallback(async (ids: string[]) => {
     if (!ids.length) return;
-    await authFetch('/api/notifications', {
+    const response = await authFetch('/api/notifications', {
       method: 'PATCH',
       body: JSON.stringify({ ids }),
     });
+    if (!response.ok) throw new Error('No se pudo marcar la notificación como leída.');
     setNotifications((prev) =>
       prev.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n)),
     );
-    setUnreadCount((prev) => Math.max(0, prev - ids.length));
   }, []);
 
   const markAllRead = useCallback(async () => {
-    await authFetch('/api/notifications', {
+    const snapshot = new Map(notifications.map(n => [n.id, n]));
+    const response = await authFetch('/api/notifications', {
       method: 'PATCH',
       body: JSON.stringify({ all: true }),
     });
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
-  }, []);
+    if (!response.ok) throw new Error('No se pudieron marcar las notificaciones como leídas.');
+    setNotifications((prev) => prev.map((n) => snapshot.get(n.id) === n ? { ...n, read: true } : n));
+  }, [notifications]);
 
   /** Clear the latest urgent (after popup dismissed) */
   const dismissUrgent = useCallback(() => {
@@ -65,6 +63,8 @@ export function useNotifications(userEmail: string | undefined) {
   useEffect(() => {
     if (!userEmail) return;
 
+    // The async fetch updates state only after the network response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
 
     const channel = supabase
@@ -87,7 +87,6 @@ export function useNotifications(userEmail: string | undefined) {
           const priority = (n.priority || 'normal') as NotifPriority;
 
           setNotifications((prev) => [n, ...prev].slice(0, 50));
-          setUnreadCount((prev) => prev + 1);
 
           // Trigger urgent popup for urgent/high priority
           if (priority === 'urgent' || priority === 'high') {

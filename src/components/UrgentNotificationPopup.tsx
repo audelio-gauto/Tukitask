@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * UrgentNotificationPopup — full-screen overlay for urgent/high-priority notifications.
+ * UrgentNotificationPopup — non-blocking card for urgent/high-priority notifications.
  * Shows animated popup with sound + vibration for urgent events.
  * Integrates with useNotifications to auto-display urgent unread notifications.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import type React from 'react';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
 import { Icon } from '@/components/Icon';
@@ -90,40 +90,26 @@ interface Props {
   notification: AppNotification | null;
   /** Called after user dismisses */
   onDismiss: () => void;
+  onOpen: (notification: AppNotification) => void;
   variant?: 'driver';
   /** Enable/disable sounds (default true) */
   soundEnabled?: boolean;
 }
 
-export function UrgentNotificationPopup({ notification, onDismiss, variant, soundEnabled = true }: Props) {
-  const [visible, setVisible] = useState(false);
-  const [animState, setAnimState] = useState<'entering' | 'visible' | 'exiting'>('entering');
+export function UrgentNotificationPopup({ notification, onDismiss, onOpen, variant, soundEnabled = true }: Props) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const prevIdRef = useRef<string | null>(null);
 
   const dismiss = useCallback(() => {
-    setAnimState('exiting');
-    setTimeout(() => {
-      setVisible(false);
-      setAnimState('entering');
-      onDismiss();
-    }, 300);
+    clearTimeout(timerRef.current);
+    onDismiss();
   }, [onDismiss]);
 
   useEffect(() => {
     if (!notification) return;
-    if (notification.id === prevIdRef.current) return; // dedup same notification
-    prevIdRef.current = notification.id;
-
     const priority = notification.priority as NotifPriority;
 
     // Only show popup for urgent and high
     if (priority !== 'urgent' && priority !== 'high') return;
-
-    setVisible(true);
-    setAnimState('entering');
-    // Short delay for animation
-    requestAnimationFrame(() => setAnimState('visible'));
 
     // Sound + vibration
     if (soundEnabled) {
@@ -135,14 +121,16 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
       }
     }
 
-    // Auto-dismiss after 8s for urgent, 5s for high
+    // Keep the compact notification available long enough to open.
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(dismiss, 1500);
+    timerRef.current = setTimeout(dismiss, priority === 'urgent' ? 10000 : 8000);
 
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      clearTimeout(timerRef.current);
+    };
   }, [notification, soundEnabled, dismiss]);
 
-  if (!visible || !notification) return null;
+  if (!notification || (notification.priority !== 'urgent' && notification.priority !== 'high')) return null;
 
   const cfg = typeConfig[notification.type] || defaultConfig;
   const isDriver = variant === 'driver';
@@ -151,12 +139,9 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
     <>
       {/* Sin fondo bloqueante: la pantalla sigue tocable (aceptar/rechazar) mientras se muestra el aviso */}
       {/* Popup card — slides in from top */}
-      <div onClick={dismiss} style={{
-        cursor: 'pointer',
+      <div style={{
         position: 'fixed',
-        top: animState === 'visible'
-          ? isDriver ? 'calc(env(safe-area-inset-top, 0px) + 128px)' : 16
-          : isDriver ? -140 : -120,
+        top: isDriver ? 'calc(env(safe-area-inset-top, 0px) + 128px)' : 16,
         left: '50%',
         transform: 'translateX(-50%)',
         width: isDriver ? 'min(250px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 32px))',
@@ -167,7 +152,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
           ? '0 4px 14px rgba(0,0,0,0.22)'
           : `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${cfg.color}20`,
         overflow: 'hidden',
-        transition: 'top 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        animation: 'notificationPopupIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 9999,
       }}>
         {/* Priority indicator bar */}
@@ -180,6 +165,7 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
         }} />
 
         <div style={{ padding: isDriver ? '6px 8px' : '14px 16px', display: 'flex', gap: isDriver ? 8 : 12, alignItems: 'center' }}>
+          <button type="button" onClick={() => { onOpen(notification); dismiss(); }} aria-label={`Leer notificación: ${notification.title}`} style={{ display: 'flex', flex: 1, minWidth: 0, gap: isDriver ? 8 : 12, alignItems: 'center', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer' }}>
           {/* Icon circle */}
           <div style={{
             width: isDriver ? 28 : 44,
@@ -204,7 +190,9 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
               fontWeight: isDriver ? 700 : undefined,
               lineHeight: 1.25,
               marginBottom: isDriver ? 1 : 2,
-              ...(isDriver ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } : {}),
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}>
               {notification.title}
             </div>
@@ -212,15 +200,23 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
               color: isDriver ? 'var(--text-secondary)' : '#9ca3af',
               fontSize: isDriver ? '0.68rem' : '0.78rem',
               lineHeight: 1.3,
-              ...(isDriver ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' } : {}),
+              display: '-webkit-box',
+              WebkitLineClamp: isDriver ? 2 : 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              overflowWrap: 'anywhere',
             }}>
               {notification.body}
             </div>
+            <span style={{ display: 'block', marginTop: 3, fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tocar para leer</span>
           </div>
+          </button>
 
           {/* Close button */}
           <button
-            onClick={e => { e.stopPropagation(); dismiss(); }}
+            type="button"
+            aria-label="Cerrar aviso"
+            onClick={dismiss}
             style={{
               background: 'var(--glass-card)',
               width: isDriver ? 22 : 28,
@@ -241,6 +237,10 @@ export function UrgentNotificationPopup({ notification, onDismiss, variant, soun
 
       {/* Keyframe animations */}
       <style>{`
+        @keyframes notificationPopupIn {
+          from { opacity: 0; transform: translate(-50%, -40px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
         @keyframes urgentPulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }

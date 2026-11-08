@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useNotifications } from '@/lib/useNotifications';
 import { UrgentNotificationPopup } from '@/components/UrgentNotificationPopup';
+import { NotificationDetail } from '@/components/NotificationDetail';
 import { Icon } from '@/components/Icon';
 import type { AppNotification, NotifPriority } from '@/lib/notifications';
 
@@ -18,22 +19,32 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(h / 24)}d`;
 }
 
-// Map notification type → URL to navigate when tapped
-const typeUrl: Record<string, string> = {
-  new_order:       '/driver/delivered',
-  new_market_order:'/vendedor/pedidos',
-  new_offer:       '/cliente/mis-envios',
-  offer_accepted:  '/driver/delivered',
-  offer_rejected:  '/cliente/mis-envios',
-  status_change:   '/cliente/mis-envios',
-  new_job:         '/tecnico',
-  new_job_offer:   '/cliente/mis-servicios',
-  job_accepted:    '/tecnico',
-  job_status:      '/cliente/mis-servicios',
-  commission:      '/driver/billetera',
-  wallet:          '/cliente/mis-envios',
-  rating:          '/cliente/mis-envios',
-};
+export function notificationUrl(n: AppNotification, pathname: string): string | null {
+  if (pathname.startsWith('/vendedor')) {
+    if (n.type !== 'new_market_order') return null;
+    const id = n.data?.order_id;
+    return typeof id === 'string' || typeof id === 'number'
+      ? `/vendedor/pedidos?order_id=${encodeURIComponent(String(id))}`
+      : '/vendedor/pedidos';
+  }
+  if (pathname.startsWith('/tienda') && n.type === 'status_change' && n.group_key?.startsWith('market_order_')) return '/tienda/mis-pedidos';
+  if (pathname.startsWith('/cliente')) {
+    if (n.type === 'new_job_offer' || n.type === 'job_status') return '/cliente/mis-servicios';
+    if (n.group_key?.startsWith('market_order_')) return '/tienda/mis-pedidos';
+    if (n.type === 'new_offer' || (n.type === 'status_change' && n.group_key?.startsWith('order:'))) return '/cliente/mis-envios';
+  }
+  if (pathname.startsWith('/driver')) {
+    if (n.type === 'offer_accepted') return '/driver/activo';
+    if (n.type === 'offer_rejected') return '/driver/historial-ofertas';
+    if (n.type === 'new_order') return '/driver';
+    if (n.type === 'commission' || n.type === 'wallet') return '/driver/billetera';
+  }
+  if (pathname.startsWith('/tecnico')) {
+    if (n.type === 'job_accepted' || n.type === 'job_status' || n.type === 'new_job') return '/tecnico/citas';
+    if (n.type === 'offer_rejected') return '/tecnico/historial-ofertas';
+  }
+  return null;
+}
 const typeStyle: Record<string, { icon: React.ComponentProps<typeof Icon>['name']; accent: string }> = {
   new_order:       { icon: 'package', accent: '#8b5cf6' },
   new_market_order:{ icon: 'package', accent: '#F5C518' },
@@ -67,17 +78,29 @@ interface Props {
 
 export function NotificationBell({ userEmail, className, variant, soundEnabled = true }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail);
   const [open, setOpen] = useState(false);
   const [bellAnim, setBellAnim] = useState(false);
+  const [selected, setSelected] = useState<AppNotification | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  const readAttemptRef = useRef(0);
+  const closeDetail = useCallback(() => {
+    selectedIdRef.current = null;
+    readAttemptRef.current += 1;
+    setSelected(null);
+  }, []);
 
   // Animate bell when new urgent notification arrives
   useEffect(() => {
     if (latestUrgent) {
-      setBellAnim(true);
+      const frame = requestAnimationFrame(() => setBellAnim(true));
       const t = setTimeout(() => setBellAnim(false), 1000);
-      return () => clearTimeout(t);
+      return () => { cancelAnimationFrame(frame); clearTimeout(t); };
     }
   }, [latestUrgent]);
 
@@ -92,32 +115,20 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
   }, [open]);
 
   const handleNotifClick = (n: AppNotification) => {
-    if (!n.read) markRead([n.id]);
     setOpen(false);
-
-    const orderId = typeof n.data?.order_id === 'string' || typeof n.data?.order_id === 'number'
-      ? String(n.data.order_id)
-      : null;
-
-    const url = orderId
-      ? `/vendedor/pedidos?order_id=${encodeURIComponent(orderId)}`
-      : (typeUrl[n.type] ?? '/vendedor/pedidos');
-
-    if (url) router.push(url);
+    selectedIdRef.current = n.id;
+    const attempt = ++readAttemptRef.current;
+    setSelected(n);
+    setReadError(null);
+    if (!n.read) {
+      void markRead([n.id]).catch(error => {
+        console.error('[notifications] No se pudo marcar como leída:', error);
+        if (selectedIdRef.current === n.id && readAttemptRef.current === attempt) setReadError('No se pudo marcar como leída. Volvé a abrirla para reintentar.');
+      });
+    }
   };
 
-  // Don't render the bell at all when there's nothing to show
-  // (UrgentNotificationPopup is always rendered separately for urgent popups)
-  if (unreadCount === 0) {
-    return (
-      <UrgentNotificationPopup
-        notification={latestUrgent}
-        onDismiss={dismissUrgent}
-        soundEnabled={soundEnabled}
-        variant={variant}
-      />
-    );
-  }
+  if (!userEmail) return null;
 
   return (
     <>
@@ -125,9 +136,21 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
       <UrgentNotificationPopup
         notification={latestUrgent}
         onDismiss={dismissUrgent}
+        onOpen={handleNotifClick}
         soundEnabled={soundEnabled}
         variant={variant}
       />
+
+      {selected && <NotificationDetail
+        notification={selected}
+        error={readError}
+        onClose={closeDetail}
+        fallbackFocusRef={bellRef}
+        onNavigate={notificationUrl(selected, pathname) ? () => {
+          const url = notificationUrl(selected, pathname);
+          if (url) { closeDetail(); router.push(url); }
+        } : undefined}
+      />}
 
       <div
         ref={panelRef}
@@ -136,8 +159,10 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
       >
         {/* Bell button */}
         <button
+          ref={bellRef}
           onClick={() => setOpen((v) => !v)}
           aria-label="Notificaciones"
+          aria-expanded={open}
           style={{
             position: 'relative',
             background: 'rgba(28,28,46,0.85)',
@@ -215,7 +240,10 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
               </span>
               {unreadCount > 0 && (
                 <button
-                  onClick={() => markAllRead()}
+                  onClick={() => { setListError(null); void markAllRead().catch(error => {
+                    console.error('[notifications] No se pudieron marcar como leídas:', error);
+                    setListError('No se pudieron marcar las notificaciones como leídas. Intentá nuevamente.');
+                  }); }}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -229,6 +257,8 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
                 </button>
               )}
             </div>
+
+            {listError && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px 16px', fontSize: '0.8rem' }}>{listError}</p>}
 
             {/* List */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
