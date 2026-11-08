@@ -3,6 +3,7 @@ import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized } from '@/lib/apiAuth';
 import { allowRequest } from '@/lib/rateLimit';
 import { dispatchPush } from '@/lib/pushService';
+import { isOrderChatClosed } from '@/lib/orderChat';
 
 const db = () => sbAdmin();
 
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
   if (orderId) {
     const { data: order } = await db()
       .from('orders')
-      .select('client_email, accepted_by')
+      .select('client_email, accepted_by, status')
       .eq('id', orderId)
       .maybeSingle();
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
 
     // ?count=1 → solo devuelve el nro de mensajes no leídos (para el badge)
     if (searchParams.get('count') === '1') {
+      if (isOrderChatClosed(order.status)) return NextResponse.json({ unread: 0 });
       const { data: thread } = await db()
         .from('chat_threads')
         .select('unread_count')

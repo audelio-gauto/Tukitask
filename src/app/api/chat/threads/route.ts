@@ -1,6 +1,7 @@
 import { serverError } from '@/lib/apiError';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, unauthorized, sbAdmin } from '@/lib/apiAuth';
+import { canShowOrderChat } from '@/lib/orderChat';
 
 // GET /api/chat/threads
 // ?count=1  -> { total_unread }
@@ -23,10 +24,26 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return serverError(error);
 
+  const threads: Array<{ unread_count: number | null; order_id: string | null; job_id: string | null; last_message_at: string | null }> = data ?? [];
+  const orderIds = [...new Set(threads.map(row => row.order_id).filter((id): id is string => !!id))];
+  const visibleOrderIds = new Set<string>();
+  if (orderIds.length) {
+    const { data: orders, error: ordersError } = await sbAdmin()
+      .from('orders')
+      .select('id, status, client_email, accepted_by')
+      .in('id', orderIds);
+    if (ordersError) return serverError(ordersError);
+    for (const order of orders ?? []) {
+      if (canShowOrderChat(order, user.email)) {
+        visibleOrderIds.add(order.id);
+      }
+    }
+  }
+  const visible = threads.filter(row => !row.order_id || visibleOrderIds.has(row.order_id));
   if (countOnly) {
-    const total = (data ?? []).reduce((sum: number, r: { unread_count: number | null }) => sum + Number(r.unread_count ?? 0), 0);
+    const total = visible.reduce((sum: number, r: { unread_count: number | null }) => sum + Number(r.unread_count ?? 0), 0);
     return NextResponse.json({ total_unread: total });
   }
 
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(visible);
 }

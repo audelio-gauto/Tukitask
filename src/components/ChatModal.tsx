@@ -59,6 +59,7 @@ export default function ChatModal({
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
   const scope = orderId ? `order_id=${orderId}` : `job_id=${jobId}`;
+  const isTripChat = !!orderId;
 
   // Detect touch device once on mount
   useEffect(() => {
@@ -204,6 +205,9 @@ export default function ChatModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Chat con ${otherName || 'Tasker'}`}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(0,0,0,0.75)',
@@ -245,8 +249,8 @@ export default function ChatModal({
             <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {otherName || 'Tasker'}
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+            <div style={{ fontSize: '0.72rem', color: isTripChat ? 'var(--text-secondary)' : '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: isTripChat ? '#F5C518' : '#22c55e', display: 'inline-block' }} />
               Chat activo
             </div>
           </div>
@@ -257,6 +261,7 @@ export default function ChatModal({
           )}
           <button
             onClick={onClose}
+            aria-label="Cerrar chat"
             style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--glass-card)', color: 'var(--text-muted)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >✕</button>
         </div>
@@ -264,7 +269,7 @@ export default function ChatModal({
         {/* ── Mensajes ── */}
         <div ref={messagesRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, overscrollBehavior: 'contain' }}>
           {loading && (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: '40px 0', fontSize: '0.85rem' }}>
+            <div style={{ textAlign: 'center', color: isTripChat ? 'var(--text-muted)' : 'rgba(255,255,255,0.3)', padding: '40px 0', fontSize: '0.85rem' }}>
               Cargando mensajes...
             </div>
           )}
@@ -275,7 +280,7 @@ export default function ChatModal({
                   <Icon name="chat" size={22} />
                 </div>
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+              <div style={{ color: isTripChat ? 'var(--text-secondary)' : 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
                 Comenzá la conversación.<br />Los mensajes son privados entre vos y {otherName || 'el Tasker'}.
               </div>
             </div>
@@ -286,7 +291,7 @@ export default function ChatModal({
               <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                 {/* Nombre del remitente (solo para mensajes ajenos) */}
                 {!isMe && (
-                  <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginBottom: 3, paddingLeft: 4, fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.68rem', color: isTripChat ? 'var(--text-muted)' : 'rgba(255,255,255,0.35)', marginBottom: 3, paddingLeft: 4, fontWeight: 600 }}>
                     {msg.sender_name || (msg.sender_role === 'client' ? 'Cliente' : 'Tasker')}
                   </div>
                 )}
@@ -295,17 +300,18 @@ export default function ChatModal({
                   padding: '10px 14px',
                   borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                   background: isMe
-                    ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+                    ? (isTripChat ? '#F5C518' : 'linear-gradient(135deg,#22c55e,#16a34a)')
                     : 'var(--glass-card)',
-                  color: isMe ? '#fff' : 'var(--text-primary)',
+                  color: isMe ? (isTripChat ? '#1C1C2E' : '#fff') : 'var(--text-primary)',
                   fontSize: '0.9rem',
                   lineHeight: 1.45,
                   wordBreak: 'break-word',
-                  boxShadow: isMe ? '0 2px 12px rgba(34,197,94,0.25)' : 'none',
+                  boxShadow: isMe ? (isTripChat ? '0 2px 10px rgba(245,197,24,0.18)' : '0 2px 12px rgba(34,197,94,0.25)') : 'none',
+                  whiteSpace: 'pre-wrap',
                 }}>
                   {msg.content}
                 </div>
-                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.25)', marginTop: 3, paddingLeft: 4, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: '0.62rem', color: isTripChat ? 'var(--text-muted)' : 'rgba(255,255,255,0.25)', marginTop: 3, paddingLeft: 4, paddingRight: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                   {formatTime(msg.created_at)}
                   {isMe && msg.id.startsWith('temp-') && <span style={{ color: 'rgba(255,255,255,0.3)' }}>enviando…</span>}
                   {isMe && !msg.id.startsWith('temp-') && msg.read_at && <span style={{ color: '#22c55e' }}>✓✓</span>}
@@ -352,6 +358,7 @@ export default function ChatModal({
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
             ref={inputRef}
+            aria-label="Escribir mensaje"
             value={text}
             onChange={e => { setText(e.target.value); if (sendError) setSendError(null); }}
             onKeyDown={handleKeyDown}
@@ -375,15 +382,16 @@ export default function ChatModal({
           />
           <button
             onClick={() => sendMessage()}
+            aria-label="Enviar mensaje"
             disabled={!text.trim() || sending}
             style={{
               width: 44, height: 44,
               borderRadius: '50%',
               border: 'none',
               background: text.trim() && !sending
-                ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+                ? (isTripChat ? '#F5C518' : 'linear-gradient(135deg,#22c55e,#16a34a)')
                 : 'rgba(255,255,255,0.1)',
-              color: text.trim() && !sending ? '#fff' : 'rgba(255,255,255,0.3)',
+              color: text.trim() && !sending ? (isTripChat ? '#1C1C2E' : '#fff') : 'var(--text-muted)',
               fontSize: '1.1rem',
               cursor: text.trim() && !sending ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',

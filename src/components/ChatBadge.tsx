@@ -24,13 +24,16 @@ export function ChatBadge({ email, href, scope }: Props) {
   const [unread, setUnread] = useState(0);
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
+  const requestRef = useRef(0);
 
   const fetchCount = useCallback(async () => {
     if (!email) return;
+    const request = ++requestRef.current;
     try {
-      const res = await authFetch('/api/chat/threads?count=1');
-      if (!res.ok) return;
+      const res = await authFetch('/api/chat/threads?count=1', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
+      if (request !== requestRef.current) return;
       const newCount = Number(j.total_unread ?? 0);
       if (!initialLoadRef.current && newCount > prevUnreadRef.current) {
         playMessageAlert();
@@ -39,14 +42,14 @@ export function ChatBadge({ email, href, scope }: Props) {
       prevUnreadRef.current = newCount;
       initialLoadRef.current = false;
       setUnread(newCount);
-    } catch {
-      // silently ignore — badge is non-critical
+    } catch (error) {
+      console.warn('[Chat] No se pudo actualizar el contador:', error);
     }
   }, [email]);
 
   useEffect(() => {
     fetchCount();
-    const iv = setInterval(fetchCount, 30_000);
+    const iv = setInterval(fetchCount, scope === 'order' ? 10_000 : 30_000);
 
     // Realtime: re-count when any thread updates for this user
     const channel = email
@@ -66,11 +69,26 @@ export function ChatBadge({ email, href, scope }: Props) {
           .subscribe()
       : null;
 
+    const ordersChannel = scope === 'order' && email
+      ? supabase.channel(`chat-order-status-${email}`)
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'orders', filter: `client_email=eq.${email}`,
+          } as never, () => fetchCount())
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'orders', filter: `accepted_by=eq.${email}`,
+          } as never, () => fetchCount())
+          .subscribe()
+      : null;
+    const onVisible = () => { if (!document.hidden) fetchCount(); };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
+      requestRef.current += 1;
       clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisible);
       if (channel) supabase.removeChannel(channel);
+      if (ordersChannel) supabase.removeChannel(ordersChannel);
     };
-  }, [email, fetchCount]);
+  }, [email, fetchCount, scope]);
 
   if (unread === 0) return null;
 

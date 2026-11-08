@@ -2105,7 +2105,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
       })}
 
       {/* Chat Modal */}
-      {chatModal && email && (
+      {chatModal && email && orders.some(o => o.id === chatModal.orderId) && (
         <ChatModal
           open={true}
           onClose={() => setChatModal(null)}

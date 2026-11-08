@@ -8,6 +8,7 @@ import { useClientContext } from '../context';
 import RatingModal from '@/components/RatingModal';
 import ReportModal from '@/components/ReportModal';
 import ChatModal from '@/components/ChatModal';
+import { isOrderChatClosed } from '@/lib/orderChat';
 import { Icon } from '@/components/Icon';
 import { authFetch } from '@/lib/authFetch';
 import { getStatusTone } from '@/lib/statusPalette';
@@ -744,7 +745,7 @@ export default function ClienteHistorialPage() {
                       )}
                       {((item.data as Order).driver_name) && (
                         <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(245,197,24,0.12)', paddingTop: 8 }}>
-                          {(() => {
+                          {!isOrderChatClosed(item.data.status) && (() => {
                             const refDate = (item.data as Order).completed_at ?? item.data.created_at;
                             const chatOk = refDate ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000 : false;
                             return chatOk ? (
@@ -753,8 +754,7 @@ export default function ClienteHistorialPage() {
                                 className="tuki-btn tuki-btn-warning"
                                 style={{ flex: 1, fontSize: '0.8rem' }}
                               >
-                                <Icon name="chat" size={14} />
-                                Chat con el driver
+                                <Icon name="chat" size={14} /> Chat con el driver
                               </button>
                             ) : null;
                           })()}

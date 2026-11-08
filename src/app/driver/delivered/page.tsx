@@ -9,6 +9,7 @@ import ReportModal from '@/components/ReportModal';
 import ChatModal from '@/components/ChatModal';
 import { Icon } from '@/components/Icon';
 import { getStatusTone } from '@/lib/statusPalette';
+import { isOrderChatClosed } from '@/lib/orderChat';
 
 const RatingModalDynamic = dynamic(() => import('@/components/RatingModal'), { ssr: false });
 
@@ -47,28 +48,19 @@ export default function DeliveredPage() {
   const [chatModal, setChatModal] = useState<{ orderId: string; clientName: string | null; clientPhoto: string | null } | null>(null);
   const searchParams = useSearchParams();
 
-  // Auto-open most recent unread chat when badge redirects here
   useEffect(() => {
     if (!searchParams.get('openChat') || orders.length === 0 || chatModal) return;
     authFetch('/api/chat/threads')
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : [])
       .then((threads: Array<{ order_id: string | null; unread_count: number; last_message_at: string }>) => {
         const target = threads
           .filter(t => t.order_id && t.unread_count > 0)
           .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime())[0];
-        if (!target) return;
-        const order = orders.find(o => o.id === target.order_id);
-        if (order) {
-          setChatModal({
-            orderId: order.id,
-            clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente',
-            clientPhoto: order.client_photo || null,
-          });
-        }
+        const order = target && orders.find(o => o.id === target.order_id && !isOrderChatClosed(o.status));
+        if (order) setChatModal({ orderId: order.id, clientName: order.client_name || order.client_email?.split('@')[0] || 'Cliente', clientPhoto: order.client_photo || null });
       })
-      .catch(() => {});
+      .catch(error => console.warn('[Chat] No se pudieron consultar las conversaciones:', error));
   }, [searchParams, orders, chatModal]);
-
   const fetchDelivered = useCallback(() => {
     if (!email) return;
     authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}&history=true`)
@@ -127,9 +119,8 @@ export default function DeliveredPage() {
       ? new Date(order.completed_at).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
       : new Date(order.created_at).toLocaleDateString('es-PY');
     const refDate = order.completed_at || order.created_at;
-    const chatAvailable = refDate
-      ? Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000
-      : false;
+    const chatAvailable = !isOrderChatClosed(order.status) && refDate &&
+      Date.now() - new Date(refDate).getTime() < 24 * 60 * 60 * 1000;
     const statusTone = getStatusTone(order.status);
     const statusLabel = STATUS_LABELS[order.status] ?? 'Entregado';
 
@@ -232,7 +223,6 @@ export default function DeliveredPage() {
                 <Icon name="chat" size={14} /> Chat con el cliente
               </button>
             )}
-
             {existingRating == null && !['returned', 'return_rejected', 'cancelled', 'failed'].includes(order.status) && (
               <button
                 onClick={() => openRating(order)}
@@ -315,16 +305,9 @@ export default function DeliveredPage() {
         />
       )}
 
-      {chatModal && email && (
-        <ChatModal
-          open={true}
-          onClose={() => setChatModal(null)}
-          orderId={chatModal.orderId}
-          myEmail={email}
-          myName={displayName || null}
-          otherName={chatModal.clientName}
-          otherPhoto={chatModal.clientPhoto}
-        />
+      {chatModal && email && orders.some(o => o.id === chatModal.orderId && !isOrderChatClosed(o.status)) && (
+        <ChatModal open={true} onClose={() => setChatModal(null)} orderId={chatModal.orderId}
+          myEmail={email} myName={displayName || null} otherName={chatModal.clientName} otherPhoto={chatModal.clientPhoto} />
       )}
     </DriverScreenLayout>
   );

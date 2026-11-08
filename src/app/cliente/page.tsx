@@ -1639,7 +1639,7 @@ export default function ClienteHomePage() {
 
       {/* ── Chat Modal ───────────────────────────────────────────────────── */}
       <ChatModal
-        open={chatOpen}
+        open={chatOpen && (!chatOrderId || orders.some(o => o.id === chatOrderId && TRACKING_STS.includes(o.status)))}
         onClose={closeChat}
         orderId={chatOrderId}
         jobId={chatJobId}
@@ -1650,7 +1650,7 @@ export default function ClienteHomePage() {
       />
 
       {/* ── Toast: nuevo mensaje recibido ────────────────────────────────── */}
-      {chatToast && (
+      {chatToast && (chatToast.isJob || orders.some(o => o.id === chatToast.id && TRACKING_STS.includes(o.status))) && (
         <div
           onClick={() => {
             setChatToast(null);

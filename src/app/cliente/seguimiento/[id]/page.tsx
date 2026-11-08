@@ -1450,7 +1450,7 @@ export default function SeguimientoPage() {
       )}
 
       {/* ── Chat toast popup ── */}
-      {chatToast && (
+      {chatToast && (type === 'service' || isActive) && (
         <div
           onClick={() => {
             if (chatToastTimerRef.current) clearTimeout(chatToastTimerRef.current);
@@ -1505,7 +1505,7 @@ export default function SeguimientoPage() {
       )}
 
       {/* ── Chat Modal ── */}
-      {chatOpen && myEmail && (
+      {chatOpen && myEmail && (type === 'service' || isActive) && (
         <ChatModal
           open={chatOpen}
           onClose={() => { setChatOpen(false); setChatUnread(0); }}

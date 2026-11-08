@@ -1119,7 +1119,7 @@ export default function MisOfertasPage() {
       </div>
 
       {/* ── Chat Modal ─────────────────────────────────────────────────── */}
-      {chatTarget && email && (
+      {chatTarget && email && (!chatTarget.orderId || orders.some(o => o.id === chatTarget.orderId)) && (
         <ChatModal
           open={true}
           onClose={() => setChatTarget(null)}
