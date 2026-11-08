@@ -42,7 +42,12 @@ export default function DriverNavegarPage() {
   const [order, setOrder] = useState<any>(null);
   const [rateOrder, setRateOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [route, setRoute] = useState<{ distKm: number; etaMin: number } | null>(null);
+  const [route, setRoute] = useState<{ distKm: number; etaMin: number; estimated: boolean } | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 10_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -54,8 +59,10 @@ export default function DriverNavegarPage() {
   const followRef = useRef(true);
   const [following, setFollowing] = useState(true);
   const lastRouteKey = useRef('');
+  const routeRequestRef = useRef(0);
   const [mapReady, setMapReady] = useState(false);
   const [mapFull, setMapFull] = useState(false);
+  useEffect(() => () => { routeRequestRef.current += 1; }, []);
 
   const fetchOrder = useCallback(async () => {
     if (!email) return;
@@ -138,10 +145,10 @@ export default function DriverNavegarPage() {
 
     if (driverPos) {
       const kind = vehicleKindFrom(order?.vehicle_type);
-      if (!meMarker.current) meMarker.current = createVehicleMarker(L, map, driverPos.lat, driverPos.lng, kind);
+      if (!meMarker.current) meMarker.current = createVehicleMarker(L, map, driverPos.lat, driverPos.lng, kind, driverPos);
       else {
         meMarker.current.setKind(kind);
-        meMarker.current.move(driverPos.lat, driverPos.lng);
+        meMarker.current.move(driverPos.lat, driverPos.lng, driverPos);
       }
       // Modo seguimiento (como Bolt/inDrive): el mapa va con el vehículo hasta que el conductor lo mueva con el dedo
       if (followRef.current) {
@@ -161,9 +168,10 @@ export default function DriverNavegarPage() {
 
     if (!driverPos || !tgt) return;
     // Solo recalcula la ruta si cambió el destino o el conductor se movió ~100 m
-    const key = `${targetKey}|${driverPos.lat.toFixed(3)},${driverPos.lng.toFixed(3)}`;
+    const key = `${toPickup ? 'A' : 'B'}|${targetKey}|${driverPos.lat.toFixed(3)},${driverPos.lng.toFixed(3)}`;
     if (key === lastRouteKey.current) return;
     lastRouteKey.current = key;
+    const requestId = ++routeRequestRef.current;
 
     (async () => {
       let coords: [number, number][] = [[driverPos.lat, driverPos.lng], [tgt.lat, tgt.lng]];
@@ -179,16 +187,19 @@ export default function DriverNavegarPage() {
           if (json?.coords?.length > 1) {
             coords = json.coords.map((c: LatLng) => [Number(c.lat), Number(c.lng)] as [number, number]);
             ok = true;
+            if (routeRequestRef.current !== requestId || mapRef.current !== map) return;
             setRoute({
               distKm: Number(json.distance_meters || 0) / 1000 || haversineKm(driverPos.lat, driverPos.lng, tgt.lat, tgt.lng),
               etaMin: Math.max(1, Math.round(Number(json.duration_seconds || 0) / 60)),
+              estimated: false,
             });
           }
         }
       } catch { /* línea recta */ }
+      if (routeRequestRef.current !== requestId || mapRef.current !== map) return;
       if (!ok) {
         const d = haversineKm(driverPos.lat, driverPos.lng, tgt.lat, tgt.lng);
-        setRoute({ distKm: d, etaMin: Math.max(1, Math.round(d * 2.5)) });
+        setRoute({ distKm: d, etaMin: Math.max(1, Math.round(d * 2.5)), estimated: true });
       }
       if (lineRef.current) map.removeLayer(lineRef.current);
       lineRef.current = L.layerGroup([
@@ -199,10 +210,10 @@ export default function DriverNavegarPage() {
         fittedRef.current = true;
       }
     })();
-  }, [mapReady, driverPos, targetKey, toPickup]);
+  }, [mapReady, driverPos, targetKey, toPickup, order?.vehicle_type]);
 
   // Al cambiar de tramo (recogida → entrega) se vuelve a encuadrar
-  useEffect(() => { fittedRef.current = false; lastRouteKey.current = ''; }, [toPickup]);
+  useEffect(() => { fittedRef.current = false; }, [toPickup]);
 
   const recenter = () => {
     const map = mapRef.current;
@@ -218,7 +229,7 @@ export default function DriverNavegarPage() {
 
         {route && (
           <div style={{ position: 'absolute', left: 12, right: 68, top: 'calc(env(safe-area-inset-top, 0px) + 12px)', zIndex: 1001, background: '#111827', color: '#fff', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontWeight: 900, fontSize: '1.3rem', lineHeight: 1.1, textAlign: 'center' }}>
-            {route.etaMin} min <span style={{ color: '#9ca3af', fontWeight: 800 }}>· {route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}</span>
+            {route.estimated ? 'Aprox. ' : ''}{route.etaMin} min <span style={{ color: '#9ca3af', fontWeight: 800 }}>· {route.distKm < 1 ? `${Math.round(route.distKm * 1000)} m` : `${route.distKm.toFixed(1)} km`}</span>
           </div>
         )}
 
@@ -243,6 +254,11 @@ export default function DriverNavegarPage() {
         {!driverPos && mapReady && (
           <div style={{ position: 'absolute', bottom: 28, left: 12, zIndex: 1001, background: 'rgba(0,0,0,0.75)', color: '#f59e0b', borderRadius: 12, padding: '8px 14px', fontSize: '0.75rem', fontWeight: 600 }}>
             Esperando señal GPS…
+          </div>
+        )}
+        {driverPos?.capturedAt && clock - driverPos.capturedAt > 45_000 && mapReady && (
+          <div role="status" style={{ position: 'absolute', bottom: 28, left: 12, zIndex: 1001, background: 'rgba(0,0,0,0.75)', color: '#f59e0b', borderRadius: 12, padding: '8px 14px', fontSize: '0.75rem', fontWeight: 600 }}>
+            Ubicación sin actualizar. Revisá la señal GPS.
           </div>
         )}
       </div>

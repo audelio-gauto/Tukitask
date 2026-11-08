@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { WorkerContext, DEFAULT_FILTERS } from './context';
-import type { ServiceFilters } from './context';
+import type { ServiceFilters, WorkerPosition } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './driver.css';
@@ -18,6 +18,7 @@ import OfflineBanner from '@/components/OfflineBanner';
 import AppUpdateBanner from '@/components/AppUpdateBanner';
 import GpsBanner from '@/components/GpsBanner';
 import { authFetch } from '@/lib/authFetch';
+import { isFreshLocation, isNewerLocation, normalizeLiveLocation, type LiveLocation } from '@/lib/liveLocation';
 
 const DRIVER_TABS = [
   { href: '/driver',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -43,7 +44,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
   const [pickupRangeKm, setPickupRangeKm] = useState(10);
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [driverPos, setDriverPos] = useState<WorkerPosition | null>(null);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
@@ -86,11 +87,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   // 4. Exposes driverPos via context — child pages must NOT create their own watchPosition
   useEffect(() => {
     if (!email) return;
-    let lastLat: number | null = null;
-    let lastLng: number | null = null;
+    let lastLocation: LiveLocation | null = null;
     let lastDbLat: number | null = null;
     let lastDbLng: number | null = null;
     let lastDbAt = 0;
+    let dbPending = false;
+    let disposed = false;
     let watchId: number | null = null;
     let dbIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -100,12 +102,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     });
     broadcastCh.subscribe();
 
-    const broadcastLocation = (lat: number, lng: number) => {
+    const broadcastLocation = (location: LiveLocation) => {
       broadcastCh.send({
         type: 'broadcast',
         event: 'location',
-        payload: { lat, lng },
-      }).catch(() => {});
+        payload: location,
+      }).catch(error => console.warn('[GPS] No se pudo enviar la ubicación:', error));
     };
 
     // DB write (throttled to 60s, skipped when offline)
@@ -119,65 +121,79 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     };
 
-    const postToDB = () => {
-      if (lastLat == null || lastLng == null) return;
+    const postToDB = async () => {
+      const location = lastLocation;
+      if (!location || !isFreshLocation(location) || dbPending) return;
       // En un viaje activo (navegar/activo) siempre se publica, aunque el switch esté en offline
       const onTrip = typeof window !== 'undefined' && /^\/driver\/(navegar|activo)/.test(window.location.pathname);
       if (!onTrip && typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
       if (!onTrip && lastDbAt !== 0 && Date.now() - lastDbAt < 60_000) return;
       if (lastDbLat != null && lastDbLng != null) {
-        const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, { lat: lastLat, lng: lastLng });
+        const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, location);
         // Quieto: igual se refresca cada ~2 min para que el cliente lo siga viendo en línea
         if (moved < (onTrip ? 15 : 50) && Date.now() - lastDbAt < 120_000) return;
       }
-      lastDbAt = Date.now();
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session?.access_token) return;
-        fetch('/api/driver-location', {
+      dbPending = true;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token || disposed) return;
+        const response = await fetch('/api/driver-location', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ lat: lastLat, lng: lastLng }),
-        }).catch(() => {});
-      });
-      lastDbLat = lastLat;
-      lastDbLng = lastLng;
+          body: JSON.stringify({ lat: location.lat, lng: location.lng }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        lastDbAt = Date.now();
+        lastDbLat = location.lat;
+        lastDbLng = location.lng;
+      } catch (error) {
+        console.warn('[GPS] No se pudo guardar la ubicación:', error);
+      } finally {
+        dbPending = false;
+      }
+    };
+
+    const acceptLocation = (location: LiveLocation | null) => {
+      if (disposed || !location || !isFreshLocation(location) || !isNewerLocation(location, lastLocation)) return;
+      lastLocation = location;
+      setDriverPos(location);
+      if (lastDbAt === 0) void postToDB();
+      broadcastLocation(location);
     };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          lastLat = pos.coords.latitude;
-          lastLng = pos.coords.longitude;
-          // Share position with child pages via context (eliminates duplicate watchPosition)
-          setDriverPos({ lat: lastLat, lng: lastLng });
-          // Primer fix: publicar ya en DB para que el cliente lo vea al instante
-          if (lastDbAt === 0) postToDB();
-          // Broadcast immediately on every GPS fix (< 1s for client)
-          broadcastLocation(lastLat, lastLng);
+          acceptLocation(normalizeLiveLocation({
+            lat: pos.coords.latitude, lng: pos.coords.longitude, capturedAt: pos.timestamp,
+            accuracy: pos.coords.accuracy, speed: pos.coords.speed, heading: pos.coords.heading,
+          }));
         },
-        () => {},
+        error => console.warn('[GPS] No se pudo obtener la ubicación:', error.message),
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
       );
-      // DB write: 60s en general, 10s durante un viaje activo (respaldo si falla el broadcast)
-      dbIntervalId = setInterval(postToDB, 10_000);
     }
+    // También se necesita el respaldo si solo está disponible el GPS nativo.
+    dbIntervalId = setInterval(postToDB, 10_000);
 
     // Background GPS — only activates inside the Capacitor APK.
     // On web browsers startBackgroundGeo() returns null (no-op).
     let bgGeoStop: (() => void) | null = null;
     import('@/lib/capacitorGeo').then(({ startBackgroundGeo }) =>
-      startBackgroundGeo((lat, lng) => {
-        lastLat = lat;
-        lastLng = lng;
-        setDriverPos({ lat, lng });
-        broadcastLocation(lat, lng);
+      startBackgroundGeo((lat, lng, location) => {
+        acceptLocation(normalizeLiveLocation({
+          lat, lng, capturedAt: location.time, accuracy: location.accuracy,
+          speed: location.speed, heading: location.bearing,
+        }));
       }),
-    ).then(cleanup => { bgGeoStop = cleanup; });
+    ).then(cleanup => { if (disposed) cleanup?.(); else bgGeoStop = cleanup; })
+      .catch(error => console.warn('[GPS] No se pudo iniciar la ubicación en segundo plano:', error));
 
     return () => {
+      disposed = true;
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
       if (dbIntervalId != null) clearInterval(dbIntervalId);
       supabase.removeChannel(broadcastCh);

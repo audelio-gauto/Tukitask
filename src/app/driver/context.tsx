@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext } from 'react';
+import type { LiveLocation } from '@/lib/liveLocation';
 
 /** Maps the vehicle_type stored in orders → driver filter key */
 export const VEHICLE_TO_FILTER: Record<string, string> = {
@@ -10,6 +11,7 @@ export const VEHICLE_TO_FILTER: Record<string, string> = {
 };
 
 export type ServiceFilters = Record<string, boolean>;
+export type WorkerPosition = Pick<LiveLocation, 'lat' | 'lng'> & Partial<Omit<LiveLocation, 'lat' | 'lng'>>;
 
 export const DEFAULT_FILTERS: ServiceFilters = {
   moto_envios: true,
@@ -32,8 +34,8 @@ interface WorkerCtx {
   pickupRangeKm: number;
   setPickupRangeKm: (v: number) => void;
   /** Live GPS position shared from layout — avoids duplicate watchPosition instances */
-  driverPos: { lat: number; lng: number } | null;
-  setDriverPos: (v: { lat: number; lng: number } | null) => void;
+  driverPos: WorkerPosition | null;
+  setDriverPos: (v: WorkerPosition | null) => void;
 }
 
 export const WorkerContext = createContext<WorkerCtx>({

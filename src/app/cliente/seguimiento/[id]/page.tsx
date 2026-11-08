@@ -19,6 +19,7 @@ import SearchingDriver from '../../components/SearchingDriver';
 import { playMessageAlert } from '@/lib/audio';
 import { routePinHtml, PIN_A_COLOR, PIN_B_COLOR, PIN_W, PIN_H } from '@/lib/mapPins';
 import { themeTile, createVehicleMarker, vehicleKindFrom } from '@/lib/mapVehicle';
+import { isFreshLocation, isNewerLocation, normalizeLiveLocation, shouldUseStoredLocation, type LiveLocation } from '@/lib/liveLocation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,9 @@ interface DriverLoc {
   lat: number;
   lng: number;
   updated_at: string;
+  heading?: number;
+  speed?: number;
+  accuracy?: number;
 }
 
 const STATUS_ACTIVE = new Set([
@@ -152,7 +156,13 @@ export default function SeguimientoPage() {
   const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const broadcastChRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const subscribedDriverRef = useRef<string>('');
+  const lastLiveLocationRef = useRef<LiveLocation | null>(null);
+  const lastLiveReceivedRef = useRef(0);
+  const lastStoredAtRef = useRef(0);
+  const trackedDriverRef = useRef('');
+  const followDriverRef = useRef(true);
   const lastRouteKey      = useRef<string>('');
+  const routeRequestRef   = useRef(0);
   const etaFromApiRef     = useRef<boolean>(false);
   const vehicleFetchedRef = useRef<boolean>(false);
   const fetchVehicleRef   = useRef<((email: string) => void) | null>(null);
@@ -162,6 +172,13 @@ export default function SeguimientoPage() {
   const [stopsOpen, setStopsOpen] = useState(false);
   const [vehicle,  setVehicle]  = useState<VehicleInfo | null>(null);
   const [driverLoc, setDriverLoc] = useState<DriverLoc | null>(null);
+  const [followingDriver, setFollowingDriver] = useState(true);
+  const [locationClock, setLocationClock] = useState(() => Date.now());
+  useEffect(() => () => { routeRequestRef.current += 1; }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setLocationClock(Date.now()), 10_000);
+    return () => clearInterval(timer);
+  }, []);
   const [mapReady, setMapReady] = useState(false);
   const [mapFull, setMapFull] = useState(false);
   useEffect(() => {
@@ -319,10 +336,16 @@ export default function SeguimientoPage() {
       if (!res.ok) return;
       const loc = await res.json();
       if (loc?.lat != null) {
-        setDriverLoc(loc);
-        return loc;
+        if (type === 'service') { setDriverLoc(loc); return loc; }
+        const storedAt = Date.parse(loc.updated_at);
+        const location = normalizeLiveLocation({ lat: loc.lat, lng: loc.lng, capturedAt: storedAt });
+        if (location && shouldUseStoredLocation(location, lastStoredAtRef.current, lastLiveLocationRef.current, lastLiveReceivedRef.current)) {
+          lastStoredAtRef.current = storedAt;
+          setDriverLoc({ lat: location.lat, lng: location.lng, updated_at: loc.updated_at });
+          return loc;
+        }
       }
-    } catch { /* silent */ }
+    } catch (error) { console.warn('[Seguimiento] No se pudo consultar la ubicación:', error); }
     return null;
   }, [id, type, getToken]);
 
@@ -368,6 +391,7 @@ export default function SeguimientoPage() {
       tile.addTo(map);
       tileRef.current = tile;
       mapInst.current = map;
+      map.on('dragstart', () => { followDriverRef.current = false; setFollowingDriver(false); });
 
       const ro = new ResizeObserver(() => map.invalidateSize());
       ro.observe(mapRef.current!);
@@ -404,13 +428,13 @@ export default function SeguimientoPage() {
     if (!Number.isFinite(dLat) || !Number.isFinite(dLng)) return;
     const kind = vehicleKindFrom(vehicleRef.current?.label);
     if (!driverMarkerRef.current) {
-      driverMarkerRef.current = createVehicleMarker(L, map, dLat, dLng, kind);
+      driverMarkerRef.current = createVehicleMarker(L, map, dLat, dLng, kind, driverLoc);
     } else {
       driverMarkerRef.current.setKind(kind);
-      driverMarkerRef.current.move(dLat, dLng);
+      driverMarkerRef.current.move(dLat, dLng, driverLoc);
     }
     // Si el vehículo se acerca al borde de la pantalla, el mapa lo sigue
-    if (!map.getBounds().pad(-0.2).contains([dLat, dLng])) {
+    if (followDriverRef.current && !map.getBounds().pad(-0.2).contains([dLat, dLng])) {
       map.panTo([dLat, dLng], { animate: true, duration: 1 });
     }
   }, [driverLoc, mapReady, type]);
@@ -560,6 +584,7 @@ export default function SeguimientoPage() {
         const routeKey = (preTrip ? 'A:' : 'B:') + waypoints.map(w => `${w.lat.toFixed(3)},${w.lng.toFixed(3)}`).join('|');
         if (routeKey !== lastRouteKey.current) {
           lastRouteKey.current = routeKey;
+          const requestId = ++routeRequestRef.current;
 
         getToken().then(async token => {
             // Fetch each segment in sequence, collect all coord arrays
@@ -610,6 +635,7 @@ export default function SeguimientoPage() {
               }
             }
 
+            if (routeRequestRef.current !== requestId || mapInst.current !== map) return;
             // Draw combined polyline
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             if (segmentCoords.length > 1) {
@@ -644,8 +670,9 @@ export default function SeguimientoPage() {
               const distKm = firstSegDistanceM > 0 ? firstSegDistanceM / 1000 : haversineKm(dLat, dLng, waypoints[1]?.lat ?? nDestLat, waypoints[1]?.lng ?? nDestLng);
               etaFromApiRef.current = true;
               setEta({ distKm, etaMin, fromApi: true });
-            } else if (!etaFromApiRef.current && waypoints.length >= 2) {
+            } else if (waypoints.length >= 2) {
               const distKm = haversineKm(dLat, dLng, waypoints[1].lat, waypoints[1].lng);
+              etaFromApiRef.current = false;
               setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
             }
 
@@ -660,6 +687,7 @@ export default function SeguimientoPage() {
               setRouteTotals(null);
             }
           }).catch(() => {
+            if (routeRequestRef.current !== requestId || mapInst.current !== map) return;
             if (routeLineRef.current) { map.removeLayer(routeLineRef.current); routeLineRef.current = null; }
             routeLineRef.current = L.polyline(
               waypoints.map(w => [w.lat, w.lng] as [number, number]),
@@ -711,7 +739,7 @@ export default function SeguimientoPage() {
     const dLng = Number(driverLoc.lng);
     const distKm = haversineKm(dLat, dLng, destLat, destLng);
     setEta({ distKm, etaMin: Math.max(1, Math.round(distKm * 2)), fromApi: false });
-  }, [driverLoc, order]);  
+  }, [driverLoc, order, type]);
 
   const [arrivalAlertKey, setArrivalAlertKey] = useState<string | null>(null);
   const arrivalOrderKey = order && type !== 'service' ? `${order.id}:${order.accepted_by ?? ''}` : null;
@@ -764,6 +792,23 @@ export default function SeguimientoPage() {
     const driverEmail = order?.accepted_by;
     if (!driverEmail) return;
     if (!STATUS_ACTIVE.has(order?.status ?? '')) return;
+    if (type !== 'service' && trackedDriverRef.current && trackedDriverRef.current !== driverEmail) {
+      lastLiveLocationRef.current = null;
+      lastLiveReceivedRef.current = 0;
+      lastStoredAtRef.current = 0;
+      routeRequestRef.current += 1;
+      lastRouteKey.current = '';
+      fitKeyRef.current = '';
+      driverMarkerRef.current?.remove();
+      driverMarkerRef.current = null;
+      if (routeLineRef.current && mapInst.current) mapInst.current.removeLayer(routeLineRef.current);
+      routeLineRef.current = null;
+      etaFromApiRef.current = false;
+      setEta(null);
+      setRouteTotals(null);
+      setDriverLoc(null);
+    }
+    trackedDriverRef.current = driverEmail;
     // Only subscribe once per driver
     if (subscribedDriverRef.current === driverEmail) return;
     subscribedDriverRef.current = driverEmail;
@@ -779,9 +824,12 @@ export default function SeguimientoPage() {
     });
 
     ch.on('broadcast', { event: 'location' }, ({ payload }) => {
-      if (payload?.lat != null && payload?.lng != null) {
-        setDriverLoc({ lat: Number(payload.lat), lng: Number(payload.lng), updated_at: new Date().toISOString() });
-      }
+      if (trackedDriverRef.current !== driverEmail) return;
+      const location = normalizeLiveLocation(payload ?? {});
+      if (!location || !isFreshLocation(location) || !isNewerLocation(location, lastLiveLocationRef.current)) return;
+      lastLiveLocationRef.current = location;
+      lastLiveReceivedRef.current = Date.now();
+      setDriverLoc({ ...location, updated_at: new Date(location.capturedAt).toISOString() });
     }).subscribe((status) => {
       // Fetch location immediately when subscription is established
       if (status === 'SUBSCRIBED') {
@@ -796,7 +844,7 @@ export default function SeguimientoPage() {
       broadcastChRef.current = null;
       subscribedDriverRef.current = '';
     };
-  }, [order?.accepted_by, order?.status, fetchDriverLoc]);
+  }, [order?.accepted_by, order?.status, fetchDriverLoc, type]);
 
   // ── Realtime: incoming chat messages → show toast + unread badge ────────────
   useEffect(() => {
@@ -842,7 +890,7 @@ export default function SeguimientoPage() {
   const isActive     = order ? STATUS_ACTIVE.has(order.status) : false;
   const preTripView  = !!order && type !== 'service' && ['accepted', 'assigned', 'picking_up', 'at_pickup'].includes(String(order.status));
   const etaLabel     = eta && isActive
-    ? (eta.distKm * 1000 < 80 && preTripView ? 'Tu conductor está llegando' : `${preTripView ? 'Llega en' : 'Destino en'} ${eta.etaMin} min`)
+    ? (eta.distKm * 1000 < 80 && preTripView ? 'Tu conductor está llegando' : `${preTripView ? 'Llega en' : 'Destino en'} ${eta.fromApi ? '' : 'aprox. '}${eta.etaMin} min`)
     : null;
   const PICKUP_VALIDATED_STATUSES = ['in_transit', 'delivered', 'failed', 'returning', 'returned', 'driver_returning', 'return_delivered', 'return_rejected', 'driver_cancelled', 'client_confirmed'];
   const pickupValidated  = !!(order?.pickup_code  && PICKUP_VALIDATED_STATUSES.includes(order.status));
@@ -928,6 +976,19 @@ export default function SeguimientoPage() {
           )}
         </button>
 
+        {mapReady && driverLoc && type !== 'service' && (
+          <button
+            onClick={() => {
+              followDriverRef.current = true;
+              setFollowingDriver(true);
+              mapInst.current?.setView([driverLoc.lat, driverLoc.lng], Math.max(mapInst.current.getZoom(), 16), { animate: true });
+            }}
+            aria-label="Centrar en el conductor"
+            aria-pressed={followingDriver}
+            style={{ position: 'absolute', right: 12, bottom: 20, zIndex: 1003, width: 42, height: 42, borderRadius: '50%', border: followingDriver ? '2px solid #F5C518' : 'none', background: 'var(--sheet-bg)', color: 'var(--text-primary)', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', fontSize: '1.2rem' }}
+          >⌖</button>
+        )}
+
         {/* ETA estilo Bolt/Uber */}
         {mapReady && etaLabel && (
           <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: '50%', transform: 'translateX(-50%)', zIndex: 1003, background: '#111827', color: '#fff', borderRadius: 22, padding: '9px 16px', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 2px 12px rgba(0,0,0,0.35)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
@@ -947,6 +1008,11 @@ export default function SeguimientoPage() {
         {mapReady && !driverLoc && isActive && !loading && (
           <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '8px 16px', border: '1px solid rgba(245,158,11,0.3)' }}>
             <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600 }}>Esperando senal GPS…</span>
+          </div>
+        )}
+        {mapReady && driverLoc && isActive && locationClock - Date.parse(driverLoc.updated_at) > 150_000 && (
+          <div role="status" style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'rgba(0,0,0,0.75)', borderRadius: 12, padding: '8px 16px', color: '#f59e0b', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            Última ubicación disponible. Esperando señal GPS…
           </div>
         )}
       </div>

@@ -78,7 +78,7 @@ function metersBetween(lat1: number, lng1: number, lat2: number, lng2: number): 
 
 export interface VehicleMarkerCtl {
   marker: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  move: (lat: number, lng: number) => void;
+  move: (lat: number, lng: number, motion?: VehicleMotion) => void;
   setKind: (kind: VehicleKind) => void;
   remove: () => void;
 }
@@ -87,11 +87,18 @@ const GLIDE_MS = 1400;
 const MIN_TURN_METERS = 3;
 const MAX_GLIDE_METERS = 5000;
 
+export interface VehicleMotion {
+  heading?: number | null;
+  speed?: number | null;
+  accuracy?: number | null;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function createVehicleMarker(L: any, map: any, lat: number, lng: number, initialKind: VehicleKind = 'car'): VehicleMarkerCtl {
+export function createVehicleMarker(L: any, map: any, lat: number, lng: number, initialKind: VehicleKind = 'car', initialMotion?: VehicleMotion): VehicleMarkerCtl {
   let kind = initialKind;
   let angle = 0;
   let raf = 0;
+  let bearingOrigin = { lat, lng };
 
   const makeIcon = (k: VehicleKind) => L.divIcon({
     className: '',
@@ -107,16 +114,26 @@ export function createVehicleMarker(L: any, map: any, lat: number, lng: number, 
     if (el) el.style.transform = `rotate(${angle}deg)`;
   };
 
-  const move = (toLat: number, toLng: number) => {
+  const move = (toLat: number, toLng: number, motion?: VehicleMotion) => {
     const from = marker.getLatLng();
     const meters = metersBetween(from.lat, from.lng, toLat, toLng);
     if (raf) cancelAnimationFrame(raf);
 
-    if (meters >= MIN_TURN_METERS) {
-      const target = bearingDeg(from.lat, from.lng, toLat, toLng);
-      const delta = ((target - angle + 540) % 360) - 180;
+    const distanceFromOrigin = metersBetween(bearingOrigin.lat, bearingOrigin.lng, toLat, toLng);
+    const heading = motion?.heading;
+    const hasHeading = typeof heading === 'number' && Number.isFinite(heading) && heading >= 0 && heading < 360 &&
+      typeof motion?.speed === 'number' && motion.speed >= 1.5 &&
+      (motion.accuracy == null || motion.accuracy <= 50);
+    const canTurnFromMovement = (motion?.speed == null || motion.speed >= 0.8) &&
+      distanceFromOrigin >= Math.max(MIN_TURN_METERS, Math.min(20, (motion?.accuracy ?? 0) * 0.5));
+    if (hasHeading || canTurnFromMovement) {
+      const target = hasHeading ? heading : bearingDeg(bearingOrigin.lat, bearingOrigin.lng, toLat, toLng);
+      const delta = (((target - angle) % 360 + 540) % 360) - 180;
       angle += delta;
       applyAngle();
+      bearingOrigin = { lat: toLat, lng: toLng };
+    } else if (motion?.speed != null && motion.speed < 0.8) {
+      bearingOrigin = { lat: toLat, lng: toLng };
     }
 
     if (meters < 0.5 || meters > MAX_GLIDE_METERS) {
@@ -144,5 +161,6 @@ export function createVehicleMarker(L: any, map: any, lat: number, lng: number, 
     map.removeLayer(marker);
   };
 
+  if (initialMotion) move(lat, lng, initialMotion);
   return { marker, move, setKind, remove };
 }
