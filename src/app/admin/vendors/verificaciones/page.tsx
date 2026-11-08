@@ -16,7 +16,7 @@ type TabKey = 'pending' | 'active' | 'blocked';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'pending', label: 'Recientes'   },
-  { key: 'active',  label: 'Aprobados'   },
+  { key: 'active',  label: 'Anteriores' },
   { key: 'blocked', label: 'Suspendidos' },
 ];
 
@@ -75,10 +75,10 @@ export default function VerificacionesPage() {
         <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
           <Link href="/admin/vendors" className="hover:text-gray-600 transition-colors">Vendedores</Link>
           <span>/</span>
-          <span className="text-gray-600 font-medium">Verificaciones</span>
+          <span className="text-gray-600 font-medium">Registros y estados</span>
         </div>
-        <h1 className="text-xl font-bold text-gray-900">Verificaciones de Vendedores</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Revisar solicitudes de alta y gestión del estado de verificación de vendedores.</p>
+        <h1 className="text-xl font-bold text-gray-900">Registros y estados de vendedores</h1>
+        <p className="text-gray-500 text-sm mt-0.5">Vendedores recientes, anteriores y suspendidos. La antigüedad del registro no indica una verificación de identidad.</p>
       </div>
 
       {/* Tabs */}
@@ -113,7 +113,7 @@ export default function VerificacionesPage() {
             <p className="text-sm font-medium text-gray-400">
               {tab === 'pending' ? 'Sin vendedores recientes' : tab === 'active' ? 'Sin vendedores aprobados' : 'Sin vendedores suspendidos'}
             </p>
-            <p className="text-xs text-gray-300 mt-1">Las solicitudes aparecerán aquí</p>
+            <p className="text-xs text-gray-300 mt-1">Los registros aparecerán aquí</p>
           </div>
         ) : (
           <div>

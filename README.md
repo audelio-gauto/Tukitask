@@ -20,6 +20,18 @@ La ruta `/auth` permite iniciar sesión con email y contraseña usando Supabase 
 
 Puedes personalizar el flujo de autenticación en `src/app/auth.tsx`.
 
+## Navegación de administración
+
+El panel agrupa las herramientas en Personas, Operaciones, Marketplace, Finanzas,
+Calidad y control, Estadísticas y Configuración. El buscador del menú encuentra
+opciones dentro de cada grupo; en pantallas pequeñas el menú se abre desde la
+cabecera. Las rutas anteriores siguen disponibles.
+
+Las vistas de stock y productos reportados se identifican como no conectadas:
+no deben interpretarse como ausencia de alertas. Los retiros de vendedores aún
+no están habilitados. La pantalla de registros y estados de vendedores clasifica
+por antigüedad y bloqueo; no representa una verificación de identidad.
+
 ---
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).

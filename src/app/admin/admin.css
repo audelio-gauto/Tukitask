@@ -153,5 +153,139 @@
 /* ── Sidebar ───────────────────────────────────────────── */
 .adm-sidebar {
   background: var(--adm-sidebar-bg) !important;
-  transition: background 0.2s;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  color: #e2e8f0;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.adm-layout-main {
+  margin-left: 260px;
+  min-width: 0;
+}
+.adm-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.adm-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: #f5c518;
+  color: #0b1220;
+  font-weight: 800;
+}
+.adm-sidebar-brand strong, .adm-sidebar-brand span { display: block; }
+.adm-sidebar-brand strong { font-size: 15px; color: #fff; }
+.adm-sidebar-brand span { font-size: 11px; color: #a7b3c5; }
+.adm-nav-search { padding: 16px 12px 8px; }
+.adm-nav-search label { display: block; font-size: 11px; color: #a7b3c5; margin: 0 0 6px 3px; }
+.adm-nav-search input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #3c4a60;
+  border-radius: 8px;
+  color: #fff;
+  background: #182235;
+  font-size: 13px;
+}
+.adm-nav-search input::placeholder { color: #a7b3c5; }
+.adm-nav-search input:focus-visible, .adm-nav button:focus-visible, .adm-nav a:focus-visible,
+.adm-menu-toggle:focus-visible, .adm-sidebar-close:focus-visible {
+  outline: 2px solid #f5c518;
+  outline-offset: 2px;
+}
+.adm-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 16px; }
+.adm-nav-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border-radius: 9px;
+  color: #cbd5e1;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+}
+.adm-nav-section > span:first-of-type, .adm-nav-group > span:first-child { flex: 1; }
+.adm-nav-section:hover, .adm-nav-group:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.adm-nav-section.is-current { color: #fff; background: rgba(255,255,255,0.07); }
+.adm-nav-section.is-active, .adm-nav-link.is-active { color: #172033; background: #f5c518; }
+.adm-nav-groups { margin: 3px 0 8px 18px; padding-left: 10px; border-left: 1px solid #3c4a60; }
+.adm-nav-group {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 7px;
+  color: #b7c4d5;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+.adm-nav-chevron { font-size: 17px; line-height: 1; transition: transform 0.15s; }
+.adm-nav-chevron.is-open { transform: rotate(180deg); }
+.adm-nav-links { display: grid; gap: 2px; padding: 0 0 5px 5px; }
+.adm-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.adm-nav-link:hover:not(.is-active) { color: #fff; background: rgba(255,255,255,0.08); }
+.adm-nav-link small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; }
+.adm-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #be123c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.adm-nav-empty { padding: 12px; color: #cbd5e1; font-size: 12px; }
+.adm-sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); color: #a7b3c5; font-size: 11px; }
+.adm-header-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.adm-menu-toggle, .adm-sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  color: inherit;
+}
+.adm-sidebar-backdrop { display: none; }
+
+@media (max-width: 767px) {
+  .adm-layout-main { margin-left: 0; }
+  .adm-sidebar { transform: translateX(-100%); visibility: hidden; transition: transform 0.2s, visibility 0.2s; }
+  .adm-sidebar.adm-sidebar-open { transform: translateX(0); visibility: visible; }
+  .adm-sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(2,6,23,0.6); }
+  .adm-menu-toggle, .adm-sidebar-close { display: flex; }
+  .adm-sidebar-close { margin-left: auto; }
+  .adm-header { padding: 0 12px; }
+  .adm-header-title { font-size: 0.8rem; }
+  .adm-header-actions { gap: 4px; }
+  .adm-logout-btn { padding: 6px; }
+  .adm-content { padding: 16px; }
 }

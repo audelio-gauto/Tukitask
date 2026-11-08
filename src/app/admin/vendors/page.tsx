@@ -46,7 +46,7 @@ export default function VendorsDashboard() {
       color: 'amber',
       links: [
         { label: 'Lista de Vendedores', href: '/admin/vendors/lista' },
-        { label: 'Verificaciones', href: '/admin/vendors/verificaciones' },
+        { label: 'Registros y estados', href: '/admin/vendors/verificaciones' },
         { label: 'Bloqueos / Suspensiones', href: '/admin/vendors/bloqueos' },
       ],
     },
@@ -56,8 +56,8 @@ export default function VendorsDashboard() {
       links: [
         { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
         { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
-        { label: 'Productos Reportados', href: '/admin/vendors/productos/reportados' },
-        { label: 'Control de Stock', href: '/admin/vendors/productos/stock' },
+        { label: 'Productos Reportados (vista no conectada)', href: '/admin/vendors/productos/reportados' },
+        { label: 'Control de Stock (vista no conectada)', href: '/admin/vendors/productos/stock' },
       ],
     },
     {

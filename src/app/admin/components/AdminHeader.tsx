@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/useTheme';
 
-export default function AdminHeader() {
+export default function AdminHeader({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu: () => void }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const { theme, setTheme } = useTheme();
@@ -22,14 +22,21 @@ export default function AdminHeader() {
 
   return (
     <header className="adm-header">
-      <h1 className="adm-header-title">Tukitask &middot; Administración</h1>
+      <div className="adm-header-heading">
+        <button type="button" className="adm-menu-toggle" onClick={onToggleMenu} aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="admin-navigation">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 className="adm-header-title">Tukitask &middot; Administración</h1>
+      </div>
       <div className="adm-header-actions">
         {/* Theme toggle */}
         <button
           className="adm-theme-btn"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
-          aria-label="Toggle theme"
+          aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
         >
           {theme === 'dark' ? (
             /* Sun icon */

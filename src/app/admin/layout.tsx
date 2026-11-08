@@ -12,6 +12,16 @@ import './admin.css';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   useEffect(() => {
     initTheme();
@@ -47,9 +57,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="adm-root">
-      <AdminSidebar />
-      <div className="ml-64 transition-all duration-300">
-        <AdminHeader />
+      <AdminSidebar mobileOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+      <div className="adm-layout-main">
+        <AdminHeader menuOpen={menuOpen} onToggleMenu={() => setMenuOpen(open => !open)} />
         <main className="adm-content">
           {children}
         </main>
