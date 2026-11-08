@@ -10,6 +10,7 @@ import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import RequestsFeed, { type FeedItem, type RateConfig } from '@/components/RequestsFeed';
 import { Icon } from '@/components/Icon';
+import { FeedRefreshGate, type FeedRefreshRequest } from '@/lib/feedRefreshGate';
 
 // Mapbox GL must be loaded client-side only (no SSR)
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
@@ -102,35 +103,41 @@ export default function DriverDashboard() {
   });
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
-  const isLoadingOrdersRef = useRef(false);  // A-2: prevent concurrent mutations
+  const feedGateRef = useRef(new FeedRefreshGate());
   const activeOrderCountRef = useRef(0);     // always-fresh copy for loadPendingOrders
   const feedPrimedRef = useRef(false);
 
-  const loadPendingOrders = useCallback(() => {
-    if (isLoadingOrdersRef.current) return;  // skip if already in-flight
+  const loadPendingOrders = useCallback((force = false) => {
+    const gate = feedGateRef.current;
+    const request = gate.request(force);
+    if (!request) return;
     // InDrive-style: don't show new requests when driver already has an active order
     if (activeOrderCountRef.current > 0) {
       setPendingOrders([]);
+      gate.finish();
       return;
     }
-    isLoadingOrdersRef.current = true;
-    const feedUrl = feedPrimedRef.current ? '/api/orders' : '/api/orders?refresh=1';
-    feedPrimedRef.current = true;
-    authFetch(feedUrl)
+    const run = (current: FeedRefreshRequest) => {
+    const feedUrl = current.force || !feedPrimedRef.current ? '/api/orders?refresh=1' : '/api/orders';
+    authFetch(feedUrl, { cache: 'no-store' })
       .then(async r => {
+        if (!gate.isCurrent(current)) return null;
         if (r.status === 402) {
           // Saldo insuficiente — bloquear acceso al mercado
           const body = await r.json().catch(() => ({}));
+          if (!gate.isCurrent(current)) return null;
           setWalletBlocked(true);
           setWalletBalance(Number(body.balance ?? 0));
           setPendingOrders([]);
           return null;
         }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         setWalletBlocked(false);
         return r.json();
       })
       .then(data => {
-        if (!data || !Array.isArray(data)) return;
+        if (!gate.isCurrent(current) || !data || !Array.isArray(data)) return;
+        feedPrimedRef.current = true;
         const incomingIds = new Set(data.map((o: any) => String(o.id)));
         const freshIds = new Set([...incomingIds].filter(id => !knownOrderIdsRef.current.has(id)));
         knownOrderIdsRef.current = incomingIds;  // safe: only one write at a time
@@ -159,29 +166,35 @@ export default function DriverDashboard() {
           return pruned;
         });
       })
-      .catch(() => {})
-      .finally(() => { isLoadingOrdersRef.current = false; });
+      .catch(error => console.warn('[Driver] No se pudo actualizar la bandeja:', error))
+      .finally(() => {
+        const next = gate.finish();
+        if (next) run(next);
+      });
+    };
+    run(request);
   }, []);
 
   // Forced refresh: reset feedPrimedRef so next loadPendingOrders calls ?refresh=1
   const loadWithRefresh = useCallback(() => {
-    feedPrimedRef.current = false;
-    loadPendingOrders();
+    loadPendingOrders(true);
   }, [loadPendingOrders]);
 
   useEffect(() => {
     if (!email) return;
+    const gate = feedGateRef.current;
     loadPendingOrders();
-    // Fallback poll — 3 min (Realtime handles instant updates)
-    const iv = setInterval(loadWithRefresh, 45_000);
+    // RLS puede ocultar un pedido al cancelarse; consultar el estado real como respaldo.
+    const iv = setInterval(() => { if (!gate.isRunning()) loadPendingOrders(); }, 15_000);
+    const refreshIv = setInterval(loadWithRefresh, 45_000);
 
     // Primary: driver_feed INSERT fires when fn_match_driver_feed matches this driver
     const chFeed = supabase.channel(`driver-feed-${email}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'driver_feed',
         filter: `driver_email=eq.${email}`,
-      } as never, loadPendingOrders)
-      .subscribe();
+      } as never, () => loadPendingOrders())
+      .subscribe(status => { if (status === 'SUBSCRIBED') loadPendingOrders(); });
 
     // Backup: listen to new pending orders directly on orders table.
     // Handles the case where fn_match_driver_feed skips this driver (stale/missing GPS).
@@ -211,6 +224,8 @@ export default function DriverDashboard() {
 
     return () => {
       clearInterval(iv);
+      clearInterval(refreshIv);
+      gate.invalidate();
       document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(chFeed);
       supabase.removeChannel(chOrders);
@@ -242,7 +257,13 @@ export default function DriverDashboard() {
       }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        showToast(body.error || 'No se pudo enviar la oferta');
+        if (res.status === 409 && body.code === 'order_unavailable') {
+          setPendingOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
+          loadPendingOrders();
+          showToast('Esta solicitud ya no está disponible.');
+        } else {
+          showToast(body.error || 'No se pudo enviar la oferta');
+        }
         setSendingOfferId(null);
         return;
       }

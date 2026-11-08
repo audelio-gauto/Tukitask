@@ -174,14 +174,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'order_id y amount son requeridos' }, { status: 400 });
   }
 
-  const { data: order } = await supabaseServer
+  const { data: order, error: orderError } = await supabaseServer
     .from('orders')
     .select('status, created_at, vehicle_type, pickup_lat, pickup_lng, delivery_lat, delivery_lng')
     .eq('id', order_id)
-    .single();
+    .maybeSingle();
 
+  if (orderError) return serverError(orderError);
   if (!order || (order.status !== 'pending' && order.status !== 'negotiating')) {
-    return NextResponse.json({ error: 'Order is no longer available' }, { status: 409 });
+    return NextResponse.json({ error: 'Esta solicitud ya no está disponible.', code: 'order_unavailable' }, { status: 409 });
   }
 
   // Usar email del token — no del body
