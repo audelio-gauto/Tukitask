@@ -15,8 +15,8 @@ interface Props {
   email: string;
   /** Route to navigate to when badge is tapped */
   href: string;
-  /** 'order_id' for drivers, 'job_id' for tecnicos */
-  scope: 'order' | 'job';
+  /** Driver orders, technician jobs or the client's active services. */
+  scope: 'order' | 'job' | 'client';
 }
 
 export function ChatBadge({ email, href, scope }: Props) {
@@ -30,7 +30,7 @@ export function ChatBadge({ email, href, scope }: Props) {
     if (!email) return;
     const request = ++requestRef.current;
     try {
-      const res = await authFetch('/api/chat/threads?count=1', { cache: 'no-store' });
+      const res = await authFetch(`/api/chat/threads?count=1&scope=${scope}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       if (request !== requestRef.current) return;
@@ -45,11 +45,11 @@ export function ChatBadge({ email, href, scope }: Props) {
     } catch (error) {
       console.warn('[Chat] No se pudo actualizar el contador:', error);
     }
-  }, [email]);
+  }, [email, scope]);
 
   useEffect(() => {
     fetchCount();
-    const iv = setInterval(fetchCount, scope === 'order' ? 10_000 : 30_000);
+    const iv = setInterval(fetchCount, scope === 'job' ? 30_000 : 10_000);
 
     // Realtime: re-count when any thread updates for this user
     const channel = email
@@ -69,13 +69,20 @@ export function ChatBadge({ email, href, scope }: Props) {
           .subscribe()
       : null;
 
-    const ordersChannel = scope === 'order' && email
+    const ordersChannel = scope !== 'job' && email
       ? supabase.channel(`chat-order-status-${email}`)
           .on('postgres_changes', {
             event: 'UPDATE', schema: 'public', table: 'orders', filter: `client_email=eq.${email}`,
           } as never, () => fetchCount())
           .on('postgres_changes', {
             event: 'UPDATE', schema: 'public', table: 'orders', filter: `accepted_by=eq.${email}`,
+          } as never, () => fetchCount())
+          .subscribe()
+      : null;
+    const jobsChannel = scope === 'client' && email
+      ? supabase.channel(`chat-job-status-${email}`)
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'tecnico_jobs', filter: `client_email=eq.${email}`,
           } as never, () => fetchCount())
           .subscribe()
       : null;
@@ -87,6 +94,7 @@ export function ChatBadge({ email, href, scope }: Props) {
       document.removeEventListener('visibilitychange', onVisible);
       if (channel) supabase.removeChannel(channel);
       if (ordersChannel) supabase.removeChannel(ordersChannel);
+      if (jobsChannel) supabase.removeChannel(jobsChannel);
     };
   }, [email, fetchCount, scope]);
 

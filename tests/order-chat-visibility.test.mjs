@@ -33,7 +33,7 @@ test('job threads remain independent and completed trip buttons are absent from 
     readFile(new URL('../src/app/cliente/historial/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/ChatBadge.tsx', import.meta.url), 'utf8'),
   ]);
-  assert.match(threads, /!row\.order_id \|\| visibleOrderIds\.has\(row\.order_id\)/);
+  assert.match(threads, /visibleOrderIds\.has\(row\.order_id\)/);
   assert.match(counts, /isOrderChatClosed\(order\.status\).*unread: 0/);
   assert.match(driverHistory, /chatAvailable = !isOrderChatClosed\(order\.status\)/);
   assert.match(clientHistory, /!isOrderChatClosed\(item\.data\.status\)/);
@@ -48,14 +48,21 @@ test('threads endpoint counts active trips and technical jobs but not finished t
     { order_id: 'finished', job_id: null, unread_count: 5 },
     { order_id: 'reassigned', job_id: null, unread_count: 7 },
     { order_id: null, job_id: 'job', unread_count: 3 },
+    { order_id: null, job_id: 'finished-job', unread_count: 4 },
   ];
   const orders = [
     { id: 'active', status: 'in_transit', client_email: 'client', accepted_by: 'driver' },
     { id: 'finished', status: 'delivered', client_email: 'client', accepted_by: 'driver' },
     { id: 'reassigned', status: 'accepted', client_email: 'other', accepted_by: 'newdriver' },
   ];
+  const jobs = [
+    { id: 'job', status: 'accepted', client_email: 'client', tecnico_email: 'technician' },
+    { id: 'finished-job', status: 'completado', client_email: 'client', tecnico_email: 'technician' },
+  ];
+  let email = 'driver';
   globalThis.__chatTest = {
     canShowOrderChat,
+    JOB_ACTIVE_STATUSES: ['accepted', 'en_camino', 'llegue', 'en_proceso', 'completion_pending'],
     sbAdmin: () => ({
       from(table) {
         const query = {
@@ -63,12 +70,12 @@ test('threads endpoint counts active trips and technical jobs but not finished t
           eq() { return this; },
           gt() { return this; },
           in() { return this; },
-          then(resolve) { return Promise.resolve({ data: table === 'orders' ? orders : rows, error: null }).then(resolve); },
+          then(resolve) { return Promise.resolve({ data: table === 'orders' ? orders : table === 'tecnico_jobs' ? jobs : rows, error: null }).then(resolve); },
         };
         return query;
       },
     }),
-    getAuthUser: async () => ({ email: 'driver' }),
+    getAuthUser: async () => ({ email }),
     unauthorized: () => ({ status: 401 }),
     serverError: error => ({ status: 500, error }),
     NextResponse: { json: value => value },
@@ -76,12 +83,18 @@ test('threads endpoint counts active trips and technical jobs but not finished t
   try {
     let api = await readFile(new URL('../src/app/api/chat/threads/route.ts', import.meta.url), 'utf8');
     api = api.replace(/^import .*;\s*$/gm, '');
-    api = `const { canShowOrderChat, sbAdmin, getAuthUser, unauthorized, serverError, NextResponse } = globalThis.__chatTest;\n${api}`;
+    api = `const { canShowOrderChat, JOB_ACTIVE_STATUSES, sbAdmin, getAuthUser, unauthorized, serverError, NextResponse } = globalThis.__chatTest;\n${api}`;
     const compiled = ts.transpileModule(api, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
     const { GET } = await import(`data:text/javascript,${encodeURIComponent(compiled)}`);
-    assert.deepEqual(await GET({ url: 'https://example.test/api/chat/threads?count=1' }), { total_unread: 5 });
+    assert.deepEqual(await GET({ url: 'https://example.test/api/chat/threads?count=1' }), { total_unread: 9 });
+    assert.deepEqual(await GET({ url: 'https://example.test/api/chat/threads?count=1&scope=order' }), { total_unread: 2 });
+    assert.deepEqual(await GET({ url: 'https://example.test/api/chat/threads?count=1&scope=job' }), { total_unread: 7 });
     const visible = await GET({ url: 'https://example.test/api/chat/threads' });
-    assert.deepEqual(visible.map(row => row.order_id || row.job_id), ['active', 'job']);
+    assert.deepEqual(visible.map(row => row.order_id || row.job_id), ['active', 'job', 'finished-job']);
+    email = 'client';
+    assert.deepEqual(await GET({ url: 'https://example.test/api/chat/threads?count=1&scope=client' }), { total_unread: 5 });
+    const clientThreads = await GET({ url: 'https://example.test/api/chat/threads?scope=client' });
+    assert.deepEqual(clientThreads.map(row => row.order_id || row.job_id), ['active', 'job']);
   } finally {
     delete globalThis.__chatTest;
   }

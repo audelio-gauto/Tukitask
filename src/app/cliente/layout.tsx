@@ -138,7 +138,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         onBeforeLogout={cleanupPushNotifications}
       />
       <NotificationBell userEmail={email} className="" />
-      {email && <ChatBadge email={email} href="/cliente" scope="order" />}
+      {email && <ChatBadge email={email} href="/cliente" scope="client" />}
       {email && <OfferIncomingToast email={email} />}
       <ClientContext.Provider value={{
         openDrawer: () => setDrawerOpen(true),
