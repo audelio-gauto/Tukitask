@@ -32,6 +32,17 @@ no deben interpretarse como ausencia de alertas. Los retiros de vendedores aún
 no están habilitados. La pantalla de registros y estados de vendedores clasifica
 por antigüedad y bloqueo; no representa una verificación de identidad.
 
+## Radio de recogida de drivers
+
+El filtro de solicitudes permite elegir entre 1 y 50 km en línea recta desde la
+ubicación del conductor hasta la recogida. El valor predeterminado para perfiles
+sin rango guardado es 50 km; los valores existentes, incluso los de 10 km,
+se conservan y cada conductor puede cambiarlos en «Filtrar solicitudes».
+Para que el servidor coincida con la interfaz, aplicar la migración
+`sql/migrations/122_driver_pickup_default_50km.sql` antes de desplegar el código.
+Siguen aplicándose los filtros de vehículo, documentos, ubicación, disponibilidad
+y saldo existentes.
+
 ## Aplicación Android y retirada de la PWA
 
 La APK usa la aplicación web en vivo configurada en `capacitor.config.ts`.

@@ -59,6 +59,9 @@ export default function DriverDashboard() {
 
   // Filter modal open state
   const [filterOpen, setFilterOpen] = useState(false);
+  const [savingFilters, setSavingFilters] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
+  const savingFiltersRef = useRef(false);
 
   // Wallet balance — initial load + realtime subscription
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -532,17 +535,27 @@ export default function DriverDashboard() {
   };
 
   // Cualquier forma de cerrar el panel guarda el rango/filtros: el servidor arma la bandeja con el valor guardado
-  const closeFilters = () => {
-    setFilterOpen(false);
-    authFetch('/api/driver-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        pickup_range: pickupRangeKm,
-        service_filters: serviceFilters,
-      }),
-    }).then(() => loadWithRefresh()).catch(() => {});
+  const closeFilters = async () => {
+    if (savingFiltersRef.current) return;
+    savingFiltersRef.current = true;
+    setSavingFilters(true);
+    setFilterError(null);
+    try {
+      const response = await authFetch('/api/driver-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, pickup_range: pickupRangeKm, service_filters: serviceFilters }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setFilterOpen(false);
+      loadWithRefresh();
+    } catch (error) {
+      console.error('[driver] No se pudieron guardar los filtros:', error);
+      setFilterError('No se pudieron guardar los filtros. Revisá tu conexión e intentá nuevamente.');
+    } finally {
+      savingFiltersRef.current = false;
+      setSavingFilters(false);
+    }
   };
 
   const filteredFeedItems: FeedItem[] = pendingOrders
@@ -719,6 +732,7 @@ export default function DriverDashboard() {
                   key={item.key}
                   type="button"
                   className={`driver-filter-item${serviceFilters[item.key] ? ' active' : ''}`}
+                  disabled={savingFilters}
                   onClick={() => toggleFilter(item.key)}
                 >
                   <span className="driver-filter-item-icon"><Icon name={item.icon as 'truck' | 'car'} size={16} /></span>
@@ -748,7 +762,7 @@ export default function DriverDashboard() {
                   </label>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981' }}>{pickupRangeKm} km</span>
                 </div>
-                <input type="range" min={1} max={50} step={1} value={pickupRangeKm}
+                <input type="range" min={1} max={50} step={1} value={pickupRangeKm} disabled={savingFilters}
                   onChange={e => setPickupRangeKm(Number(e.target.value))}
                   style={{ width: '100%', accentColor: '#10b981' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
@@ -757,8 +771,9 @@ export default function DriverDashboard() {
               </div>
             </div>
 
-            <button className="driver-filter-done" onClick={closeFilters}>
-              Aplicar filtros
+            {filterError && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: 10, borderRadius: 8 }}>{filterError}</p>}
+            <button className="driver-filter-done" onClick={closeFilters} disabled={savingFilters}>
+              {savingFilters ? 'Guardando...' : 'Aplicar filtros'}
             </button>
           </div>
         </>

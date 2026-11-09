@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { WorkerContext, DEFAULT_FILTERS } from './context';
+import { WorkerContext, DEFAULT_FILTERS, DEFAULT_PICKUP_RANGE_KM } from './context';
 import type { ServiceFilters, WorkerPosition } from './context';
 import { supabase } from '@/lib/supabaseClient';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
@@ -43,7 +43,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(DEFAULT_FILTERS);
   const [suspended, setSuspended] = useState<{ active: boolean; reason?: string; until?: string; permanent?: boolean }>({ active: false });
   const toggleFilter = (key: string) => setServiceFilters(prev => ({ ...prev, [key]: !prev[key] }));
-  const [pickupRangeKm, setPickupRangeKm] = useState(10);
+  const [pickupRangeKm, setPickupRangeKm] = useState(DEFAULT_PICKUP_RANGE_KM);
   const [driverPos, setDriverPos] = useState<WorkerPosition | null>(null);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);

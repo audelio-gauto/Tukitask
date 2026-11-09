@@ -13,6 +13,8 @@ export const VEHICLE_TO_FILTER: Record<string, string> = {
 export type ServiceFilters = Record<string, boolean>;
 export type WorkerPosition = Pick<LiveLocation, 'lat' | 'lng'> & Partial<Omit<LiveLocation, 'lat' | 'lng'>>;
 
+export const DEFAULT_PICKUP_RANGE_KM = 50;
+
 export const DEFAULT_FILTERS: ServiceFilters = {
   moto_envios: true,
   auto_envios: true,
@@ -49,7 +51,7 @@ export const WorkerContext = createContext<WorkerCtx>({
   serviceFilters: DEFAULT_FILTERS,
   toggleFilter: () => {},
   navApp: 'google_maps',
-  pickupRangeKm: 10,
+  pickupRangeKm: DEFAULT_PICKUP_RANGE_KM,
   setPickupRangeKm: () => {},
   driverPos: null,
   setDriverPos: () => {},
