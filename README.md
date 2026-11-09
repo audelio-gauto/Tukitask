@@ -50,6 +50,16 @@ no una asignación ni una garantía de que el conductor acepte. Los tiempos
 mostrados son estimaciones, y una ubicación reciente no confirma por sí sola el
 estado de disponibilidad. El mapa de inicio conserva su radio de 8 km.
 
+Al cambiar a desconectado, el driver deja de recibir sonidos de nuevas
+solicitudes y el servidor lo excluye de la búsqueda y la bandeja. Los avisos de
+viajes activos no se desactivan. El formulario del cliente intenta actualizarse
+por tiempo real y también consulta cada cuatro segundos como respaldo. Si falla
+la sincronización se informa al driver y puede reintentar; sin conexión al
+servidor no se puede actualizar inmediatamente el estado para otros usuarios.
+Aplicar `sql/migrations/123_driver_availability.sql` después de la migración 122
+y antes de desplegar esta versión. Los estados existentes se inicializan como
+disponibles por compatibilidad y se sincronizan al abrir el inicio del driver.
+
 ## Aplicación Android y retirada de la PWA
 
 La APK usa la aplicación web en vivo configurada en `capacitor.config.ts`.

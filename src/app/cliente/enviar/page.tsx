@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useClientContext } from '../context';
 import { authFetch } from '@/lib/authFetch';
+import { supabase } from '@/lib/supabaseClient';
 import { haversineKm, nearestNeighborSort } from '@/lib/geo';
 import { Icon } from '@/components/Icon';
 import SearchingDriver from '../components/SearchingDriver';
@@ -306,8 +307,10 @@ export default function EnviarPaquetePage() {
     if (!isFinite(lat) || !isFinite(lng)) return;
     let cancelled = false;
     let loading = false;
+    let refreshRequested = false;
     const load = async () => {
-      if (document.hidden || loading) return;
+      if (document.hidden) return;
+      if (loading) { refreshRequested = true; return; }
       loading = true;
       try {
         const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}&radius_km=50&respect_range=1`);
@@ -322,13 +325,20 @@ export default function EnviarPaquetePage() {
         }
       } finally {
         loading = false;
+        if (refreshRequested && !cancelled) {
+          refreshRequested = false;
+          void load();
+        }
       }
     };
     load();
+    const channel = supabase.channel('driver-availability-changes')
+      .on('broadcast', { event: 'changed' }, () => { void load(); })
+      .subscribe();
     const t = setInterval(load, 4000);
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { cancelled = true; clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
+    return () => { cancelled = true; clearInterval(t); document.removeEventListener('visibilitychange', onVisible); supabase.removeChannel(channel); };
   }, [form.pickupLat, form.pickupLng, pickupKey]);
 
   const nearbyEta = useMemo(() => {

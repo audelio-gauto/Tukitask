@@ -35,6 +35,7 @@ interface DriverProfile {
   transport_mode: string | null;
   pickup_range: number | null;
   service_filters: Record<string, boolean> | null;
+  accepting_orders: boolean;
 }
 
 // GET /api/nearby-drivers?lat=X&lng=Y[&radius_km=Z]
@@ -89,7 +90,7 @@ export async function GET(req: Request) {
       const emails = locs.slice(offset, offset + PAGE_SIZE).map(l => l.driver_email);
       const [usersResult, profilesResult] = await Promise.all([
         db.from('users').select('email').eq('role', 'driver').in('email', emails),
-        db.from('driver_profiles').select('email, transport_mode, pickup_range, service_filters').in('email', emails),
+        db.from('driver_profiles').select('email, transport_mode, pickup_range, service_filters, accepting_orders').in('email', emails),
       ]);
       if (usersResult.error) return serverError(usersResult.error, 'nearby-drivers users');
       if (profilesResult.error) return serverError(profilesResult.error, 'nearby-drivers profiles');
@@ -100,6 +101,7 @@ export async function GET(req: Request) {
     const candidates = locs.flatMap(location => {
       if (!driverSet.has(location.driver_email)) return [];
       const profile = profileMap.get(location.driver_email);
+      if (profile?.accepting_orders === false) return [];
       const mode = profile?.transport_mode ?? 'moto';
       const filter = MODE_TO_FILTER[mode];
       if (respectRange && (location.distanceKm > (profile?.pickup_range ?? 50) ||

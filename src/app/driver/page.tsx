@@ -31,6 +31,51 @@ export default function DriverDashboard() {
   const [available, setAvailable] = useState(() => {
     try { return localStorage.getItem('driver_available') === 'true'; } catch { return false; }
   });
+  const [availabilitySynced, setAvailabilitySynced] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState(false);
+  const [availabilityRetry, setAvailabilityRetry] = useState(0);
+  const availabilityQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletBlocked, setWalletBlocked] = useState(false);
+  useEffect(() => {
+    if (!email) return;
+    let cancelled = false;
+    const save = async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const response = await authFetch('/api/driver-availability', {
+          method: 'POST',
+          body: JSON.stringify({ available: available && !walletBlocked }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!cancelled) {
+          setAvailabilitySynced(true);
+          setAvailabilityError(false);
+        }
+      } catch (error) {
+        console.error('[driver] No se pudo sincronizar la disponibilidad:', error);
+        if (!cancelled) setAvailabilityError(true);
+        return;
+      } finally {
+        clearTimeout(timeout);
+      }
+      void (async () => {
+        const channel = supabase.channel('driver-availability-changes');
+        try {
+          const result = await channel.send({ type: 'broadcast', event: 'changed', payload: {} });
+          if (result !== 'ok') console.warn('[driver] No se pudo avisar el cambio de disponibilidad:', result);
+        } catch (error) {
+          console.warn('[driver] No se pudo avisar el cambio de disponibilidad:', error);
+        } finally {
+          await supabase.removeChannel(channel);
+        }
+      })();
+    };
+    availabilityQueueRef.current = availabilityQueueRef.current.then(save, save);
+    return () => { cancelled = true; };
+  }, [email, available, walletBlocked, availabilityRetry]);
 
   const [docAlerts, setDocAlerts] = useState<{ expired: string[]; soon: string[]; notApproved: string[] }>({ expired: [], soon: [], notApproved: [] });
   const [docCounts, setDocCounts] = useState<{ approved: number; pending: number; rejected: number; missing: number }>({ approved: 0, pending: 0, rejected: 0, missing: 0 });
@@ -64,8 +109,6 @@ export default function DriverDashboard() {
   const savingFiltersRef = useRef(false);
 
   // Wallet balance — initial load + realtime subscription
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [walletBlocked, setWalletBlocked] = useState(false);
   useEffect(() => {
     if (!email) return;
     const refreshWallet = () => authFetch('/api/wallet')
@@ -854,7 +897,7 @@ export default function DriverDashboard() {
       )}
       <RequestsFeed
         mode="driver"
-        available={available}
+        available={available && availabilitySynced && !walletBlocked}
         items={filteredFeedItems}
         dismissed={dismissedHome}
         onAccept={sendDriverOffer}
@@ -947,11 +990,13 @@ export default function DriverDashboard() {
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return;
                 if (!available) {
                   // Going online → save state
+                  setAvailabilitySynced(false);
                   setAvailable(true);
                   try { localStorage.setItem('driver_available', 'true'); } catch {}
                   showToast('Online. Buscando pedidos...');
                 } else {
                   // Going offline → stay on dashboard
+                  setAvailabilitySynced(false);
                   setAvailable(false);
                   try { localStorage.setItem('driver_available', 'false'); } catch {}
                   showToast('Offline. Descansando');
@@ -960,6 +1005,12 @@ export default function DriverDashboard() {
               <span className="tuki-toggle-slider" />
             </label>
           </div>
+          {availabilityError && (
+            <div role="alert" style={{ padding: 12, margin: '8px 0', background: '#fef2f2', color: '#991b1b', borderRadius: 8 }}>
+              No se pudo actualizar tu disponibilidad en el servidor. Revisá tu conexión.
+              <button type="button" onClick={() => { setAvailabilityError(false); setAvailabilityRetry(n => n + 1); }} style={{ marginLeft: 8, textDecoration: 'underline' }}>Reintentar</button>
+            </div>
+          )}
 
           {/* ⚠️ Billetera bloqueada — banner de alta prioridad */}
           {walletBlocked && (

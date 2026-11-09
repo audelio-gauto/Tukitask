@@ -46,6 +46,18 @@ export async function emitNotification(
   const groupKey = opts?.groupKey ?? null;
 
   try {
+    if (type === 'new_order') {
+      const { data: profile, error } = await sbAdmin()
+        .from('driver_profiles')
+        .select('accepting_orders')
+        .eq('email', userEmail.toLowerCase())
+        .maybeSingle();
+      if (error) {
+        console.error('[notif] No se pudo comprobar la disponibilidad:', error.message);
+        return;
+      }
+      if (profile?.accepting_orders === false) return;
+    }
     // Try the smart RPC first (business rules + dedup in DB)
     const { data: rpcResult, error: rpcError } = await sbAdmin().rpc('safe_emit_notification', {
       p_user_email: userEmail.toLowerCase(),

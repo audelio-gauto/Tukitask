@@ -111,11 +111,13 @@ export async function GET(req: Request) {
     }
 
     // Fetch driver profile + approved doc types for server-side filtering
-    const { data: dProf } = await db
+    const { data: dProf, error: profileError } = await db
       .from('driver_profiles')
-      .select('service_filters')
+      .select('service_filters, accepting_orders')
       .eq('email', user.email)
       .maybeSingle();
+    if (profileError) return serverError(profileError, 'orders driver profile');
+    if (dProf?.accepting_orders === false) return NextResponse.json([]);
     const sf = (dProf?.service_filters as Record<string, boolean> | null) ?? {};
 
     // Compute which vehicle types the driver has fully approved docs for

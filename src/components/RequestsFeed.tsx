@@ -207,6 +207,12 @@ export default memo(function RequestsFeed({
   }, [sendingId]);
 
   useEffect(() => {
+    if (!available) {
+      if (soundIvRef.current) clearInterval(soundIvRef.current);
+      soundIvRef.current = null;
+      prevIdsRef.current = new Set();
+      return;
+    }
     const visibleLive = items.filter(i => !dismissed.has(i.id));
     const hasNew = visibleLive.some(i => !prevIdsRef.current.has(i.id));
     prevIdsRef.current = new Set(items.map(i => i.id));
@@ -225,7 +231,7 @@ export default memo(function RequestsFeed({
       clearInterval(soundIvRef.current); soundIvRef.current = null;
     }
    
-  }, [items, dismissed]);
+  }, [items, dismissed, available]);
 
   useEffect(() => () => {
     if (soundIvRef.current) clearInterval(soundIvRef.current);

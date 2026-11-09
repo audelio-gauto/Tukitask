@@ -82,6 +82,15 @@ test('50 km busca por distancia real, prioriza cercanos y respeta rango y filtro
   assert.equal((await get(request(''))).body.drivers.length, 2);
 });
 
+test('el conductor desconectado no aparece aunque su ubicación sea reciente', async () => {
+  const driver = makeDriver('one', 5);
+  driver.profile.accepting_orders = false;
+  const get = await loadRoute(database(tables([driver])));
+  assert.equal((await get(request('&radius_km=50&respect_range=1'))).body.drivers.length, 0);
+  driver.profile.accepting_orders = true;
+  assert.equal((await get(request('&radius_km=50&respect_range=1'))).body.drivers.length, 1);
+});
+
 test('la paginación y el límite no ocultan categorías más alejadas', async () => {
   const drivers = Array.from({ length: 205 }, (_, i) => makeDriver(`moto-${String(i).padStart(3, '0')}`, 1 + i / 100));
   drivers.push(makeDriver('z-auto', 40, { mode: 'auto' }));
