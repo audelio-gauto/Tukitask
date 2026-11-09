@@ -43,6 +43,13 @@ Para que el servidor coincida con la interfaz, aplicar la migración
 Siguen aplicándose los filtros de vehículo, documentos, ubicación, disponibilidad
 y saldo existentes.
 
+Al solicitar un servicio, el cliente busca conductores con ubicación reciente
+hasta 50 km de la recogida, muestra primero los más cercanos y respeta el radio
+y el filtro de servicio guardados por cada conductor. La búsqueda es inmediata,
+no una asignación ni una garantía de que el conductor acepte. Los tiempos
+mostrados son estimaciones, y una ubicación reciente no confirma por sí sola el
+estado de disponibilidad. El mapa de inicio conserva su radio de 8 km.
+
 ## Aplicación Android y retirada de la PWA
 
 La APK usa la aplicación web en vivo configurada en `capacitor.config.ts`.

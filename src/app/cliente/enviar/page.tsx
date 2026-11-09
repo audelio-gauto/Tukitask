@@ -310,7 +310,7 @@ export default function EnviarPaquetePage() {
       if (document.hidden || loading) return;
       loading = true;
       try {
-        const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}`);
+        const res = await authFetch(`/api/nearby-drivers?lat=${lat}&lng=${lng}&radius_km=50&respect_range=1`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!Array.isArray(json.drivers)) throw new Error('Respuesta inválida');
