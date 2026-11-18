@@ -13,7 +13,9 @@ const MODE_TO_VEHICLE: Record<string, string> = {
   camion: 'camion2t',
 };
 
-const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+// El conductor publica un heartbeat cada ~2 min (incluso quieto). La ventana
+// de 10 min tolera una pausa breve de GPS/red sin hacerlo desaparecer.
+const ONLINE_WINDOW_MS = 10 * 60 * 1000;
 const MAX_RADIUS_KM = 50;
 const MAX_RESULTS = 40;
 const PAGE_SIZE = 200;

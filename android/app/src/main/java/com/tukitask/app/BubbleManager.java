@@ -2,32 +2,53 @@ package com.tukitask.app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
- * Burbuja flotante (estilo Uber/Bolt) que aparece sobre otras apps cuando
- * TukiTask pasa a segundo plano (p. ej. al navegar con Google Maps o Waze).
- * Al tocarla vuelve a TukiTask.
+ * Burbuja flotante (estilo Uber/Bolt/InDrive) que aparece sobre otras apps
+ * cuando TukiTask pasa a segundo plano (p. ej. al navegar con Google Maps o
+ * Waze). Solo se muestra si el conductor está disponible.
+ *
+ * La insignia roja indica cuántas solicitudes hay esperando.
  */
 public final class BubbleManager {
+    private static final String PREFS = "tuki_driver_mode";
+    private static final String KEY_BUBBLE = "bubble_enabled";
+
     private static View bubble;
+    private static TextView badgeView;
     private static WindowManager.LayoutParams params;
+    private static int badgeCount = 0;
     private static boolean enabled = false;
 
     private BubbleManager() {}
 
+    public static void init(Context ctx) {
+        enabled = prefs(ctx).getBoolean(KEY_BUBBLE, false);
+    }
+
     public static boolean isEnabled() { return enabled; }
-    public static void setEnabled(boolean value) { enabled = value; }
+
+    public static void setEnabled(Context ctx, boolean value) {
+        enabled = value;
+        prefs(ctx).edit().putBoolean(KEY_BUBBLE, value).apply();
+        if (!value) hide(ctx.getApplicationContext());
+    }
 
     public static boolean canDraw(Context ctx) {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(ctx);
@@ -37,24 +58,65 @@ public final class BubbleManager {
         return new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.getPackageName()));
     }
 
+    /** Actualiza la insignia de solicitudes pendientes. Seguro desde cualquier hilo. */
+    public static void setBadge(final Context ctx, final int count) {
+        badgeCount = Math.max(0, count);
+        new Handler(Looper.getMainLooper()).post(() -> applyBadge(ctx));
+    }
+
+    private static void applyBadge(Context ctx) {
+        if (badgeView == null) return;
+        if (badgeCount <= 0) {
+            badgeView.setVisibility(View.GONE);
+            return;
+        }
+        badgeView.setText(badgeCount > 99 ? "99+" : String.valueOf(badgeCount));
+        badgeView.setVisibility(View.VISIBLE);
+    }
+
+    private static SharedPreferences prefs(Context ctx) {
+        return ctx.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
     public static void show(final Context appCtx) {
         if (!enabled || bubble != null || !canDraw(appCtx)) return;
         final WindowManager wm = (WindowManager) appCtx.getSystemService(Context.WINDOW_SERVICE);
         float d = appCtx.getResources().getDisplayMetrics().density;
         int size = (int) (60 * d);
 
-        ImageView v = new ImageView(appCtx);
+        ImageView icon = new ImageView(appCtx);
         int resId = appCtx.getResources().getIdentifier("ic_launcher_round", "mipmap", appCtx.getPackageName());
-        v.setImageResource(resId);
-        v.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        if (resId == 0) resId = appCtx.getApplicationInfo().icon;
+        icon.setImageResource(resId);
+        icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.OVAL);
         bg.setColor(Color.WHITE);
         bg.setStroke((int) (2 * d), Color.parseColor("#F5C518"));
-        v.setBackground(bg);
-        v.setClipToOutline(true);
-        v.setElevation(8 * d);
-        v.setPadding((int) (2 * d), (int) (2 * d), (int) (2 * d), (int) (2 * d));
+        icon.setBackground(bg);
+        icon.setClipToOutline(true);
+        icon.setPadding((int) (2 * d), (int) (2 * d), (int) (2 * d), (int) (2 * d));
+
+        FrameLayout container = new FrameLayout(appCtx);
+        container.setElevation(8 * d);
+        container.addView(icon, new FrameLayout.LayoutParams(size, size));
+
+        TextView badge = new TextView(appCtx);
+        badge.setTextColor(Color.WHITE);
+        badge.setTextSize(11);
+        badge.setGravity(Gravity.CENTER);
+        badge.setTypeface(null, android.graphics.Typeface.BOLD);
+        GradientDrawable badgeBg = new GradientDrawable();
+        badgeBg.setShape(GradientDrawable.OVAL);
+        badgeBg.setColor(Color.parseColor("#EF4444"));
+        badgeBg.setStroke((int) (1.5 * d), Color.WHITE);
+        badge.setBackground(badgeBg);
+        int badgeSize = (int) (23 * d);
+        FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(
+                badgeSize, badgeSize, Gravity.TOP | Gravity.END);
+        container.addView(badge, badgeParams);
+        badgeView = badge;
+        applyBadge(appCtx);
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -67,7 +129,7 @@ public final class BubbleManager {
         params.y = (int) (140 * d);
 
         final int slop = (int) (8 * d);
-        v.setOnTouchListener(new View.OnTouchListener() {
+        container.setOnTouchListener(new View.OnTouchListener() {
             private int startX, startY;
             private float touchX, touchY;
             private boolean moved;
@@ -103,10 +165,11 @@ public final class BubbleManager {
         });
 
         try {
-            wm.addView(v, params);
-            bubble = v;
+            wm.addView(container, params);
+            bubble = container;
         } catch (Exception ignored) {
             bubble = null;
+            badgeView = null;
         }
     }
 
@@ -116,5 +179,6 @@ public final class BubbleManager {
             ((WindowManager) appCtx.getSystemService(Context.WINDOW_SERVICE)).removeView(bubble);
         } catch (Exception ignored) {}
         bubble = null;
+        badgeView = null;
     }
 }

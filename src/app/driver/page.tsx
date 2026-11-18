@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { setDriverBubble } from '@/lib/driverMode';
+import { setDriverBubbleBadge } from '@/lib/driverMode';
+import { setDriverAvailability, setDriverWalletBlocked } from '@/lib/driverAvailability';
 import { useWorkerContext } from './context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -37,6 +38,11 @@ export default function DriverDashboard() {
   const availabilityQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletBlocked, setWalletBlocked] = useState(false);
+
+  // Mantiene el estado compartido (burbuja nativa, heartbeat, servicio en
+  // segundo plano) alineado con el interruptor de disponibilidad.
+  useEffect(() => { setDriverAvailability(available); }, [available]);
+  useEffect(() => { setDriverWalletBlocked(walletBlocked); }, [walletBlocked]);
   useEffect(() => {
     if (!email) return;
     let cancelled = false;
@@ -353,7 +359,7 @@ export default function DriverDashboard() {
         const missing = Math.max(0, DRIVER_TOTAL_DOCS - docs.length);
         if (expired.length > 0 || notApproved.length > 0 || missing > 0) {
           setAvailable(false);
-          try { localStorage.setItem('driver_available', 'false'); } catch {}
+          setDriverAvailability(false);
         }
       })
       .catch(() => {});
@@ -444,10 +450,13 @@ export default function DriverDashboard() {
     };
   }, [email]);
 
-  // La burbuja flotante (APK) solo aparece con el conductor disponible
+  // Insignia de la burbuja. El aviso sonoro en segundo plano lo emite el
+  // servicio nativo (DriverBackgroundService), que es el único dueño de las
+  // notificaciones mientras la WebView está suspendida. Así se evita que la
+  // página y el servicio alerten dos veces por la misma solicitud.
   useEffect(() => {
-    void setDriverBubble(available && !walletBlocked);
-  }, [available, walletBlocked]);
+    void setDriverBubbleBadge(pendingOrders.length);
+  }, [pendingOrders]);
 
   // Touch drag state
   const isDragging = useRef(false);
@@ -979,16 +988,16 @@ export default function DriverDashboard() {
                 if (walletBlocked) { showToast('Recarga tu billetera para activarte'); return; }
                 if (!available && (docAlerts.expired.length > 0 || docAlerts.notApproved.length > 0 || docCounts.missing > 0)) return;
                 if (!available) {
-                  // Going online → save state
+                  // Going online → save state immediately (bubble + heartbeat)
                   setAvailabilitySynced(false);
                   setAvailable(true);
-                  try { localStorage.setItem('driver_available', 'true'); } catch {}
+                  setDriverAvailability(true);
                   showToast('Online. Buscando pedidos...');
                 } else {
                   // Going offline → stay on dashboard
                   setAvailabilitySynced(false);
                   setAvailable(false);
-                  try { localStorage.setItem('driver_available', 'false'); } catch {}
+                  setDriverAvailability(false);
                   showToast('Offline. Descansando');
                 }
               }} />

@@ -24,6 +24,14 @@
 
         </activity>
 
+        <!-- Busca solicitudes y renueva la ubicación mientras el conductor usa
+             Google Maps/Waze u otra app. -->
+        <service
+            android:name=".DriverBackgroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -51,12 +59,14 @@
          "TukiTask activo" y no mate el proceso cuando la pantalla se apaga -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Wake Lock — mantiene la CPU activa para procesar fixes GPS en background -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Notificaciones (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Burbuja flotante sobre otras apps (volver a TukiTask desde Google Maps/Waze) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />

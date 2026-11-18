@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { getAuthUser, sbAdmin, unauthorized, forbidden } from '@/lib/apiAuth';
 import { cacheDel } from '@/lib/cache';
-import { emitNotification } from '@/lib/notificationEmitter';
+import { emitNotification, emitNotificationBulk } from '@/lib/notificationEmitter';
 import { allowRequest } from '@/lib/rateLimit';
 import { FINISH_TOLERANCE_M, FINISH_REQUEST_TIMEOUT_MS, roadKm } from '@/lib/tripFinish';
 
@@ -400,6 +400,46 @@ export async function POST(req: Request) {
 
   // Note: anti-fraud PINs (pickup_code / delivery_pin) are generated when the
   // client accepts a driver offer — see /api/orders/offers PATCH action='accept'.
+
+  // Aviso a los conductores emparejados. El push nativo (FCM) llega aunque la
+  // app esté en segundo plano; la notificación in-app aparece en la campana.
+  // Los pedidos programados no se avisan hasta que falten 30 minutos.
+  if (order?.id && !safeBody.date_scheduled) {
+    after(async () => {
+      try {
+        const { data: matched, error: matchError } = await db
+          .from('driver_feed')
+          .select('driver_email')
+          .eq('order_id', order.id)
+          .order('distance_km', { ascending: true })
+          .limit(60);
+        if (matchError || !matched?.length) return;
+
+        const price = Number(order.offer ?? order.suggested_price ?? 0);
+        const pickup = order.pickup_address || 'Origen';
+        const delivery = order.delivery_address || 'Destino';
+        const body = `${pickup} → ${delivery}${price > 0 ? ` · ${price.toLocaleString('es-PY')} Gs.` : ''}`;
+        const title = order.order_type === 'viaje' ? 'Nuevo viaje solicitado' : 'Nueva solicitud de envío';
+
+        await emitNotificationBulk(
+          (matched as Array<{ driver_email: string }>).map((row) => ({
+            userEmail: row.driver_email,
+            type: 'new_order' as const,
+            title,
+            body,
+            data: {
+              order_id: order.id,
+              vehicle_type: order.vehicle_type,
+              order_type: order.order_type,
+            },
+            opts: { groupKey: `order:${order.id}:new` },
+          })),
+        );
+      } catch (error) {
+        console.error('[orders POST] No se pudieron avisar las solicitudes:', error);
+      }
+    });
+  }
 
   return NextResponse.json(order, { status: 201 });
 }

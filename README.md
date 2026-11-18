@@ -77,6 +77,17 @@ La instalación como PWA, su caché sin conexión y las notificaciones push web
 fueron retiradas; las notificaciones nativas de Android conservan su
 configuración existente. La aplicación sigue disponible en el navegador.
 
+Mientras el conductor está disponible y pasa a otra aplicación (Google Maps,
+Waze, etc.), la APK mantiene un servicio en primer plano que consulta
+`/api/driver/background-requests` cada pocos segundos, renueva la última
+ubicación conocida y muestra un aviso local con la solicitud. La burbuja
+flotante lleva una insignia con la cantidad de pedidos esperando. Todo se
+detiene al desconectarse o cerrar sesión. En Android 13+ hace falta aceptar el
+permiso de notificaciones; sin permiso la burbuja y la búsqueda siguen
+funcionando, pero el aviso no se muestra. En Android 15 el servicio de datos
+tiene un límite diario y se reinicia al volver a abrir la app. Este
+comportamiento requiere recompilar e instalar la APK con los cambios nativos.
+
 Durante la transición, las instalaciones web existentes reciben un aviso:
 Android puede descargar `/app-update/TukiTask.apk`; en iPhone se indica que el
 APK no es compatible y que se puede utilizar el navegador. Los workers antiguos

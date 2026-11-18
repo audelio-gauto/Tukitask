@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { WorkerContext, DEFAULT_FILTERS, DEFAULT_PICKUP_RANGE_KM } from './context';
 import type { ServiceFilters, WorkerPosition } from './context';
@@ -11,7 +11,16 @@ import { WorkerDrawer } from '@/components/WorkerDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
-import { enableDriverMode, disableDriverMode } from '@/lib/driverMode';
+import {
+  enableDriverMode,
+  disableDriverMode,
+  setDriverBubble,
+  saveDriverSession,
+  clearDriverSession,
+  updateDriverNativeLocation,
+  ensureDriverNotificationPermission,
+} from '@/lib/driverMode';
+import { isDriverAvailable, setDriverAvailability, subscribeDriverAvailability } from '@/lib/driverAvailability';
 import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfflineBanner from '@/components/OfflineBanner';
@@ -48,14 +57,84 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
+  const handleBeforeLogout = useCallback(async () => {
+    // Cerrar sesión estando online dejaría al conductor "disponible" en el
+    // servidor y con la burbuja activa para la próxima cuenta.
+    setDriverAvailability(false);
+    try {
+      await authFetch('/api/driver-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ available: false }),
+      });
+    } catch { /* el logout debe continuar aunque falle la red */ }
+    await clearDriverSession();
+    await cleanupPushNotifications();
+  }, [cleanupPushNotifications]);
+
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
 
-  // APK: pantalla encendida + burbuja flotante mientras el conductor usa la app
+  // APK: pantalla encendida + burbuja flotante SOLO con disponibilidad efectiva.
+  // El layout es el único dueño de este estado para que funcione en todas las
+  // pantallas del conductor (inicio, activo, ganancias, etc.), no solo en /driver.
+  const publishLocationRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!email) return;
-    void enableDriverMode();
-    return () => { void disableDriverMode(); };
+    let disposed = false;
+
+    const applyAvailability = () => {
+      if (disposed) return;
+      const available = isDriverAvailable();
+      void setDriverBubble(available);
+      if (available) {
+        void ensureDriverNotificationPermission();
+        publishLocationRef.current?.();
+      }
+    };
+
+    void (async () => {
+      await enableDriverMode();
+      if (disposed) return;
+      applyAvailability();
+    })();
+
+    const unsubscribe = subscribeDriverAvailability(applyAvailability);
+    return () => {
+      disposed = true;
+      unsubscribe();
+      void setDriverBubble(false);
+      void clearDriverSession();
+      void disableDriverMode();
+    };
+  }, [email]);
+
+  // APK: guarda la sesión para que el servicio nativo pueda buscar solicitudes
+  // mientras el conductor usa Google Maps/Waze u otra aplicación.
+  useEffect(() => {
+    if (!email) return;
+    let disposed = false;
+
+    const applySession = (session: { access_token?: string; refresh_token?: string } | null) => {
+      if (disposed || !session?.access_token) return;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+      if (!supabaseUrl || !supabaseAnonKey) return;
+      void saveDriverSession({
+        apiBase: window.location.origin,
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token ?? '',
+        supabaseUrl,
+        supabaseAnonKey,
+      });
+    };
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applySession(session));
+    return () => {
+      disposed = true;
+      listener?.subscription?.unsubscribe?.();
+    };
   }, [email]);
 
   // Wake Lock web: mantiene la pantalla encendida (APK y navegador), se renueva al volver a la app
@@ -92,6 +171,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     let lastDbLng: number | null = null;
     let lastDbAt = 0;
     let dbPending = false;
+    let lastNativeAt = 0;
     let disposed = false;
     let watchId: number | null = null;
     let dbIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -110,8 +190,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       }).catch(error => console.warn('[GPS] No se pudo enviar la ubicación:', error));
     };
 
-    // DB write (throttled to 60s, skipped when offline)
-    // 'driver_available' === 'false' means driver toggled offline
+    // DB write (throttled to 60s, skipped when offline).
+    // Importante: se guarda la última posición conocida aunque la lectura tenga
+    // más de 30 s. Si el conductor está quieto, Android deja de emitir fixes GPS;
+    // sin este heartbeat la ubicación vencía a los 5 min y el cliente lo veía
+    // como desconectado mientras la burbuja seguía visible.
     const distMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
       const toRad = (d: number) => (d * Math.PI) / 180;
       const R = 6371000;
@@ -121,17 +204,18 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     };
 
-    const postToDB = async () => {
+    const postToDB = async (force = false) => {
       const location = lastLocation;
-      if (!location || !isFreshLocation(location) || dbPending) return;
+      if (!location || dbPending) return;
       // En un viaje activo (navegar/activo) siempre se publica, aunque el switch esté en offline
       const onTrip = typeof window !== 'undefined' && /^\/driver\/(navegar|activo)/.test(window.location.pathname);
       if (!onTrip && typeof localStorage !== 'undefined' && localStorage.getItem('driver_available') === 'false') return;
-      if (!onTrip && lastDbAt !== 0 && Date.now() - lastDbAt < 60_000) return;
-      if (lastDbLat != null && lastDbLng != null) {
+      const now = Date.now();
+      if (!force && lastDbAt !== 0 && now - lastDbAt < 60_000) return;
+      if (!force && lastDbLat != null && lastDbLng != null && lastDbAt !== 0) {
         const moved = distMeters({ lat: lastDbLat, lng: lastDbLng }, location);
-        // Quieto: igual se refresca cada ~2 min para que el cliente lo siga viendo en línea
-        if (moved < (onTrip ? 15 : 50) && Date.now() - lastDbAt < 120_000) return;
+        // Quieto: igual se refresca cada 2 min para que el cliente lo siga viendo en línea
+        if (moved < (onTrip ? 15 : 50) && now - lastDbAt < 120_000) return;
       }
       dbPending = true;
       try {
@@ -160,9 +244,23 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       if (disposed || !location || !isFreshLocation(location) || !isNewerLocation(location, lastLocation)) return;
       lastLocation = location;
       setDriverPos(location);
-      if (lastDbAt === 0) void postToDB();
+      // Cada fix nuevo intenta publicar; el throttle interno evita escrituras de más.
+      void postToDB();
+      // El servicio nativo también necesita la última coordenada para el
+      // heartbeat mientras la WebView está en segundo plano.
+      const now = Date.now();
+      if (now - lastNativeAt >= 30_000) {
+        lastNativeAt = now;
+        void updateDriverNativeLocation(location.lat, location.lng);
+      }
       broadcastLocation(location);
     };
+
+    // Al entrar o salir de la app se publica de inmediato: al salir para usar
+    // Google Maps/Waze la ubicación queda fresca, y al volver se actualiza ya.
+    const onVisibilityChange = () => { void postToDB(true); };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    publishLocationRef.current = () => { void postToDB(true); };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
@@ -177,7 +275,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       );
     }
     // También se necesita el respaldo si solo está disponible el GPS nativo.
-    dbIntervalId = setInterval(postToDB, 10_000);
+    dbIntervalId = setInterval(() => { void postToDB(); }, 10_000);
 
     // Background GPS — only activates inside the Capacitor APK.
     // On web browsers startBackgroundGeo() returns null (no-op).
@@ -194,6 +292,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
     return () => {
       disposed = true;
+      publishLocationRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
       if (dbIntervalId != null) clearInterval(dbIntervalId);
       supabase.removeChannel(broadcastCh);
@@ -334,7 +434,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         email={email}
         displayName={displayName}
         profilePhoto={profilePhoto}
-        onBeforeLogout={cleanupPushNotifications}
+        onBeforeLogout={handleBeforeLogout}
       />
       {!inNav && <NotificationBell userEmail={email} className="" variant={pathname === '/driver' ? 'driver' : undefined} />}
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}

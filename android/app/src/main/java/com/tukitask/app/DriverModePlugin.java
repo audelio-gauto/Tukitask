@@ -1,15 +1,35 @@
 package com.tukitask.app;
 
+import android.Manifest;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.view.WindowManager;
+
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
-/** Puente JS ↔ nativo para el modo conductor: burbuja flotante y pantalla siempre encendida. */
-@CapacitorPlugin(name = "DriverMode")
+/**
+ * Puente JS ↔ nativo para el modo conductor: burbuja flotante, pantalla
+ * siempre encendida y búsqueda de solicitudes en segundo plano.
+ */
+@CapacitorPlugin(
+    name = "DriverMode",
+    permissions = {
+        @Permission(
+            alias = "notifications",
+            strings = { Manifest.permission.POST_NOTIFICATIONS }
+        )
+    }
+)
 public class DriverModePlugin extends Plugin {
     static volatile boolean keepAwake = false;
 
@@ -17,8 +37,18 @@ public class DriverModePlugin extends Plugin {
     public void setEnabled(final PluginCall call) {
         final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
         keepAwake = enabled;
-        if (!enabled) BubbleManager.setEnabled(false);
+        if (!enabled) {
+            BubbleManager.setEnabled(getContext(), false);
+            DriverBackgroundService.stop(getContext());
+            RequestNotifier.clear(getContext());
+            BubbleManager.setBadge(getContext(), 0);
+        }
+        if (getActivity() == null) {
+            call.resolve();
+            return;
+        }
         getActivity().runOnUiThread(() -> {
+            if (getActivity() == null) { call.resolve(); return; }
             if (enabled) getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             else getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (!enabled) BubbleManager.hide(getContext().getApplicationContext());
@@ -30,11 +60,141 @@ public class DriverModePlugin extends Plugin {
     @PluginMethod
     public void setBubble(final PluginCall call) {
         final boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
-        BubbleManager.setEnabled(enabled);
-        if (!enabled) {
-            getActivity().runOnUiThread(() -> BubbleManager.hide(getContext().getApplicationContext()));
+        BubbleManager.setEnabled(getContext(), enabled);
+        if (enabled) {
+            // Se inicia mientras la app está en primer plano: Android no permite
+            // arrancar el servicio en segundo plano más tarde.
+            DriverBackgroundService.start(getContext());
+        } else {
+            DriverBackgroundService.stop(getContext());
+            RequestNotifier.clear(getContext());
+            BubbleManager.setBadge(getContext(), 0);
+            if (getActivity() == null) {
+                BubbleManager.hide(getContext().getApplicationContext());
+            } else {
+                getActivity().runOnUiThread(() -> BubbleManager.hide(getContext().getApplicationContext()));
+            }
         }
         call.resolve();
+    }
+
+    /** Insignia roja con la cantidad de solicitudes pendientes. */
+    @PluginMethod
+    public void setBubbleBadge(final PluginCall call) {
+        BubbleManager.setBadge(getContext(), call.getInt("count", 0));
+        call.resolve();
+    }
+
+    /** Guarda la sesión y los datos de Supabase para refrescar el token en segundo plano. */
+    @PluginMethod
+    public void setSession(final PluginCall call) {
+        String apiBase = trimSlash(call.getString("apiBase", ""));
+        String accessToken = call.getString("accessToken", "");
+        String refreshToken = call.getString("refreshToken", "");
+        String supabaseUrl = trimSlash(call.getString("supabaseUrl", ""));
+        String supabaseAnonKey = call.getString("supabaseAnonKey", "");
+        if (apiBase.isEmpty() || accessToken == null || accessToken.isEmpty()) {
+            call.reject("sesión inválida");
+            return;
+        }
+
+        sessionPrefs().edit()
+                .putString(DriverBackgroundService.KEY_API_BASE, apiBase)
+                .putString(DriverBackgroundService.KEY_ACCESS_TOKEN, accessToken)
+                .putString(DriverBackgroundService.KEY_REFRESH_TOKEN, refreshToken == null ? "" : refreshToken)
+                .putString(DriverBackgroundService.KEY_SUPABASE_URL, supabaseUrl)
+                .putString(DriverBackgroundService.KEY_SUPABASE_KEY, supabaseAnonKey == null ? "" : supabaseAnonKey)
+                .apply();
+
+        if (BubbleManager.isEnabled()) DriverBackgroundService.start(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void clearSession(final PluginCall call) {
+        sessionPrefs().edit().clear().apply();
+        DriverBackgroundService.stop(getContext());
+        BubbleManager.setEnabled(getContext(), false);
+        RequestNotifier.clear(getContext());
+        BubbleManager.setBadge(getContext(), 0);
+        call.resolve();
+    }
+
+    /** Última coordenada conocida para el heartbeat en segundo plano. */
+    @PluginMethod
+    public void setNativeLocation(final PluginCall call) {
+        Double lat = call.getDouble("lat");
+        Double lng = call.getDouble("lng");
+        if (lat == null || lng == null) {
+            call.reject("coordenadas inválidas");
+            return;
+        }
+        sessionPrefs().edit()
+                .putString(DriverBackgroundService.KEY_LAT, String.valueOf(lat))
+                .putString(DriverBackgroundService.KEY_LNG, String.valueOf(lng))
+                .apply();
+        call.resolve();
+    }
+
+    /** Notificación local inmediata (heads-up) con la nueva solicitud. */
+    @PluginMethod
+    public void notifyRequests(final PluginCall call) {
+        int count = call.getInt("count", 1);
+        String title = call.getString("title", "Nueva solicitud");
+        String body = call.getString("body", "Tienes una solicitud cerca de ti");
+        RequestNotifier.notifyRequest(getContext(), count, title, body);
+        BubbleManager.setBadge(getContext(), count);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void clearRequestsNotification(final PluginCall call) {
+        RequestNotifier.clear(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void hasNotificationPermission(final PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("granted", notificationsEnabled());
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void requestNotificationPermission(final PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || notificationsEnabled()) {
+            JSObject result = new JSObject();
+            result.put("granted", notificationsEnabled());
+            call.resolve(result);
+            return;
+        }
+        requestPermissionForAlias("notifications", call, "notificationPermissionCallback");
+    }
+
+    @PermissionCallback
+    private void notificationPermissionCallback(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("granted", notificationsEnabled());
+        call.resolve(result);
+    }
+
+    private boolean notificationsEnabled() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            int state = ContextCompat.checkSelfPermission(
+                    getContext(), Manifest.permission.POST_NOTIFICATIONS);
+            if (state != PackageManager.PERMISSION_GRANTED) return false;
+        }
+        return NotificationManagerCompat.from(getContext()).areNotificationsEnabled();
+    }
+
+    private SharedPreferences sessionPrefs() {
+        return getContext().getSharedPreferences(
+                DriverBackgroundService.PREFS, android.content.Context.MODE_PRIVATE);
+    }
+
+    private static String trimSlash(String value) {
+        if (value == null) return "";
+        return value.replaceAll("/+$", "");
     }
 
     @PluginMethod
