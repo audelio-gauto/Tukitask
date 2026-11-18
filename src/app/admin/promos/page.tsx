@@ -18,6 +18,19 @@ interface PromoCode {
   created_at: string;
 }
 
+const fieldStyle: React.CSSProperties = {
+  width: '100%', padding: '9px 12px', borderRadius: 10,
+  border: '1px solid var(--adm-input-border)',
+  background: 'var(--adm-input-bg)',
+  color: 'var(--adm-text-primary)',
+  fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '0.75rem', fontWeight: 700, color: 'var(--adm-text-secondary)',
+  textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: 4,
+};
+
 export default function AdminPromosPage() {
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,9 +111,14 @@ export default function AdminPromosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#13131F] text-white p-6">
+    <div className="p-6">
       {toast && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12, background: toast.ok ? '#065f46' : '#7f1d1d', color: '#fff', fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? '#10b981' : '#ef4444'}` }}>
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 1000, padding: '12px 20px', borderRadius: 12,
+          background: toast.ok ? 'var(--adm-success-bg)' : 'var(--adm-danger-bg)',
+          color: toast.ok ? 'var(--adm-success-text)' : 'var(--adm-danger)',
+          fontSize: '0.9rem', fontWeight: 600, border: `1px solid ${toast.ok ? 'var(--adm-success)' : 'var(--adm-danger)'}`,
+        }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name={toast.ok ? 'check' : 'x'} size={14} />
             {toast.msg}
@@ -110,29 +128,28 @@ export default function AdminPromosPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Códigos Promocionales</h1>
-          <p className="text-sm text-gray-400 mt-1">{promos.length} código(s) en total</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--adm-text-primary)' }}>Códigos Promocionales</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--adm-text-muted)' }}>{promos.length} código(s) en total</p>
         </div>
-        <button onClick={() => setShowForm(v => !v)}
+        <button
+          onClick={() => setShowForm(v => !v)}
           className="px-4 py-2 rounded-xl font-bold text-sm"
-          style={{ background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E' }}>
+          style={{ background: 'var(--adm-accent)', color: 'var(--adm-accent-text)' }}
+        >
           {showForm ? (
-            <span className="inline-flex items-center gap-2">
-              <Icon name="x" size={14} />
-              Cancelar
-            </span>
+            <span className="inline-flex items-center gap-2"><Icon name="x" size={14} /> Cancelar</span>
           ) : (
-            <span className="inline-flex items-center gap-2">
-              <Icon name="plus" size={14} />
-              Nuevo codigo
-            </span>
+            <span className="inline-flex items-center gap-2"><Icon name="plus" size={14} /> Nuevo código</span>
           )}
         </button>
       </div>
 
       {showForm && (
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700, color: '#F5C518' }}>Nuevo código</h2>
+        <div style={{
+          background: 'var(--adm-surface)', border: '1px solid var(--adm-border)',
+          borderRadius: 16, padding: 20, marginBottom: 24,
+        }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 700, color: 'var(--adm-accent)' }}>Nuevo código</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[
               { label: 'Código *', key: 'code', type: 'text', placeholder: 'PROMO10' },
@@ -144,22 +161,22 @@ export default function AdminPromosPage() {
               { label: 'Expira (opcional)', key: 'expires_at', type: 'datetime-local', placeholder: '' },
             ].map(f => (
               <div key={f.key}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: 4 }}>{f.label}</label>
+                <label style={labelStyle}>{f.label}</label>
                 <input
                   type={f.type}
                   placeholder={f.placeholder}
                   value={(form as Record<string, string | number>)[f.key] as string}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.07)', color: '#fff', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={fieldStyle}
                 />
               </div>
             ))}
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: 4 }}>Aplica a</label>
+              <label style={labelStyle}>Aplica a</label>
               <select
                 value={form.applicable_to}
                 onChange={e => setForm(prev => ({ ...prev, applicable_to: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: '#1e1e2e', color: '#fff', fontSize: '0.9rem', outline: 'none' }}
+                style={fieldStyle}
               >
                 <option value="all">Todos</option>
                 <option value="envio">Solo envíos</option>
@@ -167,28 +184,36 @@ export default function AdminPromosPage() {
               </select>
             </div>
           </div>
-          <button onClick={handleCreate} style={{ marginTop: 16, padding: '12px 24px', borderRadius: 12, background: 'linear-gradient(135deg,#F5C518,#f59e0b)', color: '#1C1C2E', fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer' }}>
+          <button onClick={handleCreate} style={{
+            marginTop: 16, padding: '12px 24px', borderRadius: 12,
+            background: 'var(--adm-accent)', color: 'var(--adm-accent-text)',
+            fontWeight: 800, fontSize: '0.9rem', border: 'none', cursor: 'pointer',
+          }}>
             Crear código
           </button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', paddingTop: 60, color: 'rgba(255,255,255,0.4)' }}>Cargando...</div>
+        <div style={{ textAlign: 'center', paddingTop: 60, color: 'var(--adm-text-muted)' }}>Cargando...</div>
       ) : promos.length === 0 ? (
-        <div style={{ textAlign: 'center', paddingTop: 60, color: 'rgba(255,255,255,0.3)' }}>Sin códigos aún</div>
+        <div style={{ textAlign: 'center', paddingTop: 60, color: 'var(--adm-text-muted)' }}>Sin códigos aún</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {promos.map(p => (
-            <div key={p.id} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${p.is_active ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={p.id} style={{
+              background: 'var(--adm-surface)', border: '1px solid var(--adm-border)',
+              borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+            }}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 800, fontSize: '1rem', color: p.is_active ? '#F5C518' : 'rgba(255,255,255,0.4)' }}>{p.code}</span>
-                  {p.is_active ? <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 7px', borderRadius: 6 }}>ACTIVO</span>
-                    : <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', background: 'rgba(107,114,128,0.15)', padding: '2px 7px', borderRadius: 6 }}>INACTIVO</span>}
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{p.applicable_to === 'all' ? 'Todos' : p.applicable_to}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1rem', color: p.is_active ? 'var(--adm-accent)' : 'var(--adm-text-primary)' }}>{p.code}</span>
+                  {p.is_active
+                    ? <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--adm-success-text)', background: 'var(--adm-success-bg)', padding: '2px 7px', borderRadius: 6 }}>ACTIVO</span>
+                    : <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--adm-text-muted)', background: 'var(--adm-neutral-bg)', padding: '2px 7px', borderRadius: 6 }}>INACTIVO</span>}
+                  <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>{p.applicable_to === 'all' ? 'Todos' : p.applicable_to}</span>
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--adm-text-secondary)' }}>
                   {p.discount_pct > 0 && `${p.discount_pct}% off`}
                   {p.discount_pct > 0 && p.discount_fixed > 0 && ' + '}
                   {p.discount_fixed > 0 && `${p.discount_fixed.toLocaleString('es-PY')} Gs`}
@@ -198,10 +223,20 @@ export default function AdminPromosPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => toggleActive(p.id, p.is_active)} style={{ padding: '7px 14px', borderRadius: 9, border: `1px solid ${p.is_active ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}`, background: p.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: p.is_active ? '#f87171' : '#4ade80', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => toggleActive(p.id, p.is_active)} style={{
+                  padding: '7px 14px', borderRadius: 9,
+                  border: `1px solid ${p.is_active ? 'var(--adm-danger)' : 'var(--adm-success)'}`,
+                  background: p.is_active ? 'var(--adm-danger-bg)' : 'var(--adm-success-bg)',
+                  color: p.is_active ? 'var(--adm-danger)' : 'var(--adm-success-text)',
+                  fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                }}>
                   {p.is_active ? 'Desactivar' : 'Activar'}
                 </button>
-                <button onClick={() => handleDelete(p.id, p.code)} style={{ padding: '7px 10px', borderRadius: 9, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }} title="Eliminar">
+                <button onClick={() => handleDelete(p.id, p.code)} style={{
+                  padding: '7px 10px', borderRadius: 9, border: '1px solid var(--adm-danger)',
+                  background: 'var(--adm-danger-bg)', color: 'var(--adm-danger)',
+                  fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                }} title="Eliminar">
                   <Icon name="trash" size={14} />
                 </button>
               </div>

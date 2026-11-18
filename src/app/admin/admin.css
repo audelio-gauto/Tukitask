@@ -21,6 +21,15 @@
   --adm-row-hover:    #f8fafc;
   --adm-danger:       #dc2626;
   --adm-danger-bg:    #fef2f2;
+  --adm-success:      #059669;
+  --adm-success-bg:   #f0fdf4;
+  --adm-success-text: #065f46;
+  --adm-warning-bg:   #fffbeb;
+  --adm-warning-text: #92400e;
+  --adm-info-bg:      #eff6ff;
+  --adm-info-text:    #1d4ed8;
+  --adm-neutral-bg:   #f3f4f6;
+  --adm-neutral-text: #374151;
   --adm-shadow-soft:  0 8px 24px rgba(15,23,42,0.08);
   --adm-shadow-card:  0 12px 28px rgba(15,23,42,0.12);
 }
@@ -44,7 +53,16 @@
   --adm-badge-bg:     #0f172a;
   --adm-row-hover:    #111827;
   --adm-danger:       #f87171;
-  --adm-danger-bg:    rgba(239,68,68,0.1);
+  --adm-danger-bg:    rgba(239,68,68,0.14);
+  --adm-success:      #34d399;
+  --adm-success-bg:   rgba(16,185,129,0.14);
+  --adm-success-text: #6ee7b7;
+  --adm-warning-bg:   rgba(245,158,11,0.14);
+  --adm-warning-text: #fcd34d;
+  --adm-info-bg:      rgba(59,130,246,0.14);
+  --adm-info-text:    #93c5fd;
+  --adm-neutral-bg:   rgba(148,163,184,0.12);
+  --adm-neutral-text: #cbd5e1;
   --adm-shadow-soft:  0 10px 28px rgba(15,23,42,0.35);
   --adm-shadow-card:  0 18px 36px rgba(15,23,42,0.45);
 }
@@ -319,4 +337,119 @@
   .adm-header-actions { gap: 4px; }
   .adm-logout-btn { padding: 6px; }
   .adm-content { padding: 16px; }
+}
+
+/* ── Dark mode: puente de Tailwind + estilos inline del panel ──────────
+   Las páginas del panel mezclan utilidades de Tailwind y estilos inline.
+   Este bloque las mapea a las variables del tema sin editar cada página. */
+[data-theme="dark"] .adm-content .bg-white,
+[data-theme="dark"] .adm-content .bg-gray-50,
+[data-theme="dark"] .adm-content .bg-gray-100,
+[data-theme="dark"] .adm-content .bg-slate-50 {
+  background-color: var(--adm-surface) !important;
+}
+[data-theme="dark"] .adm-content .bg-gray-200,
+[data-theme="dark"] .adm-content .bg-gray-300 {
+  background-color: var(--adm-surface-2) !important;
+}
+[data-theme="dark"] .adm-content .text-gray-900,
+[data-theme="dark"] .adm-content .text-gray-800,
+[data-theme="dark"] .adm-content .text-slate-900,
+[data-theme="dark"] .adm-content .text-slate-800 {
+  color: var(--adm-text-primary) !important;
+}
+[data-theme="dark"] .adm-content .text-gray-700,
+[data-theme="dark"] .adm-content .text-gray-600,
+[data-theme="dark"] .adm-content .text-slate-700,
+[data-theme="dark"] .adm-content .text-slate-600 {
+  color: var(--adm-text-secondary) !important;
+}
+[data-theme="dark"] .adm-content .text-gray-500,
+[data-theme="dark"] .adm-content .text-gray-400,
+[data-theme="dark"] .adm-content .text-slate-500,
+[data-theme="dark"] .adm-content .text-slate-400 {
+  color: var(--adm-text-muted) !important;
+}
+[data-theme="dark"] .adm-content .border-gray-100,
+[data-theme="dark"] .adm-content .border-gray-200,
+[data-theme="dark"] .adm-content .border-gray-300,
+[data-theme="dark"] .adm-content .border-slate-200 {
+  border-color: var(--adm-border) !important;
+}
+[data-theme="dark"] .adm-content .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] .adm-content .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--adm-border) !important;
+}
+[data-theme="dark"] .adm-content .hover\:bg-gray-50:hover,
+[data-theme="dark"] .adm-content .hover\:bg-gray-100:hover,
+[data-theme="dark"] .adm-content .hover\:bg-slate-50:hover {
+  background-color: var(--adm-row-hover) !important;
+}
+[data-theme="dark"] .adm-content .hover\:text-gray-900:hover {
+  color: var(--adm-text-primary) !important;
+}
+[data-theme="dark"] .adm-content .hover\:border-gray-300:hover {
+  border-color: var(--adm-border) !important;
+}
+
+/* Controles con estilos inline: se adaptan aunque la página fije colores. */
+[data-theme="dark"] .adm-content input,
+[data-theme="dark"] .adm-content select,
+[data-theme="dark"] .adm-content textarea {
+  background-color: var(--adm-input-bg) !important;
+  color: var(--adm-text-primary) !important;
+  border-color: var(--adm-input-border) !important;
+}
+[data-theme="dark"] .adm-content th,
+[data-theme="dark"] .adm-content td {
+  color: var(--adm-text-primary) !important;
+  border-color: var(--adm-border) !important;
+}
+[data-theme="dark"] .adm-content table {
+  border-color: var(--adm-border) !important;
+}
+
+/* Superficies y textos fijos frecuentes en estilos inline. */
+[data-theme="dark"] .adm-content [style*="background:#fff"],
+[data-theme="dark"] .adm-content [style*="background: #fff"],
+[data-theme="dark"] .adm-content [style*="background:#ffffff"],
+[data-theme="dark"] .adm-content [style*="background: #ffffff"],
+[data-theme="dark"] .adm-content [style*="background-color:#fff"],
+[data-theme="dark"] .adm-content [style*="background-color: #fff"],
+[data-theme="dark"] .adm-content [style*="background:rgb(255, 255, 255)"],
+[data-theme="dark"] .adm-content [style*="background: rgb(255, 255, 255)"] {
+  background-color: var(--adm-surface) !important;
+}
+[data-theme="dark"] .adm-content [style*="#0f172a"],
+[data-theme="dark"] .adm-content [style*="#1e293b"],
+[data-theme="dark"] .adm-content [style*="#1f2937"],
+[data-theme="dark"] .adm-content [style*="#334155"],
+[data-theme="dark"] .adm-content [style*="#374151"],
+[data-theme="dark"] .adm-content [style*="#475569"],
+[data-theme="dark"] .adm-content [style*="#64748b"],
+[data-theme="dark"] .adm-content [style*="#6b7280"],
+[data-theme="dark"] .adm-content [style*="rgb(15, 23, 42)"],
+[data-theme="dark"] .adm-content [style*="rgb(30, 41, 59)"],
+[data-theme="dark"] .adm-content [style*="rgb(31, 41, 55)"],
+[data-theme="dark"] .adm-content [style*="rgb(51, 65, 85)"],
+[data-theme="dark"] .adm-content [style*="rgb(55, 65, 81)"],
+[data-theme="dark"] .adm-content [style*="rgb(100, 116, 139)"],
+[data-theme="dark"] .adm-content [style*="rgb(107, 114, 128)"] {
+  color: var(--adm-text-primary) !important;
+}
+[data-theme="dark"] .adm-content [style*="#e2e8f0"],
+[data-theme="dark"] .adm-content [style*="#e5e7eb"],
+[data-theme="dark"] .adm-content [style*="#f1f5f9"],
+[data-theme="dark"] .adm-content [style*="#f8fafc"],
+[data-theme="dark"] .adm-content [style*="rgb(226, 232, 240)"],
+[data-theme="dark"] .adm-content [style*="rgb(229, 231, 235)"],
+[data-theme="dark"] .adm-content [style*="rgb(241, 245, 249)"],
+[data-theme="dark"] .adm-content [style*="rgb(248, 250, 252)"] {
+  border-color: var(--adm-border) !important;
+}
+
+/* Modo claro: textos translúcidos pensados para fondo oscuro (Promociones). */
+[data-theme="light"] .adm-content [style*="rgba(255,255,255"],
+[data-theme="light"] .adm-content [style*="rgba(255, 255, 255"] {
+  color: var(--adm-text-secondary) !important;
 }

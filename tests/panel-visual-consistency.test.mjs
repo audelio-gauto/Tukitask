@@ -68,3 +68,14 @@ test('technician documents use theme-aware cards and inputs', async () => {
   assert.match(page, /border: '1px solid var\(--doc-card-border\)'/);
   assert.match(page, /color: 'var\(--input-text\)', background: 'var\(--input-bg\)'/);
 });
+
+test('admin panel maps Tailwind and inline colors to both themes', async () => {
+  const css = await read('src/app/admin/admin.css');
+  assert.match(css, /\[data-theme="dark"\] \.adm-content \.bg-white/);
+  assert.match(css, /\[data-theme="dark"\] \.adm-content input/);
+  assert.match(css, /\[data-theme="dark"\] \.adm-content \[style\*="background:#fff"\]/);
+  assert.match(css, /--adm-success-bg:/);
+  const promos = await read('src/app/admin/promos/page.tsx');
+  assert.doesNotMatch(promos, /bg-\[#13131F\]/);
+  assert.match(promos, /var\(--adm-surface\)/);
+});
