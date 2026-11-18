@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/useTheme';
+import { usePushNotifications } from '@/lib/usePushNotifications';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function AdminHeader({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu: () => void }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const { theme, setTheme } = useTheme();
+  const { cleanup: cleanupPushNotifications } = usePushNotifications(email || undefined);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -16,6 +19,7 @@ export default function AdminHeader({ menuOpen, onToggleMenu }: { menuOpen: bool
   }, []);
 
   async function handleLogout() {
+    await cleanupPushNotifications();
     await supabase.auth.signOut();
     router.replace('/auth');
   }
@@ -31,6 +35,8 @@ export default function AdminHeader({ menuOpen, onToggleMenu }: { menuOpen: bool
         <h1 className="adm-header-title">Tukitask &middot; Administración</h1>
       </div>
       <div className="adm-header-actions">
+        {email && <NotificationBell userEmail={email.toLowerCase()} variant="admin" />}
+
         {/* Theme toggle */}
         <button
           className="adm-theme-btn"

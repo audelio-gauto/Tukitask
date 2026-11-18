@@ -3,6 +3,7 @@ import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_PHOTO, validateImageMagicBytes } from '@/lib/constants';
 import { allowRequest } from '@/lib/rateLimit';
+import { notifyAdminsRecharge } from '@/lib/adminAlerts';
 
 // GET — saldo actual + últimas transacciones del trabajador autenticado
 export async function GET(req: Request) {
@@ -82,5 +83,12 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return serverError(error);
+
+  const { count } = await db
+    .from('recharge_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  await notifyAdminsRecharge('driver', amount, count ?? 1);
+
   return NextResponse.json({ success: true, id: data.id }, { status: 201 });
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
@@ -340,8 +341,10 @@ export default function NuevoProductoPage() {
 
     // Vendors cannot publish directly — submitted products go to pending_review
     const dbStatus = targetStatus === 'published' ? 'pending_review' : targetStatus;
+    const productId = crypto.randomUUID();
 
     const row = {
+      id:            productId,
       vendor_id:     user.id,
       vendor_email:  user.email ?? '',
       name:          form.name.trim(),
@@ -372,6 +375,18 @@ export default function NuevoProductoPage() {
       setSaving(false);
       setErrors({ name: error.message });
       return;
+    }
+
+    // Aviso al panel de administración cuando el producto queda para revisión.
+    if (dbStatus === 'pending_review') {
+      try {
+        await authFetch('/api/products/notify-review', {
+          method: 'POST',
+          body: JSON.stringify({ productId }),
+        });
+      } catch (err) {
+        console.error('[productos] No se pudo avisar la revisión:', err);
+      }
     }
 
     setSaving(false);

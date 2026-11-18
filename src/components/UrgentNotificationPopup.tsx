@@ -80,6 +80,8 @@ const typeConfig: Record<string, { icon: React.ComponentProps<typeof Icon>['name
   commission:      { icon: 'money', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
   wallet:          { icon: 'tag', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
   rating:          { icon: 'star', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  admin_product_review:  { icon: 'package', color: '#F5C518', bg: 'rgba(245,197,24,0.12)' },
+  admin_wallet_recharge: { icon: 'money', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
 };
 
 const defaultConfig = { icon: 'bell' as const, color: '#F5C518', bg: 'rgba(245,197,24,0.12)' };

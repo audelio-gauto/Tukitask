@@ -37,6 +37,11 @@ estados de vendedores clasifica por antigüedad y bloqueo; no representa una
 verificación de identidad. La configuración de proveedores/modelos de IA está
 en Control AI; las claves se cargan en Claves API.
 
+Las alertas de administración llegan a la campana del encabezado: cuando un
+vendedor envía un producto para revisión o cuando se solicita una recarga de
+billetera, el panel recibe una notificación prioritaria que abre la cola
+correspondiente. Se agrupan por cola para no repetir avisos sin leer.
+
 ## Radio de recogida de drivers
 
 El filtro de solicitudes permite elegir entre 1 y 50 km en línea recta desde la

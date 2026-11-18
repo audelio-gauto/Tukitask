@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 
 /* ── Types ───────────────────────────────────────────────── */
 type ProductStatus = 'published' | 'draft';
@@ -274,6 +275,17 @@ export default function EditarProductoPage() {
       setSaving(false);
       setErrors({ name: error.message });
       return;
+    }
+
+    if (dbStatus === 'pending_review') {
+      try {
+        await authFetch('/api/products/notify-review', {
+          method: 'POST',
+          body: JSON.stringify({ productId }),
+        });
+      } catch (err) {
+        console.error('[productos] No se pudo avisar la revisión:', err);
+      }
     }
 
     setSaving(false);

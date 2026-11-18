@@ -21,7 +21,9 @@ export type NotifType =
   | 'commission'
   | 'wallet'
   | 'rating'
-  | 'chat_message';
+  | 'chat_message'
+  | 'admin_product_review'
+  | 'admin_wallet_recharge';
 
 /**
  * Default priority per notification type.
@@ -42,6 +44,8 @@ export const NOTIF_PRIORITY: Record<NotifType, NotifPriority> = {
   wallet:          'normal',
   rating:          'silent',
   chat_message:    'high',
+  admin_product_review:  'high',
+  admin_wallet_recharge: 'high',
 };
 
 export interface AppNotification {

@@ -181,6 +181,27 @@ test('solo ofrece rutas identificables para cada rol', async () => {
   assert.equal(route('job_accepted', '/tecnico'), '/tecnico/citas');
   assert.equal(route('new_market_order', '/vendedor', { data: { order_id: 'a/b' } }), '/vendedor/pedidos?order_id=a%2Fb');
   assert.equal(route('new_offer', '/vendedor'), null);
+  assert.equal(route('admin_product_review', '/admin'), '/admin/vendors/productos/aprobar');
+  assert.equal(route('admin_wallet_recharge', '/admin', { data: { source: 'driver' } }), '/admin/wallets?tab=pending');
+  assert.equal(route('admin_wallet_recharge', '/admin', { data: { source: 'vendor' } }), '/admin/billetera/vendedores');
+});
+
+test('las alertas de administración llegan bandeja arriba y a los dos tipos de recarga', async () => {
+  const wallet = await readFile(new URL('../src/app/api/wallet/route.ts', import.meta.url), 'utf8');
+  const vendorWallet = await readFile(new URL('../src/app/api/vendor/wallet/route.ts', import.meta.url), 'utf8');
+  const notifyRoute = await readFile(new URL('../src/app/api/products/notify-review/route.ts', import.meta.url), 'utf8');
+  const productNew = await readFile(new URL('../src/app/vendedor/productos/nuevo/page.tsx', import.meta.url), 'utf8');
+  const productEdit = await readFile(new URL('../src/app/vendedor/productos/[id]/page.tsx', import.meta.url), 'utf8');
+  const alerts = await readFile(new URL('../src/lib/adminAlerts.ts', import.meta.url), 'utf8');
+  assert.match(wallet, /notifyAdminsRecharge\('driver'/);
+  assert.match(vendorWallet, /notifyAdminsRecharge\('vendor'/);
+  assert.match(notifyRoute, /notifyAdminsProductReview/);
+  assert.match(productNew, /\/api\/products\/notify-review/);
+  assert.match(productEdit, /\/api\/products\/notify-review/);
+  assert.match(alerts, /admin_product_review/);
+  assert.match(alerts, /admin_wallet_recharge/);
+  const header = await readFile(new URL('../src/app/admin/components/AdminHeader.tsx', import.meta.url), 'utf8');
+  assert.match(header, /NotificationBell[^>]*variant="admin"/);
 });
 
 test('la bandeja permite leer sin navegar, conserva el historial y muestra errores', async () => {

@@ -20,6 +20,13 @@ function timeAgo(dateStr: string): string {
 }
 
 export function notificationUrl(n: AppNotification, pathname: string): string | null {
+  if (pathname.startsWith('/admin')) {
+    if (n.type === 'admin_product_review') return '/admin/vendors/productos/aprobar';
+    if (n.type === 'admin_wallet_recharge') {
+      return n.data?.source === 'vendor' ? '/admin/billetera/vendedores' : '/admin/wallets?tab=pending';
+    }
+    return null;
+  }
   if (pathname.startsWith('/vendedor')) {
     if (n.type !== 'new_market_order') return null;
     const id = n.data?.order_id;
@@ -59,6 +66,8 @@ const typeStyle: Record<string, { icon: React.ComponentProps<typeof Icon>['name'
   commission:      { icon: 'money', accent: '#22c55e' },
   wallet:          { icon: 'tag', accent: '#f59e0b' },
   rating:          { icon: 'star', accent: '#f59e0b' },
+  admin_product_review:  { icon: 'package', accent: '#F5C518' },
+  admin_wallet_recharge: { icon: 'money', accent: '#f59e0b' },
 };
 
 const priorityBorder: Record<NotifPriority, string> = {
@@ -71,7 +80,7 @@ const priorityBorder: Record<NotifPriority, string> = {
 interface Props {
   userEmail: string | undefined;
   className?: string;
-  variant?: 'driver';
+  variant?: 'driver' | 'admin';
   /** Enable sound on urgent popups (default true) */
   soundEnabled?: boolean;
 }
@@ -138,7 +147,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
         onDismiss={dismissUrgent}
         onOpen={handleNotifClick}
         soundEnabled={soundEnabled}
-        variant={variant}
+        variant={variant === 'driver' ? 'driver' : undefined}
       />
 
       {selected && <NotificationDetail
@@ -155,7 +164,11 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
       <div
         ref={panelRef}
         className={[className, variant === 'driver' ? 'driver-notification-bell' : ''].filter(Boolean).join(' ')}
-        style={{ position: 'fixed', zIndex: 900, ...(variant !== 'driver' ? { top: 16, right: 70 } : {}) }}
+        style={{
+          position: variant === 'admin' ? 'relative' : 'fixed',
+          zIndex: 900,
+          ...(variant === 'driver' || variant === 'admin' ? {} : { top: 16, right: 70 }),
+        }}
       >
         {/* Bell button */}
         <button
@@ -168,8 +181,8 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
             background: 'rgba(28,28,46,0.85)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '50%',
-            width: variant === 'driver' ? 44 : 48,
-            height: variant === 'driver' ? 44 : 48,
+            width: variant === 'driver' ? 44 : variant === 'admin' ? 38 : 48,
+            height: variant === 'driver' ? 44 : variant === 'admin' ? 38 : 48,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
