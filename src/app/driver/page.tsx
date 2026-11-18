@@ -242,17 +242,8 @@ export default function DriverDashboard() {
       } as never, () => loadPendingOrders())
       .subscribe(status => { if (status === 'SUBSCRIBED') loadPendingOrders(); });
 
-    // Backup: listen to new pending orders directly on orders table.
-    // Handles the case where fn_match_driver_feed skips this driver (stale/missing GPS).
-    // On any new pending/negotiating order, force a feed refresh so this driver is matched.
-    const chOrders = supabase.channel(`driver-orders-pending-${email}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'orders',
-        filter: `status=eq.pending`,
-      } as never, loadWithRefresh)
-      .subscribe();
-
     // Pedido cancelado por el cliente: se quita de la bandeja al instante
+    // (para pedidos pending, el DELETE de driver_feed ya dispara loadPendingOrders)
     const chCancelled = supabase.channel(`driver-orders-cancelled-${email}`)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'orders',
@@ -274,7 +265,6 @@ export default function DriverDashboard() {
       gate.invalidate();
       document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(chFeed);
-      supabase.removeChannel(chOrders);
       supabase.removeChannel(chCancelled);
     };
   }, [loadPendingOrders, loadWithRefresh, email]);

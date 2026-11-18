@@ -95,9 +95,19 @@ export async function GET(req: Request) {
     if (!user || user.email !== driverEmail) return unauthorized();
     query = query.eq('accepted_by', driverEmail).in('status', ['accepted', 'awaiting_payment', 'payment_confirmed', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'return_rejected', 'cancelled']);
   } else {
-    // Pedidos disponibles para drivers — requiere auth
+    // Pedidos disponibles para drivers — requiere auth + rol de conductor
     const user = await getAuthUser(req);
     if (!user) return unauthorized();
+
+    const { data: roleRow } = await db
+      .from('users')
+      .select('role')
+      .eq('email', user.email)
+      .maybeSingle();
+    const role = (roleRow as { role?: string } | null)?.role ?? '';
+    if (!['driver', 'admin', 'super_admin', 'owner'].includes(role)) {
+      return forbidden('Solo conductores pueden ver solicitudes de envío');
+    }
 
     // Verificar saldo de billetera
     const { data: wallet } = await db
@@ -296,8 +306,7 @@ export async function POST(req: Request) {
   const db = sbAdmin();
 
   // Extract stops array before inserting — they go to order_stops table
-  // Extract mandadito fields — only sent to DB if columns exist (require migration 025)
-  const { stops, order_type, shopping_list, max_budget, ...orderBody } = body as {
+  const { stops, order_type, shopping_list, max_budget } = body as {
     stops?: Array<{
       address: string;
       lat?: string | number;
@@ -318,15 +327,44 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Máximo 20 paradas permitidas' }, { status: 400 });
   }
 
-  // Forzar client_email desde el token — nunca confiar en el body
+  // Whitelist: only these fields may be set by the client. Identity, status,
+  // PINs, assignment and payment fields are never accepted from the body.
+  const str = (v: unknown, max = 500): string | null =>
+    typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
+  const num = (v: unknown): number | null => {
+    if (v == null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
   const safeBody: Record<string, unknown> = {
-    ...orderBody,
     client_email: user.email,
-    is_multi_stop: isMultiStop,
-    stop_count: isMultiStop ? stops!.length : 1,
-    order_type: order_type || 'envio',
-    shopping_list: shopping_list || null,
-    max_budget: max_budget || null,
+    client_name:            str(body.client_name, 120),
+    client_photo:           str(body.client_photo, 1000),
+    client_avg_rating:      num(body.client_avg_rating),
+    order_type:             order_type || 'envio',
+    pickup_address:         str(body.pickup_address, 500),
+    pickup_lat:             num(body.pickup_lat),
+    pickup_lng:             num(body.pickup_lng),
+    delivery_address:       str(body.delivery_address, 500),
+    delivery_lat:           num(body.delivery_lat),
+    delivery_lng:           num(body.delivery_lng),
+    receiver_contact:       str(body.receiver_contact, 120),
+    receiver_phone:         str(body.receiver_phone, 40),
+    sender_contact:         str(body.sender_contact, 120),
+    sender_phone:           str(body.sender_phone, 40),
+    description:            str(body.description, 1000),
+    instructions:           str(body.instructions, 1000),
+    vehicle_type:           str(body.vehicle_type, 30),
+    payment_method:         str(body.payment_method, 30) || 'efectivo',
+    suggested_price:        num(body.suggested_price),
+    offer:                  str(body.offer, 30),
+    date_scheduled:         str(body.date_scheduled, 40),
+    promo_code:             str(body.promo_code, 50),
+    promo_discount:         num(body.promo_discount) ?? 0,
+    shopping_list:          shopping_list || null,
+    max_budget:             max_budget || null,
+    is_multi_stop:          isMultiStop,
+    stop_count:             isMultiStop ? stops!.length : 1,
   };
 
   const { data: order, error } = await db

@@ -263,7 +263,7 @@ export default function ActiveOrders({ mode = 'scheduled', orderId }: { mode?: '
   // Load driver alias for payment modal
   useEffect(() => {
     if (!email) return;
-    fetch(`/api/driver-profile?email=${encodeURIComponent(email)}`)
+    authFetch(`/api/driver-profile?email=${encodeURIComponent(email)}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const alias = d?.profile?.tigo_money_alias || d?.profile?.phone || '';

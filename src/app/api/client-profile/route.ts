@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
-/** GET /api/client-profile?email=... — abierto */
+/** GET /api/client-profile?email=... — solo el propio perfil autenticado */
 export async function GET(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   try {
     const { searchParams } = new URL(req.url);
-    const email = searchParams.get('email');
+    const email = (searchParams.get('email') || '').trim().toLowerCase();
     if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 });
+    if (email !== user.email) return forbidden();
 
     const { data, error } = await sbAdmin()
       .from('client_profiles')

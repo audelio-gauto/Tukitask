@@ -167,8 +167,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
       // Load profile in background — updates state and refreshes cache
       Promise.all([
-        fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
-        fetch(`/api/tecnico/settings?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+        authFetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+        authFetch(`/api/tecnico/settings?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       ]).then(([profJson, settingsJson]) => {
         if (!mounted) return;
         const photo = profJson.profile?.profile_photo || settingsJson.settings?.profile_photo || '';

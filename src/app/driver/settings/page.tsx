@@ -71,7 +71,7 @@ export default function DriverSettingsPage() {
       if (!user) return;
       setEmail(user.email || '');
       try {
-        const res = await fetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
+        const res = await authFetch(`/api/driver-profile?email=${encodeURIComponent(user.email || '')}`);
         const json = await res.json();
         const data = json.profile;
         if (data) {

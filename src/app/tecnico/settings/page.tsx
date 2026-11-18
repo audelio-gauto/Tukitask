@@ -67,7 +67,7 @@ export default function TecnicoSettings() {
     (async () => {
       try {
         if (!email) return;
-        const res = await fetch(`/api/tecnico/settings?email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`/api/tecnico/settings?email=${encodeURIComponent(email)}`);
         const json = await res.json();
         if (json?.settings) {
           const s = json.settings;

@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
-import { sbAdmin } from '@/lib/apiAuth';
+import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 export async function GET(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   const { searchParams } = new URL(req.url);
-  const email = searchParams.get('email');
+  const email = (searchParams.get('email') || '').trim().toLowerCase();
   if (!email) {
     return NextResponse.json({ error: 'email required' }, { status: 400 });
   }
+  if (email !== user.email) return forbidden('No autorizado');
 
   const db = sbAdmin();
   const { data, error } = await db

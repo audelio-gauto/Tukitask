@@ -272,7 +272,7 @@ export default function MisOfertasPage() {
           .filter(o => TRACKING_STS.includes(o.status) && o.accepted_by)
           .map(async o => {
             try {
-              const r = await fetch(`/api/driver-profile?email=${encodeURIComponent(o.accepted_by!)}`);
+              const r = await authFetch(`/api/driver-profile?email=${encodeURIComponent(o.accepted_by!)}`);
               const json = await r.json();
               const p = json?.profile;
               if (!p) return;
@@ -453,7 +453,7 @@ export default function MisOfertasPage() {
     let alias: string | null = null;
     if (order.accepted_by) {
       try {
-        const r = await fetch(`/api/driver-profile?email=${encodeURIComponent(order.accepted_by)}`);
+        const r = await authFetch(`/api/driver-profile?email=${encodeURIComponent(order.accepted_by)}`);
         const d = await r.json();
         alias = d?.profile?.tigo_money_alias || d?.profile?.phone || null;
       } catch { /* keep null */ }

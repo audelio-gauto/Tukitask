@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback, Suspense, type ReactNode } fr
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { NotificationBell } from '@/components/NotificationBell';
 import { initTheme } from '@/lib/useTheme';
 import { CartProvider, useCart, type CartItem } from './cart-context';
@@ -434,7 +435,7 @@ export default function TiendaLayout({ children }: { children: ReactNode }) {
         setName(userEmail.split('@')[0]);
       }
       /* Fetch fresco en background */
-      fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
+      authFetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(data => {
           const p = data?.profile;

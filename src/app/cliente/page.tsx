@@ -587,7 +587,7 @@ export default function ClienteHomePage() {
                 driverInfoMap[order.id] = { name: accepted.driver_name, photo: accepted.driver_photo, vehicle_label: null, vehicle_brand: null, vehicle_plate: null, driver_email: accepted.driver_email };
                 // Fetch driver profile for vehicle details
                 profileFetches.push(
-                  fetch(`/api/driver-profile?email=${encodeURIComponent(accepted.driver_email)}`)
+                  authFetch(`/api/driver-profile?email=${encodeURIComponent(accepted.driver_email)}`)
                     .then(r => r.json())
                     .then(json => {
                       const p = json?.profile;

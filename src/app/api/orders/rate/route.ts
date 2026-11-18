@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAuthUser, forbidden, unauthorized } from '@/lib/apiAuth';
+import { allowRequest } from '@/lib/rateLimit';
 
 const getSupabase = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
@@ -16,6 +18,12 @@ const getSupabase = () => {
  */
 export async function POST(req: Request) {
   try {
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
+
+    const allowed = await allowRequest(`rl:orders:rate:${user.email}`, 20, 3600);
+    if (!allowed) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
+
     const body = await req.json();
     const { order_id, rated_by, rating, note } = body;
 
@@ -45,6 +53,12 @@ export async function POST(req: Request) {
     if (!DELIVERED_STATUSES.includes(order.status)) {
       return NextResponse.json({ error: 'Solo se puede calificar un pedido entregado' }, { status: 400 });
     }
+
+    // Ownership: only the client or the assigned driver may rate this order
+    const isClient = (order.client_email || '').toLowerCase() === user.email;
+    const isDriver = (order.accepted_by || '').toLowerCase() === user.email;
+    if (rated_by === 'client' && !isClient) return forbidden('Not your order');
+    if (rated_by === 'driver' && !isDriver) return forbidden('Not your order');
 
     if (rated_by === 'client') {
       if (order.driver_rating !== null && order.driver_rating !== undefined) {

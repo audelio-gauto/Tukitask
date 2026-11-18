@@ -246,7 +246,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       }).catch(() => {});
 
       // Load profile in background — updates state and refreshes cache
-      fetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
+      authFetch(`/api/driver-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(profJson => {
           const photo    = profJson.profile?.profile_photo || '';

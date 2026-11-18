@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { authFetch } from '@/lib/authFetch';
 
 /* ─── Web Audio ──────────────────────────────────────────────────────────── */
 let _gAC: AudioContext | null = null;
@@ -152,7 +153,7 @@ export default function OfferIncomingToast({ email }: Props) {
 
     /* -- ENVÍOS: pending/negotiating orders → fetch driver offers -- */
     try {
-      const ordersRes = await fetch(`/api/orders?client_email=${encodeURIComponent(email)}`);
+      const ordersRes = await authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`);
       if (ordersRes.ok) {
         const orders: any[] = await ordersRes.json();
         const active = Array.isArray(orders)
@@ -160,7 +161,7 @@ export default function OfferIncomingToast({ email }: Props) {
           : [];
 
         for (const order of active) {
-          const offersRes = await fetch(`/api/orders/offers?order_id=${order.id}`);
+          const offersRes = await authFetch(`/api/orders/offers?order_id=${order.id}`);
           if (!offersRes.ok) continue;
           const rawOffers: any[] = await offersRes.json();
           const pending = Array.isArray(rawOffers) ? rawOffers.filter(o => o.status === 'pending') : [];
@@ -181,12 +182,12 @@ export default function OfferIncomingToast({ email }: Props) {
 
     /* -- SERVICIOS TÉCNICOS: pending tech jobs → fetch tech offers -- */
     try {
-      const jobsRes = await fetch(`/api/tecnico/jobs?client_active=true&client_email=${encodeURIComponent(email)}`);
+      const jobsRes = await authFetch(`/api/tecnico/jobs?client_active=true&client_email=${encodeURIComponent(email)}`);
       if (jobsRes.ok) {
         const jobs: any[] = await jobsRes.json();
         const pending = Array.isArray(jobs) ? jobs.filter(j => j.status === 'pending') : [];
         for (const job of pending) {
-          const offersRes = await fetch(`/api/tecnico/jobs?job_offers=${job.id}`);
+          const offersRes = await authFetch(`/api/tecnico/jobs?job_offers=${job.id}`);
           if (!offersRes.ok) continue;
           const rawOffers: any[] = await offersRes.json();
           if (!Array.isArray(rawOffers)) continue;

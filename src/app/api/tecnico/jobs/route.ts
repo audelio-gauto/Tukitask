@@ -18,9 +18,10 @@ const HISTORY_STATUSES = ['completado', 'cancelled', 'incidente'];
 
 export async function GET(req: Request) {
   try {
-    const url         = new URL(req.url);
-    const email       = (url.searchParams.get('email')        || '').toLowerCase();
-    const clientEmail = (url.searchParams.get('client_email') || '').toLowerCase();
+    const url          = new URL(req.url);
+    const email        = (url.searchParams.get('email')         || '').toLowerCase();
+    const clientEmail  = (url.searchParams.get('client_email')  || '').toLowerCase();
+    const tecnicoEmail = (url.searchParams.get('tecnico_email') || '').toLowerCase();
 
     // ── Dashboard stats ──────────────────────────────────────────────────────
     if (url.searchParams.get('stats') === 'true') {
@@ -138,6 +139,16 @@ export async function GET(req: Request) {
       if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
       const user = await getAuthUser(req);
       if (!user || user.email !== email) return unauthorized();
+
+      const { data: roleRow } = await sb
+        .from('users')
+        .select('role')
+        .eq('email', user.email)
+        .maybeSingle();
+      const role = (roleRow as { role?: string } | null)?.role ?? '';
+      if (!['tecnico', 'servicio', 'admin', 'super_admin', 'owner'].includes(role)) {
+        return forbidden('Solo técnicos pueden ver solicitudes');
+      }
 
       // E-1: Verificar saldo mínimo de billetera antes de mostrar solicitudes
       {
@@ -334,11 +345,39 @@ export async function GET(req: Request) {
       return NextResponse.json(data ?? []);
     }
 
+    // ── Offer history (own offers only) ──────────────────────────────────────
+    if (url.searchParams.get('all_offers') === 'true') {
+      const user = await getAuthUser(req);
+      if (!user) return unauthorized();
+      let q = sb.from('tecnico_job_offers').select('*');
+      if (tecnicoEmail) {
+        if (user.email !== tecnicoEmail) return forbidden('Not your offers');
+        q = q.eq('tecnico_email', user.email);
+      } else if (clientEmail) {
+        if (user.email !== clientEmail) return forbidden('Not your offers');
+        q = q.eq('client_email', user.email);
+      } else {
+        return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+      }
+      const { data, error } = await q.order('created_at', { ascending: false }).limit(200);
+      if (error) return serverError(error);
+      return NextResponse.json(data ?? []);
+    }
+
     // ── All offers on a specific job (client picks a tecnico) ────────────────
     const jobOffersId = url.searchParams.get('job_offers');
     if (jobOffersId) {
       const user = await getAuthUser(req);
       if (!user) return unauthorized();
+      const { data: job } = await sb
+        .from('tecnico_jobs')
+        .select('client_email, tecnico_email')
+        .eq('id', jobOffersId)
+        .maybeSingle();
+      if (!job) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      const isClient  = (job.client_email  || '').toLowerCase() === user.email;
+      const isTecnico = (job.tecnico_email || '').toLowerCase() === user.email;
+      if (!isClient && !isTecnico) return forbidden('Not your job');
       const { data, error } = await sb
         .from('tecnico_job_offers')
         .select('*')
@@ -426,10 +465,22 @@ export async function POST(req: Request) {
 
     // ── send_offer (tecnico sends price offer) ───────────────────────────────
     if (action === 'send_offer') {
-      const { jobId, tecnicoName, tecnicoPhoto, tecnicoRating,
-              proposedPrice, note, distanceKm } = body;
+      const { jobId, proposedPrice, note, distanceKm } = body;
       if (!jobId || proposedPrice == null) {
         return NextResponse.json({ error: 'Missing jobId or proposedPrice' }, { status: 400 });
+      }
+      const price = Number(proposedPrice);
+      if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
+        return NextResponse.json({ error: 'Precio inválido' }, { status: 400 });
+      }
+      const { data: roleRow } = await sb
+        .from('users')
+        .select('role')
+        .eq('email', user.email)
+        .maybeSingle();
+      const role = (roleRow as { role?: string } | null)?.role ?? '';
+      if (!['tecnico', 'servicio', 'admin', 'super_admin', 'owner'].includes(role)) {
+        return forbidden('Solo técnicos pueden enviar ofertas');
       }
       const tecnicoEmail = user.email; // derived from token — prevents impersonation
 
@@ -446,44 +497,54 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: 'saldo_insuficiente', balance }, { status: 402 });
         }
       }
-      // Fetch client_email to store on offer (enables filtered realtime subscriptions)
-      const { data: jobForClient } = await sb
+
+      // Job must exist and still be open
+      const { data: job } = await sb
         .from('tecnico_jobs')
-        .select('client_email')
+        .select('status, client_email, require_verified_tecnico')
         .eq('id', jobId)
-        .single();
-      const offerClientEmail = jobForClient?.client_email ?? null;
+        .maybeSingle();
+      if (!job) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      if (job.status !== 'pending') {
+        return NextResponse.json({ error: 'Este trabajo ya no está disponible' }, { status: 409 });
+      }
+
+      // Identity fields are derived server-side — never trusted from the body
+      const { data: techProfile } = await sb
+        .from('tecnico_settings')
+        .select('first_name, last_name, profile_photo, avg_rating, verified')
+        .eq('email', tecnicoEmail)
+        .maybeSingle();
+      if (job.require_verified_tecnico && techProfile?.verified !== true) {
+        return NextResponse.json({ error: 'Este cliente requiere técnicos verificados' }, { status: 403 });
+      }
+      const tecnicoName = [techProfile?.first_name, techProfile?.last_name].filter(Boolean).join(' ') || null;
 
       const { data, error } = await sb
         .from('tecnico_job_offers')
         .upsert({
           job_id:         jobId,
-          tecnico_email:  String(tecnicoEmail).toLowerCase(),
-          tecnico_name:   tecnicoName   || null,
-          tecnico_photo:  tecnicoPhoto  || null,
-          tecnico_rating: tecnicoRating || null,
-          proposed_price: Number(proposedPrice),
-          note:           note          || null,
+          tecnico_email:  tecnicoEmail,
+          tecnico_name:   tecnicoName,
+          tecnico_photo:  techProfile?.profile_photo ?? null,
+          tecnico_rating: techProfile?.avg_rating ?? null,
+          proposed_price: price,
+          note:           typeof note === 'string' ? note.slice(0, 500) : null,
           distance_km:    distanceKm ? Number(distanceKm) : null,
           status:         'pending',
-          client_email:   offerClientEmail,
+          client_email:   job.client_email ?? null,
         }, { onConflict: 'job_id,tecnico_email', ignoreDuplicates: false })
         .select()
         .maybeSingle();
       if (error) return serverError(error);
 
-      // Notify client about the new tecnico offer
-      const { data: jobForNotif } = await sb
-        .from('tecnico_jobs')
-        .select('client_email')
-        .eq('id', jobId)
-        .single();
-      if (jobForNotif?.client_email) {
-        emitNotification(
-          jobForNotif.client_email,
+      // Notify client about the new tecnico offer (awaited so serverless does not drop it)
+      if (job.client_email) {
+        await emitNotification(
+          job.client_email,
           'new_job_offer',
           'Nueva oferta de técnico',
-          `Un técnico ofreció ${Number(proposedPrice).toLocaleString('es-PY')} ₲ para tu servicio`,
+          `Un técnico ofreció ${price.toLocaleString('es-PY')} ₲ para tu servicio`,
           { job_id: jobId, offer_id: data?.id },
           { groupKey: `offer:job:${jobId}` },
         );
@@ -519,7 +580,7 @@ export async function POST(req: Request) {
 
       // Notify the tecnico that their offer was accepted
       if (result.tecnico_email) {
-        emitNotification(
+        await emitNotification(
           result.tecnico_email,
           'job_accepted',
           '¡Oferta aceptada!',
@@ -537,23 +598,33 @@ export async function POST(req: Request) {
       const { offerId } = body;
       if (!offerId) return NextResponse.json({ error: 'Missing offerId' }, { status: 400 });
 
-      // Get tecnico email before rejecting
+      // Get offer + job owner before rejecting
       const { data: offerInfo } = await sb
         .from('tecnico_job_offers')
-        .select('tecnico_email')
+        .select('tecnico_email, job_id')
         .eq('id', offerId)
-        .single();
+        .maybeSingle();
+      if (!offerInfo) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      const { data: offerJob } = await sb
+        .from('tecnico_jobs')
+        .select('client_email')
+        .eq('id', offerInfo.job_id)
+        .maybeSingle();
+      if (!offerJob || (offerJob.client_email || '').toLowerCase() !== user.email) {
+        return forbidden('Not your job');
+      }
 
       const { data, error } = await sb
         .from('tecnico_job_offers')
         .update({ status: 'rejected', responded_at: now })
         .eq('id', offerId)
+        .eq('status', 'pending')
         .select()
         .maybeSingle();
       if (error) return serverError(error);
 
-      if (offerInfo?.tecnico_email) {
-        emitNotification(
+      if (offerInfo.tecnico_email) {
+        await emitNotification(
           offerInfo.tecnico_email,
           'offer_rejected',
           'Oferta rechazada',
@@ -568,52 +639,52 @@ export async function POST(req: Request) {
 
     // ── en_camino ─────────────────────────────────────────────────────────────
     if (action === 'en_camino') {
-      const { jobId, tecnicoEmail } = body;
-      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({ status: 'en_camino', en_camino_at: now })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .in('status', ['accepted'])
         .select()
         .maybeSingle();
       if (error) return serverError(error);
       // Notify client
       if (data?.client_email) {
-        emitNotification(data.client_email, 'job_status', 'Técnico en camino', 'El técnico va en camino a tu ubicación.', { job_id: jobId }, { priority: 'urgent' });
+        await emitNotification(data.client_email, 'job_status', 'Técnico en camino', 'El técnico va en camino a tu ubicación.', { job_id: jobId }, { priority: 'urgent' });
       }
       return NextResponse.json({ job: data });
     }
 
     // ── llegue ────────────────────────────────────────────────────────────────
     if (action === 'llegue') {
-      const { jobId, tecnicoEmail } = body;
-      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({ status: 'llegue', llegue_at: now })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .in('status', ['en_camino'])
         .select()
         .maybeSingle();
       if (error) return serverError(error);
       if (data?.client_email) {
-        emitNotification(data.client_email, 'job_status', 'Técnico llegó', '¡El técnico llegó a tu ubicación!', { job_id: jobId }, { priority: 'urgent' });
+        await emitNotification(data.client_email, 'job_status', 'Técnico llegó', '¡El técnico llegó a tu ubicación!', { job_id: jobId }, { priority: 'urgent' });
       }
       return NextResponse.json({ job: data });
     }
 
     // ── en_proceso ────────────────────────────────────────────────────────────
     if (action === 'en_proceso') {
-      const { jobId, tecnicoEmail } = body;
-      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({ status: 'en_proceso', en_proceso_at: now })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .in('status', ['llegue'])
         .select()
         .maybeSingle();
@@ -670,8 +741,8 @@ export async function POST(req: Request) {
 
     // ── add_extra (tecnico manages extra charges — full list replacement) ─────
     if (action === 'add_extra') {
-      const { jobId, tecnicoEmail, extraItems } = body;
-      if (!jobId || !tecnicoEmail || !Array.isArray(extraItems)) {
+      const { jobId, extraItems } = body;
+      if (!jobId || !Array.isArray(extraItems)) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
       const items = (extraItems as Array<{ amount: number; reason: string }>)
@@ -687,7 +758,7 @@ export async function POST(req: Request) {
           extra_reason: items.length > 0 ? items.map(i => i.reason).filter(Boolean).join(', ') : null,
         })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .in('status', ['en_proceso', 'completion_pending'])
         .select()
         .maybeSingle();
@@ -697,14 +768,17 @@ export async function POST(req: Request) {
 
     // ── set_warranty (tecnico sets warranty days before marking complete) ──────
     if (action === 'set_warranty') {
-      const { jobId, tecnicoEmail, warrantyDays } = body;
-      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId, warrantyDays } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       const days = warrantyDays != null ? Number(warrantyDays) : null;
+      if (days != null && (!Number.isFinite(days) || days < 0 || days > 3650)) {
+        return NextResponse.json({ error: 'Garantía inválida' }, { status: 400 });
+      }
       const { data, error } = await sb
         .from('tecnico_jobs')
         .update({ warranty_days: days })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .select()
         .maybeSingle();
       if (error) return serverError(error);
@@ -713,8 +787,8 @@ export async function POST(req: Request) {
 
     // ── completion_pending (tecnico marks job done, client must confirm) ──────
     if (action === 'completion_pending') {
-      const { jobId, tecnicoEmail } = body;
-      if (!jobId || !tecnicoEmail) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const { jobId } = body;
+      if (!jobId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
       const { data: cur } = await sb
         .from('tecnico_jobs')
@@ -727,13 +801,13 @@ export async function POST(req: Request) {
         .from('tecnico_jobs')
         .update({ status: 'completion_pending', completion_attempts: attempts })
         .eq('id', jobId)
-        .eq('tecnico_email', String(tecnicoEmail).toLowerCase())
+        .eq('tecnico_email', user.email) // ownership from token
         .in('status', ['en_proceso'])
         .select()
         .maybeSingle();
       if (error) return serverError(error);
       if (data?.client_email) {
-        emitNotification(data.client_email, 'job_status', 'Servicio completado', 'El técnico marcó el servicio como completado. Por favor confirma.', { job_id: jobId }, { priority: 'urgent', groupKey: `job:${jobId}:completion_pending` });
+        await emitNotification(data.client_email, 'job_status', 'Servicio completado', 'El técnico marcó el servicio como completado. Por favor confirma.', { job_id: jobId }, { priority: 'urgent', groupKey: `job:${jobId}:completion_pending` });
       }
       return NextResponse.json({ job: data });
     }

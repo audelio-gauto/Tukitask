@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useClientContext } from '../context';
 import { DriverOffer, TecnicoOffer } from '@/types';
+import { authFetch } from '@/lib/authFetch';
 
 export default function HistorialOfertasCliente() {
   const { email } = useClientContext();
@@ -13,8 +14,8 @@ export default function HistorialOfertasCliente() {
     if (!email) return;
     setLoading(true);
     Promise.all([
-      fetch(`/api/orders/offers?client_email=${encodeURIComponent(email)}`).then(r => r.json()),
-      fetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&all_offers=true`).then(r => r.json()),
+      authFetch(`/api/orders/offers?client_email=${encodeURIComponent(email)}`).then(r => r.json()),
+      authFetch(`/api/tecnico/jobs?client_email=${encodeURIComponent(email)}&all_offers=true`).then(r => r.json()),
     ]).then(([driverData, jobData]) => {
       setDriverOffers(Array.isArray(driverData) ? driverData : []);
       setJobOffers(Array.isArray(jobData) ? jobData : []);

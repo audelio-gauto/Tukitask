@@ -3,11 +3,15 @@ import { serverError } from '@/lib/apiError';
 import { sbAdmin, getAuthUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 export async function GET(req: Request) {
+  const user = await getAuthUser(req);
+  if (!user) return unauthorized();
+
   try {
     const url = new URL(req.url);
     const email = url.searchParams.get('email') || '';
     if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     const emailNormalized = email.toLowerCase();
+    if (emailNormalized !== user.email) return forbidden();
     const { data, error } = await sbAdmin()
       .from('tecnico_settings')
       .select('*')

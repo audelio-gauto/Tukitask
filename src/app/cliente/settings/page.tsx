@@ -103,7 +103,7 @@ export default function ClientSettingsPage() {
   const loadVerified = useCallback(async () => {
     if (!email) return;
     try {
-      const res  = await fetch(`/api/client-profile?email=${encodeURIComponent(email)}`);
+      const res  = await authFetch(`/api/client-profile?email=${encodeURIComponent(email)}`);
       const json = await res.json();
       setIsVerified(json.profile?.is_verified === true);
     } catch { /* non-fatal */ }

@@ -14,15 +14,24 @@ export async function GET(req: Request) {
   const orderId = searchParams.get('order_id');
   const orderIds = searchParams.get('order_ids'); // batch: comma-separated IDs
   const driverEmail = searchParams.get('driver_email');
+  const clientEmail = searchParams.get('client_email');
 
   // Batch fetch: offers for multiple orders in one query
   if (orderIds) {
     const ids = orderIds.split(',').filter(Boolean).slice(0, 50); // max 50
     if (ids.length === 0) return NextResponse.json({});
+    // Ownership: only orders that belong to the authenticated client
+    const { data: ownOrders } = await supabaseServer
+      .from('orders')
+      .select('id')
+      .in('id', ids)
+      .eq('client_email', user.email);
+    const allowedIds = (ownOrders ?? []).map((o: { id: string }) => o.id);
+    if (allowedIds.length === 0) return NextResponse.json({});
     const { data, error } = await supabaseServer
       .from('driver_offers')
       .select('id, order_id, driver_email, driver_name, driver_photo, amount, status, expires_at, created_at, client_email, distance_km, note')
-      .in('order_id', ids)
+      .in('order_id', allowedIds)
       .in('status', ['pending', 'accepted'])   // accepted needed for tracking card
       .order('created_at', { ascending: false });
     if (error) return serverError(error);
@@ -96,6 +105,15 @@ export async function GET(req: Request) {
   }
 
   if (orderId) {
+    // Ownership: only the client who owns the order may list its offers
+    const { data: ownOrder } = await supabaseServer
+      .from('orders')
+      .select('id')
+      .eq('id', orderId)
+      .eq('client_email', user.email)
+      .maybeSingle();
+    if (!ownOrder) return forbidden('Not your order');
+
     const { data, error } = await supabaseServer
       .from('driver_offers')
       .select('*')
@@ -107,17 +125,31 @@ export async function GET(req: Request) {
   }
 
   if (driverEmail) {
+    if (driverEmail.toLowerCase() !== user.email) return forbidden('Not your offers');
+    // Whitelist columns — never expose full order rows (delivery PIN, etc.)
     const { data, error } = await supabaseServer
       .from('driver_offers')
-      .select('*, orders(*)')
-      .eq('driver_email', driverEmail)
+      .select('id, order_id, driver_email, driver_name, driver_photo, amount, note, distance_km, status, expires_at, created_at, orders(id, status, order_type, pickup_address, delivery_address, created_at)')
+      .eq('driver_email', user.email)
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) return serverError(error);
     return NextResponse.json(data);
   }
 
-  return NextResponse.json({ error: 'Provide order_id or driver_email' }, { status: 400 });
+  if (clientEmail) {
+    if (clientEmail.toLowerCase() !== user.email) return forbidden('Not your offers');
+    const { data, error } = await supabaseServer
+      .from('driver_offers')
+      .select('id, order_id, driver_email, driver_name, driver_photo, amount, note, distance_km, status, expires_at, created_at, client_email')
+      .eq('client_email', user.email)
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) return serverError(error);
+    return NextResponse.json(data);
+  }
+
+  return NextResponse.json({ error: 'Provide order_id, order_ids, driver_email or client_email' }, { status: 400 });
 }
 
 // POST — driver envía oferta; driver_email se fuerza desde el token
@@ -146,6 +178,16 @@ export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 
+  const { data: roleRow } = await supabaseServer
+    .from('users')
+    .select('role')
+    .eq('email', user.email)
+    .maybeSingle();
+  const role = (roleRow as { role?: string } | null)?.role ?? '';
+  if (!['driver', 'admin', 'super_admin', 'owner'].includes(role)) {
+    return forbidden('Solo conductores pueden enviar ofertas');
+  }
+
   if (await driverHasActiveService(user.email)) {
     return NextResponse.json({ error: 'Ya tenés un servicio en curso. Terminalo para recibir otro.' }, { status: 409 });
   }
@@ -170,8 +212,9 @@ export async function POST(req: Request) {
   const note: string | null = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 300) : null;
   const distanceKm: number | null = typeof body.distance_km === 'number' && body.distance_km >= 0 ? Math.round(body.distance_km * 10) / 10 : null;
 
-  if (!order_id || !amount) {
-    return NextResponse.json({ error: 'order_id y amount son requeridos' }, { status: 400 });
+  const amountNum = Number(amount);
+  if (!order_id || !Number.isFinite(amountNum) || amountNum <= 0 || amountNum > 100_000_000) {
+    return NextResponse.json({ error: 'order_id y amount válidos son requeridos' }, { status: 400 });
   }
 
   const { data: order, error: orderError } = await supabaseServer
@@ -250,7 +293,7 @@ export async function POST(req: Request) {
   if (existing) {
     const { data, error } = await supabaseServer
       .from('driver_offers')
-      .update({ amount: Number(amount), note, distance_km: distanceKm, updated_at: new Date().toISOString() })
+      .update({ amount: amountNum, note, distance_km: distanceKm, updated_at: new Date().toISOString() })
       .eq('id', existing.id)
       .select()
       .single();
@@ -282,7 +325,7 @@ export async function POST(req: Request) {
       driver_email: driverEmail,
       driver_name: driverName,
       driver_photo: driverPhoto,
-      amount: Number(amount),
+      amount: amountNum,
       note,
       distance_km: distanceKm,
       client_email: clientEmail,
@@ -316,11 +359,11 @@ export async function POST(req: Request) {
     .eq('id', order_id)
     .single();
   if (orderInfo?.client_email) {
-    emitNotification(
+    await emitNotification(
       orderInfo.client_email,
       'new_offer',
       'Nueva oferta recibida',
-      `Un conductor ofreció ${Number(amount).toLocaleString('es-PY')} ₲ para tu envío`,
+      `Un conductor ofreció ${amountNum.toLocaleString('es-PY')} ₲ para tu envío`,
       { order_id, offer_id: data.id },
       { groupKey: `offer:order:${order_id}` },
     );
@@ -369,7 +412,7 @@ export async function PATCH(req: Request) {
     // Notify the driver that their offer was accepted
     const accepted = result.offer as Record<string, unknown> | undefined;
     if (accepted?.driver_email) {
-      emitNotification(
+      await emitNotification(
         String(accepted.driver_email),
         'offer_accepted',
         '¡Oferta aceptada!',
@@ -431,14 +474,15 @@ export async function PATCH(req: Request) {
       .from('driver_offers')
       .select('order_id')
       .eq('id', offer_id)
-      .single();
-    if (offer) {
-      const { data: order } = await supabaseServer
-        .from('orders')
-        .select('client_email')
-        .eq('id', offer.order_id)
-        .single();
-      if (!order || order.client_email !== user.email) return forbidden('Not your order');
+      .maybeSingle();
+    if (!offer) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    const { data: order } = await supabaseServer
+      .from('orders')
+      .select('client_email')
+      .eq('id', offer.order_id)
+      .maybeSingle();
+    if (!order || (order.client_email || '').toLowerCase() !== user.email) {
+      return forbidden('Not your order');
     }
 
     // Get driver email before rejecting so we can notify them
@@ -457,7 +501,7 @@ export async function PATCH(req: Request) {
 
     // Notify driver of rejection
     if (offerForNotif?.driver_email) {
-      emitNotification(
+      await emitNotification(
         offerForNotif.driver_email,
         'offer_rejected',
         'Oferta rechazada',

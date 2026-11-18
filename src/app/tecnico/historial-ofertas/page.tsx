@@ -4,6 +4,7 @@ import { useWorkerContext } from '../../driver/context';
 import { TecnicoOffer } from '@/types';
 import DriverScreenLayout from '../../driver/components/DriverScreenLayout';
 import { Icon } from '@/components/Icon';
+import { authFetch } from '@/lib/authFetch';
 
 export default function HistorialOfertasTecnico() {
   const { email } = useWorkerContext();
@@ -13,7 +14,7 @@ export default function HistorialOfertasTecnico() {
   useEffect(() => {
     if (!email) return;
     setLoading(true);
-    fetch(`/api/tecnico/jobs?tecnico_email=${encodeURIComponent(email)}&all_offers=true`)
+    authFetch(`/api/tecnico/jobs?tecnico_email=${encodeURIComponent(email)}&all_offers=true`)
       .then(r => r.json())
       .then(data => {
         setOffers(Array.isArray(data) ? data : []);

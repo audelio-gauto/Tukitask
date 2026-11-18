@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { useCart } from '../cart-context';
 import { gs, PY_CITIES } from '../data';
 import type { CheckoutItem } from '@/app/api/tienda/checkout/route';
@@ -237,7 +238,7 @@ function CheckoutInner() {
       const email = session.user.email ?? '';
       setBilling(b => ({ ...b, email }));
       try {
-        const res = await fetch(`/api/client-profile?email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`/api/client-profile?email=${encodeURIComponent(email)}`);
         const { profile } = await res.json();
         if (profile) {
           setBilling(b => ({

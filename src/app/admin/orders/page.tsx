@@ -24,6 +24,8 @@ interface Order {
   is_multi_stop: boolean;
   stop_count: number | null;
   order_type: string | null;
+  payment_proof_url: string | null;
+  delivery_photo_url: string | null;
   order_stops: { sequence: number; address: string; lat: number; lng: number; status: string; fail_reason: string | null }[] | null;
   _type: 'order';
   _driver_active: boolean;
@@ -196,21 +198,9 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
 }) {
   const [newStatus, setNewStatus] = React.useState('');
   const [reassignEmail, setReassignEmail] = React.useState('');
-  const [proofs, setProofs] = React.useState<{ payment_proof_url: string | null; delivery_photo_url: string | null } | null>(null);
 
   React.useEffect(() => {
-    if (row) { setNewStatus(row.status); setReassignEmail(''); setProofs(null); }
-  }, [row?.id]);
-
-  // Fetch proof URLs separately (columns may not exist — query fails silently)
-  React.useEffect(() => {
-    if (!row || row._type !== 'order') return;
-    void supabase
-      .from('orders')
-      .select('payment_proof_url, delivery_photo_url')
-      .eq('id', row.id)
-      .maybeSingle()
-      .then(({ data }) => { if (data) setProofs(data as never); });
+    if (row) { setNewStatus(row.status); setReassignEmail(''); }
   }, [row?.id]);
 
   if (!row) return null;
@@ -439,18 +429,18 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
         <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
 
           {/* Comprobantes (delivery proof + mandadito payment proof) */}
-          {isOrder && (proofs?.delivery_photo_url || (o.order_type === 'mandadito' && proofs?.payment_proof_url)) && (
+          {isOrder && (o.delivery_photo_url || (o.order_type === 'mandadito' && o.payment_proof_url)) && (
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Comprobantes</p>
               <div className="flex flex-col gap-3">
-                {o.order_type === 'mandadito' && proofs?.payment_proof_url && (
+                {o.order_type === 'mandadito' && o.payment_proof_url && (
                   <div className="rounded-xl overflow-hidden border border-amber-200 bg-amber-50">
                     <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide px-3 py-1.5 flex items-center gap-1">
                       <span>💳</span> Comprobante de transferencia (Mandadito)
                     </p>
-                    <a href={proofs.payment_proof_url} target="_blank" rel="noopener noreferrer">
+                    <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer">
                       <img
-                        src={proofs.payment_proof_url}
+                        src={o.payment_proof_url}
                         alt="Comprobante de transferencia"
                         className="w-full max-h-56 object-contain bg-gray-100 block"
                       />
@@ -458,14 +448,14 @@ function OrderDrawer({ row, onClose, onCancel, onSetStatus, onReassign }: {
                     <p className="text-[10px] text-amber-600 px-3 pb-2">Tocá la imagen para verla a tamaño completo</p>
                   </div>
                 )}
-                {proofs?.delivery_photo_url && (
+                {o.delivery_photo_url && (
                   <div className="rounded-xl overflow-hidden border border-green-200 bg-green-50">
                     <p className="text-[10px] font-bold text-green-700 uppercase tracking-wide px-3 py-1.5 flex items-center gap-1">
                       <span>📦</span> Foto de entrega
                     </p>
-                    <a href={proofs.delivery_photo_url} target="_blank" rel="noopener noreferrer">
+                    <a href={o.delivery_photo_url} target="_blank" rel="noopener noreferrer">
                       <img
-                        src={proofs.delivery_photo_url}
+                        src={o.delivery_photo_url}
                         alt="Foto de entrega"
                         className="w-full max-h-56 object-contain bg-gray-100 block"
                       />

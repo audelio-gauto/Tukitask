@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientContext } from './context';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { getCachedRole, setCachedRole } from '@/lib/roleCache';
 import './cliente.css';
 import { initTheme } from '@/lib/useTheme';
@@ -83,7 +84,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       }).catch(() => {});
 
       // Load client profile in background — updates state and refreshes cache
-      fetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
+      authFetch(`/api/client-profile?email=${encodeURIComponent(userEmail)}`)
         .then(r => r.json())
         .then(data => {
           const p = data?.profile;

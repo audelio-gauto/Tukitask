@@ -250,15 +250,12 @@ export default function TecnicoDashboard() {
     loadPendingJobs();
     // Realtime handles instant new-job notifications; 3 min fallback poll
     const iv = setInterval(loadPendingJobs, 180_000);
+    // tecnico_feed INSERT/DELETE cubre altas y cancelaciones: el trigger de
+    // tecnico_jobs borra la fila del feed cuando el job deja de estar pending.
     const ch = supabase.channel(`tecnico-feed-${email}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tecnico_feed',
         filter: `tecnico_email=eq.${email}`,
-      } as never, loadPendingJobs)
-      // También escuchar UPDATE en tecnico_jobs: detecta cancelaciones del cliente
-      // (el cliente cancela un job 'pending' → status → 'cancelled', sin tocar tecnico_feed)
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'tecnico_jobs',
       } as never, loadPendingJobs)
       .subscribe();
     return () => { clearInterval(iv); supabase.removeChannel(ch); };
@@ -405,7 +402,7 @@ export default function TecnicoDashboard() {
     } catch {}
 
     if (!email) return;
-    fetch(`/api/tecnico/settings?email=${encodeURIComponent(email)}`)
+    authFetch(`/api/tecnico/settings?email=${encodeURIComponent(email)}`)
       .then(r => r.json())
       .then(json => {
         const g = (json?.settings?.gender || '') as 'hombre' | 'mujer' | '';

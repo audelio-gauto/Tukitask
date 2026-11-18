@@ -24,21 +24,31 @@ export async function POST(req: Request) {
     }
 
     const emailNormalized = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalized)) {
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
+    }
 
     // ADMIN_EMAIL is a PRIVATE server-only env var (not NEXT_PUBLIC_*)
     const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
     const role = adminEmail && emailNormalized === adminEmail ? 'admin' : 'cliente';
 
     const sb = sbAdmin();
+    // Never overwrite an existing role (prevents admin/driver demotion by re-registering)
     const { error } = await sb
       .from('users')
-      .upsert({ email: emailNormalized, role }, { onConflict: 'email' });
+      .upsert({ email: emailNormalized, role }, { onConflict: 'email', ignoreDuplicates: true });
 
     if (error) {
       return serverError(error);
     }
 
-    return NextResponse.json({ success: true, role });
+    const { data: saved } = await sb
+      .from('users')
+      .select('role')
+      .eq('email', emailNormalized)
+      .maybeSingle();
+
+    return NextResponse.json({ success: true, role: saved?.role ?? role });
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
