@@ -163,7 +163,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
 
       <div
         ref={panelRef}
-        className={[className, variant === 'driver' ? 'driver-notification-bell' : ''].filter(Boolean).join(' ')}
+        className={[className, variant === 'driver' ? 'driver-notification-bell' : variant === 'admin' ? 'adm-notification-bell' : ''].filter(Boolean).join(' ')}
         style={{
           position: variant === 'admin' ? 'relative' : 'fixed',
           zIndex: 900,
@@ -178,23 +178,24 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
           aria-expanded={open}
           style={{
             position: 'relative',
-            background: 'rgba(28,28,46,0.85)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: variant === 'admin' ? 'var(--adm-surface-2)' : 'rgba(28,28,46,0.85)',
+            border: variant === 'admin' ? '1px solid var(--adm-border)' : '1px solid rgba(255,255,255,0.12)',
             borderRadius: '50%',
-            width: variant === 'driver' ? 44 : variant === 'admin' ? 38 : 48,
-            height: variant === 'driver' ? 44 : variant === 'admin' ? 38 : 48,
+            width: variant === 'driver' ? 44 : variant === 'admin' ? 34 : 48,
+            height: variant === 'driver' ? 44 : variant === 'admin' ? 34 : 48,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)',
+            color: variant === 'admin' ? 'var(--adm-text-secondary)' : '#fff',
+            backdropFilter: variant === 'admin' ? 'none' : 'blur(14px)',
+            WebkitBackdropFilter: variant === 'admin' ? 'none' : 'blur(14px)',
+            boxShadow: variant === 'admin' ? 'none' : '0 4px 20px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)',
             animation: bellAnim ? 'bellShake 0.5s ease' : undefined,
             transition: 'transform 0.18s cubic-bezier(.34,1.56,.64,1), background 0.18s, box-shadow 0.18s',
           }}
         >
-          <svg width="20" height="20" fill="none" stroke="#fff" viewBox="0 0 24 24">
+          <svg width="18" height="18" fill="none" stroke={variant === 'admin' ? 'currentColor' : '#fff'} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
             />
@@ -215,7 +216,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
               fontSize: '0.65rem',
               fontWeight: 700,
               padding: '0 4px',
-              border: '2px solid rgba(28,28,46,0.85)',
+              border: variant === 'admin' ? '2px solid var(--adm-surface)' : '2px solid rgba(28,28,46,0.85)',
               animation: 'badgePop 0.3s ease',
             }}>
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -231,8 +232,8 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
             right: 0,
             width: Math.min(variant === 'driver' ? 300 : 340, typeof window !== 'undefined' ? window.innerWidth - 32 : 340),
             maxHeight: variant === 'driver' ? 360 : 440,
-            background: 'var(--modal-bg)',
-            border: '1px solid var(--border-subtle)',
+            background: variant === 'admin' ? 'var(--adm-surface)' : 'var(--modal-bg)',
+            border: variant === 'admin' ? '1px solid var(--adm-border)' : '1px solid var(--border-subtle)',
             borderRadius: 14,
             boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
             overflow: 'hidden',
@@ -246,9 +247,13 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 16px',
-              borderBottom: '1px solid var(--border-subtle)',
+              borderBottom: variant === 'admin' ? '1px solid var(--adm-border)' : '1px solid var(--border-subtle)',
             }}>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.9rem' }}>
+              <span style={{
+                color: variant === 'admin' ? 'var(--adm-text-primary)' : 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+              }}>
                 Notificaciones {unreadCount > 0 && `(${unreadCount})`}
               </span>
               {unreadCount > 0 && (
@@ -276,7 +281,12 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
             {/* List */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {notifications.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
+                <div style={{
+                  padding: 24,
+                  textAlign: 'center',
+                  color: variant === 'admin' ? 'var(--adm-text-muted)' : '#6b7280',
+                  fontSize: '0.85rem',
+                }}>
                   Sin notificaciones
                 </div>
               ) : (
@@ -297,7 +307,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
                         background: n.read ? 'transparent' : `${ts.accent}08`,
                         border: 'none',
                         borderLeft: `3px solid ${n.read ? 'transparent' : borderColor}`,
-                        borderBottom: '1px solid var(--border-subtle)',
+                        borderBottom: variant === 'admin' ? '1px solid var(--adm-border)' : '1px solid var(--border-subtle)',
                         cursor: 'pointer',
                         textAlign: 'left',
                         animation: i === 0 && !n.read ? 'notifSlideIn 0.3s ease' : undefined,
@@ -320,7 +330,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          color: 'var(--text-primary)',
+                          color: variant === 'admin' ? 'var(--adm-text-primary)' : 'var(--text-primary)',
                           fontSize: '0.8rem',
                           fontWeight: n.read ? 500 : 700,
                           lineHeight: 1.3,
@@ -331,7 +341,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
                           {n.title}
                         </div>
                         <div style={{
-                          color: '#9ca3af',
+                          color: variant === 'admin' ? 'var(--adm-text-muted)' : '#9ca3af',
                           fontSize: '0.72rem',
                           lineHeight: 1.3,
                           marginTop: 2,
@@ -344,7 +354,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                        <span style={{ color: '#6b7280', fontSize: '0.65rem' }}>
+                        <span style={{ color: variant === 'admin' ? 'var(--adm-text-muted)' : '#6b7280', fontSize: '0.65rem' }}>
                           {timeAgo(n.created_at)}
                         </span>
                         {!n.read && (

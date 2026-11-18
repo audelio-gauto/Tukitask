@@ -75,7 +75,26 @@ test('admin panel maps Tailwind and inline colors to both themes', async () => {
   assert.match(css, /\[data-theme="dark"\] \.adm-content input/);
   assert.match(css, /\[data-theme="dark"\] \.adm-content \[style\*="background:#fff"\]/);
   assert.match(css, /--adm-success-bg:/);
+  // El sidebar y las tarjetas de color también cambian de tema.
+  assert.match(css, /--adm-sidebar-bg:\s+#ffffff/);
+  assert.match(css, /--adm-sidebar-bg:\s+#0b1220/);
+  assert.match(css, /--adm-sidebar-text:\s+#334155/);
+  assert.match(css, /--adm-sidebar-text:\s+#cbd5e1/);
+  assert.match(css, /\.bg-amber-50/);
+  assert.match(css, /\.bg-sky-50/);
+  assert.match(css, /\[style\*="background:#fee2e2"\]/);
   const promos = await read('src/app/admin/promos/page.tsx');
   assert.doesNotMatch(promos, /bg-\[#13131F\]/);
   assert.match(promos, /var\(--adm-surface\)/);
+});
+
+test('admin notification bell sits next to the theme toggle and follows the theme', async () => {
+  const header = await read('src/app/admin/components/AdminHeader.tsx');
+  assert.match(header, /adm-header-tools[\s\S]*adm-theme-btn[\s\S]*NotificationBell/);
+  assert.match(header, /NotificationBell[^>]*variant="admin"/);
+  const bell = await read('src/components/NotificationBell.tsx');
+  assert.match(bell, /adm-notification-bell/);
+  assert.match(bell, /var\(--adm-surface-2\)/);
+  assert.match(bell, /var\(--adm-border\)/);
+  assert.match(bell, /var\(--adm-text-primary\)/);
 });
