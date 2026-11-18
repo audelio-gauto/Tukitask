@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Icon } from '@/components/Icon';
+import WalletTabs from '../components/WalletTabs';
 
 interface RechargeRequest {
   id: string;
@@ -255,6 +256,8 @@ function AdminWalletsPageInner() {
 
   return (
     <div>
+      <WalletTabs />
+
       {/* Toast */}
       {toast && (
         <div style={{

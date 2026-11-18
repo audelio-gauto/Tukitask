@@ -81,7 +81,7 @@ async function buildDashboard() {
     totalOrders, pendingOrders, deliveredOrders, cancelledOrders,
     deliveredRows,
     marketTotal, marketPending, marketSoldRows,
-    pendingDriverRecharges, pendingVendorRecharges, stalePendingOrders, unresolvedReports, pendingProducts,
+    pendingDriverRecharges, pendingVendorRecharges, stalePendingOrders, unresolvedReports, pendingProducts, pendingDocuments,
   ] = await Promise.all([
     count('users_total', head('users')),
     count('users_admins', head('users').in('role', ADMIN_ROLES)),
@@ -106,6 +106,7 @@ async function buildDashboard() {
     count('orders_stale', head('orders').in('status', ORDER_PENDING).lte('created_at', staleBefore)),
     count('reports_open', head('reports').in('status', ['pending', 'reviewing'])),
     count('products_pending', head('products').eq('status', 'pending_review')),
+    count('documents_pending', head('driver_documents').eq('status', 'pending')),
   ]);
 
   if (recentUsersResult.error) {
@@ -149,6 +150,7 @@ async function buildDashboard() {
       stalePendingOrders,
       unresolvedReports,
       pendingProducts,
+      pendingDocuments,
     },
     recentUsers: recentUsersResult.data ?? [],
     warnings,

@@ -55,9 +55,7 @@ export default function VendorsDashboard() {
       color: 'emerald',
       links: [
         { label: 'Aprobar Productos', href: '/admin/vendors/productos/aprobar' },
-        { label: 'Categorías', href: '/admin/vendors/productos/categorias' },
-        { label: 'Productos Reportados (vista no conectada)', href: '/admin/vendors/productos/reportados' },
-        { label: 'Control de Stock (vista no conectada)', href: '/admin/vendors/productos/stock' },
+        { label: 'Catálogo', href: '/admin/vendors/productos/categorias' },
       ],
     },
     {
@@ -66,16 +64,12 @@ export default function VendorsDashboard() {
       links: [
         { label: 'Ver todos los Pedidos', href: '/admin/vendors/pedidos' },
         { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones' },
-        { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos' },
-        { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
       ],
     },
     {
       title: 'Negociaciones',
       color: 'purple',
       links: [
-        { label: 'Monitorear Ofertas', href: '/admin/vendors/negociaciones' },
-        { label: 'Spam / Fraude', href: '/admin/vendors/negociaciones/fraude' },
         { label: 'Historial', href: '/admin/vendors/negociaciones/historial' },
         { label: 'Límites Automáticos', href: '/admin/vendors/negociaciones/limites' },
       ],

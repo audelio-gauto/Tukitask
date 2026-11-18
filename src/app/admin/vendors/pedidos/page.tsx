@@ -5,8 +5,7 @@ import Link from 'next/link';
 
 const SUB_LINKS = [
   { label: 'Cancelaciones', href: '/admin/vendors/pedidos/cancelaciones', desc: 'Pedidos cancelados por vendedor o cliente.' },
-  { label: 'Reembolsos', href: '/admin/vendors/pedidos/reembolsos', desc: 'Solicitudes de devolución de dinero pendientes.' },
-  { label: 'Disputas', href: '/admin/vendors/pedidos/disputas', desc: 'Conflictos entre vendedores y compradores.' },
+  { label: 'Disputas y reportes', href: '/admin/reports', desc: 'Conflictos entre vendedores y compradores.' },
 ];
 
 async function fetchCount(token: string, status?: string): Promise<number> {
@@ -78,7 +77,7 @@ export default function VendorPedidosPage() {
 
       <div className="mb-5">
         <Link
-          href="/admin/orders"
+          href="/admin/orders?type=venta"
           className="inline-flex items-center gap-2 px-4 py-2 bg-[#F5C518] text-gray-900 rounded-lg text-sm font-semibold hover:bg-[#e6b800] transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

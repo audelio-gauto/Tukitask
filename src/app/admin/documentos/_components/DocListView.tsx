@@ -594,8 +594,6 @@ function DriverCard({
 interface DocListViewProps {
   pageTitle: string;
   pageDescription: string;
-  fixedStatus?: 'pending' | 'approved' | 'rejected';
-  showTabs?: boolean;
 }
 
 export default function DocListView({ pageTitle, pageDescription }: DocListViewProps) {
@@ -614,6 +612,14 @@ export default function DocListView({ pageTitle, pageDescription }: DocListViewP
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null));
+  }, []);
+
+  // Las rutas históricas /aprobados y /rechazados redirigen con ?tab=...
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab && ['listos', 'incompletos', 'rechazados', 'aprobados', 'todos'].includes(tab)) {
+      setActiveTab(tab as DriverTab | 'todos');
+    }
   }, []);
 
   const fetchGroups = useCallback(async (append = false, cur?: { email: string; role: string } | null) => {

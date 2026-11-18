@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 type TabKey = 'observability' | 'operational' | 'tukibot' | 'animaciones';
@@ -1027,7 +1028,8 @@ export default function ControlAiPage() {
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-base font-semibold text-gray-800 mb-1">Política operativa</h2>
             <p className="text-xs text-gray-500 mb-4">
-              Controla motor y comportamiento global sin tocar código ni desplegar.
+              Controla motor y comportamiento global sin tocar código ni desplegar. Las claves de cada proveedor se cargan en{' '}
+              <Link href="/admin/apikeys" className="text-blue-600 hover:underline">Claves API</Link>.
             </p>
 
             <div className="space-y-4">

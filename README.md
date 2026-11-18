@@ -22,15 +22,20 @@ Puedes personalizar el flujo de autenticación en `src/app/auth.tsx`.
 
 ## Navegación de administración
 
-El panel agrupa las herramientas en Personas, Operaciones, Marketplace, Finanzas,
-Calidad y control, Estadísticas y Configuración. El buscador del menú encuentra
-opciones dentro de cada grupo; en pantallas pequeñas el menú se abre desde la
-cabecera. Las rutas anteriores siguen disponibles.
+El panel usa dos niveles: Operaciones, Personas, Marketplace, Finanzas y
+Configuración, con Inicio como centro de acción. El menú es de sección → enlace;
+las vistas relacionadas se agrupan con pestañas dentro de cada workspace
+(vendedores, productos, catálogo, pedidos, negociaciones, reportes, billeteras,
+IA). El buscador del menú y los indicadores de colas críticas siguen disponibles;
+en pantallas pequeñas el menú se abre desde la cabecera. Las rutas anteriores
+siguen accesibles y las páginas sin datos reales ya no figuran en el menú.
 
-Las vistas de stock y productos reportados se identifican como no conectadas:
-no deben interpretarse como ausencia de alertas. Los retiros de vendedores aún
-no están habilitados. La pantalla de registros y estados de vendedores clasifica
-por antigüedad y bloqueo; no representa una verificación de identidad.
+Las vistas de stock, productos reportados y detección de fraude no están
+conectadas: no deben interpretarse como ausencia de alertas. Los reembolsos y
+retiros de vendedores aún no están habilitados. La pantalla de registros y
+estados de vendedores clasifica por antigüedad y bloqueo; no representa una
+verificación de identidad. La configuración de proveedores/modelos de IA está
+en Control AI; las claves se cargan en Claves API.
 
 ## Radio de recogida de drivers
 

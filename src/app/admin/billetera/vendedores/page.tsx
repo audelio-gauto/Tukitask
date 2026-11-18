@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import WalletTabs from '../../components/WalletTabs';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface VendorRequest {
@@ -107,6 +108,8 @@ export default function AdminVendedoresWalletPage() {
   /* ── render ── */
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 900, margin: '0 auto' }}>
+      <WalletTabs />
+
       {/* Header */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>

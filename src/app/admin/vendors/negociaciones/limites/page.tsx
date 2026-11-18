@@ -46,7 +46,7 @@ export default function LimitesPage() {
         <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
           <Link href="/admin/vendors" className="hover:text-gray-600 transition-colors">Vendedores</Link>
           <span>/</span>
-          <Link href="/admin/vendors/negociaciones" className="hover:text-gray-600 transition-colors">Negociaciones</Link>
+          <Link href="/admin/vendors/negociaciones/historial" className="hover:text-gray-600 transition-colors">Negociaciones</Link>
           <span>/</span>
           <span className="text-gray-600 font-medium">Límites Automáticos</span>
         </div>
@@ -56,7 +56,7 @@ export default function LimitesPage() {
             <p className="text-gray-500 text-sm mt-0.5">Reglas que el sistema aplica automáticamente a las negociaciones.</p>
           </div>
           <Link
-            href="/admin/configuracion/limites-negociacion"
+            href="/admin/vendors/configuracion/limites-negociacion"
             className="flex items-center gap-2 px-4 py-2 bg-[#F5C518] text-[#1d2327] rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

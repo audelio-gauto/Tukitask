@@ -6,7 +6,6 @@ export default function DocumentosPage() {
     <DocListView
       pageTitle="Verificacion de Documentos"
       pageDescription="Revisá y aprobá los documentos de conductores y técnicos"
-      showTabs
     />
   );
 }

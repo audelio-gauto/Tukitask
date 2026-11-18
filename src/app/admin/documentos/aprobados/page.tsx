@@ -1,12 +1,5 @@
-'use client';
-import DocListView from '../_components/DocListView';
+import { redirect } from 'next/navigation';
 
 export default function DocumentosAprobadosPage() {
-  return (
-    <DocListView
-      pageTitle="Documentos Aprobados"
-      pageDescription="Todos los documentos verificados y aprobados"
-      fixedStatus="approved"
-    />
-  );
+  redirect('/admin/documentos?tab=aprobados');
 }

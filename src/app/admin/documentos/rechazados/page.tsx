@@ -1,12 +1,5 @@
-'use client';
-import DocListView from '../_components/DocListView';
+import { redirect } from 'next/navigation';
 
 export default function DocumentosRechazadosPage() {
-  return (
-    <DocListView
-      pageTitle="Documentos Rechazados"
-      pageDescription="Documentos rechazados — revisá el motivo y permitile al usuario resubir"
-      fixedStatus="rejected"
-    />
-  );
+  redirect('/admin/documentos?tab=rechazados');
 }

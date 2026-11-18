@@ -23,20 +23,24 @@ export async function GET(req: Request) {
       return count ?? 0;
     };
 
-    const [products, disputes, driverRecharges, vendorRecharges] = await Promise.all([
+    const [documents, products, reports, driverRecharges, vendorRecharges] = await Promise.all([
+      head('driver_documents').eq('status', 'pending') as Promise<CountResult>,
       head('products').eq('status', 'pending_review') as Promise<CountResult>,
-      head('reports').eq('reference_type', 'order').in('status', ['pending', 'reviewing']) as Promise<CountResult>,
+      head('reports').in('status', ['pending', 'reviewing']) as Promise<CountResult>,
       head('recharge_requests').eq('status', 'pending') as Promise<CountResult>,
       head('vendor_recharge_requests').eq('status', 'pending') as Promise<CountResult>,
     ]);
 
     const payments = [value('driver_recharges', driverRecharges), value('vendor_recharges', vendorRecharges)];
-
     const counts: Record<string, number> = {};
+
+    const documentsCount = value('documents', documents);
     const productsCount = value('products', products);
-    const disputesCount = value('disputes', disputes);
-    if (productsCount !== null) counts['/admin/vendors/productos/aprobar'] = productsCount;
-    if (disputesCount !== null) counts['/admin/vendors/pedidos/disputas'] = disputesCount;
+    const reportsCount = value('reports', reports);
+
+    if (documentsCount !== null) counts['/admin/documentos'] = documentsCount;
+    if (productsCount !== null) counts['/admin/vendors/productos'] = productsCount;
+    if (reportsCount !== null) counts['/admin/reports'] = reportsCount;
     if (payments.every((n) => n !== null)) {
       counts['/admin/finanzas/pagos-pendientes'] = (payments[0] as number) + (payments[1] as number);
     }

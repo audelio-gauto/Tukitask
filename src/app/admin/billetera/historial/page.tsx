@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
 import { Icon } from '@/components/Icon';
+import WalletTabs from '../../components/WalletTabs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface RechargeRecord {
@@ -141,6 +142,8 @@ export default function RechargeHistoryPage() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      <WalletTabs />
+
       {/* ── Page header ── */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>

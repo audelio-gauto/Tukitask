@@ -25,15 +25,12 @@ export default function AdminSidebar({ mobileOpen, onClose }: Props) {
   const pathname = usePathname();
   const active = activeAdminLink(pathname);
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [criticalCounts, setCriticalCounts] = useState<Record<string, number>>({});
   const [badgesError, setBadgesError] = useState(false);
 
   useEffect(() => {
-    const current = activeAdminLink(pathname);
-    setOpenSection(current?.sectionId ?? null);
-    setOpenGroup(current ? `${current.sectionId}:${current.groupLabel}` : null);
+    setOpenSection(activeAdminLink(pathname)?.sectionId ?? null);
   }, [pathname]);
 
   useEffect(() => {
@@ -51,8 +48,9 @@ export default function AdminSidebar({ mobileOpen, onClose }: Props) {
         const json = await res.json() as { counts?: Record<string, number> };
         if (!json.counts) throw new Error('Respuesta de indicadores incompleta');
         const requiredCounts = [
-          '/admin/vendors/productos/aprobar',
-          '/admin/vendors/pedidos/disputas',
+          '/admin/documentos',
+          '/admin/reports',
+          '/admin/vendors/productos',
           '/admin/finanzas/pagos-pendientes',
         ];
         const incomplete = requiredCounts.some(href => typeof json.counts?.[href] !== 'number');
@@ -78,6 +76,9 @@ export default function AdminSidebar({ mobileOpen, onClose }: Props) {
   }, []);
 
   const query = normalize(search);
+  const hasMatches = adminNavigation.some(section =>
+    section.links.some(link => normalize(`${section.label} ${link.label} ${link.note ?? ''}`).includes(query)),
+  );
 
   return (
     <>
@@ -99,49 +100,47 @@ export default function AdminSidebar({ mobileOpen, onClose }: Props) {
             <Icon name="home" size={19} /><span>Inicio</span>
           </Link>
           {adminNavigation.map(section => {
-            const groups = section.groups.map(group => ({
-              ...group,
-              links: group.links.filter(link => !query || normalize(`${section.label} ${group.label} ${link.label} ${link.note ?? ''}`).includes(query)),
-            })).filter(group => group.links.length > 0);
-            if (!groups.length) return null;
+            const links = section.links.filter(link =>
+              !query || normalize(`${section.label} ${link.label} ${link.note ?? ''}`).includes(query),
+            );
+            if (!links.length) return null;
             const expanded = !!query || openSection === section.id;
-            const sectionCount = section.groups.flatMap(group => group.links).reduce((sum, link) => sum + (criticalCounts[link.href] ?? 0), 0);
+            const sectionCount = section.links.reduce((sum, link) => sum + (criticalCounts[link.href] ?? 0), 0);
             return (
               <div key={section.id}>
-                <button type="button" className={`adm-nav-section${active?.sectionId === section.id ? ' is-current' : ''}`} aria-expanded={expanded} disabled={!!query} onClick={() => setOpenSection(expanded ? null : section.id)}>
+                <button
+                  type="button"
+                  className={`adm-nav-section${active?.sectionId === section.id ? ' is-current' : ''}`}
+                  aria-expanded={expanded}
+                  disabled={!!query}
+                  onClick={() => setOpenSection(expanded ? null : section.id)}
+                >
                   <Icon name={section.icon} size={19} /><span>{section.label}</span>
                   <Badge count={sectionCount} />
                   <span className={`adm-nav-chevron${expanded ? ' is-open' : ''}`} aria-hidden="true">⌄</span>
                 </button>
-                {expanded && <div className="adm-nav-groups">
-                  {groups.map(group => {
-                    const groupId = `${section.id}:${group.label}`;
-                    const groupExpanded = !!query || openGroup === groupId;
-                    const groupCount = group.links.reduce((sum, link) => sum + (criticalCounts[link.href] ?? 0), 0);
-                    return (
-                      <div key={groupId}>
-                        <button type="button" className="adm-nav-group" aria-expanded={groupExpanded} disabled={!!query} onClick={() => setOpenGroup(groupExpanded ? null : groupId)}>
-                          <span>{group.label}</span><Badge count={groupCount} />
-                          <span className={`adm-nav-chevron${groupExpanded ? ' is-open' : ''}`} aria-hidden="true">⌄</span>
-                        </button>
-                        {groupExpanded && <div className="adm-nav-links">
-                          {group.links.map(link => (
-                            <Link key={link.href} href={link.href} onClick={onClose} className={`adm-nav-link${active?.href === link.href ? ' is-active' : ''}`} aria-current={active?.href === link.href ? 'page' : undefined}>
-                              <span>{link.label}{link.note && <small>{link.note}</small>}</span>
-                              <Badge count={criticalCounts[link.href] ?? 0} />
-                            </Link>
-                          ))}
-                        </div>}
-                      </div>
-                    );
-                  })}
-                </div>}
+                {expanded && (
+                  <div className="adm-nav-groups">
+                    <div className="adm-nav-links">
+                      {links.map(link => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={onClose}
+                          className={`adm-nav-link${active?.href === link.href ? ' is-active' : ''}`}
+                          aria-current={active?.href === link.href ? 'page' : undefined}
+                        >
+                          <span>{link.label}{link.note && <small>{link.note}</small>}</span>
+                          <Badge count={criticalCounts[link.href] ?? 0} />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
-          {query && !adminNavigation.some(section => section.groups.some(group => group.links.some(link => normalize(`${section.label} ${group.label} ${link.label} ${link.note ?? ''}`).includes(query)))) && (
-            <p className="adm-nav-empty">No se encontraron secciones.</p>
-          )}
+          {query && !hasMatches && <p className="adm-nav-empty">No se encontraron secciones.</p>}
         </nav>
         <div className="adm-sidebar-footer">
           {badgesError ? <span role="status">Algunos indicadores no están disponibles. Se reintentará automáticamente.</span> : <span>Administración de Tukitask</span>}

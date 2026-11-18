@@ -577,6 +577,12 @@ export default function AdminOrdersPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Permite enlaces profundos como /admin/orders?type=venta
+  useEffect(() => {
+    const type = new URLSearchParams(window.location.search).get('type');
+    if (type === 'orders' || type === 'tecnico' || type === 'venta') setTab(type);
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');

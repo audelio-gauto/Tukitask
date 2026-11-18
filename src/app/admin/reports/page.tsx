@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import SuspendUserModal, { SuspendTarget } from '../components/SuspendUserModal';
+import AdminTabs from '../components/AdminTabs';
 import { Icon, type IconName } from '@/components/Icon';
 
 interface Report {
@@ -141,6 +142,11 @@ export default function AdminReportsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      <AdminTabs tabs={[
+        { label: 'Reportes', href: '/admin/reports' },
+        { label: 'Disputas', href: '/admin/vendors/pedidos/disputas' },
+      ]} label="Reportes y disputas" />
+
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Reportes y Reclamos</h1>

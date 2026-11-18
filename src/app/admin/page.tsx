@@ -53,6 +53,7 @@ interface Alerts {
   stalePendingOrders: number;
   unresolvedReports: number;
   pendingProducts: number;
+  pendingDocuments: number;
 }
 
 function fmtGs(n: number) {
@@ -95,7 +96,7 @@ export default function AdminDashboard() {
   const stats = data?.stats ?? { total: 0, admins: 0, drivers: 0, vendedores: 0, servicios: 0, hoteleria: 0, clientes: 0 };
   const orderMetrics = data?.orders ?? { total: 0, pending: 0, delivered: 0, cancelled: 0, revenueToday: 0, revenueLast30Days: 0, daily: [] };
   const marketplace = data?.marketplace ?? { total: 0, pending: 0, revenueLast30Days: 0 };
-  const alerts = data?.alerts ?? { pendingDriverRecharges: 0, pendingVendorRecharges: 0, stalePendingOrders: 0, unresolvedReports: 0, pendingProducts: 0 };
+  const alerts = data?.alerts ?? { pendingDriverRecharges: 0, pendingVendorRecharges: 0, stalePendingOrders: 0, unresolvedReports: 0, pendingProducts: 0, pendingDocuments: 0 };
   const recentUsers = data?.recentUsers ?? [];
   const dailyRevenue = orderMetrics.daily;
 
@@ -114,6 +115,7 @@ export default function AdminDashboard() {
     { key: 'stale-orders', count: alerts.stalePendingOrders, label: 'Pedidos sin asignar >30 min', href: '/admin/orders', tone: 'bg-red-50 border-red-200 hover:bg-red-100', badge: 'bg-red-500', text: 'text-red-700' },
     { key: 'reports', count: alerts.unresolvedReports, label: 'Reportes sin resolver', href: '/admin/reports', tone: 'bg-purple-50 border-purple-200 hover:bg-purple-100', badge: 'bg-purple-500', text: 'text-purple-700' },
     { key: 'products', count: alerts.pendingProducts, label: 'Productos esperando aprobación', href: '/admin/vendors/productos/aprobar', tone: 'bg-sky-50 border-sky-200 hover:bg-sky-100', badge: 'bg-sky-500', text: 'text-sky-700' },
+    { key: 'documents', count: alerts.pendingDocuments, label: 'Documentos por revisar', href: '/admin/documentos', tone: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100', badge: 'bg-indigo-500', text: 'text-indigo-700' },
   ];
   const activeAlerts = alertItems.filter(a => a.count > 0);
 
