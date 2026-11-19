@@ -11,6 +11,8 @@ import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import RequestsFeed, { type FeedItem } from '@/components/RequestsFeed';
 import { Icon } from '@/components/Icon';
+import { setTecnicoAvailability } from '@/lib/tecnicoAvailability';
+import { setDriverBubbleBadge } from '@/lib/driverMode';
 
 const WorkerMap = dynamic(() => import('@/components/WorkerMap'), { ssr: false });
 
@@ -110,8 +112,8 @@ export default function TecnicoDashboard() {
         if (expired.length > 0 || hasRejected) {
           // Force offline — expired or rejected critical docs
           setAvailable(false);
+          setTecnicoAvailability(false);
           try {
-            localStorage.setItem('tecnico_available', 'false');
             localStorage.setItem('tecnico_doc_blocked', 'true');
           } catch {}
         } else {
@@ -120,7 +122,7 @@ export default function TecnicoDashboard() {
             const wasDocBlocked = localStorage.getItem('tecnico_doc_blocked') === 'true';
             if (wasDocBlocked) {
               setAvailable(true);
-              localStorage.setItem('tecnico_available', 'true');
+              setTecnicoAvailability(true);
               localStorage.removeItem('tecnico_doc_blocked');
             }
           } catch {}
@@ -526,6 +528,11 @@ export default function TecnicoDashboard() {
 
   const feedVisible = available && !walletBlocked && filteredJobs.filter(j => !dismissedHome.has(j.id)).length > 0;
 
+  // Mantiene la insignia de la burbuja sincronizada con el feed visible.
+  useEffect(() => {
+    void setDriverBubbleBadge(available && !walletBlocked ? filteredJobs.length : 0);
+  }, [available, walletBlocked, filteredJobs.length]);
+
   return (
     <>
       <div className="tuki-map">
@@ -821,11 +828,11 @@ export default function TecnicoDashboard() {
                 if (!available && (docAlerts.expired.length > 0 || docCounts.rejected > 0)) return;
                 if (!available) {
                   setAvailable(true);
-                  try { localStorage.setItem('tecnico_available', 'true'); } catch {}
+                  setTecnicoAvailability(true);
                   showToast('Online. Buscando solicitudes…');
                 } else {
                   setAvailable(false);
-                  try { localStorage.setItem('tecnico_available', 'false'); } catch {}
+                  setTecnicoAvailability(false);
                   showToast('Offline. Descansando.');
                 }
               }} />

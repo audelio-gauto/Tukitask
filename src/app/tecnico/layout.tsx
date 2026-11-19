@@ -15,6 +15,16 @@ import { BottomNav } from '@/components/BottomNav';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfflineBanner from '@/components/OfflineBanner';
 import { authFetch } from '@/lib/authFetch';
+import {
+  enableDriverMode,
+  disableDriverMode,
+  setDriverBubble,
+  saveDriverSession,
+  clearDriverSession,
+  updateDriverNativeLocation,
+  ensureDriverNotificationPermission,
+} from '@/lib/driverMode';
+import { isTecnicoAvailable, subscribeTecnicoAvailability } from '@/lib/tecnicoAvailability';
 
 const TECNICO_TABS = [
   { href: '/tecnico',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -43,6 +53,69 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
 
+  // APK: burbuja flotante + búsqueda en segundo plano SOLO cuando el técnico
+  // está online. El layout es el dueño de este estado para que la burbuja
+  // funcione en todas las pantallas del técnico, no solo en /tecnico.
+  useEffect(() => {
+    if (!email) return;
+    let disposed = false;
+
+    const applyAvailability = async () => {
+      if (disposed) return;
+      const online = isTecnicoAvailable();
+      if (online) {
+        await enableDriverMode('tecnico');
+        // Pudo desconectarse mientras se pedía el permiso de burbuja.
+        if (disposed || !isTecnicoAvailable()) return;
+        await setDriverBubble(true);
+        if (!disposed && isTecnicoAvailable()) void ensureDriverNotificationPermission();
+      } else {
+        await setDriverBubble(false);
+        // Si volvió a conectarse mientras se apagaba, no matar el modo.
+        if (!disposed && !isTecnicoAvailable()) await disableDriverMode();
+      }
+    };
+
+    void applyAvailability();
+    const unsubscribe = subscribeTecnicoAvailability(() => { void applyAvailability(); });
+    return () => {
+      disposed = true;
+      unsubscribe();
+      void setDriverBubble(false);
+      void clearDriverSession();
+      void disableDriverMode();
+    };
+  }, [email]);
+
+  // APK: guarda la sesión para que el servicio nativo busque solicitudes
+  // mientras el técnico usa Google Maps/WhatsApp u otra aplicación.
+  useEffect(() => {
+    if (!email) return;
+    let disposed = false;
+
+    const applySession = (session: { access_token?: string; refresh_token?: string } | null) => {
+      if (disposed || !session?.access_token) return;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+      if (!supabaseUrl || !supabaseAnonKey) return;
+      void saveDriverSession({
+        apiBase: window.location.origin,
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token ?? '',
+        supabaseUrl,
+        supabaseAnonKey,
+        role: 'tecnico',
+      });
+    };
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applySession(session));
+    return () => {
+      disposed = true;
+      listener?.subscription?.unsubscribe?.();
+    };
+  }, [email]);
+
   // ── GPS broadcast: always-on while tecnico app is open ─────────────────────
   // DB write every 60s (reduced from 15s), skipped when tecnico is offline
   // Exposes driverPos via context so child pages don't need their own watchPosition
@@ -50,6 +123,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
     if (!email) return;
     let lastLat: number | null = null;
     let lastLng: number | null = null;
+    let lastNativeAt = 0;
     let watchId: number | null = null;
     let dbIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -60,6 +134,15 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
 
     const broadcastLocation = (lat: number, lng: number) => {
       broadcastCh.send({ type: 'broadcast', event: 'location', payload: { lat, lng } }).catch(() => {});
+    };
+
+    // El servicio nativo necesita la última coordenada para el heartbeat
+    // mientras la WebView está en segundo plano.
+    const publishNativeLocation = (lat: number, lng: number) => {
+      const now = Date.now();
+      if (now - lastNativeAt < 30_000) return;
+      lastNativeAt = now;
+      void updateDriverNativeLocation(lat, lng);
     };
 
     const postToDB = () => {
@@ -85,6 +168,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           // Share with child pages via context
           setDriverPos({ lat: lastLat, lng: lastLng });
           broadcastLocation(lastLat, lastLng);
+          publishNativeLocation(lastLat, lastLng);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
@@ -102,6 +186,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         lastLng = lng;
         setDriverPos({ lat, lng });
         broadcastLocation(lat, lng);
+        publishNativeLocation(lat, lng);
       }),
     ).then(cleanup => { bgGeoStop = cleanup; });
 

@@ -6,6 +6,8 @@ interface DriverSessionPayload {
   refreshToken: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  /** Rol que está online: define si el servicio busca envíos o servicios. */
+  role?: 'driver' | 'tecnico';
 }
 
 interface NotificationPermissionResult {
@@ -39,13 +41,15 @@ function isAndroid(): boolean {
 }
 
 /** Solo en el APK: pantalla siempre encendida + burbuja flotante al salir a otras apps. */
-export async function enableDriverMode(): Promise<void> {
+export async function enableDriverMode(role: 'driver' | 'tecnico' = 'driver'): Promise<void> {
   if (!isAndroid()) return;
   try {
     await DriverMode.setEnabled({ enabled: true });
     const { granted } = await DriverMode.hasOverlayPermission();
-    if (!granted && !localStorage.getItem(ASKED_KEY)) {
-      localStorage.setItem(ASKED_KEY, '1');
+    // El conductor conserva su clave histórica; el técnico pide una vez por su cuenta.
+    const askedKey = role === 'driver' ? ASKED_KEY : `${ASKED_KEY}_${role}`;
+    if (!granted && !localStorage.getItem(askedKey)) {
+      localStorage.setItem(askedKey, '1');
       await DriverMode.requestOverlayPermission();
     }
   } catch { /* el plugin nativo no está en este APK */ }

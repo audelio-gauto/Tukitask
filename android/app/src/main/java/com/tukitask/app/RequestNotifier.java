@@ -12,7 +12,7 @@ import android.provider.Settings;
 
 /** Notificación local de nuevas solicitudes (heads-up, sonido y vibración). */
 public final class RequestNotifier {
-    private static final String CHANNEL_ID = "tukitask_requests_v2";
+    private static final String CHANNEL_ID = "tukitask_requests_v3";
     private static final int NOTIFICATION_ID = 44120;
 
     private RequestNotifier() {}
@@ -24,7 +24,7 @@ public final class RequestNotifier {
 
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "Solicitudes de envío",
+                "Solicitudes TukiTask",
                 NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Nuevas solicitudes mientras TukiTask está en segundo plano");
         channel.enableVibration(true);

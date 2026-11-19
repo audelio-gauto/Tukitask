@@ -55,7 +55,10 @@ public class DriverBackgroundService extends Service {
     public static final String KEY_SUPABASE_KEY = "supabase_key";
     public static final String KEY_LAT = "lat";
     public static final String KEY_LNG = "lng";
-    private static final String KEY_KNOWN_IDS = "known_request_ids";
+    public static final String KEY_ROLE = "worker_role";
+    public static final String ROLE_DRIVER = "driver";
+    public static final String ROLE_TECNICO = "tecnico";
+    public static final String KEY_KNOWN_IDS = "known_request_ids";
 
     private ScheduledExecutorService executor;
     private volatile boolean running = false;
@@ -105,6 +108,11 @@ public class DriverBackgroundService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        // Si Android reinició el proceso en segundo plano, la burbuja anterior
+        // desapareció; se vuelve a crear sin esperar a que abran la app.
+        if (!MainActivity.isVisible()) {
+            BubbleManager.show(getApplicationContext());
+        }
         if (executor == null) {
             executor = Executors.newSingleThreadScheduledExecutor();
             executor.scheduleWithFixedDelay(this::tick, 400, POLL_MS, TimeUnit.MILLISECONDS);
@@ -132,6 +140,7 @@ public class DriverBackgroundService extends Service {
         }
         RequestNotifier.clear(this);
         BubbleManager.setBadge(this, 0);
+        BubbleManager.hide(getApplicationContext());
         try { stopForeground(true); } catch (Exception ignored) {}
         super.onDestroy();
     }
@@ -202,7 +211,7 @@ public class DriverBackgroundService extends Service {
                 if (token == null || token.isEmpty()) return;
                 result = fetchRequests(prefs, token);
             }
-            if (result != null && result.ok) handleOrders(prefs, result.orders);
+            if (result != null && result.ok) handleRequests(prefs, result.orders);
         } catch (Exception error) {
             Log.w(TAG, "Fallo al buscar solicitudes", error);
         }
@@ -258,7 +267,11 @@ public class DriverBackgroundService extends Service {
         try {
             String apiBase = apiBase(prefs);
             if (apiBase.isEmpty()) return null;
-            URL url = new URL(apiBase + "/api/driver/background-requests");
+            boolean tecnico = isTecnico(prefs);
+            String endpoint = tecnico
+                    ? "/api/tecnico/background-requests"
+                    : "/api/driver/background-requests";
+            URL url = new URL(apiBase + endpoint);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(10000);
@@ -271,7 +284,7 @@ public class DriverBackgroundService extends Service {
 
             String body = read(connection.getInputStream());
             JSONObject json = new JSONObject(body);
-            JSONArray array = json.optJSONArray("orders");
+            JSONArray array = json.optJSONArray(tecnico ? "jobs" : "orders");
             List<JSONObject> orders = new ArrayList<>();
             if (array != null) {
                 for (int i = 0; i < array.length(); i++) {
@@ -287,10 +300,10 @@ public class DriverBackgroundService extends Service {
         }
     }
 
-    private void handleOrders(SharedPreferences prefs, List<JSONObject> orders) {
+    private void handleRequests(SharedPreferences prefs, List<JSONObject> requests) {
         Set<String> current = new HashSet<>();
-        for (JSONObject order : orders) {
-            String id = order.optString("id", "");
+        for (JSONObject request : requests) {
+            String id = request.optString("id", "");
             if (!id.isEmpty()) current.add(id);
         }
 
@@ -302,7 +315,7 @@ public class DriverBackgroundService extends Service {
             }
         }
 
-        int count = orders.size();
+        int count = requests.size();
         BubbleManager.setBadge(this, count);
 
         if (count == 0) {
@@ -313,20 +326,33 @@ public class DriverBackgroundService extends Service {
         }
 
         List<JSONObject> fresh = new ArrayList<>();
-        for (JSONObject order : orders) {
-            String id = order.optString("id", "");
-            if (!id.isEmpty() && !known.contains(id)) fresh.add(order);
+        for (JSONObject request : requests) {
+            String id = request.optString("id", "");
+            if (!id.isEmpty() && !known.contains(id)) fresh.add(request);
         }
 
         prefs.edit().putString(KEY_KNOWN_IDS, TextUtils.join(",", current)).apply();
 
         if (!fresh.isEmpty()) {
             JSONObject first = fresh.get(0);
-            String pickup = first.optString("pickup_address", "Origen");
-            String delivery = first.optString("delivery_address", "Destino");
-            double price = first.optDouble("offer", first.optDouble("suggested_price", 0));
-            String title = fresh.size() > 1 ? fresh.size() + " solicitudes nuevas" : "Nueva solicitud";
-            String text = pickup + " → " + delivery;
+            boolean tecnico = isTecnico(prefs);
+            String title;
+            String text;
+            double price;
+            if (tecnico) {
+                String service = first.optString("service_type", "Servicio");
+                String address = first.optString("address", "");
+                price = first.optDouble("client_initial_price", 0);
+                title = fresh.size() > 1 ? fresh.size() + " servicios nuevos" : "Nuevo servicio";
+                text = service;
+                if (!address.isEmpty()) text += " · " + address;
+            } else {
+                String pickup = first.optString("pickup_address", "Origen");
+                String delivery = first.optString("delivery_address", "Destino");
+                price = first.optDouble("offer", first.optDouble("suggested_price", 0));
+                title = fresh.size() > 1 ? fresh.size() + " solicitudes nuevas" : "Nueva solicitud";
+                text = pickup + " → " + delivery;
+            }
             if (price > 0) text += " · " + formatGuaranies(price) + " Gs.";
             RequestNotifier.notifyRequest(this, count, title, text);
         }
@@ -368,6 +394,10 @@ public class DriverBackgroundService extends Service {
         } finally {
             if (connection != null) connection.disconnect();
         }
+    }
+
+    private static boolean isTecnico(SharedPreferences prefs) {
+        return ROLE_TECNICO.equals(prefs.getString(KEY_ROLE, ROLE_DRIVER));
     }
 
     private static String apiBase(SharedPreferences prefs) {

@@ -47,7 +47,10 @@ public final class BubbleManager {
     public static void setEnabled(Context ctx, boolean value) {
         enabled = value;
         prefs(ctx).edit().putBoolean(KEY_BUBBLE, value).apply();
-        if (!value) hide(ctx.getApplicationContext());
+        if (!value) {
+            badgeCount = 0;
+            hide(ctx.getApplicationContext());
+        }
     }
 
     public static boolean canDraw(Context ctx) {
@@ -80,6 +83,12 @@ public final class BubbleManager {
 
     public static void show(final Context appCtx) {
         if (!enabled || bubble != null || !canDraw(appCtx)) return;
+        // WindowManager solo puede tocar vistas desde el hilo principal. El
+        // puente de Capacitor puede invocar esto desde otro hilo.
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            new Handler(Looper.getMainLooper()).post(() -> show(appCtx));
+            return;
+        }
         final WindowManager wm = (WindowManager) appCtx.getSystemService(Context.WINDOW_SERVICE);
         float d = appCtx.getResources().getDisplayMetrics().density;
         int size = (int) (60 * d);
@@ -99,6 +108,7 @@ public final class BubbleManager {
 
         FrameLayout container = new FrameLayout(appCtx);
         container.setElevation(8 * d);
+        container.setContentDescription("TukiTask: solicitudes pendientes");
         container.addView(icon, new FrameLayout.LayoutParams(size, size));
 
         TextView badge = new TextView(appCtx);
@@ -146,8 +156,10 @@ public final class BubbleManager {
                         float dx = e.getRawX() - touchX, dy = e.getRawY() - touchY;
                         if (Math.abs(dx) > slop || Math.abs(dy) > slop) moved = true;
                         if (moved) {
-                            params.x = startX + (int) dx;
-                            params.y = startY + (int) dy;
+                            int maxX = appCtx.getResources().getDisplayMetrics().widthPixels - size;
+                            int maxY = appCtx.getResources().getDisplayMetrics().heightPixels - size;
+                            params.x = Math.max(0, Math.min(maxX, startX + (int) dx));
+                            params.y = Math.max(0, Math.min(maxY, startY + (int) dy));
                             try { wm.updateViewLayout(bubble, params); } catch (Exception ignored) {}
                         }
                         return true;
@@ -173,7 +185,12 @@ public final class BubbleManager {
         }
     }
 
-    public static void hide(Context appCtx) {
+    public static void hide(final Context appCtx) {
+        // Se postea siempre: puede haber un show pendiente en la cola principal.
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            new Handler(Looper.getMainLooper()).post(() -> hide(appCtx));
+            return;
+        }
         if (bubble == null) return;
         try {
             ((WindowManager) appCtx.getSystemService(Context.WINDOW_SERVICE)).removeView(bubble);

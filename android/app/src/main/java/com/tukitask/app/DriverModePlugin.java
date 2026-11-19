@@ -93,17 +93,30 @@ public class DriverModePlugin extends Plugin {
         String refreshToken = call.getString("refreshToken", "");
         String supabaseUrl = trimSlash(call.getString("supabaseUrl", ""));
         String supabaseAnonKey = call.getString("supabaseAnonKey", "");
+        String role = call.getString("role", DriverBackgroundService.ROLE_DRIVER);
+        if (!DriverBackgroundService.ROLE_TECNICO.equals(role)) {
+            role = DriverBackgroundService.ROLE_DRIVER;
+        }
         if (apiBase.isEmpty() || accessToken == null || accessToken.isEmpty()) {
             call.reject("sesión inválida");
             return;
         }
 
-        sessionPrefs().edit()
+        SharedPreferences prefs = sessionPrefs();
+        String previousRole = prefs.getString(
+                DriverBackgroundService.KEY_ROLE, DriverBackgroundService.ROLE_DRIVER);
+        if (!role.equals(previousRole)) {
+            // No mezclar solicitudes vistas por un rol con las del otro.
+            prefs.edit().putString(DriverBackgroundService.KEY_KNOWN_IDS, "").apply();
+        }
+
+        prefs.edit()
                 .putString(DriverBackgroundService.KEY_API_BASE, apiBase)
                 .putString(DriverBackgroundService.KEY_ACCESS_TOKEN, accessToken)
                 .putString(DriverBackgroundService.KEY_REFRESH_TOKEN, refreshToken == null ? "" : refreshToken)
                 .putString(DriverBackgroundService.KEY_SUPABASE_URL, supabaseUrl)
                 .putString(DriverBackgroundService.KEY_SUPABASE_KEY, supabaseAnonKey == null ? "" : supabaseAnonKey)
+                .putString(DriverBackgroundService.KEY_ROLE, role)
                 .apply();
 
         if (BubbleManager.isEnabled()) DriverBackgroundService.start(getContext());
