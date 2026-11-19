@@ -10,6 +10,7 @@ import { initTheme } from '@/lib/useTheme';
 import { WorkerDrawer } from '@/components/WorkerDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
+import type { NotifType } from '@/lib/notifications';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import {
   enableDriverMode,
@@ -28,6 +29,10 @@ import AppUpdateBanner from '@/components/AppUpdateBanner';
 import GpsBanner from '@/components/GpsBanner';
 import { authFetch } from '@/lib/authFetch';
 import { isFreshLocation, isNewerLocation, normalizeLiveLocation, type LiveLocation } from '@/lib/liveLocation';
+
+// Las solicitudes del conductor se avisan con popup (igual que al técnico) y
+// no se acumulan en la campanita: la tarjeta accionable ya está en pantalla.
+const DRIVER_POPUP_ONLY_TYPES: NotifType[] = ['new_order'];
 
 const DRIVER_TABS = [
   { href: '/driver',           label: 'Inicio',    icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg> },
@@ -384,14 +389,15 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     // Abre la navegación una sola vez por pedido cuando el cliente acepta la oferta
     // Un servicio a la vez: mientras haya uno en curso, el conductor queda en su pantalla de navegación
     const LOCK_STATUSES = ['accepted', 'picking_up', 'at_pickup', 'in_transit', 'returning', 'driver_returning', 'return_delivered', 'awaiting_payment', 'payment_confirmed'];
-    const openNavForNew = (orders: any[]) => {
+    type DriverOrderSummary = { id: string | number; status: string; date_scheduled?: string | null };
+    const openNavForNew = (orders: DriverOrderSummary[]) => {
       const current = orders.find(o => LOCK_STATUSES.includes(o.status) && !(o.status === 'accepted' && o.date_scheduled));
       if (current && !window.location.pathname.startsWith('/driver/navegar')) router.push(`/driver/navegar/${current.id}`);
     };
     const load = () => {
       authFetch(`/api/orders?driver_email=${encodeURIComponent(email)}`)
         .then(r => r.json())
-        .then((data: any[]) => {
+        .then((data: DriverOrderSummary[]) => {
           if (Array.isArray(data)) {
             setActiveOrderCount(data.filter(o => ACTIVE_STATUSES.includes(o.status)).length);
             openNavForNew(data);
@@ -436,7 +442,14 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         profilePhoto={profilePhoto}
         onBeforeLogout={handleBeforeLogout}
       />
-      {!inNav && <NotificationBell userEmail={email} className="" variant={pathname === '/driver' ? 'driver' : undefined} />}
+      {!inNav && (
+        <NotificationBell
+          userEmail={email}
+          className=""
+          variant={pathname === '/driver' ? 'driver' : undefined}
+          popupOnlyTypes={DRIVER_POPUP_ONLY_TYPES}
+        />
+      )}
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}
       <WorkerContext.Provider value={{ openDrawer: () => setDrawerOpen(true), email, displayName, profilePhoto, setProfilePhoto, avgRating, totalRatings, serviceFilters, toggleFilter, navApp, pickupRangeKm, setPickupRangeKm, driverPos, setDriverPos }}>
         {children}

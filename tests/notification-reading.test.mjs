@@ -251,6 +251,108 @@ test('la bandeja permite leer sin navegar, conserva el historial y muestra error
   assert.ok(find(tree, e => e.props?.children === item.title));
 });
 
+test('la solicitud del conductor se recupera como popup y no se acumula en la campanita', async () => {
+  const h = hooks();
+  const old = {
+    ...notification, id: 'old-request', type: 'new_order', title: 'Nuevo viaje solicitado',
+    body: 'Origen → Destino', priority: 'high', read: false,
+    created_at: '2020-01-01T12:00:00Z',
+  };
+  const rows = [old];
+  const patches = [];
+  const inserts = [];
+  let onVisibility;
+  const authFetch = async (url, init = {}) => {
+    if (init.method === 'PATCH') {
+      patches.push(JSON.parse(init.body));
+      return { ok: true };
+    }
+    return { ok: true, json: async () => rows };
+  };
+  const channel = {
+    on(event, config, callback) {
+      if (config.event === 'INSERT') inserts.push(callback);
+      return channel;
+    },
+    subscribe() { return channel; },
+  };
+  const { useNotifications: notificationsHook } = await load('src/lib/useNotifications.ts', {
+    react: h,
+    '@/lib/supabaseClient': { supabase: { channel: () => channel, removeChannel() {} } },
+    '@/lib/authFetch': { authFetch },
+  }, {
+    document: {
+      visibilityState: 'visible',
+      addEventListener(event, callback) { if (event === 'visibilitychange') onVisibility = callback; },
+      removeEventListener() {},
+    },
+    setInterval: () => 1,
+    clearInterval() {},
+  });
+  const render = () => {
+    h.start();
+    const value = notificationsHook('driver@example.test', { popupOnlyTypes: ['new_order'] });
+    h.runEffects();
+    return value;
+  };
+  const flush = async () => {
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+  };
+
+  render();
+  await flush();
+  let current = render();
+  assert.equal(current.notifications.length, 0);
+  assert.equal(current.latestUrgent, null, 'el historial viejo no debe reaparecer');
+  assert.deepEqual(patches, [{ ids: ['old-request'] }]);
+
+  const fresh = { ...old, id: 'fresh', created_at: new Date().toISOString() };
+  rows.unshift(fresh);
+  onVisibility();
+  await flush();
+  current = render();
+  assert.equal(current.notifications.length, 0);
+  assert.equal(current.latestUrgent?.id, 'fresh');
+  assert.ok(patches.some(p => p.ids?.includes('fresh')));
+
+  const realtime = { ...fresh, id: 'realtime' };
+  rows.unshift(realtime);
+  inserts[0]({ new: realtime });
+  current = render();
+  assert.equal(current.notifications.length, 0);
+  assert.equal(current.latestUrgent?.id, 'realtime');
+});
+
+test('el popup de solicitud del conductor usa el formato amplio del técnico', async () => {
+  const h = hooks();
+  const request = {
+    ...notification, id: 'req', type: 'new_order', title: 'Nuevo viaje solicitado',
+    priority: 'high', created_at: new Date().toISOString(),
+  };
+  const api = {
+    notifications: [], unreadCount: 0,
+    markRead: async () => {}, markAllRead: async () => {},
+    latestUrgent: request, dismissUrgent() {},
+  };
+  const Popup = () => null;
+  const { NotificationBell } = await load('src/components/NotificationBell.tsx', {
+    react: h,
+    'next/navigation': { useRouter: () => ({ push() {} }), usePathname: () => '/driver' },
+    '@/lib/useNotifications': { useNotifications: () => api },
+    '@/components/UrgentNotificationPopup': { UrgentNotificationPopup: Popup },
+    '@/components/NotificationDetail': { NotificationDetail: () => null },
+    '@/components/Icon': { Icon: () => null },
+  });
+  h.start();
+  const tree = NotificationBell({
+    userEmail: 'driver@example.test', variant: 'driver', popupOnlyTypes: ['new_order'],
+  });
+  const popup = find(tree, e => e.type === Popup);
+  assert.equal(popup.props.variant, undefined);
+  assert.ok(find(tree, e => e.props?.['aria-label'] === 'Notificaciones'));
+  assert.equal(api.notifications.length, 0);
+});
+
 test('los errores no marcan leído y marcar todo no modifica avisos nuevos durante la petición', async () => {
   const h = hooks();
   let response = { ok: false };

@@ -7,7 +7,7 @@ import { useNotifications } from '@/lib/useNotifications';
 import { UrgentNotificationPopup } from '@/components/UrgentNotificationPopup';
 import { NotificationDetail } from '@/components/NotificationDetail';
 import { Icon } from '@/components/Icon';
-import type { AppNotification, NotifPriority } from '@/lib/notifications';
+import type { AppNotification, NotifPriority, NotifType } from '@/lib/notifications';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -83,12 +83,17 @@ interface Props {
   variant?: 'driver' | 'admin';
   /** Enable sound on urgent popups (default true) */
   soundEnabled?: boolean;
+  /**
+   * Tipos que se muestran solo como popup transitorio y nunca en la lista de
+   * la campanita. El conductor lo usa para las solicitudes de viaje/envío.
+   */
+  popupOnlyTypes?: NotifType[];
 }
 
-export function NotificationBell({ userEmail, className, variant, soundEnabled = true }: Props) {
+export function NotificationBell({ userEmail, className, variant, soundEnabled = true, popupOnlyTypes }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail);
+  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail, { popupOnlyTypes });
   const [open, setOpen] = useState(false);
   const [bellAnim, setBellAnim] = useState(false);
   const [selected, setSelected] = useState<AppNotification | null>(null);
@@ -139,6 +144,10 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
 
   if (!userEmail) return null;
 
+  // La solicitud del conductor se muestra con el mismo popup amplio que ve el
+  // técnico; el resto de avisos del conductor conserva el formato compacto.
+  const requestPopup = latestUrgent && (popupOnlyTypes ?? []).includes(latestUrgent.type);
+
   return (
     <>
       {/* Urgent popup overlay */}
@@ -147,7 +156,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
         onDismiss={dismissUrgent}
         onOpen={handleNotifClick}
         soundEnabled={soundEnabled}
-        variant={variant === 'driver' ? 'driver' : undefined}
+        variant={variant === 'driver' && !requestPopup ? 'driver' : undefined}
       />
 
       {selected && <NotificationDetail

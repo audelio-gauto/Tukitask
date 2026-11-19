@@ -84,8 +84,10 @@ que consulta `/api/driver/background-requests` o
 ubicación conocida y muestra un aviso local con la solicitud. El aviso del
 conductor dice «Nuevo viaje solicitado», «Nuevo envío solicitado» o «Nuevo
 flete solicitado» según el pedido; el del técnico conserva «Nuevo servicio».
-La burbuja flotante lleva una insignia con la cantidad de pedidos o servicios
-esperando.
+Dentro de la app, la solicitud del conductor aparece como popup (también al
+volver de otra aplicación) y no se acumula en la campanita; la tarjeta
+accionable sigue en la bandeja. La burbuja flotante lleva una insignia con la
+cantidad de pedidos o servicios esperando.
 Todo se detiene al desconectarse o cerrar sesión. En Android 13+ hace falta
 aceptar el permiso de notificaciones; sin permiso la burbuja y la búsqueda
 siguen funcionando, pero el aviso no se muestra. En Android 15 el servicio de
