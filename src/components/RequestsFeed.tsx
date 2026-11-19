@@ -172,6 +172,8 @@ export default memo(function RequestsFeed({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('near');
+  /** Solo presentación: la hoja se puede plegar para dejar ver el mapa. */
+  const [compact, setCompact] = useState(false);
   const selectedChipRef = useRef<HTMLButtonElement | null>(null);
 
   // Auto-dismiss expired cards — checked every 5s
@@ -384,9 +386,9 @@ export default memo(function RequestsFeed({
 
         {/* ── Top bar: dots + nav arrows ── */}
         {mode === 'driver' ? (
-          <div style={{ padding: '2px 0 8px' }}>
-            {/* Orden */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' as never }}>
+          <div style={{ padding: compact ? '0 0 4px' : '2px 0 8px' }}>
+            {/* Orden — se oculta al plegar, el orden elegido se conserva */}
+            <div style={{ display: compact ? 'none' : 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' as never }}>
               <span style={{
                 flexShrink: 0, background: `linear-gradient(135deg,${BRAND},#F58A07)`, color: '#1C1C2E',
                 borderRadius: 99, padding: '3px 10px', fontSize: '0.7rem', fontWeight: 900,
@@ -405,8 +407,34 @@ export default memo(function RequestsFeed({
                 >{o.label}</button>
               ))}
             </div>
-            {/* Tira comparativa */}
+            {/* Tira comparativa — la misma de siempre, solo más delgada al plegar */}
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' as never, scrollSnapType: 'x proximity' }}>
+              {compact && (
+                <div style={{
+                  position: 'sticky', left: 0, zIndex: 2, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', gap: 2,
+                  background: 'var(--sheet-bg)', borderRadius: 99,
+                  border: '1px solid rgba(245,197,24,0.22)', padding: '2px 4px',
+                }}>
+                  <button type="button" onClick={goPrev} disabled={safeIdx === 0} aria-label="Anterior"
+                    style={{ width: 22, height: 22, padding: 0, border: 'none', borderRadius: 99,
+                      background: safeIdx === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(245,197,24,0.12)',
+                      color: safeIdx === 0 ? 'var(--text-muted)' : BRAND,
+                      cursor: safeIdx === 0 ? 'default' : 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>
+                    ‹
+                  </button>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 900, color: BRAND, minWidth: 30, textAlign: 'center' }}>
+                    {safeIdx + 1}/{total}
+                  </span>
+                  <button type="button" onClick={goNext} disabled={safeIdx >= total - 1} aria-label="Siguiente"
+                    style={{ width: 22, height: 22, padding: 0, border: 'none', borderRadius: 99,
+                      background: safeIdx >= total - 1 ? 'rgba(255,255,255,0.05)' : 'rgba(245,197,24,0.12)',
+                      color: safeIdx >= total - 1 ? 'var(--text-muted)' : BRAND,
+                      cursor: safeIdx >= total - 1 ? 'default' : 'pointer', fontSize: '0.9rem', lineHeight: 1 }}>
+                    ›
+                  </button>
+                </div>
+              )}
               {visible.map((it, idx) => {
                 const m = metricsOf(it);
                 const active = idx === safeIdx;
@@ -418,8 +446,8 @@ export default memo(function RequestsFeed({
                     onClick={() => setSelId(it.id)}
                     aria-pressed={active}
                     style={{
-                      flexShrink: 0, minWidth: 112, textAlign: 'left', cursor: 'pointer', scrollSnapAlign: 'center',
-                      padding: '8px 10px', borderRadius: 14,
+                      flexShrink: 0, minWidth: compact ? 88 : 104, textAlign: 'left', cursor: 'pointer', scrollSnapAlign: 'center',
+                      padding: compact ? '5px 8px' : '7px 9px', borderRadius: compact ? 11 : 14,
                       background: 'var(--sheet-bg)',
                       border: active ? `2px solid ${BRAND}` : '1.5px solid rgba(255,255,255,0.12)',
                       boxShadow: active ? `0 0 0 3px ${BRAND_SHADOW}` : '0 2px 8px rgba(0,0,0,0.25)',
@@ -430,15 +458,18 @@ export default memo(function RequestsFeed({
                       <span style={{ fontWeight: 900, fontSize: '1rem', color: BRAND, lineHeight: 1 }}>₲{m.price.toLocaleString('es-PY')}</span>
                       {m.color && <span style={{ width: 8, height: 8, borderRadius: 99, background: m.color, flexShrink: 0 }} title="Rentabilidad" />}
                     </div>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)', marginTop: 4, whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: compact ? '0.62rem' : '0.68rem', fontWeight: 700, color: 'var(--text-secondary)', marginTop: compact ? 2 : 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {it.clientRating != null && Number(it.clientRating) > 0
                         ? <span style={{ color: '#F5C518' }}>★ {Number(it.clientRating).toFixed(1)}</span>
                         : <span style={{ color: 'var(--text-muted)' }}>Nuevo</span>}
-                      {m.gs != null && <span style={{ color: 'var(--text-muted)' }}> · {m.gs.toLocaleString('es-PY')} Gs/km</span>}
+                      {m.gs != null && !compact && <span style={{ color: 'var(--text-muted)' }}> · {m.gs.toLocaleString('es-PY')} Gs/km</span>}
+                      {compact && m.d != null && <span style={{ color: 'var(--text-muted)' }}> · {m.d.toFixed(1)} km</span>}
                     </div>
-                    <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap' }}>
-                      {m.d != null ? `📍 ${m.d.toFixed(1)} km` : '📍 —'}{m.r != null ? ` · viaje ${m.r.toFixed(1)} km` : ''}
-                    </div>
+                    {!compact && (
+                      <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap' }}>
+                        {m.d != null ? `📍 ${m.d.toFixed(1)} km` : '📍 —'}{m.r != null ? ` · viaje ${m.r.toFixed(1)} km` : ''}
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -518,7 +549,52 @@ export default memo(function RequestsFeed({
         </div>
         )}
 
-        {/* ── Single card ── */}
+        {/* ── Barra compacta (más mapa) / tarjeta completa ── */}
+        {compact && mode === 'driver' ? (
+          <div style={{
+            background: 'var(--sheet-bg)',
+            borderRadius: 16,
+            border: `1.5px solid ${stopCount >= 5 ? 'rgba(245,158,11,0.45)' : 'rgba(245,197,24,0.22)'}`,
+            boxShadow: '0 -6px 30px rgba(0,0,0,0.35)',
+            padding: '6px 12px 10px',
+          }}>
+            <button
+              type="button"
+              onClick={() => setCompact(false)}
+              aria-label="Expandir solicitud"
+              style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '2px 0 7px', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--text-muted)', opacity: 0.5 }} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.2rem', lineHeight: 1.1 }}>
+                  ₲{clientPrice.toLocaleString('es-PY')}
+                </div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {distKm != null
+                    ? `${Math.max(1, Math.round(distKm * 2.5))} min · ${distKm.toFixed(1)} km`
+                    : (item.from || 'Recogida cercana')}
+                  {Number(item.clientRating) > 0 ? ` · ★ ${Number(item.clientRating).toFixed(1)}` : ''}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onAccept(item.id, clientPrice, offerNote, distKm)}
+                disabled={isSending}
+                style={{
+                  flexShrink: 0, padding: '10px 16px', border: 'none', borderRadius: 12,
+                  cursor: isSending ? 'not-allowed' : 'pointer',
+                  background: isSending ? 'rgba(245,197,24,0.25)' : `linear-gradient(135deg,${BRAND},#F58A07)`,
+                  color: '#1C1C2E', fontWeight: 900, fontSize: '0.92rem',
+                  opacity: isSending ? 0.6 : 1,
+                }}
+              >
+                {isSending ? 'Enviando…' : `Aceptar · ₲${clientPrice.toLocaleString('es-PY')}`}
+              </button>
+            </div>
+          </div>
+        ) : (
         <div style={{
           background: 'var(--sheet-bg)',
           borderRadius: 20,
@@ -527,6 +603,17 @@ export default memo(function RequestsFeed({
           overflow: 'hidden',
           position: 'relative',
         }}>
+          {/* Tirador: pliega la tarjeta y deja el mapa a pantalla casi completa (solo conductor) */}
+          {mode === 'driver' && (
+            <button
+              type="button"
+              onClick={() => setCompact(true)}
+              aria-label="Plegar solicitud"
+              style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '6px 0 0', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--text-muted)', opacity: 0.5 }} />
+            </button>
+          )}
 
           {/* ── Offer-sent overlay ── */}
           {isSending && !offerSentForThis && (
@@ -545,7 +632,7 @@ export default memo(function RequestsFeed({
           )}
 
           {/* ── Info zone ── */}
-          <div style={{ padding: '8px 12px 6px', position: 'relative' }}>
+          <div style={{ padding: '4px 12px 6px', position: 'relative' }}>
 
             {/* Omitir: esquina pequeña, lejos de los botones de acción */}
             <button
@@ -633,33 +720,42 @@ export default memo(function RequestsFeed({
 
             </div>
 
-            {/* ── Precio protagonista + rentabilidad ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
+            {/* ── Precio + métricas en una sola fila ── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
               {mode === 'driver' || clientPrice > 0 ? (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 900, color: BRAND, fontSize: '2rem', lineHeight: 1, letterSpacing: '-0.02em' }}>
-                    {clientPrice.toLocaleString('es-PY')} <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>Gs</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 900, color: BRAND, fontSize: '1.55rem', lineHeight: 1, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+                    ₲{clientPrice.toLocaleString('es-PY')} <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)' }}>Gs</span>
                   </div>
-                  {pricePerStop && <div style={{ fontSize: '0.64rem', color: '#f59e0b', fontWeight: 700, marginTop: 3 }}>≈{pricePerStop.toLocaleString()}/parada</div>}
+                  {pricePerStop && <div style={{ fontSize: '0.6rem', color: '#f59e0b', fontWeight: 700, marginTop: 2 }}>≈{pricePerStop.toLocaleString()}/parada</div>}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '1.1rem', lineHeight: 1.2 }}>A cotizar</div>
-                  <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Ponés tu precio</div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '1.05rem', lineHeight: 1.2 }}>A cotizar</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Ponés tu precio</div>
                 </div>
               )}
-              {showRateBadge && (
-                <div style={{
-                  background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
-                  borderRadius: 10, padding: '4px 9px', textAlign: 'center', flexShrink: 0,
-                }}>
-                  <div style={{ fontSize: '0.52rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
-                    {gsPerKm!.toLocaleString('es-PY')}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                {Number(item.clientRating) > 0 && (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#F5C518', whiteSpace: 'nowrap' }}>★ {Number(item.clientRating).toFixed(1)}</span>
+                )}
+                {distKm != null && (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {Math.max(1, Math.round(distKm * 2.5))} min · {distKm.toFixed(1)} km
+                  </span>
+                )}
+                {showRateBadge && (
+                  <div style={{
+                    background: `${rateColor}18`, border: `1px solid ${rateColor}50`,
+                    borderRadius: 9, padding: '3px 7px', textAlign: 'center', flexShrink: 0,
+                  }}>
+                    <div style={{ fontSize: '0.48rem', fontWeight: 800, color: rateColor!, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap' }}>{rateLabel}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, marginTop: 2 }}>
+                      {gsPerKm!.toLocaleString('es-PY')} <span style={{ fontSize: '0.46rem', color: rateColor! }}>Gs/km</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.5rem', fontWeight: 700, color: rateColor! }}>Gs/km</div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
 
@@ -669,9 +765,9 @@ export default memo(function RequestsFeed({
             <div style={{
               background: 'rgba(255,255,255,0.04)', borderRadius: 14,
               border: '1px solid rgba(255,255,255,0.07)',
-              padding: '10px 12px', marginBottom: 8,
+              padding: '8px 10px', marginBottom: 6,
               fontSize: '0.86rem', color: 'var(--text-primary)',
-              display: 'flex', flexDirection: 'column', gap: 10,
+              display: 'flex', flexDirection: 'column', gap: 7,
               position: 'relative',
             }}>
               {/* Línea que une recogida y destino */}
@@ -684,7 +780,7 @@ export default memo(function RequestsFeed({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                       {distKm != null ? (
-                        <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
                           {Math.max(1, Math.round(distKm * 2.5))} min <span style={{ color: 'var(--text-muted)', fontWeight: 800 }}>· {distKm.toFixed(1)} km</span>
                         </span>
                       ) : null}
@@ -735,7 +831,7 @@ export default memo(function RequestsFeed({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                       {routeKm != null ? (
-                        <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
                           {Math.max(1, Math.round(routeKm * 2.5))} min <span style={{ color: 'var(--text-muted)', fontWeight: 800 }}>· {routeKm.toFixed(1)} km</span>
                         </span>
                       ) : null}
@@ -1042,6 +1138,7 @@ export default memo(function RequestsFeed({
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
