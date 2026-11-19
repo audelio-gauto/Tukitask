@@ -81,8 +81,11 @@ Mientras el conductor o el técnico está disponible y pasa a otra aplicación
 (Google Maps, Waze, WhatsApp, etc.), la APK mantiene un servicio en primer plano
 que consulta `/api/driver/background-requests` o
 `/api/tecnico/background-requests` cada pocos segundos, renueva la última
-ubicación conocida y muestra un aviso local con la solicitud. La burbuja
-flotante lleva una insignia con la cantidad de pedidos o servicios esperando.
+ubicación conocida y muestra un aviso local con la solicitud. El aviso del
+conductor dice «Nuevo viaje solicitado», «Nuevo envío solicitado» o «Nuevo
+flete solicitado» según el pedido; el del técnico conserva «Nuevo servicio».
+La burbuja flotante lleva una insignia con la cantidad de pedidos o servicios
+esperando.
 Todo se detiene al desconectarse o cerrar sesión. En Android 13+ hace falta
 aceptar el permiso de notificaciones; sin permiso la burbuja y la búsqueda
 siguen funcionando, pero el aviso no se muestra. En Android 15 el servicio de

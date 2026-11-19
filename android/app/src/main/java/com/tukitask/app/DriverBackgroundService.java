@@ -167,12 +167,17 @@ public class DriverBackgroundService extends Service {
                 open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String searching = isTecnico(prefs)
+                ? "Buscando servicios cerca de ti"
+                : "Buscando viajes y envíos cerca de ti";
+
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(this, CHANNEL_ID)
                 : new Notification.Builder(this);
         builder.setSmallIcon(R.drawable.ic_stat_tukitask)
                 .setContentTitle("TukiTask conectado")
-                .setContentText("Buscando solicitudes cerca de ti")
+                .setContentText(searching)
                 .setOngoing(true)
                 .setContentIntent(contentIntent)
                 .setPriority(Notification.PRIORITY_LOW);
@@ -350,12 +355,36 @@ public class DriverBackgroundService extends Service {
                 String pickup = first.optString("pickup_address", "Origen");
                 String delivery = first.optString("delivery_address", "Destino");
                 price = first.optDouble("offer", first.optDouble("suggested_price", 0));
-                title = fresh.size() > 1 ? fresh.size() + " solicitudes nuevas" : "Nueva solicitud";
+                title = driverRequestTitle(fresh);
                 text = pickup + " → " + delivery;
             }
             if (price > 0) text += " · " + formatGuaranies(price) + " Gs.";
             RequestNotifier.notifyRequest(this, count, title, text);
         }
+    }
+
+    /**
+     * El conductor recibe el mismo popup que el técnico, pero con el nombre del
+     * servicio: viaje, envío o flete. Si hay varios pedidos mezclados se usa un
+     * texto genérico para no describir mal la solicitud.
+     */
+    private static String driverRequestTitle(List<JSONObject> fresh) {
+        String type = fresh.get(0).optString("order_type", "");
+        if (fresh.size() > 1) {
+            for (int i = 1; i < fresh.size(); i++) {
+                if (!type.equals(fresh.get(i).optString("order_type", ""))) {
+                    return fresh.size() + " solicitudes nuevas";
+                }
+            }
+            if ("viaje".equals(type)) return fresh.size() + " viajes nuevos";
+            if ("flete".equals(type)) return fresh.size() + " fletes nuevos";
+            if ("envio".equals(type)) return fresh.size() + " envíos nuevos";
+            return fresh.size() + " solicitudes nuevas";
+        }
+        if ("viaje".equals(type)) return "Nuevo viaje solicitado";
+        if ("flete".equals(type)) return "Nuevo flete solicitado";
+        if ("envio".equals(type)) return "Nuevo envío solicitado";
+        return "Nueva solicitud";
     }
 
     private String refreshAccessToken(SharedPreferences prefs) {

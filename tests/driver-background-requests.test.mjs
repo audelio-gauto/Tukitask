@@ -220,12 +220,27 @@ test('el servicio consulta el endpoint y no compite con la WebView visible', asy
   assert.doesNotMatch(page, /setDriverBubble\(available/);
 });
 
+test('el aviso del conductor distingue viaje, envío y flete; el técnico conserva su popup', async () => {
+  const service = await read('android/app/src/main/java/com/tukitask/app/DriverBackgroundService.java');
+  assert.match(service, /driverRequestTitle\(fresh\)/);
+  assert.match(service, /"Nuevo viaje solicitado"/);
+  assert.match(service, /"Nuevo envío solicitado"/);
+  assert.match(service, /"Nuevo flete solicitado"/);
+  assert.match(service, /"Nuevo servicio"/);
+  assert.match(service, /"Buscando viajes y envíos cerca de ti"/);
+  assert.match(service, /"Buscando servicios cerca de ti"/);
+  assert.match(service, /optString\("order_type"/);
+});
+
 test('la creación de pedidos avisa a los conductores emparejados salvo los programados', async () => {
   const orders = await read('src/app/api/orders/route.ts');
   assert.match(orders, /emitNotificationBulk/);
   assert.match(orders, /safeBody\.date_scheduled/);
   assert.match(orders, /from\('driver_feed'\)/);
   assert.match(orders, /groupKey: `order:\$\{order\.id\}:new`/);
+  assert.match(orders, /'Nuevo viaje solicitado'/);
+  assert.match(orders, /'Nuevo flete solicitado'/);
+  assert.match(orders, /'Nuevo envío solicitado'/);
   const nearby = await read('src/app/api/nearby-drivers/route.ts');
   assert.match(nearby, /ONLINE_WINDOW_MS = 10 \* 60 \* 1000/);
   const readme = await read('README.md');

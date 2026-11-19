@@ -419,7 +419,11 @@ export async function POST(req: Request) {
         const pickup = order.pickup_address || 'Origen';
         const delivery = order.delivery_address || 'Destino';
         const body = `${pickup} → ${delivery}${price > 0 ? ` · ${price.toLocaleString('es-PY')} Gs.` : ''}`;
-        const title = order.order_type === 'viaje' ? 'Nuevo viaje solicitado' : 'Nueva solicitud de envío';
+        const title = order.order_type === 'viaje'
+          ? 'Nuevo viaje solicitado'
+          : order.order_type === 'flete'
+            ? 'Nuevo flete solicitado'
+            : 'Nuevo envío solicitado';
 
         await emitNotificationBulk(
           (matched as Array<{ driver_email: string }>).map((row) => ({
