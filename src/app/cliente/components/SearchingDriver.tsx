@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
-import { playClientOfferAlert } from '@/lib/audio';
+import { playOfferAlert } from '@/lib/audio';
 
 interface Offer {
   id: string;
@@ -62,7 +62,7 @@ export default function SearchingDriver({ orderId, serviceLabel }: Props) {
         const fresh = list.some(o => !seenOffersRef.current.has(o.id));
         list.forEach(o => seenOffersRef.current.add(o.id));
         if (fresh) {
-          playClientOfferAlert();
+          playOfferAlert();
           try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
         }
       }

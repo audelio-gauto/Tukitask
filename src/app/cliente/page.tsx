@@ -10,7 +10,7 @@ import { authFetch } from '@/lib/authFetch';
 import { haversineKm } from '@/lib/geo';
 import { getGreeting } from '@/lib/greeting';
 import ChatModal from '@/components/ChatModal';
-import { playMessageAlert } from '@/lib/audio';
+import { playMessageAlert, playOfferAlert, playClientOfferAlert } from '@/lib/audio';
 
 const ClientMap = dynamic(() => import('./components/ClientMap'), { ssr: false });
 
@@ -477,6 +477,9 @@ export default function ClienteHomePage() {
   const locateRef = useRef<(() => void) | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoExpiredRef = useRef(new Set<string>());
+  // Offer sound alerts: announce each new pending offer only once
+  const announcedOfferIdsRef = useRef<Set<string>>(new Set());
+  const offersHydratedRef = useRef(false);
 
   // Chat state
   const [chatOpen,       setChatOpen]       = useState(false);
@@ -535,6 +538,9 @@ export default function ClienteHomePage() {
   /* ─── Data loading ──────────────────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
     if (!email) return;
+    // Snapshot hydration before fetching: first load records existing offers silently
+    const wasHydrated = offersHydratedRef.current;
+    const freshOfferKinds = new Set<'envio' | 'servicio'>();
     try {
       const [ordersRes, jobsRes] = await Promise.all([
         authFetch(`/api/orders?client_email=${encodeURIComponent(email)}`),
@@ -603,6 +609,14 @@ export default function ClienteHomePage() {
               }
             }
           }
+          for (const list of Object.values(pendingMap)) {
+            for (const off of list) {
+              const key = `d:${off.id}`;
+              if (announcedOfferIdsRef.current.has(key)) continue;
+              announcedOfferIdsRef.current.add(key);
+              if (wasHydrated) freshOfferKinds.add('envio');
+            }
+          }
           await Promise.all(profileFetches);
           setDriverOffers(pendingMap);
           setAcceptedDriverInfo({ ...driverInfoMap });
@@ -620,9 +634,29 @@ export default function ClienteHomePage() {
           const data = await r.json();
           allJobOffers[job.id] = Array.isArray(data) ? data : [];
         }));
+        for (const list of Object.values(allJobOffers)) {
+          for (const off of list) {
+            if (off.status !== 'pending') continue;
+            const key = `s:${off.id}`;
+            if (announcedOfferIdsRef.current.has(key)) continue;
+            announcedOfferIdsRef.current.add(key);
+            if (wasHydrated) freshOfferKinds.add('servicio');
+          }
+        }
         setJobOffers(allJobOffers);
       } else {
         setJobOffers({});
+      }
+
+      offersHydratedRef.current = true;
+      if (freshOfferKinds.size > 0) {
+        try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
+        if (freshOfferKinds.has('envio')) playOfferAlert();
+        if (freshOfferKinds.has('servicio')) {
+          // Stagger when both arrive together so the alerts don't overlap
+          if (freshOfferKinds.has('envio')) setTimeout(playClientOfferAlert, 1200);
+          else playClientOfferAlert();
+        }
       }
 
     } catch { setLoading(false); }
@@ -641,9 +675,27 @@ export default function ClienteHomePage() {
       ? supabase.channel(`client-home-${email}`)
           .on('postgres_changes', { event: '*',      schema: 'public', table: 'orders',              filter: `client_email=eq.${email}` } as never, () => loadAll())
           .on('postgres_changes', { event: '*',      schema: 'public', table: 'tecnico_jobs',        filter: `client_email=eq.${email}` } as never, () => loadAll())
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers',       filter: `client_email=eq.${email}` } as never, () => { loadAll(); window.dispatchEvent(new Event('tuki-offer-insert')); })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_offers',       filter: `client_email=eq.${email}` } as never, (payload: { new?: { id?: string } }) => {
+            const offerId = payload?.new?.id;
+            if (offerId && !announcedOfferIdsRef.current.has(`d:${offerId}`)) {
+              announcedOfferIdsRef.current.add(`d:${offerId}`);
+              playOfferAlert();
+              try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
+            }
+            loadAll();
+            window.dispatchEvent(new Event('tuki-offer-insert'));
+          })
           // tecnico_job_offers now has client_email column (migration 027) — filter server-side
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers',  filter: `client_email=eq.${email}` } as never, () => { loadAll(); window.dispatchEvent(new Event('tuki-offer-insert')); })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tecnico_job_offers',  filter: `client_email=eq.${email}` } as never, (payload: { new?: { id?: string } }) => {
+            const offerId = payload?.new?.id;
+            if (offerId && !announcedOfferIdsRef.current.has(`s:${offerId}`)) {
+              announcedOfferIdsRef.current.add(`s:${offerId}`);
+              playClientOfferAlert();
+              try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
+            }
+            loadAll();
+            window.dispatchEvent(new Event('tuki-offer-insert'));
+          })
           .subscribe()
       : null;
     return () => {
