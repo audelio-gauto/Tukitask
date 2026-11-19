@@ -538,17 +538,7 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (error) return serverError(error);
 
-      // Notify client about the new tecnico offer (awaited so serverless does not drop it)
-      if (job.client_email) {
-        await emitNotification(
-          job.client_email,
-          'new_job_offer',
-          'Nueva oferta de técnico',
-          `Un técnico ofreció ${price.toLocaleString('es-PY')} ₲ para tu servicio`,
-          { job_id: jobId, offer_id: data?.id },
-          { groupKey: `offer:job:${jobId}` },
-        );
-      }
+      // Aviso al cliente deshabilitado: las ofertas de servicio no generan notificación (popup/campana/push)
 
       return NextResponse.json({ offer: data });
     }

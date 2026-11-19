@@ -13,7 +13,6 @@ import { ChatBadge } from '@/components/ChatBadge';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import SuspendedScreen from '@/components/SuspendedScreen';
 import OfflineBanner from '@/components/OfflineBanner';
-import OfferIncomingToast from './components/OfferIncomingToast';
 import { getAppMode, saveRealRole, TASKER_ROLES } from '@/lib/modeSwitch';
 
 export default function ClienteLayout({ children }: { children: React.ReactNode }) {
@@ -140,7 +139,6 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       />
       <NotificationBell userEmail={email} className="" />
       {email && <ChatBadge email={email} href="/cliente" scope="client" />}
-      {email && <OfferIncomingToast email={email} />}
       <ClientContext.Provider value={{
         openDrawer: () => setDrawerOpen(true),
         email, displayName, profilePhoto, setProfilePhoto,

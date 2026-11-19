@@ -352,22 +352,7 @@ export async function POST(req: Request) {
     });
   } catch { /* migration may not be applied yet — safe to ignore */ }
 
-  // Notify the client about the new offer
-  const { data: orderInfo } = await supabaseServer
-    .from('orders')
-    .select('client_email')
-    .eq('id', order_id)
-    .single();
-  if (orderInfo?.client_email) {
-    await emitNotification(
-      orderInfo.client_email,
-      'new_offer',
-      'Nueva oferta recibida',
-      `Un conductor ofreció ${amountNum.toLocaleString('es-PY')} ₲ para tu envío`,
-      { order_id, offer_id: data.id },
-      { groupKey: `offer:order:${order_id}` },
-    );
-  }
+  // Aviso al cliente deshabilitado: las ofertas de envío no generan notificación (popup/campana/push)
 
   return NextResponse.json(data, { status: 201 });
 }
