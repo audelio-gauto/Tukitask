@@ -10,7 +10,7 @@ import { initTheme } from '@/lib/useTheme';
 import { WorkerDrawer } from '@/components/WorkerDrawer';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ChatBadge } from '@/components/ChatBadge';
-import type { NotifType } from '@/lib/notifications';
+import type { AppNotification, NotifType } from '@/lib/notifications';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import {
   enableDriverMode,
@@ -20,6 +20,7 @@ import {
   clearDriverSession,
   updateDriverNativeLocation,
   ensureDriverNotificationPermission,
+  notifyDriverRequests,
 } from '@/lib/driverMode';
 import { isDriverAvailable, setDriverAvailability, subscribeDriverAvailability } from '@/lib/driverAvailability';
 import { BottomNav } from '@/components/BottomNav';
@@ -76,6 +77,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     await clearDriverSession();
     await cleanupPushNotifications();
   }, [cleanupPushNotifications]);
+
+  // Aviso nativo inmediato: además del polling del servicio, cuando la WebView
+  // recibe la solicitud se publica el heads-up de Android con el mismo título.
+  const handleRequestAlert = useCallback((n: AppNotification) => {
+    void notifyDriverRequests({ count: 1, title: n.title, body: n.body });
+  }, []);
 
   // Apply saved theme on mount
   useEffect(() => { initTheme(); }, []);
@@ -448,6 +455,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           className=""
           variant={pathname === '/driver' ? 'driver' : undefined}
           popupOnlyTypes={DRIVER_POPUP_ONLY_TYPES}
+          onPopupOnly={handleRequestAlert}
         />
       )}
       {!inNav && <ChatBadge email={email} href="/driver/activo" scope="order" />}

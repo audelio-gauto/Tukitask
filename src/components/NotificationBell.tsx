@@ -88,12 +88,14 @@ interface Props {
    * la campanita. El conductor lo usa para las solicitudes de viaje/envío.
    */
   popupOnlyTypes?: NotifType[];
+  /** Aviso nativo de Android cuando llega una solicitud de estos tipos. */
+  onPopupOnly?: (notification: AppNotification) => void;
 }
 
-export function NotificationBell({ userEmail, className, variant, soundEnabled = true, popupOnlyTypes }: Props) {
+export function NotificationBell({ userEmail, className, variant, soundEnabled = true, popupOnlyTypes, onPopupOnly }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail, { popupOnlyTypes });
+  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail, { popupOnlyTypes, onPopupOnly });
   const [open, setOpen] = useState(false);
   const [bellAnim, setBellAnim] = useState(false);
   const [selected, setSelected] = useState<AppNotification | null>(null);
