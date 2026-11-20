@@ -52,7 +52,15 @@ async function loadRoute(tables, { role, authenticated = true } = {}) {
       return builder;
     },
   };
+  const geo = {};
+  const geoSource = await read('src/lib/geo.ts');
+  const geoCode = ts.transpileModule(geoSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  vm.runInNewContext(geoCode, { exports: geo, console });
+
   const mocks = {
+    '@/lib/geo': geo,
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200, headers: options?.headers }) } },
     '@/lib/apiAuth': {
       getAuthUser: async () => authenticated ? { email: 'driver@example.test' } : null,
@@ -73,12 +81,25 @@ async function loadRoute(tables, { role, authenticated = true } = {}) {
   return { get: exports.GET, calls };
 }
 
+const approvedDocs = () => {
+  const docs = ['cedula_frente', 'antecedentes', 'domicilio'];
+  for (const vt of ['moto', 'auto', 'moto_carro', 'camion']) {
+    for (const key of ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso']) {
+      docs.push(`${vt}_${key}`);
+    }
+  }
+  return docs.map(doc_type => ({ doc_type, status: 'approved' }));
+};
+
 const baseTables = () => ({
   users: { role: 'driver' },
-  driver_profiles: { accepting_orders: true },
+  driver_profiles: { accepting_orders: true, service_filters: {}, pickup_range: 50 },
   driver_wallets: { balance: 25000 },
   orders: [],
-  driver_feed: [{ order_id: 'a' }],
+  driver_locations: { lat: 0, lng: 0 },
+  driver_documents: approvedDocs(),
+  // El feed puede estar vacío: el aviso nativo debe salir igual.
+  driver_feed: [],
 });
 
 const request = () => new Request('https://tuki.test/api/driver/background-requests', {
@@ -117,29 +138,33 @@ test('sin disponibilidad, con billetera baja o con viaje activo no se avisa', as
   assert.equal(result.busy, true);
 });
 
-test('solo devuelve pedidos recientes del feed y no almacena la respuesta', async () => {
+test('el aviso nativo consulta pedidos directamente, sin depender del feed', async () => {
   const now = Date.now();
   const tables = baseTables();
-  tables.driver_feed = [
-    { order_id: 'fresh' }, { order_id: 'fresh' }, { order_id: 'old' },
-    { order_id: 'soon' }, { order_id: 'later' },
-  ];
+  const order = (id, extra = {}) => ({
+    id, pickup_address: 'Origen', delivery_address: 'Destino', offer: '12000', suggested_price: null,
+    vehicle_type: 'moto', order_type: 'envio', created_at: new Date(now - 60000).toISOString(),
+    status: 'pending', date_scheduled: null, pickup_lat: 0.01, pickup_lng: 0.01, ...extra,
+  });
   tables.orders = [
-    { id: 'fresh', pickup_address: 'Origen', delivery_address: 'Destino', offer: '12000', suggested_price: null,
-      vehicle_type: 'moto', order_type: 'envio', created_at: new Date(now - 60000).toISOString(), status: 'pending', date_scheduled: null },
-    { id: 'old', pickup_address: 'Viejo', delivery_address: 'Destino', offer: null, suggested_price: 100,
-      vehicle_type: 'auto', order_type: 'envio', created_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(), status: 'pending', date_scheduled: null },
-    { id: 'soon', pickup_address: 'Pronto', delivery_address: 'Destino', offer: null, suggested_price: 100,
-      vehicle_type: 'moto', order_type: 'viaje', created_at: new Date(now - 4 * 60 * 60 * 1000).toISOString(), status: 'pending',
-      date_scheduled: new Date(now + 10 * 60 * 1000).toISOString() },
-    { id: 'later', pickup_address: 'Lejos', delivery_address: 'Destino', offer: null, suggested_price: 100,
-      vehicle_type: 'moto', order_type: 'viaje', created_at: new Date(now - 4 * 60 * 60 * 1000).toISOString(), status: 'pending',
-      date_scheduled: new Date(now + 3 * 60 * 60 * 1000).toISOString() },
+    order('fresh'),
+    order('old', { created_at: new Date(now - 5 * 60 * 60 * 1000).toISOString() }),
+    order('scheduled', {
+      created_at: new Date(now - 4 * 60 * 60 * 1000).toISOString(),
+      date_scheduled: new Date(now + 10 * 60 * 1000).toISOString(),
+    }),
+    order('later', {
+      created_at: new Date(now - 4 * 60 * 60 * 1000).toISOString(),
+      date_scheduled: new Date(now + 3 * 60 * 60 * 1000).toISOString(),
+    }),
+    order('far', { pickup_lat: 5, pickup_lng: 5 }),
+    order('mandadito', { order_type: 'mandadito' }),
   ];
   const response = await (await loadRoute(tables)).get(request());
-  assert.deepEqual(response.body.orders.map(order => order.id), ['fresh', 'soon']);
+  assert.deepEqual(response.body.orders.map(order => order.id), ['fresh', 'scheduled']);
   assert.equal(response.headers['Cache-Control'], 'no-store');
   assert.equal(response.body.orders[0].pickup_address, 'Origen');
+  assert.ok(!response.body.orders.some(order => order.id === 'mandadito'));
 });
 
 test('la disponibilidad compartida apaga la burbuja si la billetera está bloqueada', async () => {

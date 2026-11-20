@@ -81,7 +81,9 @@ Mientras el conductor o el técnico está disponible y pasa a otra aplicación
 (Google Maps, Waze, WhatsApp, etc.), la APK mantiene un servicio en primer plano
 que consulta `/api/driver/background-requests` o
 `/api/tecnico/background-requests` cada pocos segundos, renueva la última
-ubicación conocida y muestra un aviso local con la solicitud. El aviso del
+ubicación conocida y muestra un aviso local con la solicitud. El del conductor
+consulta los pedidos directamente para no depender de que el feed esté
+poblado; así basta con estar online para ver el aviso bajando la barra. El aviso del
 conductor dice «Nuevo viaje solicitado», «Nuevo envío solicitado» o «Nuevo
 flete solicitado» según el pedido; el del técnico conserva «Nuevo servicio».
 Dentro de la app, la solicitud del conductor aparece como popup (también al
