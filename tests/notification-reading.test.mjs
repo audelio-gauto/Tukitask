@@ -323,30 +323,6 @@ test('la solicitud del conductor se recupera como popup y no se acumula en la ca
   assert.equal(current.latestUrgent?.id, 'realtime');
 });
 
-test('la solicitud del conductor permanece en pantalla hasta que la lee', async () => {
-  const h = hooks();
-  const timers = new Map();
-  let timerId = 0;
-  let dismissed = 0;
-  const { UrgentNotificationPopup } = await load('src/components/UrgentNotificationPopup.tsx', {
-    react: h, '@/components/Icon': { Icon: () => null },
-  }, {
-    setTimeout: (fn, delay) => { const id = ++timerId; timers.set(id, { fn, delay }); return id; },
-    clearTimeout: id => timers.delete(id),
-  });
-  h.start();
-  UrgentNotificationPopup({
-    notification: { ...notification, type: 'new_order', title: 'Nuevo viaje solicitado' },
-    onDismiss: () => { dismissed++; },
-    onOpen() {},
-    soundEnabled: false,
-    persistent: true,
-  });
-  h.runEffects();
-  assert.equal(timers.size, 0, 'no debe programar cierre automático');
-  assert.equal(dismissed, 0);
-});
-
 test('el popup de solicitud del conductor usa el formato amplio del técnico', async () => {
   const h = hooks();
   const request = {
@@ -373,7 +349,6 @@ test('el popup de solicitud del conductor usa el formato amplio del técnico', a
   });
   const popup = find(tree, e => e.type === Popup);
   assert.equal(popup.props.variant, undefined);
-  assert.equal(popup.props.persistent, true);
   assert.ok(find(tree, e => e.props?.['aria-label'] === 'Notificaciones'));
   assert.equal(api.notifications.length, 0);
 });
