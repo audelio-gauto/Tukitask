@@ -254,6 +254,10 @@ test('el servicio consulta el endpoint y no compite con la WebView visible', asy
   assert.match(service, /BubbleManager\.setBadge/);
   assert.match(service, /RequestNotifier\.notifyRequest/);
   assert.match(service, /onTimeout/);
+  assert.match(service, /EMPTY_POLLS_BEFORE_CLEAR/);
+  assert.match(service, /No borrar aquí el aviso de solicitud/);
+  const notifier = await read('android/app/src/main/java/com/tukitask/app/RequestNotifier.java');
+  assert.match(notifier, /setAutoCancel\(true\)/);
 
   const layout = await read('src/app/driver/layout.tsx');
   assert.match(layout, /subscribeDriverAvailability\(applyAvailability\)/);

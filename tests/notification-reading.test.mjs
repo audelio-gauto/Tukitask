@@ -323,7 +323,7 @@ test('la solicitud del conductor se recupera como popup y no se acumula en la ca
   assert.equal(current.latestUrgent?.id, 'realtime');
 });
 
-test('el popup de solicitud del conductor usa el formato amplio del técnico', async () => {
+test('la solicitud del conductor no muestra popup interno, igual que el técnico', async () => {
   const h = hooks();
   const request = {
     ...notification, id: 'req', type: 'new_order', title: 'Nuevo viaje solicitado',
@@ -348,7 +348,7 @@ test('el popup de solicitud del conductor usa el formato amplio del técnico', a
     userEmail: 'driver@example.test', variant: 'driver', popupOnlyTypes: ['new_order'],
   });
   const popup = find(tree, e => e.type === Popup);
-  assert.equal(popup.props.variant, undefined);
+  assert.equal(popup.props.notification, null, 'el aviso debe ser solo la notificación nativa');
   assert.ok(find(tree, e => e.props?.['aria-label'] === 'Notificaciones'));
   assert.equal(api.notifications.length, 0);
 });

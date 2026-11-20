@@ -88,14 +88,12 @@ interface Props {
    * la campanita. El conductor lo usa para las solicitudes de viaje/envío.
    */
   popupOnlyTypes?: NotifType[];
-  /** Aviso nativo de Android cuando llega una solicitud de estos tipos. */
-  onPopupOnly?: (notification: AppNotification) => void;
 }
 
-export function NotificationBell({ userEmail, className, variant, soundEnabled = true, popupOnlyTypes, onPopupOnly }: Props) {
+export function NotificationBell({ userEmail, className, variant, soundEnabled = true, popupOnlyTypes }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail, { popupOnlyTypes, onPopupOnly });
+  const { notifications, unreadCount, markRead, markAllRead, latestUrgent, dismissUrgent } = useNotifications(userEmail, { popupOnlyTypes });
   const [open, setOpen] = useState(false);
   const [bellAnim, setBellAnim] = useState(false);
   const [selected, setSelected] = useState<AppNotification | null>(null);
@@ -146,19 +144,19 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
 
   if (!userEmail) return null;
 
-  // La solicitud del conductor se muestra con el mismo popup amplio que ve el
-  // técnico; el resto de avisos del conductor conserva el formato compacto.
-  const requestPopup = latestUrgent && (popupOnlyTypes ?? []).includes(latestUrgent.type);
+  // Las solicitudes del conductor se avisan solo con la notificación nativa
+  // de Android, igual que al técnico: sin popup dentro del panel.
+  const requestPopup = !!latestUrgent && (popupOnlyTypes ?? []).includes(latestUrgent.type);
 
   return (
     <>
       {/* Urgent popup overlay */}
       <UrgentNotificationPopup
-        notification={latestUrgent}
+        notification={requestPopup ? null : latestUrgent}
         onDismiss={dismissUrgent}
         onOpen={handleNotifClick}
         soundEnabled={soundEnabled}
-        variant={variant === 'driver' && !requestPopup ? 'driver' : undefined}
+        variant={variant === 'driver' ? 'driver' : undefined}
       />
 
       {selected && <NotificationDetail

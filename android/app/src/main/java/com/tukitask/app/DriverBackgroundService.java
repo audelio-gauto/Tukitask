@@ -63,6 +63,9 @@ public class DriverBackgroundService extends Service {
     private ScheduledExecutorService executor;
     private volatile boolean running = false;
     private long lastLocationPostAt = 0;
+    /** Evita que un respuesta vacía ocasional borre el aviso antes de leerlo. */
+    private int emptyPollStreak = 0;
+    private static final int EMPTY_POLLS_BEFORE_CLEAR = 3;
 
     public static void start(Context ctx) {
         if (!BubbleManager.isEnabled()) return;
@@ -138,7 +141,9 @@ public class DriverBackgroundService extends Service {
             executor.shutdownNow();
             executor = null;
         }
-        RequestNotifier.clear(this);
+        // No borrar aquí el aviso de solicitud: Android puede reiniciar el
+        // servicio en segundo plano y el heads-up debe seguir hasta que el
+        // conductor lo lea. El cierre se hace al desconectarse o al abrir la app.
         BubbleManager.setBadge(this, 0);
         BubbleManager.hide(getApplicationContext());
         try { stopForeground(true); } catch (Exception ignored) {}
@@ -324,11 +329,17 @@ public class DriverBackgroundService extends Service {
         BubbleManager.setBadge(this, count);
 
         if (count == 0) {
-            known.clear();
-            prefs.edit().putString(KEY_KNOWN_IDS, "").apply();
-            RequestNotifier.clear(this);
+            // Un fallo puntual del endpoint no debe borrar el heads-up: solo
+            // se retira cuando el pedido lleva varias consultas seguidas sin
+            // aparecer (ya se aceptó, canceló o venció).
+            if (++emptyPollStreak >= EMPTY_POLLS_BEFORE_CLEAR) {
+                known.clear();
+                prefs.edit().putString(KEY_KNOWN_IDS, "").apply();
+                RequestNotifier.clear(this);
+            }
             return;
         }
+        emptyPollStreak = 0;
 
         List<JSONObject> fresh = new ArrayList<>();
         for (JSONObject request : requests) {

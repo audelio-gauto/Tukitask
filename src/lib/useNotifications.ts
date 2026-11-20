@@ -12,8 +12,6 @@ export interface UseNotificationsOptions {
    * plano, al volver se recuperan del servidor y se avisan igual.
    */
   popupOnlyTypes?: NotifType[];
-  /** Aviso nativo de Android para estos tipos (heads-up al conductor). */
-  onPopupOnly?: (notification: AppNotification) => void;
 }
 
 /** Una solicitud deja de ser accionable a los pocos minutos. */
@@ -38,7 +36,6 @@ export function useNotifications(userEmail: string | undefined, options?: UseNot
   const seenIdsRef = useRef(new Set<string>());
   const alertedIdsRef = useRef(new Set<string>());
   const popupOnlyKey = (options?.popupOnlyTypes ?? []).join(',');
-  const onPopupOnly = options?.onPopupOnly;
 
   const isPopupOnly = useCallback(
     (n: AppNotification) => popupOnlyKey.split(',').includes(n.type),
@@ -69,9 +66,8 @@ export function useNotifications(userEmail: string | undefined, options?: UseNot
     alertedIdsRef.current.add(n.id);
     if (!isRecent(n)) return;
     setLatestUrgent(n);
-    onPopupOnly?.(n);
     if (!n.read) void markRead([n.id]).catch(() => {});
-  }, [markRead, onPopupOnly]);
+  }, [markRead]);
 
   const fetchNotifications = useCallback(async () => {
     if (!userEmail) return;

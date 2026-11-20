@@ -86,8 +86,9 @@ consulta los pedidos directamente para no depender de que el feed esté
 poblado; así basta con estar online para ver el aviso bajando la barra. El aviso del
 conductor dice «Nuevo viaje solicitado», «Nuevo envío solicitado» o «Nuevo
 flete solicitado» según el pedido; el del técnico conserva «Nuevo servicio».
-Dentro de la app, la solicitud del conductor aparece como popup (también al
-volver de otra aplicación) y no se acumula en la campanita; la tarjeta
+La solicitud del conductor se avisa con la notificación nativa de Android,
+igual que al técnico, y permanece hasta que el conductor la abre; no se
+acumula en la campanita ni genera un popup dentro del panel. La tarjeta
 accionable sigue en la bandeja. La burbuja flotante lleva una insignia con la
 cantidad de pedidos o servicios esperando.
 Todo se detiene al desconectarse o cerrar sesión. En Android 13+ hace falta
