@@ -19,9 +19,6 @@ const RECENT_MS = 3 * 60 * 60 * 1000;
 const SCHEDULED_NOTICE_MS = 30 * 60 * 1000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
-const PERSONAL_KEYS = ['cedula_frente', 'antecedentes', 'domicilio'];
-const VEH_DOC_KEYS = ['registro_frente', 'registro_dorso', 'cedula_verde_frente', 'cedula_verde_dorso'];
-const ALL_VTS = ['moto', 'auto', 'moto_carro', 'camion'];
 const FILTER_MAP: Record<string, string> = {
   moto: 'moto_envios',
   auto: 'auto_envios',
@@ -99,36 +96,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ orders: [], busy: true }, { headers: NO_STORE });
   }
 
-  const [locationRes, docsRes] = await Promise.all([
-    db.from('driver_locations')
-      .select('lat, lng')
-      .eq('driver_email', user.email)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    db.from('driver_documents')
-      .select('doc_type, status')
-      .eq('driver_email', user.email)
-      .in('doc_type', [
-        ...PERSONAL_KEYS,
-        ...ALL_VTS.flatMap(vt => VEH_DOC_KEYS.map(k => `${vt}_${k}`)),
-      ]),
-  ]);
+  const locationRes = await db.from('driver_locations')
+    .select('lat, lng')
+    .eq('driver_email', user.email)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (locationRes.error) return serverError(locationRes.error, 'background-requests location');
-  if (docsRes.error) return serverError(docsRes.error, 'background-requests documents');
 
   const sf = (profile?.service_filters as Record<string, boolean> | null) ?? {};
   const pickupRange = Number(profile?.pickup_range ?? 50);
-  const docStatus = new Map<string, string>();
-  for (const doc of docsRes.data ?? []) {
-    docStatus.set(doc.doc_type, doc.status);
-  }
-  // Solo avisar de vehículos que el conductor puede aceptar (documentos
-  // aprobados y filtro activo), igual que la bandeja de la app.
+  // Mismos tipos de vehículo que el feed: solo respetar los filtros activos.
+  // No exigir documentos para avisar, igual que hace la notificación in-app.
   const allowedVehicleTypes: string[] = [];
   for (const [orderVt, driverVt] of Object.entries(VT_MAP)) {
-    const needed = [...PERSONAL_KEYS, ...VEH_DOC_KEYS.map(k => `${driverVt}_${k}`)];
-    if (!needed.every(k => docStatus.get(k) === 'approved')) continue;
     const filter = FILTER_MAP[driverVt];
     if (filter && sf[filter] === false) continue;
     allowedVehicleTypes.push(orderVt);
