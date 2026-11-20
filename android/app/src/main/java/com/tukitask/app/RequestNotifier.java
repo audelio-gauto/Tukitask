@@ -12,7 +12,9 @@ import android.provider.Settings;
 
 /** Notificación local de nuevas solicitudes (heads-up, sonido y vibración). */
 public final class RequestNotifier {
-    private static final String CHANNEL_ID = "tukitask_requests_v3";
+    // Canal nuevo: Android no deja cambiar la importancia de un canal ya
+    // creado. Si el anterior quedó en silencioso, el aviso no salía como popup.
+    private static final String CHANNEL_ID = "tukitask_requests_v4";
     private static final int NOTIFICATION_ID = 44120;
 
     private RequestNotifier() {}

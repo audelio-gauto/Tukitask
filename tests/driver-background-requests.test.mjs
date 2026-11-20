@@ -230,6 +230,10 @@ test('el aviso del conductor distingue viaje, envío y flete; el técnico conser
   assert.match(service, /"Buscando viajes y envíos cerca de ti"/);
   assert.match(service, /"Buscando servicios cerca de ti"/);
   assert.match(service, /optString\("order_type"/);
+  const notifier = await read('android/app/src/main/java/com/tukitask/app/RequestNotifier.java');
+  // Canal nuevo para que Android vuelva a crear el aviso con IMPORTANCE_HIGH
+  // aunque el anterior hubiera quedado en silencioso en el teléfono.
+  assert.match(notifier, /tukitask_requests_v4/);
 });
 
 test('la creación de pedidos avisa a los conductores emparejados salvo los programados', async () => {
