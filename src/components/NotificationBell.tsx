@@ -148,7 +148,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
 
   // La solicitud del conductor se muestra con el mismo popup amplio que ve el
   // técnico; el resto de avisos del conductor conserva el formato compacto.
-  const requestPopup = latestUrgent && (popupOnlyTypes ?? []).includes(latestUrgent.type);
+  const requestPopup = !!latestUrgent && (popupOnlyTypes ?? []).includes(latestUrgent.type);
 
   return (
     <>
@@ -159,6 +159,7 @@ export function NotificationBell({ userEmail, className, variant, soundEnabled =
         onOpen={handleNotifClick}
         soundEnabled={soundEnabled}
         variant={variant === 'driver' && !requestPopup ? 'driver' : undefined}
+        persistent={requestPopup}
       />
 
       {selected && <NotificationDetail

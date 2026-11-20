@@ -96,9 +96,11 @@ interface Props {
   variant?: 'driver';
   /** Enable/disable sounds (default true) */
   soundEnabled?: boolean;
+  /** Solicitudes del conductor: permanecen hasta que el conductor las lea. */
+  persistent?: boolean;
 }
 
-export function UrgentNotificationPopup({ notification, onDismiss, onOpen, variant, soundEnabled = true }: Props) {
+export function UrgentNotificationPopup({ notification, onDismiss, onOpen, variant, soundEnabled = true, persistent = false }: Props) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const dismiss = useCallback(() => {
@@ -123,14 +125,17 @@ export function UrgentNotificationPopup({ notification, onDismiss, onOpen, varia
       }
     }
 
-    // Keep the compact notification available long enough to open.
+    // Las solicitudes se quedan en pantalla hasta que el conductor las abra
+    // o las cierre; el resto de avisos conserva su cierre automático.
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(dismiss, priority === 'urgent' ? 10000 : 8000);
+    if (!persistent) {
+      timerRef.current = setTimeout(dismiss, priority === 'urgent' ? 10000 : 8000);
+    }
 
     return () => {
       clearTimeout(timerRef.current);
     };
-  }, [notification, soundEnabled, dismiss]);
+  }, [notification, soundEnabled, dismiss, persistent]);
 
   if (!notification || (notification.priority !== 'urgent' && notification.priority !== 'high')) return null;
 
