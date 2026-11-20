@@ -98,6 +98,7 @@ const baseTables = () => ({
   orders: [],
   driver_locations: { lat: 0, lng: 0 },
   driver_documents: approvedDocs(),
+  notifications: [],
   // El feed puede estar vacío: el aviso nativo debe salir igual.
   driver_feed: [],
 });
@@ -165,6 +166,26 @@ test('el aviso nativo consulta pedidos directamente, sin depender del feed', asy
   assert.equal(response.headers['Cache-Control'], 'no-store');
   assert.equal(response.body.orders[0].pickup_address, 'Origen');
   assert.ok(!response.body.orders.some(order => order.id === 'mandadito'));
+});
+
+test('si la consulta directa no ve el pedido, el aviso sale igual desde la notificación new_order', async () => {
+  const now = Date.now();
+  const tables = baseTables();
+  // Ubicación lejana: la búsqueda por distancia descarta el pedido.
+  tables.driver_locations = { lat: 40, lng: -70 };
+  tables.orders = [{
+    id: 'notificado', pickup_address: 'Origen', delivery_address: 'Destino', offer: 15000,
+    suggested_price: null, vehicle_type: 'moto', order_type: 'viaje',
+    created_at: new Date(now - 60000).toISOString(), status: 'pending', date_scheduled: null,
+    pickup_lat: 0.01, pickup_lng: 0.01,
+  }];
+  tables.notifications = [{
+    data: { order_id: 'notificado' },
+    created_at: new Date(now - 60000).toISOString(),
+  }];
+  const response = await (await loadRoute(tables)).get(request());
+  assert.deepEqual(response.body.orders.map(order => order.id), ['notificado']);
+  assert.equal(response.body.orders[0].order_type, 'viaje');
 });
 
 test('la disponibilidad compartida apaga la burbuja si la billetera está bloqueada', async () => {

@@ -134,21 +134,45 @@ export async function GET(req: Request) {
   if (ordersError) return serverError(ordersError, 'background-requests orders');
 
   const soon = Date.now() + SCHEDULED_NOTICE_MS;
+  const reportable = (order: BackgroundOrder) => {
+    if (order.order_type === 'mandadito') return false;
+    if (!order.date_scheduled) return true;
+    const scheduledAt = Date.parse(order.date_scheduled);
+    return Number.isFinite(scheduledAt) && scheduledAt <= soon;
+  };
+  const withinRange = (order: BackgroundOrder) => {
+    if (!hasLocation) return true;
+    if (order.pickup_lat == null || order.pickup_lng == null) return false;
+    const oLat = Number(order.pickup_lat);
+    const oLng = Number(order.pickup_lng);
+    return Number.isFinite(oLat) && Number.isFinite(oLng)
+      && haversineKm(lat!, lng!, oLat, oLng) <= pickupRange;
+  };
+
   const visible = ((orders ?? []) as BackgroundOrder[])
-    .filter(order => order.order_type !== 'mandadito')
-    .filter(order => {
-      if (!order.date_scheduled) return true;
-      const scheduledAt = Date.parse(order.date_scheduled);
-      return Number.isFinite(scheduledAt) && scheduledAt <= soon;
-    })
-    .filter(order => {
-      if (!hasLocation) return true;
-      if (order.pickup_lat == null || order.pickup_lng == null) return false;
-      const oLat = Number(order.pickup_lat);
-      const oLng = Number(order.pickup_lng);
-      if (!Number.isFinite(oLat) || !Number.isFinite(oLng)) return false;
-      return haversineKm(lat!, lng!, oLat, oLng) <= pickupRange;
-    });
+    .filter(order => reportable(order) && withinRange(order));
+
+  // Respaldo: si la consulta directa no encuentra el pedido (feed vacío,
+  // ubicación vieja, filtros), usar las notificaciones new_order que ya se
+  // crearon para este conductor. Así el aviso de Android coincide con el aviso
+  // que recibió la WebView, igual que le pasa al técnico. Estos pedidos ya
+  // pasaron el filtro del servidor al crearse la notificación, así que no se
+  // vuelven a filtrar por distancia.
+  const notifiedIds = await recentNotifiedOrderIds(db, user.email, recentSince);
+  if (notifiedIds.length > 0) {
+    const { data: notifiedOrders } = await db
+      .from('orders')
+      .select('id, pickup_address, delivery_address, offer, suggested_price, vehicle_type, order_type, created_at, status, date_scheduled, pickup_lat, pickup_lng')
+      .in('id', notifiedIds)
+      .in('status', ['pending', 'negotiating']);
+    const existing = new Set(visible.map(order => order.id));
+    for (const order of (notifiedOrders ?? []) as BackgroundOrder[]) {
+      if (!existing.has(order.id) && reportable(order)) {
+        existing.add(order.id);
+        visible.push(order);
+      }
+    }
+  }
 
   return NextResponse.json(
     {
@@ -165,4 +189,28 @@ export async function GET(req: Request) {
     },
     { headers: NO_STORE },
   );
+}
+
+async function recentNotifiedOrderIds(
+  db: ReturnType<typeof sbAdmin>,
+  email: string,
+  recentSince: string,
+): Promise<string[]> {
+  try {
+    const { data } = await db
+      .from('notifications')
+      .select('data, created_at')
+      .eq('user_email', email)
+      .eq('type', 'new_order')
+      .or(`created_at.gte.${recentSince}`)
+      .limit(30);
+    const ids = new Set<string>();
+    for (const row of data ?? []) {
+      const orderId = (row as { data?: { order_id?: unknown } }).data?.order_id;
+      if (typeof orderId === 'string' && orderId) ids.add(orderId);
+    }
+    return [...ids];
+  } catch {
+    return [];
+  }
 }
